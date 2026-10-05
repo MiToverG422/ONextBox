@@ -2,6 +2,7 @@ import java.time.Instant
 
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -31,14 +32,19 @@ val oNextBoxBuildTime = DateTimeFormatter
     .format(Instant.ofEpochMilli(oNextBoxBuildTimestamp))
 val libxposedApiVersion = libs.versions.libxposed.get()
 
-val releaseStoreFilePath = (project.findProperty("ONEXTBOX_RELEASE_STORE_FILE") as String?)
-    ?.takeIf { it.isNotBlank() }
-val releaseStorePassword = (project.findProperty("ONEXTBOX_RELEASE_STORE_PASSWORD") as String?)
-    ?.takeIf { it.isNotBlank() }
-val releaseKeyAlias = (project.findProperty("ONEXTBOX_RELEASE_KEY_ALIAS") as String?)
-    ?.takeIf { it.isNotBlank() }
-val releaseKeyPassword = (project.findProperty("ONEXTBOX_RELEASE_KEY_PASSWORD") as String?)
-    ?.takeIf { it.isNotBlank() }
+// Local credentials stay ignored; CI/project properties take precedence.
+val localSigningProperties = Properties().apply {
+    val signingFile = rootProject.file("signing.properties")
+    if (signingFile.isFile) signingFile.inputStream().use { load(it) }
+}
+fun releaseSigningProperty(name: String): String? =
+    (project.findProperty(name) as String?)?.takeIf { it.isNotBlank() }
+        ?: localSigningProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFilePath = releaseSigningProperty("ONEXTBOX_RELEASE_STORE_FILE")
+val releaseStorePassword = releaseSigningProperty("ONEXTBOX_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = releaseSigningProperty("ONEXTBOX_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = releaseSigningProperty("ONEXTBOX_RELEASE_KEY_PASSWORD")
 
 val hasExternalReleaseSigning =
     !releaseStoreFilePath.isNullOrBlank() &&
