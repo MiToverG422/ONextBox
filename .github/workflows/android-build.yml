@@ -16,7 +16,7 @@ on:
         required: false
         type: string
       notify_telegram:
-        description: "Send APKs to the configured Telegram topic"
+        description: "Public repository only: send APKs to Telegram (disabled in Dev)"
         required: true
         default: true
         type: boolean
@@ -263,7 +263,8 @@ jobs:
           if-no-files-found: error
 
       - name: Notify build to Telegram
-        if: ${{ always() && inputs.notify_telegram }}
+        # Keep this guard when publishing the shared workflow to the public repository.
+        if: ${{ always() && github.repository == 'MiToverG422/ONextBox' && inputs.notify_telegram }}
         continue-on-error: true
         env:
           TG_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -419,13 +420,12 @@ jobs:
           def can_upload(path: Path | None) -> bool:
               return path is not None and path.is_file() and path.stat().st_size <= max_size
 
+          files_uploaded = False
           if build_status == "success" and can_upload(release_apk) and can_upload(debug_apk):
               media = [
                   {
                       "type": "document",
                       "media": "attach://apk0",
-                      "caption": msg,
-                      "parse_mode": "HTML",
                   },
                   {
                       "type": "document",
@@ -447,15 +447,14 @@ jobs:
                   ],
               )
               if is_ok(status, text):
-                  raise SystemExit(0)
-              print("Telegram APK media group upload failed, fallback to single APK or text message:")
-              print(f"HTTP status: {status}; response body omitted for privacy.")
+                  files_uploaded = True
+              else:
+                  print("Telegram APK media group upload failed, fallback to single APK or text message:")
+                  print(f"HTTP status: {status}; response body omitted for privacy.")
 
-          if build_status == "success" and can_upload(release_apk):
+          if not files_uploaded and can_upload(release_apk):
               fields = {
                   "chat_id": chat_id,
-                  "caption": msg,
-                  "parse_mode": "HTML",
               }
               if thread_id:
                   fields["message_thread_id"] = thread_id
@@ -465,10 +464,12 @@ jobs:
                   files=[("document", (release_apk.name, "application/octet-stream", release_apk.read_bytes()))],
               )
               if is_ok(status, text):
-                  raise SystemExit(0)
-              print("Telegram release APK upload failed, fallback to text message:")
-              print(f"HTTP status: {status}; response body omitted for privacy.")
+                  files_uploaded = True
+              else:
+                  print("Telegram release APK upload failed, fallback to text message:")
+                  print(f"HTTP status: {status}; response body omitted for privacy.")
 
+          # Send the description separately, after the APK group/document.
           fields = {
               "chat_id": chat_id,
               "text": msg,
