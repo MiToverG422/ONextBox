@@ -28,6 +28,12 @@ class PublicationTests(unittest.TestCase):
             self.assertFalse(sync.safe_content(name, content))
         self.assertTrue(sync.safe_content('app/src/example.kt', b'val token = System.getenv("TOKEN")'))
 
+    def test_media_privacy_guard(self):
+        for content in (b'C:\\Users\\example\\project.aep', b'C:/Users/example/project.aep', b'/Users/example/project.aep'):
+            self.assertFalse(sync.safe_content('app/src/main/res/raw/video.mp4', content))
+            self.assertFalse(sync.safe_content('docs/assets/image.webp', content))
+        self.assertTrue(sync.safe_content('app/src/main/res/raw/video.mp4', b'safe media bytes'))
+
     def test_copy_delete_idempotence_and_atomic_validation(self):
         with tempfile.TemporaryDirectory() as task_dir:
             root = Path(task_dir)

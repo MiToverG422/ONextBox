@@ -51,6 +51,10 @@ def safe_content(name, content):
         return False
     if any(pattern.search(content) for pattern in SECRET_PATTERNS):
         return False
+    if path.suffix.lower() in {'.mp4', '.mov', '.webm', '.png', '.jpg', '.jpeg', '.webp'}:
+        # Embedded media metadata must not expose local creator/user paths.
+        if re.search(rb'(?:[A-Z]:[\\/]+Users[\\/]|/Users/)', content, re.I):
+            return False
     return len(content) <= 50 * 1024 * 1024
 
 
