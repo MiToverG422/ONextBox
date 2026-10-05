@@ -1,0 +1,7 @@
+ONextBox đọc cục bộ thông tin thiết bị và hệ thống cần thiết để hiển thị khả năng tương thích và trạng thái, bao gồm kiểu máy, khu vực, phiên bản Android, thuộc tính hệ thống, Trình quản lý gốc, trạng thái LSPosed và chẩn đoán eSIM được xử lý lại.
+
+Cài đặt được lưu trữ cục bộ. Nhật ký thời gian chạy được lưu trữ trong thư mục riêng của ứng dụng và không được tải lên tự động. Một số tính năng được bật ghi cài đặt hệ thống hoặc cờ có thể vẫn còn sau khi gỡ cài đặt.
+
+Kiểm tra LSPosed có thể tạm thời sao chép cơ sở dữ liệu cấu hình của nó vào bộ đệm ứng dụng cho truy vấn chỉ đọc, sau đó xóa nó. Các bản sao lưu cấu hình do người dùng khởi tạo chỉ được ghi vào vị trí bạn chọn.
+
+Kiểm tra cập nhật nền, khi được cho phép riêng, hãy liên hệ với GitHub và do đó tiết lộ siêu dữ liệu mạng thông thường như địa chỉ IP của bạn cho GitHub. ONextBox không chứa SDK quảng cáo hoặc phân tích và không có tài khoản hoặc máy chủ đo từ xa do nhà phát triển vận hành.

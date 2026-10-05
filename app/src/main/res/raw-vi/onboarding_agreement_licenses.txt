@@ -1,0 +1,5 @@
+ONextBox được phân phối theo GPL-3.0.
+
+Các thành phần thời gian chạy bao gồm thư viện AndroidX, Jetpack Compose, Kotlin và kotlinx, COUI/Miuix, Kyant0 Capsule, AndroidLiquidGlass, libsu, HiddenApiBypass, libxpose, Material Color Utilities và Poko trong Apache-2.0.
+
+Phần mềm Android, ColorOS/OPlus, Trình quản lý gốc và LSPosed là các mục tiêu hoặc nền tảng tương thích và không được ONextBox cấp phép lại. Thông báo bản quyền và văn bản giấy phép đầy đủ do mỗi dự án cung cấp sẽ được ưu tiên áp dụng cho bản tóm tắt này. Tính khả dụng của nguồn và các liên kết ghi công vẫn có thể truy cập được từ trang Giới thiệu.

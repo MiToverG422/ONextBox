@@ -1,0 +1,4996 @@
+package com.mi.onextbox.lsp
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.SharedPreferences
+import com.mi.onextbox.ui.common.ShellLogger
+import com.topjohnwu.superuser.Shell
+import com.mi.onextbox.lsp.compat.HookConfigSnapshot
+import com.mi.onextbox.lsp.compat.ModernRemotePreferences as XSharedPreferences
+import java.io.File
+import java.lang.reflect.Method
+import java.util.concurrent.ConcurrentHashMap
+
+// Preference writes here are intentionally synchronous: root/Xposed readers must see the
+// persisted file immediately before permissions and the readable mirror are synchronized.
+@SuppressLint("ApplySharedPref", "UseKtx")
+object LspConfig {
+    /** Collects boot-time writes so dozens of values can be synchronized in one root shell. */
+    private val syncCommandBatch = ThreadLocal<MutableList<String>?>()
+    private val xposedPreferences by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        XSharedPreferences(PREFS_NAME)
+    }
+
+    /**
+     * Hook callbacks can run once per frame or once per notification. Keep the synchronized
+     * framework values briefly in-process so those callbacks do not repeatedly resolve hidden
+     * APIs, cross the Settings provider, or parse settings_global.xml.
+     */
+    private const val XPOSED_READ_CACHE_NANOS = 500_000_000L
+    private data class TimedStringValue(val value: String?, val readAtNanos: Long)
+    private val systemPropertyReadCache = ConcurrentHashMap<String, TimedStringValue>()
+    private val settingsGlobalReadCache = ConcurrentHashMap<String, TimedStringValue>()
+    private val systemPropertiesGetMethod: Method? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        runCatching {
+            Class.forName("android.os.SystemProperties")
+                .getMethod("get", String::class.java, String::class.java)
+        }.getOrNull()
+    }
+
+    private const val MODULE_PACKAGE = "com.mi.onextbox"
+    private const val PREFS_NAME = "lsp_features"
+
+    /** Permission Manager features share the same API 102, boot and backup mirrors. */
+    enum class PermissionFeature(val key: String) {
+        OldAppStartDialog("permission_old_app_start_dialog"),
+        AlwaysAllowAppStart("permission_always_allow_app_start"),
+        AutoUnlockRestrictedSettings("permission_auto_unlock_restricted_settings"),
+        DisableMaliciousAppIntercept("permission_disable_malicious_app_intercept"),
+        ExportPermissionPages("permission_export_pages"),
+        NativePermissionDialogs("permission_native_dialogs");
+
+        val propertyKey: String get() = "oost.$key"
+        val persistPropertyKey: String get() = "persist.sys.oost.$key"
+        val settingsKey: String get() = "oost_$key"
+    }
+
+    fun isPermissionFeatureEnabled(context: Context, feature: PermissionFeature): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = feature.persistPropertyKey,
+            propertyKey = feature.propertyKey,
+            settingsKey = feature.settingsKey,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = feature.key,
+            defaultValue = false,
+        )
+
+    fun setPermissionFeatureEnabled(context: Context, feature: PermissionFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = feature.key,
+            enabled = enabled,
+            propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
+            settingsGlobalKey = feature.settingsKey,
+        )
+    }
+
+    fun isPermissionFeatureEnabledXposed(feature: PermissionFeature): Boolean {
+        HookConfigSnapshot.boolean(feature.key, false)?.let { return it }
+        readSystemPropertyToggle(feature.persistPropertyKey)?.let { return it }
+        readSystemPropertyToggle(feature.propertyKey)?.let { return it }
+        readSettingsGlobalToggle(feature.settingsKey)?.let { return it }
+        return xposedPreferences.getBoolean(feature.key, false)
+    }
+
+    fun syncPermissionFeatures(context: Context) {
+        PermissionFeature.entries.forEach { feature ->
+            setPermissionFeatureEnabled(context, feature, prefs(context).getBoolean(feature.key, false))
+        }
+    }
+    /** Notification removal options share the same API 102, boot and backup mirrors. */
+    enum class NotificationRemovalFeature(val key: String) {
+        Overlay("notify_remove_overlay"),
+        Vpn("notify_remove_vpn"),
+        DeveloperMode("notify_remove_developer"),
+        ChargingCompleted("notify_remove_charging"),
+        Flashlight("notify_remove_flashlight"),
+        HighBatteryConsumption("notify_remove_consumption"),
+        HighPerformance("notify_remove_performance"),
+        DoNotDisturb("notify_remove_dnd"),
+        HotspotPowerConsumption("notify_remove_hotspot"),
+        MuteNotifications("notify_remove_mute"),
+        GtMode("notify_remove_gt");
+
+        val propertyKey: String get() = "oost.$key"
+        val persistPropertyKey: String get() = "persist.sys.oost.$key"
+        val settingsKey: String get() = "oost_$key"
+    }
+
+    fun isNotificationRemovalEnabled(context: Context, feature: NotificationRemovalFeature): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = feature.persistPropertyKey,
+            propertyKey = feature.propertyKey,
+            settingsKey = feature.settingsKey,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = feature.key,
+            defaultValue = false,
+        )
+
+    fun setNotificationRemovalEnabled(context: Context, feature: NotificationRemovalFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = feature.key,
+            enabled = enabled,
+            propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
+            settingsGlobalKey = feature.settingsKey,
+        )
+    }
+
+    fun isNotificationRemovalEnabledXposed(feature: NotificationRemovalFeature): Boolean {
+        HookConfigSnapshot.boolean(feature.key, false)?.let { return it }
+        readSystemPropertyToggle(feature.persistPropertyKey)?.let { return it }
+        readSystemPropertyToggle(feature.propertyKey)?.let { return it }
+        readSettingsGlobalToggle(feature.settingsKey)?.let { return it }
+        return xposedPreferences.getBoolean(feature.key, false)
+    }
+
+    fun syncNotificationRemovalFeatures(context: Context) {
+        NotificationRemovalFeature.entries.forEach { feature ->
+            setNotificationRemovalEnabled(context, feature, prefs(context).getBoolean(feature.key, false))
+        }
+    }
+    enum class InstallerFeature(val key: String, val defaultValue: Boolean = false) {
+        Enabled("installer_enabled"),
+        Uninstall("installer_intercept_uninstall"),
+        Session("installer_intercept_session_install"),
+        FixPermissions("installer_fix_permissions"),
+        FollowUninstall("installer_follow_uninstall", true);
+    }
+
+    const val INSTALLER_PACKAGE = "installer_selected_package"
+    const val UNINSTALLER_PACKAGE = "installer_uninstaller_package"
+    private val installerTextKeys = setOf(INSTALLER_PACKAGE, UNINSTALLER_PACKAGE)
+
+    fun isInstallerFeatureEnabled(context: Context, feature: InstallerFeature): Boolean =
+        prefs(context).getBoolean(feature.key, feature.defaultValue)
+
+    fun setInstallerFeatureEnabled(context: Context, feature: InstallerFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(context, feature.key, enabled,
+            listOf("persist.sys.oost.${feature.key}", "oost.${feature.key}"), "oost_${feature.key}")
+    }
+
+    fun isInstallerFeatureEnabledXposed(feature: InstallerFeature): Boolean {
+        HookConfigSnapshot.boolean(feature.key, feature.defaultValue)?.let { return it }
+        readSystemPropertyToggle("persist.sys.oost.${feature.key}")?.let { return it }
+        return xposedPreferences.getBoolean(feature.key, feature.defaultValue)
+    }
+
+    fun installerText(context: Context, key: String): String = prefs(context).getString(key, "").orEmpty()
+
+    fun installerTextXposed(key: String): String =
+        if (HookConfigSnapshot.isAvailable) HookConfigSnapshot.string(key, "").orEmpty()
+        else xposedPreferences.getString(key, "").orEmpty()
+
+    fun setInstallerText(context: Context, key: String, value: String) {
+        require(key in installerTextKeys && value.length <= 8192)
+        require(InstallerRoutingPolicy.validPackage(value))
+        val editor = prefs(context).edit().putString(key, value.trim())
+        if (key == UNINSTALLER_PACKAGE) editor.putBoolean(InstallerFeature.FollowUninstall.key, false)
+        require(editor.commit())
+        syncReadableState(context)
+        if (key == UNINSTALLER_PACKAGE) {
+            val flag = InstallerFeature.FollowUninstall.key
+            syncScalarState("0", listOf("persist.sys.oost.$flag", "oost.$flag"), "oost_$flag")
+        }
+    }
+
+    fun syncInstallerFeatures(context: Context) {
+        if (prefs(context).contains("installer_forced_components")) {
+            require(prefs(context).edit().remove("installer_forced_components").commit())
+            syncReadableState(context)
+        }
+        InstallerFeature.entries.forEach { setInstallerFeatureEnabled(context, it, isInstallerFeatureEnabled(context, it)) }
+    }
+
+    private const val KEY_NATIVE_NOTIFY_ICON = "native_notify_icon_enabled"
+    private const val KEY_EXTREME_REFRESH_165 = "extreme_refresh_165_enabled"
+    private const val KEY_RECENT_TASK_RADIUS = "recent_task_radius_enabled"
+    private const val KEY_AOD_ENHANCE = "aod_enhance_enabled"
+    private const val KEY_OOS_LOCALIZER = "oos_localizer_enabled"
+    private const val KEY_ASSISTANT_POWER_MODE = "assistant_power_mode"
+    private const val KEY_ASSISTANT_GESTURE_CIRCLE = "assistant_gesture_circle_enabled"
+    private const val KEY_ASSISTANT_GESTURE_CIRCLE_C17 = "assistant_gesture_circle_c17_enabled"
+    private const val KEY_ASSISTANT_NATIVE_POWER = "assistant_native_power_enabled"
+    private const val KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD =
+        "assistant_international_power_chord_enabled"
+    private const val KEY_ASSISTANT_NATIVE_CIRCLE = "assistant_native_circle_enabled"
+    private const val KEY_RECENT_TASK_RADIUS_DP = "recent_task_radius_dp"
+    private const val KEY_AOD_INIT_DARK_BRIGHTNESS = "aod_init_dark_brightness"
+    private const val KEY_AOD_INIT_BRIGHT_BRIGHTNESS = "aod_init_bright_brightness"
+    private const val KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER = "aod_running_brightness_multiplier"
+    private const val KEY_AOD_PANORAMIC_SUPPORT = "aod_panoramic_support"
+    private const val KEY_AOD_SETTINGS_SWITCH = "aod_settings_switch"
+    private const val KEY_AOD_SINGLE_CLICK_BLOCK = "aod_single_click_block"
+    private const val KEY_NATIVE_NOTIFICATION_BUBBLES = "native_notification_bubbles"
+    private const val KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY =
+        "systemui_international_network_display"
+    private const val KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR =
+        "systemui_hide_mobile_roaming_indicator"
+    private const val KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR =
+        "systemui_hide_network_activity_indicator"
+    private const val KEY_SYSTEMUI_NATIVE_POWER_MENU = "systemui_native_power_menu"
+    private const val KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER =
+        "systemui_restore_c16_network_icon_order"
+    private const val KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE =
+        "systemui_international_notification_style"
+    private const val KEY_SYSTEMUI_FORCE_TONAL_SPOT = "systemui_force_tonal_spot"
+    private const val KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE = "systemui_monet_color_spec_mode"
+    private const val KEY_SYSTEMUI_HIDE_QS_EDIT = "systemui_hide_qs_edit"
+    private const val KEY_SYSTEMUI_HIDE_QS_SETTINGS = "systemui_hide_qs_settings"
+    private const val KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER = "systemui_hide_qs_top_carrier"
+    private const val KEY_SYSTEMUI_HIDE_QS_MORE = "systemui_hide_qs_more"
+    private const val KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY = "systemui_force_native_clipboard_overlay"
+    private const val KEY_SETTINGS_INTERNATIONAL = "settings_international_enabled"
+    private const val KEY_SETTINGS_FORCE_APP_AUTO_START = "settings_force_app_auto_start"
+    private const val KEY_SETTINGS_INTERNATIONAL_WALLET = "settings_international_wallet"
+    private const val KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE =
+        "settings_restore_domestic_about_device"
+    private const val KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS =
+        "settings_restore_domestic_auxiliary_functions"
+    private const val KEY_SETTINGS_RESTORE_SMART_LOCK = "settings_restore_smart_lock"
+    private const val KEY_SETTINGS_FORCE_GOOGLE_ENTRY = "settings_force_google_entry"
+    private const val KEY_SETTINGS_C15_ABOUT_LAYOUT = "settings_c15_about_layout"
+    private const val KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM = "settings_skip_special_permission_risk_confirm"
+    private const val KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON = "settings_restore_app_open_button"
+    private const val KEY_WALLPAPERS_RED_ONE_ENTRY = "wallpapers_red_one_entry"
+    private const val KEY_SETTINGS_UNLOCK_REFRESH_RATE = "settings_unlock_refresh_rate"
+    private const val KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE =
+        "settings_force_global_extreme_refresh_rate"
+    private const val KEY_GMS_REGION_RESTRICTION_BYPASS = "gms_region_restriction_bypass"
+    private const val KEY_ESIM_REGION_RESTRICTION_BYPASS = "esim_region_restriction_bypass"
+    private const val KEY_ESIM_CONFIRMATION_CODE_PROMPT = "esim_confirmation_code_prompt"
+    private const val KEY_ESIM_REGION_RESTRICTION_OVERRIDE = "esim_region_restriction_override"
+    private const val KEY_ESIM_PROFILE_LIMIT_BYPASS = "esim_profile_limit_bypass"
+    private const val KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST =
+        "mobile_network_hide_ai_link_boost"
+    private const val KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE =
+        "mobile_network_hide_roaming_service"
+    private const val KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD =
+        "mobile_network_hide_high_data_sim_card"
+    private const val KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION =
+        "mobile_network_hide_smart_cloud_acceleration"
+    private const val KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER =
+        "mobile_network_hide_phone_number"
+    private const val KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS =
+        "mobile_network_force_carrier_options"
+    private const val KEY_APP_MARKET_REGION_RESTRICTION_BYPASS =
+        "app_market_region_restriction_bypass"
+    private const val KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS =
+        "app_market_remove_splash_recommendations"
+    private const val KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS =
+        "app_market_remove_update_download_recommendations"
+    private const val KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS =
+        "app_market_remove_mine_recommendations"
+    private const val KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS =
+        "app_market_hide_search_home_recommendations"
+    private const val KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS =
+        "app_market_hide_search_result_recommendations"
+    private const val KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS =
+        "app_market_hide_detail_recommendations"
+    private const val KEY_ATHENA_C17_SWIPE_UP_PROTECTION = "athena_c17_vpn_protection_enabled"
+    private const val KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "ok_google_hotword_compatibility_enabled"
+    private const val KEY_LAUNCHER_HIDE_WIDGET_LABELS = "launcher_hide_widget_labels"
+    private const val KEY_LAUNCHER_SEARCH_BAR_MODE = "launcher_taskbar_search_box"
+    private const val KEY_OOS_LOCALIZER_CONFIG_MODE = "oos_localizer_config_mode"
+    private const val KEY_OOS_LOCALIZER_REGION = "oos_localizer_region"
+    private const val KEY_OOS_LOCALIZER_LOCALE = "oos_localizer_locale"
+    private const val KEY_OOS_LOCALIZER_MODEL = "oos_localizer_model"
+    private const val KEY_OOS_LOCALIZER_DISABLED_PACKAGES = "oos_localizer_disabled_packages"
+    private const val KEY_OOS_LOCALIZER_DISABLED_FEATURES = "oos_localizer_disabled_features"
+    private const val KEY_OOS_LOCALIZER_PROPERTY_PREFIX = "oos_localizer_property_"
+    private const val KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX = "oos_localizer_app_feature_"
+    private const val FLAG_FILE_PATH_NATIVE_NOTIFY_ICON = "/data/local/oost_native_notify_icon.flag"
+    private const val FLAG_FILE_PATH_EXTREME_REFRESH_165 = "/data/local/oost_extreme_refresh_165.flag"
+    private const val FLAG_FILE_PATH_RECENT_TASK_RADIUS = "/data/local/oost_recent_task_radius.flag"
+    private const val FLAG_FILE_PATH_AOD_ENHANCE = "/data/local/oost_aod_enhance.flag"
+    private const val FLAG_FILE_PATH_OOS_LOCALIZER = "/data/local/oost_oos_localizer.flag"
+    private const val FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES = "/data/local/oost_native_notification_bubbles.flag"
+    private const val LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFY_ICON = "/data/local/tmp/oost_native_notify_icon.flag"
+    private const val LEGACY_FLAG_FILE_PATH_EXTREME_REFRESH_165 = "/data/local/tmp/oost_extreme_refresh_165.flag"
+    private const val LEGACY_FLAG_FILE_PATH_RECENT_TASK_RADIUS = "/data/local/tmp/oost_recent_task_radius.flag"
+    private const val LEGACY_FLAG_FILE_PATH_AOD_ENHANCE = "/data/local/tmp/oost_aod_enhance.flag"
+    private const val LEGACY_FLAG_FILE_PATH_OOS_LOCALIZER = "/data/local/tmp/oost_oos_localizer.flag"
+    private const val LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES = "/data/local/tmp/oost_native_notification_bubbles.flag"
+    private const val PROP_KEY_NATIVE_NOTIFY_ICON = "oost.native_notify_icon"
+    private const val PROP_KEY_EXTREME_REFRESH_165 = "oost.extreme_refresh_165"
+    private const val PROP_KEY_RECENT_TASK_RADIUS = "oost.recent_task_radius"
+    private const val PROP_KEY_AOD_ENHANCE = "oost.aod_enhance"
+    private const val PROP_KEY_OOS_LOCALIZER = "oost.oos_localizer"
+    private const val PROP_KEY_ASSISTANT_POWER_MODE = "oost.assistant_power_mode"
+    private const val PROP_KEY_ASSISTANT_GESTURE_CIRCLE = "oost.assistant_gesture_circle"
+    private const val PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17 = "oost.assistant_gesture_circle_c17"
+    private const val PROP_KEY_ASSISTANT_NATIVE_POWER = "oost.assistant_native_power"
+    private const val PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD =
+        "oost.assistant_international_power_chord"
+    private const val PROP_KEY_ASSISTANT_NATIVE_CIRCLE = "oost.assistant_native_circle"
+    private const val PROP_KEY_RECENT_TASK_RADIUS_DP = "oost.recent_task_radius_dp"
+    private const val PROP_KEY_AOD_INIT_DARK_BRIGHTNESS = "oost.aod_init_dark_brightness"
+    private const val PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS = "oost.aod_init_bright_brightness"
+    private const val PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER = "oost.aod_running_brightness_multiplier"
+    private const val PROP_KEY_AOD_PANORAMIC_SUPPORT = "oost.aod_panoramic_support"
+    private const val PROP_KEY_AOD_SETTINGS_SWITCH = "oost.aod_settings_switch"
+    private const val PROP_KEY_AOD_SINGLE_CLICK_BLOCK = "oost.aod_single_click_block"
+    private const val PROP_KEY_NATIVE_NOTIFICATION_BUBBLES = "oost.native_notification_bubbles"
+    private const val PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY =
+        "oost.systemui_international_network_display"
+    private const val PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR =
+        "oost.systemui_hide_mobile_roaming_indicator"
+    private const val PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR =
+        "oost.systemui_hide_network_activity_indicator"
+    private const val PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU = "oost.systemui_native_power_menu"
+    private const val PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER =
+        "oost.systemui_restore_c16_network_icon_order"
+    private const val PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE =
+        "oost.systemui_international_notification_style"
+    private const val PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT = "oost.systemui_force_tonal_spot"
+    private const val PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE =
+        "oost.systemui_monet_color_spec_mode"
+    private const val PROP_KEY_SYSTEMUI_HIDE_QS_EDIT = "oost.systemui_hide_qs_edit"
+    private const val PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS = "oost.systemui_hide_qs_settings"
+    private const val PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER = "oost.systemui_hide_qs_top_carrier"
+    private const val PROP_KEY_SYSTEMUI_HIDE_QS_MORE = "oost.systemui_hide_qs_more"
+    private const val PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY = "oost.systemui_force_native_clipboard_overlay"
+    private const val PROP_KEY_SETTINGS_INTERNATIONAL = "oost.settings_international"
+    private const val PROP_KEY_SETTINGS_FORCE_APP_AUTO_START = "oost.settings_force_app_auto_start"
+    private const val PROP_KEY_SETTINGS_INTERNATIONAL_WALLET = "oost.settings_international_wallet"
+    private const val PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE =
+        "oost.settings_restore_domestic_about_device"
+    private const val PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS =
+        "oost.settings_restore_domestic_auxiliary_functions"
+    private const val PROP_KEY_SETTINGS_RESTORE_SMART_LOCK = "oost.settings_restore_smart_lock"
+    private const val PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY = "oost.settings_force_google_entry"
+    private const val PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT = "oost.settings_c15_about_layout"
+    private const val PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM = "oost.settings_skip_special_permission_risk_confirm"
+    private const val PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON = "oost.settings_restore_app_open_button"
+    private const val PROP_KEY_WALLPAPERS_RED_ONE_ENTRY = "oost.wallpapers_red_one_entry"
+    private const val PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE = "oost.settings_unlock_refresh_rate"
+    private const val PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE =
+        "oost.settings_force_global_extreme_refresh_rate"
+    private const val PROP_KEY_GMS_REGION_RESTRICTION_BYPASS = "oost.gms_region_restriction_bypass"
+    private const val PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS =
+        "oost.esim_region_restriction_bypass"
+    private const val PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT =
+        "oost.esim_confirmation_code_prompt"
+    private const val PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE =
+        "oost.esim_region_restriction_override"
+    private const val PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS =
+        "oost.esim_profile_limit_bypass"
+    private const val PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST =
+        "oost.mobile_network_hide_ai_link_boost"
+    private const val PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE =
+        "oost.mobile_network_hide_roaming_service"
+    private const val PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD =
+        "oost.mobile_network_hide_high_data_sim_card"
+    private const val PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION =
+        "oost.mobile_network_hide_smart_cloud_acceleration"
+    private const val PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER =
+        "oost.mobile_network_hide_phone_number"
+    private const val PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS =
+        "oost.mobile_network_force_carrier_options"
+    private const val PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS =
+        "oost.app_market_region_restriction_bypass"
+    private const val PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS =
+        "oost.app_market_remove_splash_recommendations"
+    private const val PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS =
+        "oost.app_market_remove_update_download_recommendations"
+    private const val PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS =
+        "oost.app_market_remove_mine_recommendations"
+    private const val PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS =
+        "oost.app_market_hide_search_home_recommendations"
+    private const val PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS =
+        "oost.app_market_hide_search_result_recommendations"
+    private const val PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS =
+        "oost.app_market_hide_detail_recommendations"
+    private const val PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION = "oost.athena_c17_vpn_protection"
+    private const val PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "oost.ok_google_hotword_compatibility"
+    private const val PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS = "oost.launcher_hide_widget_labels"
+    private const val PROP_KEY_LAUNCHER_SEARCH_BAR_MODE = "oost.launcher_taskbar_search_box"
+    private const val PROP_KEY_OOS_LOCALIZER_CONFIG_MODE = "oost.oos_localizer_config_mode"
+    private const val PROP_KEY_OOS_LOCALIZER_REGION = "oost.oos_localizer_region"
+    private const val PROP_KEY_OOS_LOCALIZER_LOCALE = "oost.oos_localizer_locale"
+    private const val PROP_KEY_OOS_LOCALIZER_MODEL = "oost.oos_localizer_model"
+    private const val PERSIST_PROP_KEY_NATIVE_NOTIFY_ICON = "persist.sys.oost.native_notify_icon"
+    private const val PERSIST_PROP_KEY_EXTREME_REFRESH_165 = "persist.sys.oost.extreme_refresh_165"
+    private const val PERSIST_PROP_KEY_RECENT_TASK_RADIUS = "persist.sys.oost.recent_task_radius"
+    private const val PERSIST_PROP_KEY_AOD_ENHANCE = "persist.sys.oost.aod_enhance"
+    private const val PERSIST_PROP_KEY_OOS_LOCALIZER = "persist.sys.oost.oos_localizer"
+    private const val PERSIST_PROP_KEY_ASSISTANT_POWER_MODE = "persist.sys.oost.assistant_power_mode"
+    private const val PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE = "persist.sys.oost.assistant_gesture_circle"
+    private const val PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17 =
+        "persist.sys.oost.assistant_gesture_circle_c17"
+    private const val PERSIST_PROP_KEY_ASSISTANT_NATIVE_POWER =
+        "persist.sys.oost.assistant_native_power"
+    private const val PERSIST_PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD =
+        "persist.sys.oost.assistant_international_power_chord"
+    private const val PERSIST_PROP_KEY_ASSISTANT_NATIVE_CIRCLE =
+        "persist.sys.oost.assistant_native_circle"
+    private const val PERSIST_PROP_KEY_RECENT_TASK_RADIUS_DP = "persist.sys.oost.recent_task_radius_dp"
+    private const val PERSIST_PROP_KEY_AOD_INIT_DARK_BRIGHTNESS = "persist.sys.oost.aod_init_dark_brightness"
+    private const val PERSIST_PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS = "persist.sys.oost.aod_init_bright_brightness"
+    private const val PERSIST_PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER = "persist.sys.oost.aod_running_brightness_multiplier"
+    private const val PERSIST_PROP_KEY_AOD_PANORAMIC_SUPPORT = "persist.sys.oost.aod_panoramic_support"
+    private const val PERSIST_PROP_KEY_AOD_SETTINGS_SWITCH = "persist.sys.oost.aod_settings_switch"
+    private const val PERSIST_PROP_KEY_AOD_SINGLE_CLICK_BLOCK = "persist.sys.oost.aod_single_click_block"
+    private const val PERSIST_PROP_KEY_NATIVE_NOTIFICATION_BUBBLES = "persist.sys.oost.native_notification_bubbles"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY =
+        "persist.sys.oost.systemui_international_network_display"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR =
+        "persist.sys.oost.systemui_hide_mobile_roaming_indicator"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR =
+        "persist.sys.oost.systemui_hide_network_activity_indicator"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU =
+        "persist.sys.oost.systemui_native_power_menu"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER =
+        "persist.sys.oost.systemui_restore_c16_network_icon_order"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE =
+        "persist.sys.oost.systemui_international_notification_style"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT =
+        "persist.sys.oost.systemui_force_tonal_spot"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE =
+        "persist.sys.oost.systemui_monet_color_spec_mode"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_EDIT = "persist.sys.oost.systemui_hide_qs_edit"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS = "persist.sys.oost.systemui_hide_qs_settings"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER = "persist.sys.oost.systemui_hide_qs_top_carrier"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_MORE = "persist.sys.oost.systemui_hide_qs_more"
+    private const val PERSIST_PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY = "persist.sys.oost.systemui_force_native_clipboard_overlay"
+    private const val PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL = "persist.sys.oost.settings_international"
+    private const val PERSIST_PROP_KEY_SETTINGS_FORCE_APP_AUTO_START =
+        "persist.sys.oost.settings_force_app_auto_start"
+    private const val PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL_WALLET =
+        "persist.sys.oost.settings_international_wallet"
+    private const val PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE =
+        "persist.sys.oost.settings_restore_domestic_about_device"
+    private const val PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS =
+        "persist.sys.oost.settings_restore_domestic_auxiliary_functions"
+    private const val PERSIST_PROP_KEY_SETTINGS_RESTORE_SMART_LOCK =
+        "persist.sys.oost.settings_restore_smart_lock"
+    private const val PERSIST_PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY = "persist.sys.oost.settings_force_google_entry"
+    private const val PERSIST_PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT = "persist.sys.oost.settings_c15_about_layout"
+    private const val PERSIST_PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM = "persist.sys.oost.settings_skip_special_permission_risk_confirm"
+    private const val PERSIST_PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON = "persist.sys.oost.settings_restore_app_open_button"
+    private const val PERSIST_PROP_KEY_WALLPAPERS_RED_ONE_ENTRY = "persist.sys.oost.wallpapers_red_one_entry"
+    private const val PERSIST_PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE = "persist.sys.oost.settings_unlock_refresh_rate"
+    private const val PERSIST_PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE =
+        "persist.sys.oost.settings_force_global_extreme_refresh_rate"
+    private const val PERSIST_PROP_KEY_GMS_REGION_RESTRICTION_BYPASS = "persist.sys.oost.gms_region_restriction_bypass"
+    private const val PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS =
+        "persist.sys.oost.esim_region_restriction_bypass"
+    private const val PERSIST_PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT =
+        "persist.sys.oost.esim_confirmation_code_prompt"
+    private const val PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE =
+        "persist.sys.oost.esim_region_restriction_override"
+    private const val PERSIST_PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS =
+        "persist.sys.oost.esim_profile_limit_bypass"
+    private const val PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST =
+        "persist.sys.oost.mobile_network_hide_ai_link_boost"
+    private const val PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE =
+        "persist.sys.oost.mobile_network_hide_roaming_service"
+    private const val PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD =
+        "persist.sys.oost.mobile_network_hide_high_data_sim_card"
+    private const val PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION =
+        "persist.sys.oost.mobile_network_hide_smart_cloud_acceleration"
+    private const val PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER =
+        "persist.sys.oost.mobile_network_hide_phone_number"
+    private const val PERSIST_PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS =
+        "persist.sys.oost.mobile_network_force_carrier_options"
+    private const val PERSIST_PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS =
+        "persist.sys.oost.app_market_region_restriction_bypass"
+    private const val PERSIST_PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS =
+        "persist.sys.oost.app_market_remove_splash_recommendations"
+    private const val PERSIST_PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS =
+        "persist.sys.oost.app_market_remove_update_download_recommendations"
+    private const val PERSIST_PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS =
+        "persist.sys.oost.app_market_remove_mine_recommendations"
+    private const val PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS =
+        "persist.sys.oost.app_market_hide_search_home_recommendations"
+    private const val PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS =
+        "persist.sys.oost.app_market_hide_search_result_recommendations"
+    private const val PERSIST_PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS =
+        "persist.sys.oost.app_market_hide_detail_recommendations"
+    private const val PERSIST_PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION =
+        "persist.sys.oost.athena_c17_vpn_protection"
+    private const val PERSIST_PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "persist.sys.oost.ok_google_hotword_compatibility"
+    private const val PERSIST_PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS =
+        "persist.sys.oost.launcher_hide_widget_labels"
+    private const val PERSIST_PROP_KEY_LAUNCHER_SEARCH_BAR_MODE =
+        "persist.sys.oost.launcher_taskbar_search_box"
+    private const val PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE = "persist.sys.oost.oos_localizer_config_mode"
+    private const val PERSIST_PROP_KEY_OOS_LOCALIZER_REGION = "persist.sys.oost.oos_localizer_region"
+    private const val PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE = "persist.sys.oost.oos_localizer_locale"
+    private const val PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL = "persist.sys.oost.oos_localizer_model"
+    private const val SETTINGS_KEY_NATIVE_NOTIFY_ICON = "oost_native_notify_icon"
+    private const val SETTINGS_KEY_EXTREME_REFRESH_165 = "oost_extreme_refresh_165"
+    private const val SETTINGS_KEY_RECENT_TASK_RADIUS = "oost_recent_task_radius"
+    private const val SETTINGS_KEY_AOD_ENHANCE = "oost_aod_enhance"
+    private const val SETTINGS_KEY_OOS_LOCALIZER = "oost_oos_localizer"
+    private const val SETTINGS_KEY_ASSISTANT_POWER_MODE = "oost_assistant_power_mode"
+    private const val SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE = "oost_assistant_gesture_circle"
+    private const val SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE_C17 = "oost_assistant_gesture_circle_c17"
+    private const val SETTINGS_KEY_ASSISTANT_NATIVE_POWER = "oost_assistant_native_power"
+    private const val SETTINGS_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD =
+        "oost_assistant_international_power_chord"
+    private const val SETTINGS_KEY_ASSISTANT_NATIVE_CIRCLE = "oost_assistant_native_circle"
+    private const val SETTINGS_KEY_RECENT_TASK_RADIUS_DP = "oost_recent_task_radius_dp"
+    private const val SETTINGS_KEY_AOD_INIT_DARK_BRIGHTNESS = "oost_aod_init_dark_brightness"
+    private const val SETTINGS_KEY_AOD_INIT_BRIGHT_BRIGHTNESS = "oost_aod_init_bright_brightness"
+    private const val SETTINGS_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER = "oost_aod_running_brightness_multiplier"
+    private const val SETTINGS_KEY_AOD_PANORAMIC_SUPPORT = "oost_aod_panoramic_support"
+    private const val SETTINGS_KEY_AOD_SETTINGS_SWITCH = "oost_aod_settings_switch"
+    private const val SETTINGS_KEY_AOD_SINGLE_CLICK_BLOCK = "oost_aod_single_click_block"
+    private const val SETTINGS_KEY_NATIVE_NOTIFICATION_BUBBLES = "oost_native_notification_bubbles"
+    private const val SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY =
+        "oost_systemui_international_network_display"
+    private const val SETTINGS_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR =
+        "oost_systemui_hide_mobile_roaming_indicator"
+    private const val SETTINGS_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR =
+        "oost_systemui_hide_network_activity_indicator"
+    private const val SETTINGS_KEY_SYSTEMUI_NATIVE_POWER_MENU =
+        "oost_systemui_native_power_menu"
+    private const val SETTINGS_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER =
+        "oost_systemui_restore_c16_network_icon_order"
+    private const val SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE =
+        "oost_systemui_international_notification_style"
+    private const val SETTINGS_KEY_SYSTEMUI_FORCE_TONAL_SPOT = "oost_systemui_force_tonal_spot"
+    private const val SETTINGS_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE =
+        "oost_systemui_monet_color_spec_mode"
+    private const val SETTINGS_KEY_SYSTEMUI_HIDE_QS_EDIT = "oost_systemui_hide_qs_edit"
+    private const val SETTINGS_KEY_SYSTEMUI_HIDE_QS_SETTINGS = "oost_systemui_hide_qs_settings"
+    private const val SETTINGS_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER = "oost_systemui_hide_qs_top_carrier"
+    private const val SETTINGS_KEY_SYSTEMUI_HIDE_QS_MORE = "oost_systemui_hide_qs_more"
+    private const val SETTINGS_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY = "oost_systemui_force_native_clipboard_overlay"
+    private const val SETTINGS_KEY_SETTINGS_INTERNATIONAL = "oost_settings_international"
+    private const val SETTINGS_KEY_SETTINGS_FORCE_APP_AUTO_START = "oost_settings_force_app_auto_start"
+    private const val SETTINGS_KEY_SETTINGS_INTERNATIONAL_WALLET = "oost_settings_international_wallet"
+    private const val SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE =
+        "oost_settings_restore_domestic_about_device"
+    private const val SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS =
+        "oost_settings_restore_domestic_auxiliary_functions"
+    private const val SETTINGS_KEY_SETTINGS_RESTORE_SMART_LOCK =
+        "oost_settings_restore_smart_lock"
+    private const val SETTINGS_KEY_SETTINGS_FORCE_GOOGLE_ENTRY = "oost_settings_force_google_entry"
+    private const val SETTINGS_KEY_SETTINGS_C15_ABOUT_LAYOUT = "oost_settings_c15_about_layout"
+    private const val SETTINGS_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM = "oost_settings_skip_special_permission_risk_confirm"
+    private const val SETTINGS_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON = "oost_settings_restore_app_open_button"
+    private const val SETTINGS_KEY_WALLPAPERS_RED_ONE_ENTRY = "oost_wallpapers_red_one_entry"
+    private const val SETTINGS_KEY_SETTINGS_UNLOCK_REFRESH_RATE = "oost_settings_unlock_refresh_rate"
+    private const val SETTINGS_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE =
+        "oost_settings_force_global_extreme_refresh_rate"
+    private const val SETTINGS_KEY_GMS_REGION_RESTRICTION_BYPASS = "oost_gms_region_restriction_bypass"
+    private const val SETTINGS_KEY_ESIM_REGION_RESTRICTION_BYPASS =
+        "oost_esim_region_restriction_bypass"
+    private const val SETTINGS_KEY_ESIM_CONFIRMATION_CODE_PROMPT =
+        "oost_esim_confirmation_code_prompt"
+    private const val SETTINGS_KEY_ESIM_REGION_RESTRICTION_OVERRIDE =
+        "oost_esim_region_restriction_override"
+    private const val SETTINGS_KEY_ESIM_PROFILE_LIMIT_BYPASS =
+        "oost_esim_profile_limit_bypass"
+    private const val SETTINGS_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST =
+        "oost_mobile_network_hide_ai_link_boost"
+    private const val SETTINGS_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE =
+        "oost_mobile_network_hide_roaming_service"
+    private const val SETTINGS_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD =
+        "oost_mobile_network_hide_high_data_sim_card"
+    private const val SETTINGS_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION =
+        "oost_mobile_network_hide_smart_cloud_acceleration"
+    private const val SETTINGS_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER =
+        "oost_mobile_network_hide_phone_number"
+    private const val SETTINGS_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS =
+        "oost_mobile_network_force_carrier_options"
+    private const val SETTINGS_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS =
+        "oost_app_market_region_restriction_bypass"
+    private const val SETTINGS_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS =
+        "oost_app_market_remove_splash_recommendations"
+    private const val SETTINGS_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS =
+        "oost_app_market_remove_update_download_recommendations"
+    private const val SETTINGS_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS =
+        "oost_app_market_remove_mine_recommendations"
+    private const val SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS =
+        "oost_app_market_hide_search_home_recommendations"
+    private const val SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS =
+        "oost_app_market_hide_search_result_recommendations"
+    private const val SETTINGS_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS =
+        "oost_app_market_hide_detail_recommendations"
+    private const val SETTINGS_KEY_ATHENA_C17_SWIPE_UP_PROTECTION =
+        "oost_athena_c17_vpn_protection"
+    private const val SETTINGS_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "oost_ok_google_hotword_compatibility"
+    private const val SETTINGS_KEY_LAUNCHER_HIDE_WIDGET_LABELS = "oost_launcher_hide_widget_labels"
+    private const val SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE = "oost_launcher_taskbar_search_box"
+    private const val SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE = "oost_oos_localizer_config_mode"
+    private const val SETTINGS_KEY_OOS_LOCALIZER_REGION = "oost_oos_localizer_region"
+    private const val SETTINGS_KEY_OOS_LOCALIZER_LOCALE = "oost_oos_localizer_locale"
+    private const val SETTINGS_KEY_OOS_LOCALIZER_MODEL = "oost_oos_localizer_model"
+
+    private const val DEFAULT_RECENT_TASK_RADIUS_DP = 26
+    private const val DEFAULT_AOD_INIT_DARK_BRIGHTNESS = 80
+    private const val DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS = 160
+    private const val DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER = 1.6f
+    private const val DEFAULT_AOD_PANORAMIC_SUPPORT = true
+    private const val DEFAULT_AOD_SETTINGS_SWITCH = true
+    private const val DEFAULT_AOD_SINGLE_CLICK_BLOCK = true
+    private const val DEFAULT_NATIVE_NOTIFICATION_BUBBLES = false
+    private const val DEFAULT_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY = false
+    private const val DEFAULT_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR = false
+    private const val DEFAULT_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR = false
+    private const val DEFAULT_SYSTEMUI_NATIVE_POWER_MENU = false
+    private const val DEFAULT_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER = false
+    private const val DEFAULT_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE = false
+    private const val DEFAULT_SYSTEMUI_FORCE_TONAL_SPOT = false
+    const val SYSTEMUI_MONET_COLOR_SPEC_OFF = 0
+    const val SYSTEMUI_MONET_COLOR_SPEC_2025 = 1
+    const val SYSTEMUI_MONET_COLOR_SPEC_2021 = 2
+    private const val DEFAULT_SYSTEMUI_MONET_COLOR_SPEC_MODE = SYSTEMUI_MONET_COLOR_SPEC_OFF
+    private const val DEFAULT_SYSTEMUI_HIDE_QS_EDIT = false
+    private const val DEFAULT_SYSTEMUI_HIDE_QS_SETTINGS = false
+    private const val DEFAULT_SYSTEMUI_HIDE_QS_TOP_CARRIER = false
+    private const val DEFAULT_SYSTEMUI_HIDE_QS_MORE = false
+    private const val DEFAULT_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY = false
+    private const val DEFAULT_SETTINGS_INTERNATIONAL = false
+    private const val DEFAULT_SETTINGS_FORCE_APP_AUTO_START = false
+    private const val DEFAULT_SETTINGS_INTERNATIONAL_WALLET = false
+    private const val DEFAULT_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE = false
+    private const val DEFAULT_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS = false
+    private const val DEFAULT_SETTINGS_RESTORE_SMART_LOCK = false
+    private const val DEFAULT_SETTINGS_FORCE_GOOGLE_ENTRY = false
+    private const val DEFAULT_SETTINGS_C15_ABOUT_LAYOUT = false
+    private const val DEFAULT_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM = false
+    private const val DEFAULT_SETTINGS_RESTORE_APP_OPEN_BUTTON = false
+    private const val DEFAULT_WALLPAPERS_RED_ONE_ENTRY = false
+    private const val DEFAULT_SETTINGS_UNLOCK_REFRESH_RATE = false
+    private const val DEFAULT_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE = false
+    private const val DEFAULT_GMS_REGION_RESTRICTION_BYPASS = false
+    private const val DEFAULT_ESIM_REGION_RESTRICTION_BYPASS = false
+    private const val DEFAULT_ESIM_CONFIRMATION_CODE_PROMPT = false
+    private const val DEFAULT_ESIM_REGION_RESTRICTION_OVERRIDE = false
+    private const val DEFAULT_ESIM_PROFILE_LIMIT_BYPASS = false
+    private const val DEFAULT_MOBILE_NETWORK_HIDE_AI_LINK_BOOST = false
+    private const val DEFAULT_MOBILE_NETWORK_HIDE_ROAMING_SERVICE = false
+    private const val DEFAULT_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD = false
+    private const val DEFAULT_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION = false
+    private const val DEFAULT_MOBILE_NETWORK_HIDE_PHONE_NUMBER = false
+    private const val DEFAULT_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS = false
+    private const val DEFAULT_APP_MARKET_REGION_RESTRICTION_BYPASS = false
+    private const val DEFAULT_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS = false
+    private const val DEFAULT_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS = false
+    private const val DEFAULT_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS = false
+    private const val DEFAULT_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS = false
+    private const val DEFAULT_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS = false
+    private const val DEFAULT_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS = false
+    private const val DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION = false
+    private const val DEFAULT_OK_GOOGLE_HOTWORD_COMPATIBILITY = false
+    private const val DEFAULT_LAUNCHER_HIDE_WIDGET_LABELS = false
+    const val LAUNCHER_SEARCH_BAR_MODE_OFF = 0
+    const val LAUNCHER_SEARCH_BAR_MODE_INTERNATIONAL = 1
+    const val LAUNCHER_SEARCH_BAR_MODE_CHINA = 2
+    private const val DEFAULT_LAUNCHER_SEARCH_BAR_MODE = LAUNCHER_SEARCH_BAR_MODE_OFF
+    const val ASSISTANT_POWER_MODE_NONE = -1
+    const val ASSISTANT_POWER_MODE_SYSTEM_DEFAULT = 0
+    private const val DEFAULT_ASSISTANT_POWER_MODE = ASSISTANT_POWER_MODE_NONE
+    const val DEFAULT_OOS_LOCALIZER_REGION = "CN"
+    const val DEFAULT_OOS_LOCALIZER_LOCALE = "zh-CN"
+    const val DEFAULT_OOS_LOCALIZER_MODEL = "PMA120"
+    const val OOS_LOCALIZER_CONFIG_DEFAULT = 0
+    const val OOS_LOCALIZER_CONFIG_CUSTOM = 1
+    private const val DEFAULT_OOS_LOCALIZER_CONFIG_MODE = OOS_LOCALIZER_CONFIG_DEFAULT
+    const val OOS_LOCALIZER_FEATURE_PROPERTIES = "properties"
+    const val OOS_LOCALIZER_FEATURE_REGION = "region"
+    const val OOS_LOCALIZER_FEATURE_LOCALE = "locale"
+    const val OOS_LOCALIZER_FEATURE_BUILD_MODEL = "build_model"
+    const val OOS_LOCALIZER_FEATURE_APP_FEATURES = "app_features"
+
+    val OOS_LOCALIZER_PROPERTY_DEFAULTS = linkedMapOf(
+        "ro.oplus.image.system_ext.area" to "domestic",
+        "ro.oplus.image.my_stock.type" to "domestic_OPPO",
+        "ro.build.display.id" to "PMA120_16.0.7.210(CN01)",
+        "ro.build.display.full_id" to "PMA120domestic_11_16.0.7.210(CN01)_2026051318470000",
+        "ro.build.version.ota" to "PMA120_11.A.45_0450_202605131847",
+        "ro.oplus.image.my_manifest.version" to "PMA120_11.A.45_0450_202605131847.97.41d84fe6",
+        "ro.build.display.ota" to "PMA120_11_A.45",
+        "ro.product.authentication" to "26C44PC2V997",
+        "persist.bluetooth.airpods_support" to "true"
+    )
+
+    val OOS_LOCALIZER_APP_FEATURE_DEFAULTS = linkedMapOf(
+        "com.android.incallui.region_cn" to "true",
+        "com.android.launcher.CN_VERSION" to "true",
+        "com.android.settings.cn_version" to "true",
+        "com.oplusos.deepthinker.cn.enable" to "true",
+        "com.oplus.aiwriter.main_host_address" to "String:aitool-infer-cn.heytapmobi.com",
+        "com.oplus.smartanalysis.rule_server_host" to "String:https://iwisdom.apps.coloros.com"
+    )
+
+    val OOS_LOCALIZER_FEATURE_DEFAULTS = linkedMapOf(
+        OOS_LOCALIZER_FEATURE_PROPERTIES to true,
+        OOS_LOCALIZER_FEATURE_REGION to true,
+        OOS_LOCALIZER_FEATURE_LOCALE to true,
+        OOS_LOCALIZER_FEATURE_BUILD_MODEL to true,
+        OOS_LOCALIZER_FEATURE_APP_FEATURES to true
+    )
+
+    data class UiSnapshot(
+        val nativeNotifyIconEnabled: Boolean,
+        val nativeNotificationBubblesEnabled: Boolean,
+        val extremeRefresh165Enabled: Boolean,
+        val recentTaskRadiusEnabled: Boolean,
+        val recentTaskRadiusDp: Int,
+        val aodEnhanceEnabled: Boolean,
+        val aodInitDarkBrightness: Int,
+        val aodInitBrightBrightness: Int,
+        val aodRunningBrightnessMultiplier: Float,
+        val aodPanoramicSupportEnabled: Boolean,
+        val aodSettingsSwitchEnabled: Boolean,
+        val aodSingleClickBlockEnabled: Boolean,
+        val systemUiInternationalNetworkDisplayEnabled: Boolean,
+        val systemUiHideMobileRoamingIndicatorEnabled: Boolean,
+        val systemUiInternationalNotificationStyleEnabled: Boolean,
+        val systemUiHideQsEditEnabled: Boolean,
+        val systemUiHideQsSettingsEnabled: Boolean,
+        val systemUiHideQsTopCarrierEnabled: Boolean,
+        val systemUiHideQsMoreEnabled: Boolean,
+        val systemUiForceNativeClipboardOverlayEnabled: Boolean,
+        val settingsForceGoogleEntryEnabled: Boolean,
+        val gmsRegionRestrictionBypassEnabled: Boolean,
+        val athenaC17SwipeUpProtectionEnabled: Boolean,
+        val okGoogleHotwordCompatibilityEnabled: Boolean,
+        val oosLocalizerEnabled: Boolean,
+        val oosLocalizerConfigMode: Int,
+        val oosLocalizerRegion: String,
+        val oosLocalizerLocale: String,
+        val oosLocalizerModel: String,
+        val assistantPowerMode: Int,
+        val assistantGestureCircleEnabled: Boolean,
+        val assistantGestureCircleC17Enabled: Boolean,
+        val assistantNativePowerEnabled: Boolean,
+        val assistantNativeCircleEnabled: Boolean,
+    )
+
+    fun readCachedUiSnapshot(context: Context): UiSnapshot {
+        val prefs = prefs(context)
+        return UiSnapshot(
+            nativeNotifyIconEnabled = prefs.getBoolean(KEY_NATIVE_NOTIFY_ICON, true),
+            nativeNotificationBubblesEnabled = prefs.getBoolean(
+                KEY_NATIVE_NOTIFICATION_BUBBLES,
+                DEFAULT_NATIVE_NOTIFICATION_BUBBLES
+            ),
+            extremeRefresh165Enabled = prefs.getBoolean(KEY_EXTREME_REFRESH_165, false),
+            recentTaskRadiusEnabled = prefs.getBoolean(KEY_RECENT_TASK_RADIUS, false),
+            recentTaskRadiusDp = prefs.getInt(
+                KEY_RECENT_TASK_RADIUS_DP,
+                DEFAULT_RECENT_TASK_RADIUS_DP
+            ).coerceIn(0, 260),
+            aodEnhanceEnabled = prefs.getBoolean(KEY_AOD_ENHANCE, false),
+            aodInitDarkBrightness = prefs.getInt(
+                KEY_AOD_INIT_DARK_BRIGHTNESS,
+                DEFAULT_AOD_INIT_DARK_BRIGHTNESS
+            ).coerceIn(0, 255),
+            aodInitBrightBrightness = prefs.getInt(
+                KEY_AOD_INIT_BRIGHT_BRIGHTNESS,
+                DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS
+            ).coerceIn(0, 255),
+            aodRunningBrightnessMultiplier = prefs.getFloat(
+                KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
+                DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
+            ).coerceIn(1.0f, 3.0f),
+            aodPanoramicSupportEnabled = prefs.getBoolean(
+                KEY_AOD_PANORAMIC_SUPPORT,
+                DEFAULT_AOD_PANORAMIC_SUPPORT
+            ),
+            aodSettingsSwitchEnabled = prefs.getBoolean(
+                KEY_AOD_SETTINGS_SWITCH,
+                DEFAULT_AOD_SETTINGS_SWITCH
+            ),
+            aodSingleClickBlockEnabled = prefs.getBoolean(
+                KEY_AOD_SINGLE_CLICK_BLOCK,
+                DEFAULT_AOD_SINGLE_CLICK_BLOCK
+            ),
+            systemUiInternationalNetworkDisplayEnabled = prefs.getBoolean(
+                KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+                DEFAULT_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY
+            ),
+            systemUiHideMobileRoamingIndicatorEnabled = prefs.getBoolean(
+                KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+                DEFAULT_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR
+            ),
+            systemUiInternationalNotificationStyleEnabled = prefs.getBoolean(
+                KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+                DEFAULT_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE
+            ),
+            systemUiHideQsEditEnabled = prefs.getBoolean(
+                KEY_SYSTEMUI_HIDE_QS_EDIT,
+                DEFAULT_SYSTEMUI_HIDE_QS_EDIT
+            ),
+            systemUiHideQsSettingsEnabled = prefs.getBoolean(
+                KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+                DEFAULT_SYSTEMUI_HIDE_QS_SETTINGS
+            ),
+            systemUiHideQsTopCarrierEnabled = prefs.getBoolean(
+                KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+                DEFAULT_SYSTEMUI_HIDE_QS_TOP_CARRIER
+            ),
+            systemUiHideQsMoreEnabled = prefs.getBoolean(
+                KEY_SYSTEMUI_HIDE_QS_MORE,
+                DEFAULT_SYSTEMUI_HIDE_QS_MORE
+            ),
+            systemUiForceNativeClipboardOverlayEnabled = prefs.getBoolean(
+                KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+                DEFAULT_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY
+            ),
+            settingsForceGoogleEntryEnabled = prefs.getBoolean(
+                KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+                DEFAULT_SETTINGS_FORCE_GOOGLE_ENTRY
+            ),
+            gmsRegionRestrictionBypassEnabled = prefs.getBoolean(
+                KEY_GMS_REGION_RESTRICTION_BYPASS,
+                DEFAULT_GMS_REGION_RESTRICTION_BYPASS,
+            ),
+            athenaC17SwipeUpProtectionEnabled = prefs.getBoolean(
+                KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+                DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION,
+            ),
+            okGoogleHotwordCompatibilityEnabled = prefs.getBoolean(
+                KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+                DEFAULT_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            ),
+            oosLocalizerEnabled = prefs.getBoolean(KEY_OOS_LOCALIZER, false),
+            oosLocalizerConfigMode = prefs.getInt(
+                KEY_OOS_LOCALIZER_CONFIG_MODE,
+                DEFAULT_OOS_LOCALIZER_CONFIG_MODE
+            ).sanitizeOosLocalizerConfigMode(),
+            oosLocalizerRegion = prefs.getString(
+                KEY_OOS_LOCALIZER_REGION,
+                DEFAULT_OOS_LOCALIZER_REGION
+            ).sanitizeOosLocalizerRegion(),
+            oosLocalizerLocale = prefs.getString(
+                KEY_OOS_LOCALIZER_LOCALE,
+                DEFAULT_OOS_LOCALIZER_LOCALE
+            ).sanitizeOosLocalizerLocale(),
+            oosLocalizerModel = prefs.getString(
+                KEY_OOS_LOCALIZER_MODEL,
+                DEFAULT_OOS_LOCALIZER_MODEL
+            ).sanitizeOosLocalizerModel(),
+            assistantPowerMode = prefs.getInt(
+                KEY_ASSISTANT_POWER_MODE,
+                DEFAULT_ASSISTANT_POWER_MODE
+            ).sanitizeAssistantPowerMode(),
+            assistantGestureCircleEnabled = prefs.getBoolean(
+                KEY_ASSISTANT_GESTURE_CIRCLE,
+                false
+            ),
+            assistantGestureCircleC17Enabled = prefs.getBoolean(
+                KEY_ASSISTANT_GESTURE_CIRCLE_C17,
+                false
+            ),
+            assistantNativePowerEnabled = prefs.getBoolean(
+                KEY_ASSISTANT_NATIVE_POWER,
+                false
+            ),
+            assistantNativeCircleEnabled = prefs.getBoolean(
+                KEY_ASSISTANT_NATIVE_CIRCLE,
+                false
+            ),
+        )
+    }
+
+    fun readSyncedUiSnapshot(context: Context): UiSnapshot {
+        return UiSnapshot(
+            nativeNotifyIconEnabled = isNativeNotifyIconEnabled(context),
+            nativeNotificationBubblesEnabled = isNativeNotificationBubblesEnabled(context),
+            extremeRefresh165Enabled = isExtremeRefresh165Enabled(context),
+            recentTaskRadiusEnabled = isRecentTaskRadiusEnabled(context),
+            recentTaskRadiusDp = getRecentTaskRadiusDp(context),
+            aodEnhanceEnabled = isAodEnhanceEnabled(context),
+            aodInitDarkBrightness = getAodInitDarkBrightness(context),
+            aodInitBrightBrightness = getAodInitBrightBrightness(context),
+            aodRunningBrightnessMultiplier = getAodRunningBrightnessMultiplier(context),
+            aodPanoramicSupportEnabled = isAodPanoramicSupportEnabled(context),
+            aodSettingsSwitchEnabled = isAodSettingsSwitchEnabled(context),
+            aodSingleClickBlockEnabled = isAodSingleClickBlockEnabled(context),
+            systemUiInternationalNetworkDisplayEnabled =
+                isSystemUiInternationalNetworkDisplayEnabled(context),
+            systemUiHideMobileRoamingIndicatorEnabled =
+                isSystemUiHideMobileRoamingIndicatorEnabled(context),
+            systemUiInternationalNotificationStyleEnabled =
+                isSystemUiInternationalNotificationStyleEnabled(context),
+            systemUiHideQsEditEnabled = isSystemUiHideQsEditEnabled(context),
+            systemUiHideQsSettingsEnabled = isSystemUiHideQsSettingsEnabled(context),
+            systemUiHideQsTopCarrierEnabled = isSystemUiHideQsTopCarrierEnabled(context),
+            systemUiHideQsMoreEnabled = isSystemUiHideQsMoreEnabled(context),
+            systemUiForceNativeClipboardOverlayEnabled = isSystemUiForceNativeClipboardOverlayEnabled(context),
+            settingsForceGoogleEntryEnabled = isSettingsForceGoogleEntryEnabled(context),
+            gmsRegionRestrictionBypassEnabled = isGmsRegionRestrictionBypassEnabled(context),
+            athenaC17SwipeUpProtectionEnabled = isAthenaC17SwipeUpProtectionEnabled(context),
+            okGoogleHotwordCompatibilityEnabled = isOkGoogleHotwordCompatibilityEnabled(context),
+            oosLocalizerEnabled = isOosLocalizerEnabled(context),
+            oosLocalizerConfigMode = getOosLocalizerConfigMode(context),
+            oosLocalizerRegion = getOosLocalizerRegion(context),
+            oosLocalizerLocale = getOosLocalizerLocale(context),
+            oosLocalizerModel = getOosLocalizerModel(context),
+            assistantPowerMode = getAssistantPowerMode(context),
+            assistantGestureCircleEnabled = isAssistantGestureCircleEnabled(context),
+            assistantGestureCircleC17Enabled = isAssistantGestureCircleC17Enabled(context),
+            assistantNativePowerEnabled = isAssistantNativePowerEnabled(context),
+            assistantNativeCircleEnabled = isAssistantNativeCircleEnabled(context),
+        )
+    }
+
+    fun isNativeNotifyIconEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_NATIVE_NOTIFY_ICON,
+            propertyKey = PROP_KEY_NATIVE_NOTIFY_ICON,
+            settingsKey = SETTINGS_KEY_NATIVE_NOTIFY_ICON,
+            flagFilePath = FLAG_FILE_PATH_NATIVE_NOTIFY_ICON,
+            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFY_ICON,
+            prefsKey = KEY_NATIVE_NOTIFY_ICON,
+            defaultValue = true
+        )
+    }
+
+    fun setNativeNotifyIconEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_NATIVE_NOTIFY_ICON, enabled).commit()
+        syncReadableState(context)
+        syncFlagState(
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_NATIVE_NOTIFY_ICON,
+                PROP_KEY_NATIVE_NOTIFY_ICON
+            ),
+            settingsGlobalKey = SETTINGS_KEY_NATIVE_NOTIFY_ICON,
+            flagFilePath = FLAG_FILE_PATH_NATIVE_NOTIFY_ICON
+        )
+    }
+
+    fun isExtremeRefresh165Enabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_EXTREME_REFRESH_165,
+            propertyKey = PROP_KEY_EXTREME_REFRESH_165,
+            settingsKey = SETTINGS_KEY_EXTREME_REFRESH_165,
+            flagFilePath = FLAG_FILE_PATH_EXTREME_REFRESH_165,
+            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_EXTREME_REFRESH_165,
+            prefsKey = KEY_EXTREME_REFRESH_165,
+            defaultValue = false
+        )
+    }
+
+    fun setExtremeRefresh165Enabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_EXTREME_REFRESH_165, enabled).commit()
+        syncReadableState(context)
+        syncFlagState(
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_EXTREME_REFRESH_165,
+                PROP_KEY_EXTREME_REFRESH_165
+            ),
+            settingsGlobalKey = SETTINGS_KEY_EXTREME_REFRESH_165,
+            flagFilePath = FLAG_FILE_PATH_EXTREME_REFRESH_165
+        )
+    }
+
+    fun isRecentTaskRadiusEnabled(context: Context): Boolean {
+        return prefs(context).getBoolean(KEY_RECENT_TASK_RADIUS, false)
+    }
+
+    fun setRecentTaskRadiusEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_RECENT_TASK_RADIUS, enabled).commit()
+        syncReadableState(context)
+        syncFlagState(
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_RECENT_TASK_RADIUS,
+                PROP_KEY_RECENT_TASK_RADIUS
+            ),
+            settingsGlobalKey = SETTINGS_KEY_RECENT_TASK_RADIUS,
+            flagFilePath = FLAG_FILE_PATH_RECENT_TASK_RADIUS
+        )
+    }
+
+    fun isAodEnhanceEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_AOD_ENHANCE,
+            propertyKey = PROP_KEY_AOD_ENHANCE,
+            settingsKey = SETTINGS_KEY_AOD_ENHANCE,
+            flagFilePath = FLAG_FILE_PATH_AOD_ENHANCE,
+            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_AOD_ENHANCE,
+            prefsKey = KEY_AOD_ENHANCE,
+            defaultValue = false
+        )
+    }
+
+    fun setAodEnhanceEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_AOD_ENHANCE, enabled).commit()
+        syncReadableState(context)
+        syncFlagState(
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_ENHANCE,
+                PROP_KEY_AOD_ENHANCE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_ENHANCE,
+            flagFilePath = FLAG_FILE_PATH_AOD_ENHANCE
+        )
+    }
+
+    fun isOosLocalizerEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER,
+            propertyKey = PROP_KEY_OOS_LOCALIZER,
+            settingsKey = SETTINGS_KEY_OOS_LOCALIZER,
+            flagFilePath = FLAG_FILE_PATH_OOS_LOCALIZER,
+            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_OOS_LOCALIZER,
+            prefsKey = KEY_OOS_LOCALIZER,
+            defaultValue = false
+        )
+    }
+
+    fun setOosLocalizerEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_OOS_LOCALIZER, enabled).commit()
+        syncReadableState(context)
+        syncFlagState(
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER,
+                PROP_KEY_OOS_LOCALIZER
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER,
+            flagFilePath = FLAG_FILE_PATH_OOS_LOCALIZER
+        )
+    }
+
+    fun getOosLocalizerConfigMode(context: Context): Int {
+        return readSyncedInt(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE,
+            propertyKey = PROP_KEY_OOS_LOCALIZER_CONFIG_MODE,
+            settingsKey = SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE,
+            prefsKey = KEY_OOS_LOCALIZER_CONFIG_MODE,
+            defaultValue = DEFAULT_OOS_LOCALIZER_CONFIG_MODE
+        ).sanitizeOosLocalizerConfigMode()
+    }
+
+    fun setOosLocalizerConfigMode(context: Context, mode: Int) {
+        val sanitized = mode.sanitizeOosLocalizerConfigMode()
+        prefs(context).edit().putInt(KEY_OOS_LOCALIZER_CONFIG_MODE, sanitized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = sanitized.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE,
+                PROP_KEY_OOS_LOCALIZER_CONFIG_MODE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE
+        )
+    }
+
+    fun getOosLocalizerRegion(context: Context): String {
+        return readSyncedString(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER_REGION,
+            propertyKey = PROP_KEY_OOS_LOCALIZER_REGION,
+            settingsKey = SETTINGS_KEY_OOS_LOCALIZER_REGION,
+            prefsKey = KEY_OOS_LOCALIZER_REGION,
+            defaultValue = DEFAULT_OOS_LOCALIZER_REGION
+        ).sanitizeOosLocalizerRegion()
+    }
+
+    fun setOosLocalizerRegion(context: Context, value: String) {
+        val sanitized = value.sanitizeOosLocalizerRegion()
+        prefs(context).edit().putString(KEY_OOS_LOCALIZER_REGION, sanitized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = sanitized,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER_REGION,
+                PROP_KEY_OOS_LOCALIZER_REGION
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_REGION
+        )
+    }
+
+    fun getOosLocalizerLocale(context: Context): String {
+        return readSyncedString(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE,
+            propertyKey = PROP_KEY_OOS_LOCALIZER_LOCALE,
+            settingsKey = SETTINGS_KEY_OOS_LOCALIZER_LOCALE,
+            prefsKey = KEY_OOS_LOCALIZER_LOCALE,
+            defaultValue = DEFAULT_OOS_LOCALIZER_LOCALE
+        ).sanitizeOosLocalizerLocale()
+    }
+
+    fun setOosLocalizerLocale(context: Context, value: String) {
+        val sanitized = value.sanitizeOosLocalizerLocale()
+        prefs(context).edit().putString(KEY_OOS_LOCALIZER_LOCALE, sanitized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = sanitized,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE,
+                PROP_KEY_OOS_LOCALIZER_LOCALE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_LOCALE
+        )
+    }
+
+    fun getOosLocalizerModel(context: Context): String {
+        return readSyncedString(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL,
+            propertyKey = PROP_KEY_OOS_LOCALIZER_MODEL,
+            settingsKey = SETTINGS_KEY_OOS_LOCALIZER_MODEL,
+            prefsKey = KEY_OOS_LOCALIZER_MODEL,
+            defaultValue = DEFAULT_OOS_LOCALIZER_MODEL
+        ).sanitizeOosLocalizerModel()
+    }
+
+    fun setOosLocalizerModel(context: Context, value: String) {
+        val sanitized = value.sanitizeOosLocalizerModel()
+        prefs(context).edit().putString(KEY_OOS_LOCALIZER_MODEL, sanitized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = sanitized,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL,
+                PROP_KEY_OOS_LOCALIZER_MODEL
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_MODEL
+        )
+    }
+
+    fun getOosLocalizerProperty(context: Context, key: String): String {
+        val defaultValue = OOS_LOCALIZER_PROPERTY_DEFAULTS[key].orEmpty()
+        return prefs(context).getString(KEY_OOS_LOCALIZER_PROPERTY_PREFIX + key, defaultValue)
+            ?: defaultValue
+    }
+
+    fun setOosLocalizerProperty(context: Context, key: String, value: String) {
+        if (key !in OOS_LOCALIZER_PROPERTY_DEFAULTS) return
+        prefs(context).edit()
+            .putString(KEY_OOS_LOCALIZER_PROPERTY_PREFIX + key, value.trim())
+            .commit()
+        syncReadableState(context)
+    }
+
+    fun getOosLocalizerAppFeature(context: Context, key: String): String {
+        val defaultValue = OOS_LOCALIZER_APP_FEATURE_DEFAULTS[key].orEmpty()
+        return prefs(context).getString(KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX + key, defaultValue)
+            ?: defaultValue
+    }
+
+    fun setOosLocalizerAppFeature(context: Context, key: String, value: String) {
+        if (key !in OOS_LOCALIZER_APP_FEATURE_DEFAULTS) return
+        prefs(context).edit()
+            .putString(KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX + key, value.trim())
+            .commit()
+        syncReadableState(context)
+    }
+
+    fun setOosLocalizerCustomEntries(
+        context: Context,
+        propertyValues: Map<String, String>,
+        appFeatureValues: Map<String, String>,
+        featureEnabledStates: Map<String, Boolean>
+    ): Boolean {
+        val preferences = prefs(context)
+        val featureOverrides = getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_FEATURES).toMutableSet()
+        featureEnabledStates.forEach { (feature, enabled) ->
+            val defaultValue = OOS_LOCALIZER_FEATURE_DEFAULTS[feature] ?: return@forEach
+            if (enabled == defaultValue) {
+                featureOverrides.remove(feature)
+            } else {
+                featureOverrides.add(feature)
+            }
+        }
+        val editor = preferences.edit()
+            .putStringSet(KEY_OOS_LOCALIZER_DISABLED_FEATURES, featureOverrides.toSet())
+        propertyValues.forEach { (key, value) ->
+            if (key in OOS_LOCALIZER_PROPERTY_DEFAULTS) {
+                editor.putString(KEY_OOS_LOCALIZER_PROPERTY_PREFIX + key, value.trim())
+            }
+        }
+        appFeatureValues.forEach { (key, value) ->
+            if (key in OOS_LOCALIZER_APP_FEATURE_DEFAULTS) {
+                editor.putString(KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX + key, value.trim())
+            }
+        }
+        return editor.commit().also { committed ->
+            if (committed) syncReadableState(context)
+        }
+    }
+
+    fun isOosLocalizerPackageEnabled(context: Context, packageName: String): Boolean {
+        return packageName !in getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_PACKAGES)
+    }
+
+    fun setOosLocalizerPackageEnabled(context: Context, packageName: String, enabled: Boolean) {
+        val disabled = getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_PACKAGES).toMutableSet()
+        if (enabled) {
+            disabled.remove(packageName)
+        } else {
+            disabled.add(packageName)
+        }
+        prefs(context).edit().putStringSet(KEY_OOS_LOCALIZER_DISABLED_PACKAGES, disabled.toSet()).commit()
+        syncReadableState(context)
+    }
+
+    fun setOosLocalizerPackageStates(context: Context, enabledStates: Map<String, Boolean>): Boolean {
+        val disabled = getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_PACKAGES).toMutableSet()
+        enabledStates.forEach { (packageName, enabled) ->
+            if (enabled) {
+                disabled.remove(packageName)
+            } else {
+                disabled.add(packageName)
+            }
+        }
+        return prefs(context).edit()
+            .putStringSet(KEY_OOS_LOCALIZER_DISABLED_PACKAGES, disabled.toSet())
+            .commit()
+            .also { committed ->
+                if (committed) syncReadableState(context)
+            }
+    }
+
+    fun isOosLocalizerFeatureEnabled(context: Context, feature: String): Boolean {
+        val defaultValue = OOS_LOCALIZER_FEATURE_DEFAULTS[feature] ?: true
+        if (defaultValue) {
+            return feature !in getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_FEATURES)
+        }
+        return feature in getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_FEATURES)
+    }
+
+    fun setOosLocalizerFeatureEnabled(context: Context, feature: String, enabled: Boolean) {
+        if (feature !in OOS_LOCALIZER_FEATURE_DEFAULTS) return
+        val disabled = getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_FEATURES).toMutableSet()
+        if (enabled) {
+            disabled.remove(feature)
+        } else {
+            disabled.add(feature)
+        }
+        prefs(context).edit().putStringSet(KEY_OOS_LOCALIZER_DISABLED_FEATURES, disabled.toSet()).commit()
+        syncReadableState(context)
+    }
+
+    fun getAssistantPowerMode(context: Context): Int {
+        return readSyncedInt(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_POWER_MODE,
+            propertyKey = PROP_KEY_ASSISTANT_POWER_MODE,
+            settingsKey = SETTINGS_KEY_ASSISTANT_POWER_MODE,
+            prefsKey = KEY_ASSISTANT_POWER_MODE,
+            defaultValue = DEFAULT_ASSISTANT_POWER_MODE
+        ).sanitizeAssistantPowerMode()
+    }
+
+    fun setAssistantPowerMode(context: Context, mode: Int) {
+        val normalized = mode.sanitizeAssistantPowerMode()
+        prefs(context).edit().putInt(KEY_ASSISTANT_POWER_MODE, normalized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = normalized.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_POWER_MODE,
+                PROP_KEY_ASSISTANT_POWER_MODE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_POWER_MODE
+        )
+    }
+
+    fun isAssistantGestureCircleEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE,
+            propertyKey = PROP_KEY_ASSISTANT_GESTURE_CIRCLE,
+            settingsKey = SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ASSISTANT_GESTURE_CIRCLE,
+            defaultValue = false
+        )
+    }
+
+    fun setAssistantGestureCircleEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_ASSISTANT_GESTURE_CIRCLE, enabled).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = if (enabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE,
+                PROP_KEY_ASSISTANT_GESTURE_CIRCLE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE
+        )
+    }
+
+    fun isAssistantGestureCircleC17Enabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17,
+            propertyKey = PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17,
+            settingsKey = SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE_C17,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ASSISTANT_GESTURE_CIRCLE_C17,
+            defaultValue = false
+        )
+    }
+
+    fun setAssistantGestureCircleC17Enabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_ASSISTANT_GESTURE_CIRCLE_C17, enabled).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = if (enabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17,
+                PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE_C17
+        )
+    }
+
+    fun isAssistantNativePowerEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_NATIVE_POWER,
+            propertyKey = PROP_KEY_ASSISTANT_NATIVE_POWER,
+            settingsKey = SETTINGS_KEY_ASSISTANT_NATIVE_POWER,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ASSISTANT_NATIVE_POWER,
+            defaultValue = false,
+        )
+    }
+
+    fun setAssistantNativePowerEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_ASSISTANT_NATIVE_POWER, enabled).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = if (enabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_NATIVE_POWER,
+                PROP_KEY_ASSISTANT_NATIVE_POWER,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_NATIVE_POWER,
+        )
+    }
+
+    fun isAssistantInternationalPowerChordEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+            propertyKey = PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+            settingsKey = SETTINGS_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+            defaultValue = true,
+        )
+    }
+
+    fun setAssistantInternationalPowerChordEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit()
+            .putBoolean(KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD, enabled)
+            .commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = if (enabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+                PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+        )
+    }
+
+    fun isAssistantNativeCircleEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_NATIVE_CIRCLE,
+            propertyKey = PROP_KEY_ASSISTANT_NATIVE_CIRCLE,
+            settingsKey = SETTINGS_KEY_ASSISTANT_NATIVE_CIRCLE,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ASSISTANT_NATIVE_CIRCLE,
+            defaultValue = false,
+        )
+    }
+
+    fun setAssistantNativeCircleEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_ASSISTANT_NATIVE_CIRCLE, enabled).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = if (enabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_NATIVE_CIRCLE,
+                PROP_KEY_ASSISTANT_NATIVE_CIRCLE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_NATIVE_CIRCLE,
+        )
+    }
+
+    fun getRecentTaskRadiusDp(context: Context): Int {
+        return prefs(context)
+            .getInt(KEY_RECENT_TASK_RADIUS_DP, DEFAULT_RECENT_TASK_RADIUS_DP)
+            .coerceIn(0, 260)
+    }
+
+    fun setRecentTaskRadiusDp(context: Context, value: Int) {
+        val normalized = value.coerceIn(0, 260)
+        prefs(context).edit().putInt(KEY_RECENT_TASK_RADIUS_DP, normalized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = normalized.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_RECENT_TASK_RADIUS_DP,
+                PROP_KEY_RECENT_TASK_RADIUS_DP
+            ),
+            settingsGlobalKey = SETTINGS_KEY_RECENT_TASK_RADIUS_DP
+        )
+    }
+
+    fun getAodInitDarkBrightness(context: Context): Int {
+        return prefs(context)
+            .getInt(KEY_AOD_INIT_DARK_BRIGHTNESS, DEFAULT_AOD_INIT_DARK_BRIGHTNESS)
+            .coerceIn(0, 255)
+    }
+
+    fun setAodInitDarkBrightness(context: Context, value: Int) {
+        val normalized = value.coerceIn(0, 255)
+        prefs(context).edit().putInt(KEY_AOD_INIT_DARK_BRIGHTNESS, normalized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = normalized.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_INIT_DARK_BRIGHTNESS,
+                PROP_KEY_AOD_INIT_DARK_BRIGHTNESS
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_INIT_DARK_BRIGHTNESS
+        )
+    }
+
+    fun getAodInitBrightBrightness(context: Context): Int {
+        return prefs(context)
+            .getInt(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS)
+            .coerceIn(0, 255)
+    }
+
+    fun setAodInitBrightBrightness(context: Context, value: Int) {
+        val normalized = value.coerceIn(0, 255)
+        prefs(context).edit().putInt(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, normalized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = normalized.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS,
+                PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_INIT_BRIGHT_BRIGHTNESS
+        )
+    }
+
+    fun getAodRunningBrightnessMultiplier(context: Context): Float {
+        return prefs(context)
+            .getFloat(
+                KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
+                DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
+            )
+            .coerceIn(1.0f, 3.0f)
+    }
+
+    fun setAodRunningBrightnessMultiplier(context: Context, value: Float) {
+        val normalized = value.coerceIn(1.0f, 3.0f)
+        prefs(context).edit().putFloat(KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER, normalized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = normalized.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
+                PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
+        )
+    }
+
+    fun isAodPanoramicSupportEnabled(context: Context): Boolean {
+        return prefs(context).getBoolean(KEY_AOD_PANORAMIC_SUPPORT, DEFAULT_AOD_PANORAMIC_SUPPORT)
+    }
+
+    fun setAodPanoramicSupportEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_AOD_PANORAMIC_SUPPORT, enabled).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = if (enabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_PANORAMIC_SUPPORT,
+                PROP_KEY_AOD_PANORAMIC_SUPPORT
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_PANORAMIC_SUPPORT
+        )
+    }
+
+    fun isAodSettingsSwitchEnabled(context: Context): Boolean {
+        return prefs(context).getBoolean(KEY_AOD_SETTINGS_SWITCH, DEFAULT_AOD_SETTINGS_SWITCH)
+    }
+
+    fun setAodSettingsSwitchEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_AOD_SETTINGS_SWITCH, enabled).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = if (enabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_SETTINGS_SWITCH,
+                PROP_KEY_AOD_SETTINGS_SWITCH
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_SETTINGS_SWITCH
+        )
+    }
+
+    fun isAodSingleClickBlockEnabled(context: Context): Boolean {
+        return prefs(context).getBoolean(KEY_AOD_SINGLE_CLICK_BLOCK, DEFAULT_AOD_SINGLE_CLICK_BLOCK)
+    }
+
+    fun setAodSingleClickBlockEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_AOD_SINGLE_CLICK_BLOCK, enabled).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = if (enabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_SINGLE_CLICK_BLOCK,
+                PROP_KEY_AOD_SINGLE_CLICK_BLOCK
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_SINGLE_CLICK_BLOCK
+        )
+    }
+
+    fun isNativeNotificationBubblesEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_NATIVE_NOTIFICATION_BUBBLES,
+            propertyKey = PROP_KEY_NATIVE_NOTIFICATION_BUBBLES,
+            settingsKey = SETTINGS_KEY_NATIVE_NOTIFICATION_BUBBLES,
+            flagFilePath = FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES,
+            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES,
+            prefsKey = KEY_NATIVE_NOTIFICATION_BUBBLES,
+            defaultValue = DEFAULT_NATIVE_NOTIFICATION_BUBBLES
+        )
+    }
+
+    fun setNativeNotificationBubblesEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_NATIVE_NOTIFICATION_BUBBLES, enabled).commit()
+        syncReadableState(context)
+        syncFlagState(
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_NATIVE_NOTIFICATION_BUBBLES,
+                PROP_KEY_NATIVE_NOTIFICATION_BUBBLES
+            ),
+            settingsGlobalKey = SETTINGS_KEY_NATIVE_NOTIFICATION_BUBBLES,
+            flagFilePath = FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES
+        )
+    }
+
+    fun isSystemUiInternationalNetworkDisplayEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            propertyKey = PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            defaultValue = DEFAULT_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY
+        )
+    }
+
+    fun setSystemUiInternationalNetworkDisplayEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+                PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY
+        )
+    }
+
+    fun isSystemUiHideMobileRoamingIndicatorEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR
+        )
+    }
+
+    fun setSystemUiHideMobileRoamingIndicatorEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+                PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR
+        )
+    }
+
+    fun isSystemUiHideNetworkActivityIndicatorEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+        )
+    }
+
+    fun setSystemUiHideNetworkActivityIndicatorEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+                PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+        )
+    }
+
+    fun isSystemUiNativePowerMenuEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            propertyKey = PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            defaultValue = DEFAULT_SYSTEMUI_NATIVE_POWER_MENU,
+        )
+    }
+
+    fun setSystemUiNativePowerMenuEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+                PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+        )
+    }
+
+    fun isSystemUiRestoreC16NetworkIconOrderEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            propertyKey = PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            defaultValue = DEFAULT_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+        )
+    }
+
+    fun setSystemUiRestoreC16NetworkIconOrderEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+                PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+        )
+    }
+
+    fun isSystemUiInternationalNotificationStyleEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            propertyKey = PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            defaultValue = DEFAULT_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE
+        )
+    }
+
+    fun setSystemUiInternationalNotificationStyleEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+                PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE
+        )
+    }
+
+    fun isSystemUiForceTonalSpotEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            propertyKey = PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            defaultValue = DEFAULT_SYSTEMUI_FORCE_TONAL_SPOT,
+        )
+    }
+
+    fun setSystemUiForceTonalSpotEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+                PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+        )
+    }
+
+    fun getSystemUiMonetColorSpecMode(context: Context): Int {
+        return readSyncedInt(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+            propertyKey = PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+            prefsKey = KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+            defaultValue = DEFAULT_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+        ).sanitizeSystemUiMonetColorSpecMode()
+    }
+
+    fun setSystemUiMonetColorSpecMode(context: Context, mode: Int) {
+        val normalized = mode.sanitizeSystemUiMonetColorSpecMode()
+        prefs(context).edit().putInt(KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE, normalized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = normalized.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+                PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+        )
+    }
+
+    fun isSystemUiHideQsEditEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_EDIT,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_EDIT,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_EDIT,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_EDIT,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_EDIT
+        )
+    }
+
+    fun setSystemUiHideQsEditEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_EDIT,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_EDIT,
+                PROP_KEY_SYSTEMUI_HIDE_QS_EDIT
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_EDIT
+        )
+    }
+
+    fun isSystemUiHideQsSettingsEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_SETTINGS
+        )
+    }
+
+    fun setSystemUiHideQsSettingsEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+                PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_SETTINGS
+        )
+    }
+
+    fun isSystemUiHideQsTopCarrierEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_TOP_CARRIER
+        )
+    }
+
+    fun setSystemUiHideQsTopCarrierEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+                PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER
+        )
+    }
+
+    fun isSystemUiHideQsMoreEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_MORE,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_MORE,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_MORE,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_MORE,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_MORE
+        )
+    }
+
+    fun setSystemUiHideQsMoreEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_MORE,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_MORE,
+                PROP_KEY_SYSTEMUI_HIDE_QS_MORE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_MORE
+        )
+    }
+
+    fun isSystemUiForceNativeClipboardOverlayEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            propertyKey = PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            defaultValue = DEFAULT_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY
+        )
+    }
+
+    fun setSystemUiForceNativeClipboardOverlayEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+                PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY
+        )
+    }
+
+    fun isSettingsInternationalEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL,
+            propertyKey = PROP_KEY_SETTINGS_INTERNATIONAL,
+            settingsKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_INTERNATIONAL,
+            defaultValue = DEFAULT_SETTINGS_INTERNATIONAL
+        )
+    }
+
+    fun setSettingsInternationalEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_INTERNATIONAL,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL,
+                PROP_KEY_SETTINGS_INTERNATIONAL
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL
+        )
+    }
+
+    fun isSettingsForceAppAutoStartEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_APP_AUTO_START,
+            propertyKey = PROP_KEY_SETTINGS_FORCE_APP_AUTO_START,
+            settingsKey = SETTINGS_KEY_SETTINGS_FORCE_APP_AUTO_START,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_FORCE_APP_AUTO_START,
+            defaultValue = DEFAULT_SETTINGS_FORCE_APP_AUTO_START
+        )
+    }
+
+    fun setSettingsForceAppAutoStartEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_FORCE_APP_AUTO_START,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_FORCE_APP_AUTO_START,
+                PROP_KEY_SETTINGS_FORCE_APP_AUTO_START
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_FORCE_APP_AUTO_START
+        )
+    }
+
+    fun isSettingsInternationalWalletEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL_WALLET,
+            propertyKey = PROP_KEY_SETTINGS_INTERNATIONAL_WALLET,
+            settingsKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL_WALLET,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_INTERNATIONAL_WALLET,
+            defaultValue = DEFAULT_SETTINGS_INTERNATIONAL_WALLET
+        )
+    }
+
+    fun setSettingsInternationalWalletEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_INTERNATIONAL_WALLET,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL_WALLET,
+                PROP_KEY_SETTINGS_INTERNATIONAL_WALLET
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL_WALLET
+        )
+    }
+
+    fun isSettingsRestoreDomesticAboutDeviceEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            propertyKey = PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            defaultValue = DEFAULT_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+        )
+    }
+
+    fun isSettingsRestoreDomesticAuxiliaryFunctionsEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            propertyKey = PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            defaultValue = DEFAULT_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+        )
+    }
+
+    fun setSettingsRestoreDomesticAboutDeviceEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+                PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+        )
+    }
+
+    fun setSettingsRestoreDomesticAuxiliaryFunctionsEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+                PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+        )
+    }
+
+    fun isSettingsSkipSpecialPermissionRiskConfirmEnabled(context: Context): Boolean = readSyncedToggle(
+        context = context,
+        persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        propertyKey = PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        settingsKey = SETTINGS_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        flagFilePath = null,
+        legacyFlagFilePath = null,
+        prefsKey = KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        defaultValue = DEFAULT_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+    )
+
+    fun setSettingsSkipSpecialPermissionRiskConfirmEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+                PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        )
+    }
+
+    fun isSettingsRestoreAppOpenButtonEnabled(context: Context): Boolean = readSyncedToggle(
+        context = context,
+        persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        propertyKey = PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        flagFilePath = null,
+        legacyFlagFilePath = null,
+        prefsKey = KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        defaultValue = DEFAULT_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+    )
+
+    fun setSettingsRestoreAppOpenButtonEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+                PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        )
+    }
+
+    fun isSettingsC15AboutLayoutEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            propertyKey = PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            settingsKey = SETTINGS_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            defaultValue = DEFAULT_SETTINGS_C15_ABOUT_LAYOUT,
+        )
+    }
+
+    fun setSettingsC15AboutLayoutEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+                PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+        )
+    }
+
+    fun isWallpapersRedOneEntryEnabled(context: Context): Boolean = readSyncedToggle(
+        context = context,
+        persistPropertyKey = PERSIST_PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
+        propertyKey = PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
+        settingsKey = SETTINGS_KEY_WALLPAPERS_RED_ONE_ENTRY,
+        flagFilePath = null,
+        legacyFlagFilePath = null,
+        prefsKey = KEY_WALLPAPERS_RED_ONE_ENTRY,
+        defaultValue = DEFAULT_WALLPAPERS_RED_ONE_ENTRY,
+    )
+
+    fun setWallpapersRedOneEntryEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_WALLPAPERS_RED_ONE_ENTRY,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
+                PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_WALLPAPERS_RED_ONE_ENTRY,
+        )
+    }
+
+    fun isSettingsRefreshRateUnlocked(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            propertyKey = PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            settingsKey = SETTINGS_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            defaultValue = DEFAULT_SETTINGS_UNLOCK_REFRESH_RATE,
+        )
+    }
+
+    fun setSettingsRefreshRateUnlocked(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+                PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+        )
+    }
+
+    fun isSettingsForceGlobalExtremeRefreshRateEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            propertyKey = PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            settingsKey = SETTINGS_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            defaultValue = DEFAULT_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+        )
+    }
+
+    fun setSettingsForceGlobalExtremeRefreshRateEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+                PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+        )
+    }
+
+    fun isSettingsRestoreSmartLockEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
+            propertyKey = PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
+            settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_SMART_LOCK,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_RESTORE_SMART_LOCK,
+            defaultValue = DEFAULT_SETTINGS_RESTORE_SMART_LOCK,
+        )
+    }
+
+    fun setSettingsRestoreSmartLockEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_RESTORE_SMART_LOCK,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
+                PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_RESTORE_SMART_LOCK,
+        )
+    }
+
+    fun isSettingsForceGoogleEntryEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+            propertyKey = PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+            settingsKey = SETTINGS_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+            defaultValue = DEFAULT_SETTINGS_FORCE_GOOGLE_ENTRY
+        )
+    }
+
+    fun setSettingsForceGoogleEntryEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+                PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_FORCE_GOOGLE_ENTRY
+        )
+    }
+
+    fun isGmsRegionRestrictionBypassEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
+            propertyKey = PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
+            settingsKey = SETTINGS_KEY_GMS_REGION_RESTRICTION_BYPASS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_GMS_REGION_RESTRICTION_BYPASS,
+            defaultValue = DEFAULT_GMS_REGION_RESTRICTION_BYPASS,
+        )
+    }
+
+    fun setGmsRegionRestrictionBypassEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_GMS_REGION_RESTRICTION_BYPASS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
+                PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_GMS_REGION_RESTRICTION_BYPASS,
+        )
+    }
+
+    fun isEsimRegionRestrictionBypassEnabled(context: Context): Boolean {
+        val enabled = readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            propertyKey = PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            settingsKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            defaultValue = DEFAULT_ESIM_REGION_RESTRICTION_BYPASS,
+        )
+        return enabled && isEsimRegionRestrictionBypassAvailable(context)
+    }
+
+    fun setEsimRegionRestrictionBypassEnabled(context: Context, enabled: Boolean) {
+        val hiddenOverrideEnabled = prefs(context).getBoolean(
+            KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            DEFAULT_ESIM_REGION_RESTRICTION_OVERRIDE,
+        )
+        val effectiveEnabled = enabled && (
+            hiddenOverrideEnabled || !isEsimRegionRestrictionCountryRestricted(context)
+        )
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            enabled = effectiveEnabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+                PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+        )
+    }
+
+    fun isEsimRegionRestrictionBypassAvailable(context: Context): Boolean {
+        return isEsimRegionRestrictionOverrideEnabled(context) ||
+            !isEsimRegionRestrictionCountryRestricted(context)
+    }
+
+    fun isEsimRegionRestrictionCountryRestricted(context: Context): Boolean {
+        return CurrentNetworkCountryGuard.isChina(context)
+    }
+
+    fun isEsimRegionRestrictionOverrideEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            propertyKey = PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            settingsKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            defaultValue = DEFAULT_ESIM_REGION_RESTRICTION_OVERRIDE,
+        )
+    }
+
+    fun setEsimRegionRestrictionOverrideEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+                PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+        )
+    }
+
+    fun setEsimRegionRestrictionHiddenOverride(context: Context, enabled: Boolean) {
+        if (enabled) {
+            setEsimRegionRestrictionOverrideEnabled(context, true)
+            setSyncedBooleanPreference(
+                context = context,
+                prefsKey = KEY_ESIM_REGION_RESTRICTION_BYPASS,
+                enabled = true,
+                propertyKeys = listOf(
+                    PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+                    PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+                ),
+                settingsGlobalKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            )
+        } else {
+            setEsimRegionRestrictionBypassEnabled(context, false)
+            setEsimRegionRestrictionOverrideEnabled(context, false)
+        }
+    }
+
+    fun isEsimConfirmationCodePromptEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            propertyKey = PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            settingsKey = SETTINGS_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            // Preserve the behavior of existing installations until the new independent switch
+            // is changed for the first time.
+            defaultValue = isEsimRegionRestrictionBypassEnabled(context),
+        )
+    }
+
+    fun setEsimConfirmationCodePromptEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+                PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+        )
+    }
+
+    fun isEsimProfileLimitBypassEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            propertyKey = PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            settingsKey = SETTINGS_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            defaultValue = DEFAULT_ESIM_PROFILE_LIMIT_BYPASS,
+        )
+    }
+
+    fun setEsimProfileLimitBypassEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+                PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+        )
+    }
+
+    fun isMobileNetworkHideAiLinkBoostEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+        )
+
+    fun setMobileNetworkHideAiLinkBoostEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+                PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+        )
+    }
+
+    fun isMobileNetworkHideRoamingServiceEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+        )
+
+    fun setMobileNetworkHideRoamingServiceEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+                PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+        )
+    }
+
+    fun isMobileNetworkHideHighDataSimCardEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+        )
+
+    fun setMobileNetworkHideHighDataSimCardEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+                PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+        )
+    }
+
+    fun isMobileNetworkHideSmartCloudAccelerationEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+        )
+
+    fun setMobileNetworkHideSmartCloudAccelerationEnabled(
+        context: Context,
+        enabled: Boolean,
+    ) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+                PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+        )
+    }
+
+    fun isMobileNetworkHidePhoneNumberEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+        )
+
+    fun setMobileNetworkHidePhoneNumberEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+                PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+        )
+    }
+
+    fun isMobileNetworkForceCarrierOptionsEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            defaultValue = DEFAULT_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+        )
+
+    fun setMobileNetworkForceCarrierOptionsEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+                PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+        )
+    }
+
+    fun isAppMarketRegionRestrictionBypassEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            propertyKey = PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            defaultValue = DEFAULT_APP_MARKET_REGION_RESTRICTION_BYPASS,
+        )
+
+    fun setAppMarketRegionRestrictionBypassEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+                PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+        )
+    }
+
+    fun isAppMarketRemoveSplashRecommendationsEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+        )
+
+    fun setAppMarketRemoveSplashRecommendationsEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+        )
+    }
+
+    fun isAppMarketRemoveUpdateDownloadRecommendationsEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey =
+                PERSIST_PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+        )
+
+    fun setAppMarketRemoveUpdateDownloadRecommendationsEnabled(
+        context: Context,
+        enabled: Boolean,
+    ) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+        )
+    }
+
+    fun isAppMarketRemoveMineRecommendationsEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+        )
+
+    fun setAppMarketRemoveMineRecommendationsEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+        )
+    }
+
+    fun isAppMarketHideSearchHomeRecommendationsEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+        )
+
+    fun setAppMarketHideSearchHomeRecommendationsEnabled(
+        context: Context,
+        enabled: Boolean,
+    ) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+        )
+    }
+
+    fun isAppMarketHideSearchResultRecommendationsEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+        )
+
+    fun setAppMarketHideSearchResultRecommendationsEnabled(
+        context: Context,
+        enabled: Boolean,
+    ) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+        )
+    }
+
+    fun isAppMarketHideDetailRecommendationsEnabled(context: Context): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+        )
+
+    fun setAppMarketHideDetailRecommendationsEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+        )
+    }
+
+    /** Unified UI state backed by the existing per-surface switches for hook compatibility. */
+    fun isAppMarketSimplifyRecommendationsEnabled(context: Context): Boolean =
+        isAppMarketRemoveSplashRecommendationsEnabled(context) ||
+            isAppMarketRemoveUpdateDownloadRecommendationsEnabled(context) ||
+            isAppMarketRemoveMineRecommendationsEnabled(context) ||
+            isAppMarketHideSearchHomeRecommendationsEnabled(context) ||
+            isAppMarketHideSearchResultRecommendationsEnabled(context) ||
+            isAppMarketHideDetailRecommendationsEnabled(context)
+
+    fun setAppMarketSimplifyRecommendationsEnabled(context: Context, enabled: Boolean) {
+        setAppMarketRemoveSplashRecommendationsEnabled(context, enabled)
+        setAppMarketRemoveUpdateDownloadRecommendationsEnabled(context, enabled)
+        setAppMarketRemoveMineRecommendationsEnabled(context, enabled)
+        setAppMarketHideSearchHomeRecommendationsEnabled(context, enabled)
+        setAppMarketHideSearchResultRecommendationsEnabled(context, enabled)
+        setAppMarketHideDetailRecommendationsEnabled(context, enabled)
+    }
+
+    fun isAthenaC17SwipeUpProtectionEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            propertyKey = PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            settingsKey = SETTINGS_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            defaultValue = DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION,
+        )
+    }
+
+    fun setAthenaC17SwipeUpProtectionEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+                PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+        )
+    }
+
+    fun isOkGoogleHotwordCompatibilityEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            propertyKey = PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            settingsKey = SETTINGS_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            defaultValue = DEFAULT_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+        )
+    }
+
+    fun setOkGoogleHotwordCompatibilityEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+                PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+        )
+    }
+
+    fun isLauncherHideWidgetLabelsEnabled(context: Context): Boolean {
+        return readSyncedToggle(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            propertyKey = PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            settingsKey = SETTINGS_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            defaultValue = DEFAULT_LAUNCHER_HIDE_WIDGET_LABELS,
+        )
+    }
+
+    fun setLauncherHideWidgetLabelsEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+                PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+        )
+    }
+
+    fun getLauncherSearchBarMode(context: Context): Int {
+        val mode = readSyncedInt(
+            context = context,
+            persistPropertyKey = PERSIST_PROP_KEY_LAUNCHER_SEARCH_BAR_MODE,
+            propertyKey = PROP_KEY_LAUNCHER_SEARCH_BAR_MODE,
+            settingsKey = SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE,
+            prefsKey = KEY_LAUNCHER_SEARCH_BAR_MODE,
+            defaultValue = DEFAULT_LAUNCHER_SEARCH_BAR_MODE,
+        ).sanitizeLauncherSearchBarMode()
+        // The first version stored this key as a boolean. Convert it once so the API 102
+        // preference snapshot exposes the new three-state value to the launcher process.
+        if (prefs(context).all[KEY_LAUNCHER_SEARCH_BAR_MODE] !is Number) {
+            prefs(context).edit().putInt(KEY_LAUNCHER_SEARCH_BAR_MODE, mode).commit()
+            syncReadableState(context)
+        }
+        return mode
+    }
+
+    fun setLauncherSearchBarMode(context: Context, mode: Int) {
+        val normalized = mode.sanitizeLauncherSearchBarMode()
+        prefs(context).edit().putInt(KEY_LAUNCHER_SEARCH_BAR_MODE, normalized).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = normalized.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_LAUNCHER_SEARCH_BAR_MODE,
+                PROP_KEY_LAUNCHER_SEARCH_BAR_MODE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE,
+        )
+    }
+
+    fun resetToDefaults(context: Context): Boolean {
+        require(prefs(context).edit().clear().commit()) {
+            "Failed to clear $PREFS_NAME"
+        }
+
+        val batchedCommands = mutableListOf<String>()
+        syncCommandBatch.set(batchedCommands)
+        try {
+            PermissionFeature.entries.forEach { setPermissionFeatureEnabled(context, it, false) }
+            NotificationRemovalFeature.entries.forEach { setNotificationRemovalEnabled(context, it, false) }
+            InstallerFeature.entries.forEach { setInstallerFeatureEnabled(context, it, it.defaultValue) }
+            setNativeNotifyIconEnabled(context, true)
+            setExtremeRefresh165Enabled(context, false)
+            setRecentTaskRadiusEnabled(context, false)
+            setAodEnhanceEnabled(context, false)
+            setOosLocalizerEnabled(context, false)
+            setOosLocalizerConfigMode(context, DEFAULT_OOS_LOCALIZER_CONFIG_MODE)
+            setOosLocalizerRegion(context, DEFAULT_OOS_LOCALIZER_REGION)
+            setOosLocalizerLocale(context, DEFAULT_OOS_LOCALIZER_LOCALE)
+            setOosLocalizerModel(context, DEFAULT_OOS_LOCALIZER_MODEL)
+            setAssistantPowerMode(context, DEFAULT_ASSISTANT_POWER_MODE)
+            setAssistantGestureCircleEnabled(context, false)
+            setAssistantGestureCircleC17Enabled(context, false)
+            setAssistantNativePowerEnabled(context, false)
+            setAssistantInternationalPowerChordEnabled(context, true)
+            setAssistantNativeCircleEnabled(context, false)
+            setRecentTaskRadiusDp(context, DEFAULT_RECENT_TASK_RADIUS_DP)
+            setAodInitDarkBrightness(context, DEFAULT_AOD_INIT_DARK_BRIGHTNESS)
+            setAodInitBrightBrightness(context, DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS)
+            setAodRunningBrightnessMultiplier(context, DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)
+            setAodPanoramicSupportEnabled(context, DEFAULT_AOD_PANORAMIC_SUPPORT)
+            setAodSettingsSwitchEnabled(context, DEFAULT_AOD_SETTINGS_SWITCH)
+            setAodSingleClickBlockEnabled(context, DEFAULT_AOD_SINGLE_CLICK_BLOCK)
+            setNativeNotificationBubblesEnabled(context, DEFAULT_NATIVE_NOTIFICATION_BUBBLES)
+            setSystemUiInternationalNetworkDisplayEnabled(
+                context,
+                DEFAULT_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            )
+            setSystemUiHideMobileRoamingIndicatorEnabled(
+                context,
+                DEFAULT_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            )
+            setSystemUiHideNetworkActivityIndicatorEnabled(
+                context,
+                DEFAULT_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            )
+            setSystemUiNativePowerMenuEnabled(
+                context,
+                DEFAULT_SYSTEMUI_NATIVE_POWER_MENU,
+            )
+            setSystemUiRestoreC16NetworkIconOrderEnabled(
+                context,
+                DEFAULT_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            )
+            setSystemUiInternationalNotificationStyleEnabled(
+                context,
+                DEFAULT_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            )
+            setSystemUiForceTonalSpotEnabled(context, DEFAULT_SYSTEMUI_FORCE_TONAL_SPOT)
+            setSystemUiMonetColorSpecMode(context, DEFAULT_SYSTEMUI_MONET_COLOR_SPEC_MODE)
+            setSystemUiHideQsEditEnabled(context, DEFAULT_SYSTEMUI_HIDE_QS_EDIT)
+            setSystemUiHideQsSettingsEnabled(context, DEFAULT_SYSTEMUI_HIDE_QS_SETTINGS)
+            setSystemUiHideQsTopCarrierEnabled(context, DEFAULT_SYSTEMUI_HIDE_QS_TOP_CARRIER)
+            setSystemUiHideQsMoreEnabled(context, DEFAULT_SYSTEMUI_HIDE_QS_MORE)
+            setSystemUiForceNativeClipboardOverlayEnabled(
+                context,
+                DEFAULT_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            )
+            setSettingsInternationalEnabled(context, DEFAULT_SETTINGS_INTERNATIONAL)
+            setSettingsForceAppAutoStartEnabled(context, DEFAULT_SETTINGS_FORCE_APP_AUTO_START)
+            setSettingsInternationalWalletEnabled(context, DEFAULT_SETTINGS_INTERNATIONAL_WALLET)
+            setSettingsRestoreDomesticAboutDeviceEnabled(
+                context,
+                DEFAULT_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            )
+            setSettingsRestoreDomesticAuxiliaryFunctionsEnabled(
+                context,
+                DEFAULT_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            )
+            setSettingsC15AboutLayoutEnabled(context, DEFAULT_SETTINGS_C15_ABOUT_LAYOUT)
+            setSettingsSkipSpecialPermissionRiskConfirmEnabled(context, DEFAULT_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM)
+            setSettingsRestoreAppOpenButtonEnabled(context, DEFAULT_SETTINGS_RESTORE_APP_OPEN_BUTTON)
+            setWallpapersRedOneEntryEnabled(context, DEFAULT_WALLPAPERS_RED_ONE_ENTRY)
+            setSettingsRefreshRateUnlocked(context, DEFAULT_SETTINGS_UNLOCK_REFRESH_RATE)
+            setSettingsForceGlobalExtremeRefreshRateEnabled(
+                context,
+                DEFAULT_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            )
+            setSettingsRestoreSmartLockEnabled(context, DEFAULT_SETTINGS_RESTORE_SMART_LOCK)
+            setSettingsForceGoogleEntryEnabled(context, DEFAULT_SETTINGS_FORCE_GOOGLE_ENTRY)
+            setGmsRegionRestrictionBypassEnabled(context, DEFAULT_GMS_REGION_RESTRICTION_BYPASS)
+            setEsimRegionRestrictionBypassEnabled(context, DEFAULT_ESIM_REGION_RESTRICTION_BYPASS)
+            setEsimConfirmationCodePromptEnabled(context, DEFAULT_ESIM_CONFIRMATION_CODE_PROMPT)
+            setEsimProfileLimitBypassEnabled(context, DEFAULT_ESIM_PROFILE_LIMIT_BYPASS)
+            setEsimRegionRestrictionOverrideEnabled(
+                context,
+                DEFAULT_ESIM_REGION_RESTRICTION_OVERRIDE,
+            )
+            setMobileNetworkHideAiLinkBoostEnabled(
+                context,
+                DEFAULT_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            )
+            setMobileNetworkHideRoamingServiceEnabled(
+                context,
+                DEFAULT_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            )
+            setMobileNetworkHideHighDataSimCardEnabled(
+                context,
+                DEFAULT_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            )
+            setMobileNetworkHideSmartCloudAccelerationEnabled(
+                context,
+                DEFAULT_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            )
+            setMobileNetworkHidePhoneNumberEnabled(
+                context,
+                DEFAULT_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            )
+            setMobileNetworkForceCarrierOptionsEnabled(
+                context,
+                DEFAULT_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            )
+            setAppMarketRegionRestrictionBypassEnabled(
+                context,
+                DEFAULT_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            )
+            setAppMarketRemoveSplashRecommendationsEnabled(
+                context,
+                DEFAULT_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            )
+            setAppMarketRemoveUpdateDownloadRecommendationsEnabled(
+                context,
+                DEFAULT_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            )
+            setAppMarketRemoveMineRecommendationsEnabled(
+                context,
+                DEFAULT_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            )
+            setAppMarketHideSearchHomeRecommendationsEnabled(
+                context,
+                DEFAULT_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            )
+            setAppMarketHideSearchResultRecommendationsEnabled(
+                context,
+                DEFAULT_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            )
+            setAppMarketHideDetailRecommendationsEnabled(
+                context,
+                DEFAULT_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            )
+            setAthenaC17SwipeUpProtectionEnabled(
+                context,
+                DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION,
+            )
+            setOkGoogleHotwordCompatibilityEnabled(context, DEFAULT_OK_GOOGLE_HOTWORD_COMPATIBILITY)
+            setLauncherHideWidgetLabelsEnabled(context, DEFAULT_LAUNCHER_HIDE_WIDGET_LABELS)
+            setLauncherSearchBarMode(context, DEFAULT_LAUNCHER_SEARCH_BAR_MODE)
+        } finally {
+            syncCommandBatch.remove()
+        }
+        return executeSyncCommands("LSP reset", batchedCommands)
+    }
+
+    fun syncTogglesForBoot(context: Context) {
+        val nativeEnabled = isNativeNotifyIconEnabled(context)
+        val extremeRefresh165Enabled = isExtremeRefresh165Enabled(context)
+        val recentTaskRadiusEnabled = isRecentTaskRadiusEnabled(context)
+        val aodEnhanceEnabled = isAodEnhanceEnabled(context)
+        val oosLocalizerEnabled = isOosLocalizerEnabled(context)
+        val assistantPowerMode = getAssistantPowerMode(context)
+        val assistantGestureCircleEnabled = isAssistantGestureCircleEnabled(context)
+        val assistantGestureCircleC17Enabled = isAssistantGestureCircleC17Enabled(context)
+        val assistantNativePowerEnabled = isAssistantNativePowerEnabled(context)
+        val assistantInternationalPowerChordEnabled =
+            isAssistantInternationalPowerChordEnabled(context)
+        val assistantNativeCircleEnabled = isAssistantNativeCircleEnabled(context)
+        val recentTaskRadiusDp = getRecentTaskRadiusDp(context)
+        val aodInitDarkBrightness = getAodInitDarkBrightness(context)
+        val aodInitBrightBrightness = getAodInitBrightBrightness(context)
+        val aodRunningMultiplier = getAodRunningBrightnessMultiplier(context)
+        val aodPanoramicSupport = isAodPanoramicSupportEnabled(context)
+        val aodSettingsSwitch = isAodSettingsSwitchEnabled(context)
+        val aodSingleClickBlock = isAodSingleClickBlockEnabled(context)
+        val nativeNotificationBubbles = isNativeNotificationBubblesEnabled(context)
+        val systemUiInternationalNetworkDisplay =
+            isSystemUiInternationalNetworkDisplayEnabled(context)
+        val systemUiHideMobileRoamingIndicator =
+            isSystemUiHideMobileRoamingIndicatorEnabled(context)
+        val systemUiHideNetworkActivityIndicator =
+            isSystemUiHideNetworkActivityIndicatorEnabled(context)
+        val systemUiNativePowerMenu = isSystemUiNativePowerMenuEnabled(context)
+        val systemUiRestoreC16NetworkIconOrder =
+            isSystemUiRestoreC16NetworkIconOrderEnabled(context)
+        val systemUiInternationalNotificationStyle =
+            isSystemUiInternationalNotificationStyleEnabled(context)
+        val systemUiForceTonalSpot = isSystemUiForceTonalSpotEnabled(context)
+        val systemUiMonetColorSpecMode = getSystemUiMonetColorSpecMode(context)
+        val systemUiHideQsEdit = isSystemUiHideQsEditEnabled(context)
+        val systemUiHideQsSettings = isSystemUiHideQsSettingsEnabled(context)
+        val systemUiHideQsTopCarrier = isSystemUiHideQsTopCarrierEnabled(context)
+        val systemUiHideQsMore = isSystemUiHideQsMoreEnabled(context)
+        val systemUiForceNativeClipboardOverlay = isSystemUiForceNativeClipboardOverlayEnabled(context)
+        val settingsInternational = isSettingsInternationalEnabled(context)
+        val settingsForceAppAutoStart = isSettingsForceAppAutoStartEnabled(context)
+        val settingsInternationalWallet = isSettingsInternationalWalletEnabled(context)
+        val settingsRestoreDomesticAboutDevice =
+            isSettingsRestoreDomesticAboutDeviceEnabled(context)
+        val settingsRestoreDomesticAuxiliaryFunctions =
+            isSettingsRestoreDomesticAuxiliaryFunctionsEnabled(context)
+        val settingsC15AboutLayout = isSettingsC15AboutLayoutEnabled(context)
+        val settingsSkipSpecialPermissionRiskConfirm = isSettingsSkipSpecialPermissionRiskConfirmEnabled(context)
+        val settingsRestoreAppOpenButton = isSettingsRestoreAppOpenButtonEnabled(context)
+        val wallpapersRedOneEntry = isWallpapersRedOneEntryEnabled(context)
+        val settingsUnlockRefreshRate = isSettingsRefreshRateUnlocked(context)
+        val settingsForceGlobalExtremeRefreshRate =
+            isSettingsForceGlobalExtremeRefreshRateEnabled(context)
+        val settingsRestoreSmartLock = isSettingsRestoreSmartLockEnabled(context)
+        val settingsForceGoogleEntry = isSettingsForceGoogleEntryEnabled(context)
+        val gmsRegionRestrictionBypass = isGmsRegionRestrictionBypassEnabled(context)
+        val esimRegionRestrictionBypass = isEsimRegionRestrictionBypassEnabled(context)
+        val esimConfirmationCodePrompt = isEsimConfirmationCodePromptEnabled(context)
+        val esimProfileLimitBypass = isEsimProfileLimitBypassEnabled(context)
+        val esimRegionRestrictionOverride = isEsimRegionRestrictionOverrideEnabled(context)
+        val mobileNetworkHideAiLinkBoost = isMobileNetworkHideAiLinkBoostEnabled(context)
+        val mobileNetworkHideRoamingService =
+            isMobileNetworkHideRoamingServiceEnabled(context)
+        val mobileNetworkHideHighDataSimCard =
+            isMobileNetworkHideHighDataSimCardEnabled(context)
+        val mobileNetworkHideSmartCloudAcceleration =
+            isMobileNetworkHideSmartCloudAccelerationEnabled(context)
+        val mobileNetworkHidePhoneNumber =
+            isMobileNetworkHidePhoneNumberEnabled(context)
+        val mobileNetworkForceCarrierOptions =
+            isMobileNetworkForceCarrierOptionsEnabled(context)
+        val appMarketRegionRestrictionBypass =
+            isAppMarketRegionRestrictionBypassEnabled(context)
+        val appMarketRemoveSplashRecommendations =
+            isAppMarketRemoveSplashRecommendationsEnabled(context)
+        val appMarketRemoveUpdateDownloadRecommendations =
+            isAppMarketRemoveUpdateDownloadRecommendationsEnabled(context)
+        val appMarketRemoveMineRecommendations =
+            isAppMarketRemoveMineRecommendationsEnabled(context)
+        val appMarketHideSearchHomeRecommendations =
+            isAppMarketHideSearchHomeRecommendationsEnabled(context)
+        val appMarketHideSearchResultRecommendations =
+            isAppMarketHideSearchResultRecommendationsEnabled(context)
+        val appMarketHideDetailRecommendations =
+            isAppMarketHideDetailRecommendationsEnabled(context)
+        val athenaC17SwipeUpProtection = isAthenaC17SwipeUpProtectionEnabled(context)
+        val okGoogleHotwordCompatibility = isOkGoogleHotwordCompatibilityEnabled(context)
+        val launcherHideWidgetLabels = isLauncherHideWidgetLabelsEnabled(context)
+        val launcherSearchBarMode = getLauncherSearchBarMode(context)
+        val oosLocalizerConfigMode = getOosLocalizerConfigMode(context)
+        val oosLocalizerRegion = getOosLocalizerRegion(context)
+        val oosLocalizerLocale = getOosLocalizerLocale(context)
+        val oosLocalizerModel = getOosLocalizerModel(context)
+        syncReadableState(context)
+        val batchedCommands = mutableListOf<String>()
+        syncCommandBatch.set(batchedCommands)
+        try {
+        syncPermissionFeatures(context)
+        syncNotificationRemovalFeatures(context)
+        syncInstallerFeatures(context)
+        syncFlagState(
+            enabled = nativeEnabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_NATIVE_NOTIFY_ICON,
+                PROP_KEY_NATIVE_NOTIFY_ICON
+            ),
+            settingsGlobalKey = SETTINGS_KEY_NATIVE_NOTIFY_ICON,
+            flagFilePath = FLAG_FILE_PATH_NATIVE_NOTIFY_ICON
+        )
+        syncFlagState(
+            enabled = extremeRefresh165Enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_EXTREME_REFRESH_165,
+                PROP_KEY_EXTREME_REFRESH_165
+            ),
+            settingsGlobalKey = SETTINGS_KEY_EXTREME_REFRESH_165,
+            flagFilePath = FLAG_FILE_PATH_EXTREME_REFRESH_165
+        )
+        syncFlagState(
+            enabled = recentTaskRadiusEnabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_RECENT_TASK_RADIUS,
+                PROP_KEY_RECENT_TASK_RADIUS
+            ),
+            settingsGlobalKey = SETTINGS_KEY_RECENT_TASK_RADIUS,
+            flagFilePath = FLAG_FILE_PATH_RECENT_TASK_RADIUS
+        )
+        syncFlagState(
+            enabled = aodEnhanceEnabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_ENHANCE,
+                PROP_KEY_AOD_ENHANCE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_ENHANCE,
+            flagFilePath = FLAG_FILE_PATH_AOD_ENHANCE
+        )
+        syncFlagState(
+            enabled = oosLocalizerEnabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER,
+                PROP_KEY_OOS_LOCALIZER
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER,
+            flagFilePath = FLAG_FILE_PATH_OOS_LOCALIZER
+        )
+        syncScalarState(
+            value = assistantPowerMode.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_POWER_MODE,
+                PROP_KEY_ASSISTANT_POWER_MODE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_POWER_MODE
+        )
+        syncScalarState(
+            value = if (assistantGestureCircleEnabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE,
+                PROP_KEY_ASSISTANT_GESTURE_CIRCLE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE
+        )
+        syncScalarState(
+            value = if (assistantGestureCircleC17Enabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17,
+                PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE_C17
+        )
+        syncScalarState(
+            value = if (assistantNativePowerEnabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_NATIVE_POWER,
+                PROP_KEY_ASSISTANT_NATIVE_POWER,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_NATIVE_POWER,
+        )
+        syncScalarState(
+            value = if (assistantInternationalPowerChordEnabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+                PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+        )
+        syncScalarState(
+            value = if (assistantNativeCircleEnabled) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ASSISTANT_NATIVE_CIRCLE,
+                PROP_KEY_ASSISTANT_NATIVE_CIRCLE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ASSISTANT_NATIVE_CIRCLE,
+        )
+        syncScalarState(
+            value = recentTaskRadiusDp.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_RECENT_TASK_RADIUS_DP,
+                PROP_KEY_RECENT_TASK_RADIUS_DP
+            ),
+            settingsGlobalKey = SETTINGS_KEY_RECENT_TASK_RADIUS_DP
+        )
+        syncScalarState(
+            value = aodInitDarkBrightness.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_INIT_DARK_BRIGHTNESS,
+                PROP_KEY_AOD_INIT_DARK_BRIGHTNESS
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_INIT_DARK_BRIGHTNESS
+        )
+        syncScalarState(
+            value = aodInitBrightBrightness.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS,
+                PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_INIT_BRIGHT_BRIGHTNESS
+        )
+        syncScalarState(
+            value = aodRunningMultiplier.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
+                PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
+        )
+        syncScalarState(
+            value = if (aodPanoramicSupport) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_PANORAMIC_SUPPORT,
+                PROP_KEY_AOD_PANORAMIC_SUPPORT
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_PANORAMIC_SUPPORT
+        )
+        syncScalarState(
+            value = if (aodSettingsSwitch) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_SETTINGS_SWITCH,
+                PROP_KEY_AOD_SETTINGS_SWITCH
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_SETTINGS_SWITCH
+        )
+        syncScalarState(
+            value = if (aodSingleClickBlock) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_AOD_SINGLE_CLICK_BLOCK,
+                PROP_KEY_AOD_SINGLE_CLICK_BLOCK
+            ),
+            settingsGlobalKey = SETTINGS_KEY_AOD_SINGLE_CLICK_BLOCK
+        )
+        syncFlagState(
+            enabled = nativeNotificationBubbles,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_NATIVE_NOTIFICATION_BUBBLES,
+                PROP_KEY_NATIVE_NOTIFICATION_BUBBLES
+            ),
+            settingsGlobalKey = SETTINGS_KEY_NATIVE_NOTIFICATION_BUBBLES,
+            flagFilePath = FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES
+        )
+        syncScalarState(
+            value = if (systemUiInternationalNetworkDisplay) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+                PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY
+        )
+        syncScalarState(
+            value = if (systemUiHideMobileRoamingIndicator) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+                PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR
+        )
+        syncScalarState(
+            value = if (systemUiHideNetworkActivityIndicator) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+                PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+        )
+        syncScalarState(
+            value = if (systemUiNativePowerMenu) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+                PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+        )
+        syncScalarState(
+            value = if (systemUiRestoreC16NetworkIconOrder) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+                PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+        )
+        syncScalarState(
+            value = if (systemUiInternationalNotificationStyle) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+                PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE
+        )
+        syncScalarState(
+            value = if (systemUiForceTonalSpot) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+                PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+        )
+        syncScalarState(
+            value = systemUiMonetColorSpecMode.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+                PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+        )
+        syncScalarState(
+            value = if (systemUiHideQsEdit) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_EDIT,
+                PROP_KEY_SYSTEMUI_HIDE_QS_EDIT
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_EDIT
+        )
+        syncScalarState(
+            value = if (systemUiHideQsSettings) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+                PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_SETTINGS
+        )
+        syncScalarState(
+            value = if (systemUiHideQsTopCarrier) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+                PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER
+        )
+        syncScalarState(
+            value = if (systemUiHideQsMore) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_MORE,
+                PROP_KEY_SYSTEMUI_HIDE_QS_MORE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_MORE
+        )
+        syncScalarState(
+            value = if (systemUiForceNativeClipboardOverlay) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+                PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY
+        )
+        syncScalarState(
+            value = if (settingsInternational) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL,
+                PROP_KEY_SETTINGS_INTERNATIONAL
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL
+        )
+        syncScalarState(
+            value = if (settingsForceAppAutoStart) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_FORCE_APP_AUTO_START,
+                PROP_KEY_SETTINGS_FORCE_APP_AUTO_START
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_FORCE_APP_AUTO_START
+        )
+        syncScalarState(
+            value = if (settingsInternationalWallet) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL_WALLET,
+                PROP_KEY_SETTINGS_INTERNATIONAL_WALLET
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL_WALLET
+        )
+        syncScalarState(
+            value = if (settingsRestoreDomesticAboutDevice) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+                PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+        )
+        syncScalarState(
+            value = if (settingsRestoreDomesticAuxiliaryFunctions) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+                PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+        )
+        syncScalarState(
+            value = if (settingsSkipSpecialPermissionRiskConfirm) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+                PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        )
+        syncScalarState(
+            value = if (settingsRestoreAppOpenButton) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+                PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        )
+        syncScalarState(
+            value = if (settingsC15AboutLayout) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+                PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+        )
+        syncScalarState(
+            value = if (wallpapersRedOneEntry) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
+                PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_WALLPAPERS_RED_ONE_ENTRY,
+        )
+        syncScalarState(
+            value = if (settingsUnlockRefreshRate) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+                PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+        )
+        syncScalarState(
+            value = if (settingsForceGlobalExtremeRefreshRate) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+                PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+        )
+        syncScalarState(
+            value = if (settingsRestoreSmartLock) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
+                PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_RESTORE_SMART_LOCK,
+        )
+        syncScalarState(
+            value = if (settingsForceGoogleEntry) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+                PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY
+            ),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_FORCE_GOOGLE_ENTRY
+        )
+        syncScalarState(
+            value = if (gmsRegionRestrictionBypass) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
+                PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_GMS_REGION_RESTRICTION_BYPASS,
+        )
+        syncScalarState(
+            value = if (esimRegionRestrictionBypass) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+                PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+        )
+        syncScalarState(
+            value = if (esimConfirmationCodePrompt) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+                PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+        )
+        syncScalarState(
+            value = if (esimProfileLimitBypass) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+                PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+        )
+        syncScalarState(
+            value = if (esimRegionRestrictionOverride) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+                PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+        )
+        syncScalarState(
+            value = if (mobileNetworkHideAiLinkBoost) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+                PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+        )
+        syncScalarState(
+            value = if (mobileNetworkHideRoamingService) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+                PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+        )
+        syncScalarState(
+            value = if (mobileNetworkHideHighDataSimCard) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+                PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+        )
+        syncScalarState(
+            value = if (mobileNetworkHideSmartCloudAcceleration) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+                PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+        )
+        syncScalarState(
+            value = if (mobileNetworkHidePhoneNumber) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+                PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+        )
+        syncScalarState(
+            value = if (mobileNetworkForceCarrierOptions) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+                PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+        )
+        syncScalarState(
+            value = if (appMarketRegionRestrictionBypass) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+                PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+        )
+        syncScalarState(
+            value = if (appMarketRemoveSplashRecommendations) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+        )
+        syncScalarState(
+            value = if (appMarketRemoveUpdateDownloadRecommendations) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+        )
+        syncScalarState(
+            value = if (appMarketRemoveMineRecommendations) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+        )
+        syncScalarState(
+            value = if (appMarketHideSearchHomeRecommendations) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+        )
+        syncScalarState(
+            value = if (appMarketHideSearchResultRecommendations) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+        )
+        syncScalarState(
+            value = if (appMarketHideDetailRecommendations) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+                PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+        )
+        syncScalarState(
+            value = if (athenaC17SwipeUpProtection) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+                PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+        )
+        syncScalarState(
+            value = if (okGoogleHotwordCompatibility) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+                PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+        )
+        syncScalarState(
+            value = if (launcherHideWidgetLabels) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+                PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+        )
+        syncScalarState(
+            value = launcherSearchBarMode.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_LAUNCHER_SEARCH_BAR_MODE,
+                PROP_KEY_LAUNCHER_SEARCH_BAR_MODE,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE,
+        )
+        syncScalarState(
+            value = oosLocalizerConfigMode.toString(),
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE,
+                PROP_KEY_OOS_LOCALIZER_CONFIG_MODE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE
+        )
+        syncScalarState(
+            value = oosLocalizerRegion,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER_REGION,
+                PROP_KEY_OOS_LOCALIZER_REGION
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_REGION
+        )
+        syncScalarState(
+            value = oosLocalizerLocale,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE,
+                PROP_KEY_OOS_LOCALIZER_LOCALE
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_LOCALE
+        )
+        syncScalarState(
+            value = oosLocalizerModel,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL,
+                PROP_KEY_OOS_LOCALIZER_MODEL
+            ),
+            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_MODEL
+        )
+        } finally {
+            syncCommandBatch.remove()
+        }
+        executeSyncCommands("LSP boot sync", batchedCommands)
+    }
+
+    fun syncReadableState(context: Context) {
+        makePrefsReadableForXposed(context)
+        runCatching {
+            makePrefsReadableForXposed(prefsContext(context))
+        }
+    }
+
+    fun isNativeNotifyIconEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_NATIVE_NOTIFY_ICON, true)?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_NATIVE_NOTIFY_ICON)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_NATIVE_NOTIFY_ICON)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_NATIVE_NOTIFY_ICON)?.let { return it }
+        readFlagFile(FLAG_FILE_PATH_NATIVE_NOTIFY_ICON)?.let { return it }
+        readFlagFile(LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFY_ICON)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_NATIVE_NOTIFY_ICON, true)
+        }.getOrDefault(true)
+    }
+
+    fun isExtremeRefresh165EnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_EXTREME_REFRESH_165, false)?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_EXTREME_REFRESH_165)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_EXTREME_REFRESH_165)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_EXTREME_REFRESH_165)?.let { return it }
+        readFlagFile(FLAG_FILE_PATH_EXTREME_REFRESH_165)?.let { return it }
+        readFlagFile(LEGACY_FLAG_FILE_PATH_EXTREME_REFRESH_165)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_EXTREME_REFRESH_165, false)
+        }.getOrDefault(false)
+    }
+
+    fun isRecentTaskRadiusEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_RECENT_TASK_RADIUS, false)?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_RECENT_TASK_RADIUS)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_RECENT_TASK_RADIUS)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_RECENT_TASK_RADIUS)?.let { return it }
+        readFlagFile(FLAG_FILE_PATH_RECENT_TASK_RADIUS)?.let { return it }
+        readFlagFile(LEGACY_FLAG_FILE_PATH_RECENT_TASK_RADIUS)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_RECENT_TASK_RADIUS, false)
+        }.getOrDefault(false)
+    }
+
+    fun isAodEnhanceEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_AOD_ENHANCE, false)?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_AOD_ENHANCE)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_AOD_ENHANCE)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_AOD_ENHANCE)?.let { return it }
+        readFlagFile(FLAG_FILE_PATH_AOD_ENHANCE)?.let { return it }
+        readFlagFile(LEGACY_FLAG_FILE_PATH_AOD_ENHANCE)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_AOD_ENHANCE, false)
+        }.getOrDefault(false)
+    }
+
+    fun isOosLocalizerEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_OOS_LOCALIZER, false)?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_OOS_LOCALIZER)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_OOS_LOCALIZER)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_OOS_LOCALIZER)?.let { return it }
+        readFlagFile(FLAG_FILE_PATH_OOS_LOCALIZER)?.let { return it }
+        readFlagFile(LEGACY_FLAG_FILE_PATH_OOS_LOCALIZER)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_OOS_LOCALIZER, false)
+        }.getOrDefault(false)
+    }
+
+    fun getOosLocalizerRegionXposed(): String {
+        HookConfigSnapshot.string(KEY_OOS_LOCALIZER_REGION, DEFAULT_OOS_LOCALIZER_REGION)?.let {
+            return it.sanitizeOosLocalizerRegion()
+        }
+        readSystemPropertyValue(PERSIST_PROP_KEY_OOS_LOCALIZER_REGION)?.let {
+            return it.sanitizeOosLocalizerRegion()
+        }
+        readSystemPropertyValue(PROP_KEY_OOS_LOCALIZER_REGION)?.let {
+            return it.sanitizeOosLocalizerRegion()
+        }
+        readSettingsGlobalValue(SETTINGS_KEY_OOS_LOCALIZER_REGION)?.let {
+            return it.sanitizeOosLocalizerRegion()
+        }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getString(KEY_OOS_LOCALIZER_REGION, DEFAULT_OOS_LOCALIZER_REGION)
+        }.getOrDefault(DEFAULT_OOS_LOCALIZER_REGION).sanitizeOosLocalizerRegion()
+    }
+
+    fun getOosLocalizerConfigModeXposed(): Int {
+        HookConfigSnapshot.int(
+            KEY_OOS_LOCALIZER_CONFIG_MODE,
+            DEFAULT_OOS_LOCALIZER_CONFIG_MODE,
+        )?.let { return it.sanitizeOosLocalizerConfigMode() }
+        readSystemPropertyValue(PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE)?.toIntOrNull()?.let {
+            return it.sanitizeOosLocalizerConfigMode()
+        }
+        readSystemPropertyValue(PROP_KEY_OOS_LOCALIZER_CONFIG_MODE)?.toIntOrNull()?.let {
+            return it.sanitizeOosLocalizerConfigMode()
+        }
+        readSettingsGlobalValue(SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE)?.toIntOrNull()?.let {
+            return it.sanitizeOosLocalizerConfigMode()
+        }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getInt(KEY_OOS_LOCALIZER_CONFIG_MODE, DEFAULT_OOS_LOCALIZER_CONFIG_MODE)
+        }.getOrDefault(DEFAULT_OOS_LOCALIZER_CONFIG_MODE).sanitizeOosLocalizerConfigMode()
+    }
+
+    fun getOosLocalizerLocaleXposed(): String {
+        HookConfigSnapshot.string(KEY_OOS_LOCALIZER_LOCALE, DEFAULT_OOS_LOCALIZER_LOCALE)?.let {
+            return it.sanitizeOosLocalizerLocale()
+        }
+        readSystemPropertyValue(PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE)?.let {
+            return it.sanitizeOosLocalizerLocale()
+        }
+        readSystemPropertyValue(PROP_KEY_OOS_LOCALIZER_LOCALE)?.let {
+            return it.sanitizeOosLocalizerLocale()
+        }
+        readSettingsGlobalValue(SETTINGS_KEY_OOS_LOCALIZER_LOCALE)?.let {
+            return it.sanitizeOosLocalizerLocale()
+        }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getString(KEY_OOS_LOCALIZER_LOCALE, DEFAULT_OOS_LOCALIZER_LOCALE)
+        }.getOrDefault(DEFAULT_OOS_LOCALIZER_LOCALE).sanitizeOosLocalizerLocale()
+    }
+
+    fun getOosLocalizerModelXposed(): String {
+        HookConfigSnapshot.string(KEY_OOS_LOCALIZER_MODEL, DEFAULT_OOS_LOCALIZER_MODEL)?.let {
+            return it.sanitizeOosLocalizerModel()
+        }
+        readSystemPropertyValue(PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL)?.let {
+            return it.sanitizeOosLocalizerModel()
+        }
+        readSystemPropertyValue(PROP_KEY_OOS_LOCALIZER_MODEL)?.let {
+            return it.sanitizeOosLocalizerModel()
+        }
+        readSettingsGlobalValue(SETTINGS_KEY_OOS_LOCALIZER_MODEL)?.let {
+            return it.sanitizeOosLocalizerModel()
+        }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getString(KEY_OOS_LOCALIZER_MODEL, DEFAULT_OOS_LOCALIZER_MODEL)
+        }.getOrDefault(DEFAULT_OOS_LOCALIZER_MODEL).sanitizeOosLocalizerModel()
+    }
+
+    fun getOosLocalizerPropertyXposed(key: String): String? {
+        val defaultValue = OOS_LOCALIZER_PROPERTY_DEFAULTS[key] ?: return null
+        return readXposedString(KEY_OOS_LOCALIZER_PROPERTY_PREFIX + key, defaultValue)
+            ?.takeIf { it.isNotBlank() }
+    }
+
+    fun getOosLocalizerAppFeatureXposed(key: String): String? {
+        val defaultValue = OOS_LOCALIZER_APP_FEATURE_DEFAULTS[key] ?: return null
+        return readXposedString(KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX + key, defaultValue)
+            ?.takeIf { it.isNotBlank() }
+    }
+
+    fun isOosLocalizerPackageEnabledXposed(packageName: String): Boolean {
+        return packageName !in readXposedStringSet(KEY_OOS_LOCALIZER_DISABLED_PACKAGES)
+    }
+
+    fun isOosLocalizerFeatureEnabledXposed(feature: String): Boolean {
+        val defaultValue = OOS_LOCALIZER_FEATURE_DEFAULTS[feature] ?: true
+        val disabled = readXposedStringSet(KEY_OOS_LOCALIZER_DISABLED_FEATURES)
+        return if (defaultValue) feature !in disabled else feature in disabled
+    }
+
+    fun getAssistantPowerModeXposed(): Int {
+        HookConfigSnapshot.int(KEY_ASSISTANT_POWER_MODE, DEFAULT_ASSISTANT_POWER_MODE)?.let {
+            return it.sanitizeAssistantPowerMode()
+        }
+        readSystemPropertyValue(PERSIST_PROP_KEY_ASSISTANT_POWER_MODE)?.toIntOrNull()?.let {
+            return it.sanitizeAssistantPowerMode()
+        }
+        readSystemPropertyValue(PROP_KEY_ASSISTANT_POWER_MODE)?.toIntOrNull()?.let {
+            return it.sanitizeAssistantPowerMode()
+        }
+        readSettingsGlobalValue(SETTINGS_KEY_ASSISTANT_POWER_MODE)?.toIntOrNull()?.let {
+            return it.sanitizeAssistantPowerMode()
+        }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getInt(KEY_ASSISTANT_POWER_MODE, DEFAULT_ASSISTANT_POWER_MODE)
+        }.getOrDefault(DEFAULT_ASSISTANT_POWER_MODE).sanitizeAssistantPowerMode()
+    }
+
+    fun isAssistantGestureCircleEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_ASSISTANT_GESTURE_CIRCLE, false)?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_ASSISTANT_GESTURE_CIRCLE)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_ASSISTANT_GESTURE_CIRCLE, false)
+        }.getOrDefault(false)
+    }
+
+    fun isAssistantGestureCircleC17EnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_ASSISTANT_GESTURE_CIRCLE_C17, false)?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE_C17)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_ASSISTANT_GESTURE_CIRCLE_C17, false)
+        }.getOrDefault(false)
+    }
+
+    fun isAssistantNativePowerEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_ASSISTANT_NATIVE_POWER, false)?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_ASSISTANT_NATIVE_POWER)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_ASSISTANT_NATIVE_POWER)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_ASSISTANT_NATIVE_POWER)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_ASSISTANT_NATIVE_POWER, false)
+        }.getOrDefault(false)
+    }
+
+    fun isAssistantInternationalPowerChordEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(
+            KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
+            true,
+        )?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD)
+            ?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD)
+            ?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD)
+            ?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD, true)
+        }.getOrDefault(true)
+    }
+
+    fun isAssistantNativeCircleEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_ASSISTANT_NATIVE_CIRCLE, false)?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_ASSISTANT_NATIVE_CIRCLE)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_ASSISTANT_NATIVE_CIRCLE)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_ASSISTANT_NATIVE_CIRCLE)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_ASSISTANT_NATIVE_CIRCLE, false)
+        }.getOrDefault(false)
+    }
+
+    fun getRecentTaskRadiusDpXposed(): Float {
+        HookConfigSnapshot.int(KEY_RECENT_TASK_RADIUS_DP, DEFAULT_RECENT_TASK_RADIUS_DP)?.let {
+            return it.toFloat().coerceIn(0f, 260f)
+        }
+        readSystemPropertyValue(PERSIST_PROP_KEY_RECENT_TASK_RADIUS_DP)?.toFloatOrNull()?.let { return it.coerceIn(0f, 260f) }
+        readSystemPropertyValue(PROP_KEY_RECENT_TASK_RADIUS_DP)?.toFloatOrNull()?.let { return it.coerceIn(0f, 260f) }
+        readSettingsGlobalValue(SETTINGS_KEY_RECENT_TASK_RADIUS_DP)?.toFloatOrNull()?.let { return it.coerceIn(0f, 260f) }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getInt(KEY_RECENT_TASK_RADIUS_DP, DEFAULT_RECENT_TASK_RADIUS_DP).toFloat()
+        }.getOrDefault(DEFAULT_RECENT_TASK_RADIUS_DP.toFloat()).coerceIn(0f, 260f)
+    }
+
+    fun getAodInitDarkBrightnessXposed(): Int {
+        HookConfigSnapshot.int(KEY_AOD_INIT_DARK_BRIGHTNESS, DEFAULT_AOD_INIT_DARK_BRIGHTNESS)?.let {
+            return it.coerceIn(0, 255)
+        }
+        readSystemPropertyValue(PERSIST_PROP_KEY_AOD_INIT_DARK_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
+        readSystemPropertyValue(PROP_KEY_AOD_INIT_DARK_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
+        readSettingsGlobalValue(SETTINGS_KEY_AOD_INIT_DARK_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getInt(KEY_AOD_INIT_DARK_BRIGHTNESS, DEFAULT_AOD_INIT_DARK_BRIGHTNESS)
+        }.getOrDefault(DEFAULT_AOD_INIT_DARK_BRIGHTNESS).coerceIn(0, 255)
+    }
+
+    fun getAodInitBrightBrightnessXposed(): Int {
+        HookConfigSnapshot.int(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS)?.let {
+            return it.coerceIn(0, 255)
+        }
+        readSystemPropertyValue(PERSIST_PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
+        readSystemPropertyValue(PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
+        readSettingsGlobalValue(SETTINGS_KEY_AOD_INIT_BRIGHT_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getInt(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS)
+        }.getOrDefault(DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS).coerceIn(0, 255)
+    }
+
+    fun getAodRunningBrightnessMultiplierXposed(): Float {
+        HookConfigSnapshot.float(
+            KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
+            DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
+        )?.let { return it.coerceIn(1.0f, 3.0f) }
+        readSystemPropertyValue(PERSIST_PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)?.toFloatOrNull()?.let { return it.coerceIn(1.0f, 3.0f) }
+        readSystemPropertyValue(PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)?.toFloatOrNull()?.let { return it.coerceIn(1.0f, 3.0f) }
+        readSettingsGlobalValue(SETTINGS_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)?.toFloatOrNull()?.let { return it.coerceIn(1.0f, 3.0f) }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getFloat(
+                KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
+                DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
+            )
+        }.getOrDefault(DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER).coerceIn(1.0f, 3.0f)
+    }
+
+    fun isAodPanoramicSupportEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(
+            KEY_AOD_PANORAMIC_SUPPORT,
+            DEFAULT_AOD_PANORAMIC_SUPPORT,
+        )?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_AOD_PANORAMIC_SUPPORT)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_AOD_PANORAMIC_SUPPORT)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_AOD_PANORAMIC_SUPPORT)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_AOD_PANORAMIC_SUPPORT, DEFAULT_AOD_PANORAMIC_SUPPORT)
+        }.getOrDefault(DEFAULT_AOD_PANORAMIC_SUPPORT)
+    }
+
+    fun isAodSettingsSwitchEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(KEY_AOD_SETTINGS_SWITCH, DEFAULT_AOD_SETTINGS_SWITCH)?.let {
+            return it
+        }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_AOD_SETTINGS_SWITCH)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_AOD_SETTINGS_SWITCH)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_AOD_SETTINGS_SWITCH)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_AOD_SETTINGS_SWITCH, DEFAULT_AOD_SETTINGS_SWITCH)
+        }.getOrDefault(DEFAULT_AOD_SETTINGS_SWITCH)
+    }
+
+    fun isAodSingleClickBlockEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(
+            KEY_AOD_SINGLE_CLICK_BLOCK,
+            DEFAULT_AOD_SINGLE_CLICK_BLOCK,
+        )?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_AOD_SINGLE_CLICK_BLOCK)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_AOD_SINGLE_CLICK_BLOCK)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_AOD_SINGLE_CLICK_BLOCK)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_AOD_SINGLE_CLICK_BLOCK, DEFAULT_AOD_SINGLE_CLICK_BLOCK)
+        }.getOrDefault(DEFAULT_AOD_SINGLE_CLICK_BLOCK)
+    }
+
+    fun isNativeNotificationBubblesEnabledXposed(): Boolean {
+        HookConfigSnapshot.boolean(
+            KEY_NATIVE_NOTIFICATION_BUBBLES,
+            DEFAULT_NATIVE_NOTIFICATION_BUBBLES,
+        )?.let { return it }
+        readSystemPropertyToggle(PERSIST_PROP_KEY_NATIVE_NOTIFICATION_BUBBLES)?.let { return it }
+        readSystemPropertyToggle(PROP_KEY_NATIVE_NOTIFICATION_BUBBLES)?.let { return it }
+        readSettingsGlobalToggle(SETTINGS_KEY_NATIVE_NOTIFICATION_BUBBLES)?.let { return it }
+        readFlagFile(FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES)?.let { return it }
+        readFlagFile(LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(KEY_NATIVE_NOTIFICATION_BUBBLES, DEFAULT_NATIVE_NOTIFICATION_BUBBLES)
+        }.getOrDefault(DEFAULT_NATIVE_NOTIFICATION_BUBBLES)
+    }
+
+    fun isSystemUiInternationalNetworkDisplayEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            propertyKey = PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            prefsKey = KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
+            defaultValue = DEFAULT_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY
+        )
+    }
+
+    fun isSystemUiHideMobileRoamingIndicatorEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            prefsKey = KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR
+        )
+    }
+
+    fun isSystemUiHideNetworkActivityIndicatorEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            prefsKey = KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
+        )
+    }
+
+    fun isSystemUiNativePowerMenuEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            propertyKey = PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            prefsKey = KEY_SYSTEMUI_NATIVE_POWER_MENU,
+            defaultValue = DEFAULT_SYSTEMUI_NATIVE_POWER_MENU,
+        )
+    }
+
+    fun isSystemUiRestoreC16NetworkIconOrderEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            propertyKey = PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            prefsKey = KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+            defaultValue = DEFAULT_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
+        )
+    }
+
+    fun isSystemUiInternationalNotificationStyleEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            propertyKey = PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            prefsKey = KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
+            defaultValue = DEFAULT_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE
+        )
+    }
+
+    fun isSystemUiForceTonalSpotEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            propertyKey = PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            prefsKey = KEY_SYSTEMUI_FORCE_TONAL_SPOT,
+            defaultValue = DEFAULT_SYSTEMUI_FORCE_TONAL_SPOT,
+        )
+    }
+
+    fun getSystemUiMonetColorSpecModeXposed(): Int {
+        HookConfigSnapshot.int(
+            KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+            DEFAULT_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+        )?.let { return it.sanitizeSystemUiMonetColorSpecMode() }
+        readSystemPropertyValue(PERSIST_PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE)
+            ?.toIntOrNull()
+            ?.let { return it.sanitizeSystemUiMonetColorSpecMode() }
+        readSystemPropertyValue(PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE)
+            ?.toIntOrNull()
+            ?.let { return it.sanitizeSystemUiMonetColorSpecMode() }
+        readSettingsGlobalValue(SETTINGS_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE)
+            ?.toIntOrNull()
+            ?.let { return it.sanitizeSystemUiMonetColorSpecMode() }
+        return runCatching {
+            xposedPreferences.getInt(
+                KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+                DEFAULT_SYSTEMUI_MONET_COLOR_SPEC_MODE,
+            )
+        }.getOrDefault(DEFAULT_SYSTEMUI_MONET_COLOR_SPEC_MODE)
+            .sanitizeSystemUiMonetColorSpecMode()
+    }
+
+    fun isSystemUiHideQsEditEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_EDIT,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_EDIT,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_EDIT,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_EDIT,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_EDIT
+        )
+    }
+
+    fun isSystemUiHideQsSettingsEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_SETTINGS,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_SETTINGS
+        )
+    }
+
+    fun isSystemUiHideQsTopCarrierEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_TOP_CARRIER
+        )
+    }
+
+    fun isSystemUiHideQsMoreEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_MORE,
+            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_MORE,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_MORE,
+            prefsKey = KEY_SYSTEMUI_HIDE_QS_MORE,
+            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_MORE
+        )
+    }
+
+    fun isSystemUiForceNativeClipboardOverlayEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            propertyKey = PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            settingsKey = SETTINGS_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            prefsKey = KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
+            defaultValue = DEFAULT_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY
+        )
+    }
+
+    fun isSettingsForceGoogleEntryEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+            propertyKey = PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+            settingsKey = SETTINGS_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+            prefsKey = KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
+            defaultValue = DEFAULT_SETTINGS_FORCE_GOOGLE_ENTRY
+        )
+    }
+
+    fun isSettingsForceAppAutoStartEnabledXposed(): Boolean {
+        return isSettingsInternationalEnabledXposed() && readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_APP_AUTO_START,
+            propertyKey = PROP_KEY_SETTINGS_FORCE_APP_AUTO_START,
+            settingsKey = SETTINGS_KEY_SETTINGS_FORCE_APP_AUTO_START,
+            prefsKey = KEY_SETTINGS_FORCE_APP_AUTO_START,
+            defaultValue = DEFAULT_SETTINGS_FORCE_APP_AUTO_START
+        )
+    }
+
+    fun isSettingsInternationalWalletEnabledXposed(): Boolean {
+        return isSettingsInternationalEnabledXposed() && readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL_WALLET,
+            propertyKey = PROP_KEY_SETTINGS_INTERNATIONAL_WALLET,
+            settingsKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL_WALLET,
+            prefsKey = KEY_SETTINGS_INTERNATIONAL_WALLET,
+            defaultValue = DEFAULT_SETTINGS_INTERNATIONAL_WALLET
+        )
+    }
+
+    fun isSettingsRestoreDomesticAboutDeviceEnabledXposed(): Boolean {
+        return isSettingsInternationalEnabledXposed() && readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            propertyKey = PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            prefsKey = KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+            defaultValue = DEFAULT_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
+        )
+    }
+
+    fun isSettingsRestoreDomesticAuxiliaryFunctionsEnabledXposed(): Boolean {
+        return isSettingsInternationalEnabledXposed() && readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            propertyKey = PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            prefsKey = KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+            defaultValue = DEFAULT_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
+        )
+    }
+
+    fun isSettingsSkipSpecialPermissionRiskConfirmEnabledXposed(): Boolean = readXposedBooleanPreferringMirrors(
+        persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        propertyKey = PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        settingsKey = SETTINGS_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        prefsKey = KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+        defaultValue = DEFAULT_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
+    )
+
+    fun isSettingsRestoreAppOpenButtonEnabledXposed(): Boolean = readXposedBooleanPreferringMirrors(
+        persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        propertyKey = PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        prefsKey = KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+        defaultValue = DEFAULT_SETTINGS_RESTORE_APP_OPEN_BUTTON,
+    )
+
+    fun isSettingsC15AboutLayoutEnabledXposed(): Boolean {
+        return readXposedBooleanPreferringMirrors(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            propertyKey = PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            settingsKey = SETTINGS_KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            prefsKey = KEY_SETTINGS_C15_ABOUT_LAYOUT,
+            defaultValue = DEFAULT_SETTINGS_C15_ABOUT_LAYOUT,
+        )
+    }
+
+    fun isWallpapersRedOneEntryEnabledXposed(): Boolean = readXposedBooleanPreferringMirrors(
+        persistPropertyKey = PERSIST_PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
+        propertyKey = PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
+        settingsKey = SETTINGS_KEY_WALLPAPERS_RED_ONE_ENTRY,
+        prefsKey = KEY_WALLPAPERS_RED_ONE_ENTRY,
+        defaultValue = DEFAULT_WALLPAPERS_RED_ONE_ENTRY,
+    )
+
+    fun isSettingsRefreshRateUnlockedXposed(): Boolean {
+        return readXposedBooleanPreferringMirrors(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            propertyKey = PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            settingsKey = SETTINGS_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            prefsKey = KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+            defaultValue = DEFAULT_SETTINGS_UNLOCK_REFRESH_RATE,
+        )
+    }
+
+    fun isSettingsForceGlobalExtremeRefreshRateEnabledXposed(): Boolean {
+        return readXposedBooleanPreferringMirrors(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            propertyKey = PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            settingsKey = SETTINGS_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            prefsKey = KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+            defaultValue = DEFAULT_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
+        )
+    }
+
+    fun isSettingsRestoreSmartLockEnabledXposed(): Boolean {
+        return isSettingsInternationalEnabledXposed() && readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
+            propertyKey = PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
+            settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_SMART_LOCK,
+            prefsKey = KEY_SETTINGS_RESTORE_SMART_LOCK,
+            defaultValue = DEFAULT_SETTINGS_RESTORE_SMART_LOCK,
+        )
+    }
+
+    fun isSettingsInternationalEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL,
+            propertyKey = PROP_KEY_SETTINGS_INTERNATIONAL,
+            settingsKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL,
+            prefsKey = KEY_SETTINGS_INTERNATIONAL,
+            defaultValue = DEFAULT_SETTINGS_INTERNATIONAL
+        )
+    }
+
+    fun isGmsRegionRestrictionBypassEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
+            propertyKey = PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
+            settingsKey = SETTINGS_KEY_GMS_REGION_RESTRICTION_BYPASS,
+            prefsKey = KEY_GMS_REGION_RESTRICTION_BYPASS,
+            defaultValue = DEFAULT_GMS_REGION_RESTRICTION_BYPASS,
+        )
+    }
+
+    fun isEsimRegionRestrictionBypassEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            propertyKey = PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            settingsKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            prefsKey = KEY_ESIM_REGION_RESTRICTION_BYPASS,
+            defaultValue = DEFAULT_ESIM_REGION_RESTRICTION_BYPASS,
+        )
+    }
+
+    fun isEsimConfirmationCodePromptEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            propertyKey = PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            settingsKey = SETTINGS_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            prefsKey = KEY_ESIM_CONFIRMATION_CODE_PROMPT,
+            // Older builds coupled the prompt to region bypass. Use that value only as the
+            // migration default; once this setting is written it is fully independent.
+            defaultValue = isEsimRegionRestrictionBypassEnabledXposed(),
+        )
+    }
+
+    fun isEsimRegionRestrictionOverrideEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            propertyKey = PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            settingsKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            prefsKey = KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
+            defaultValue = DEFAULT_ESIM_REGION_RESTRICTION_OVERRIDE,
+        )
+    }
+
+    fun isEsimProfileLimitBypassEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            propertyKey = PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            settingsKey = SETTINGS_KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            prefsKey = KEY_ESIM_PROFILE_LIMIT_BYPASS,
+            defaultValue = DEFAULT_ESIM_PROFILE_LIMIT_BYPASS,
+        )
+    }
+
+    fun isMobileNetworkHideAiLinkBoostEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
+        )
+
+    fun isMobileNetworkHideRoamingServiceEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
+        )
+
+    fun isMobileNetworkHideHighDataSimCardEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
+        )
+
+    fun isMobileNetworkHideSmartCloudAccelerationEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey =
+                PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
+        )
+
+    fun isMobileNetworkHidePhoneNumberEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            prefsKey = KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
+        )
+
+    fun isMobileNetworkForceCarrierOptionsEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            propertyKey = PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            prefsKey = KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+            defaultValue = DEFAULT_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
+        )
+
+    fun isAppMarketRegionRestrictionBypassEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            propertyKey = PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            prefsKey = KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
+            defaultValue = DEFAULT_APP_MARKET_REGION_RESTRICTION_BYPASS,
+        )
+
+    fun isAppMarketRemoveSplashRecommendationsEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            prefsKey = KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
+        )
+
+    fun isAppMarketRemoveUpdateDownloadRecommendationsEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey =
+                PERSIST_PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            prefsKey = KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
+        )
+
+    fun isAppMarketRemoveMineRecommendationsEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            prefsKey = KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
+        )
+
+    fun isAppMarketHideSearchHomeRecommendationsEnabledXposed(): Boolean =
+        readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            prefsKey = KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
+        )
+
+    fun isAppMarketHideSearchResultRecommendationsEnabledXposed(): Boolean =
+        readXposedBooleanPreferringMirrors(
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            prefsKey = KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
+        )
+
+    fun isAppMarketHideDetailRecommendationsEnabledXposed(): Boolean =
+        readXposedBooleanPreferringMirrors(
+            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            propertyKey = PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            prefsKey = KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+            defaultValue = DEFAULT_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
+        )
+
+    fun isAthenaC17SwipeUpProtectionEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            propertyKey = PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            settingsKey = SETTINGS_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            prefsKey = KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
+            defaultValue = DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION,
+        )
+    }
+
+    fun isOkGoogleHotwordCompatibilityEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            propertyKey = PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            settingsKey = SETTINGS_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            prefsKey = KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+            defaultValue = DEFAULT_OK_GOOGLE_HOTWORD_COMPATIBILITY,
+        )
+    }
+
+    fun isLauncherHideWidgetLabelsEnabledXposed(): Boolean {
+        return readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            propertyKey = PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            settingsKey = SETTINGS_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            prefsKey = KEY_LAUNCHER_HIDE_WIDGET_LABELS,
+            defaultValue = DEFAULT_LAUNCHER_HIDE_WIDGET_LABELS,
+        )
+    }
+
+    fun getLauncherSearchBarModeXposed(): Int {
+        HookConfigSnapshot.int(KEY_LAUNCHER_SEARCH_BAR_MODE, Int.MIN_VALUE)
+            ?.takeIf { it != Int.MIN_VALUE }
+            ?.let { return it.sanitizeLauncherSearchBarMode() }
+        readSystemPropertyValue(PERSIST_PROP_KEY_LAUNCHER_SEARCH_BAR_MODE)?.toIntOrNull()?.let {
+            return it.sanitizeLauncherSearchBarMode()
+        }
+        readSystemPropertyValue(PROP_KEY_LAUNCHER_SEARCH_BAR_MODE)?.toIntOrNull()?.let {
+            return it.sanitizeLauncherSearchBarMode()
+        }
+        readSettingsGlobalValue(SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE)?.toIntOrNull()?.let {
+            return it.sanitizeLauncherSearchBarMode()
+        }
+        return runCatching {
+            xposedPreferences.getInt(
+                KEY_LAUNCHER_SEARCH_BAR_MODE,
+                DEFAULT_LAUNCHER_SEARCH_BAR_MODE,
+            )
+        }.getOrDefault(DEFAULT_LAUNCHER_SEARCH_BAR_MODE).sanitizeLauncherSearchBarMode()
+    }
+
+    private fun readSystemPropertyToggle(propertyKey: String): Boolean? {
+        return parseToggleValue(readSystemPropertyValue(propertyKey))
+    }
+
+    private fun readSyncedToggle(
+        context: Context,
+        persistPropertyKey: String,
+        propertyKey: String,
+        settingsKey: String,
+        flagFilePath: String?,
+        legacyFlagFilePath: String?,
+        prefsKey: String,
+        defaultValue: Boolean
+    ): Boolean {
+        readSystemPropertyToggle(persistPropertyKey)?.let { return it }
+        readSystemPropertyToggle(propertyKey)?.let { return it }
+        readSettingsGlobalToggle(settingsKey)?.let { return it }
+        flagFilePath?.let { readFlagFile(it)?.let { value -> return value } }
+        legacyFlagFilePath?.let { readFlagFile(it)?.let { value -> return value } }
+        return prefs(context).getBoolean(prefsKey, defaultValue)
+    }
+
+    private fun readSyncedInt(
+        context: Context,
+        persistPropertyKey: String,
+        propertyKey: String,
+        settingsKey: String,
+        prefsKey: String,
+        defaultValue: Int
+    ): Int {
+        readSystemPropertyValue(persistPropertyKey)?.toIntOrNull()?.let { return it }
+        readSystemPropertyValue(propertyKey)?.toIntOrNull()?.let { return it }
+        readSettingsGlobalValue(settingsKey)?.toIntOrNull()?.let { return it }
+        return prefs(context).getInt(prefsKey, defaultValue)
+    }
+
+    private fun readSyncedString(
+        context: Context,
+        persistPropertyKey: String,
+        propertyKey: String,
+        settingsKey: String,
+        prefsKey: String,
+        defaultValue: String
+    ): String {
+        readSystemPropertyValue(persistPropertyKey)?.let { return it }
+        readSystemPropertyValue(propertyKey)?.let { return it }
+        readSettingsGlobalValue(settingsKey)?.let { return it }
+        return prefs(context).getString(prefsKey, defaultValue) ?: defaultValue
+    }
+
+    private fun setSyncedBooleanPreference(
+        context: Context,
+        prefsKey: String,
+        enabled: Boolean,
+        propertyKeys: List<String>,
+        settingsGlobalKey: String
+    ) {
+        prefs(context).edit().putBoolean(prefsKey, enabled).commit()
+        syncReadableState(context)
+        syncScalarState(
+            value = if (enabled) "1" else "0",
+            propertyKeys = propertyKeys,
+            settingsGlobalKey = settingsGlobalKey
+        )
+    }
+
+    private fun readSystemPropertyValue(propertyKey: String): String? {
+        return readTimedString(systemPropertyReadCache, propertyKey) {
+            runCatching {
+                (systemPropertiesGetMethod?.invoke(null, propertyKey, "") as? String)
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+            }.getOrNull()
+        }
+    }
+
+    private fun readFlagFile(filePath: String): Boolean? {
+        return runCatching {
+            val file = File(filePath)
+            if (!file.exists()) return@runCatching null
+            when (file.readText().trim()) {
+                "1", "true", "on", "enabled" -> true
+                "0", "false", "off", "disabled" -> false
+                else -> null
+            }
+        }.getOrNull()
+    }
+
+    private fun readTextFileValue(filePath: String): String? {
+        return runCatching {
+            val file = File(filePath)
+            if (!file.exists()) return@runCatching null
+            file.readText().trim().takeIf { it.isNotEmpty() }
+        }.getOrNull()
+    }
+
+    private fun readSettingsGlobalToggle(settingsKey: String): Boolean? {
+        return parseToggleValue(readSettingsGlobalValue(settingsKey))
+    }
+
+    private fun readSettingsGlobalValue(settingsKey: String): String? {
+        return readTimedString(settingsGlobalReadCache, settingsKey) {
+            readSettingsGlobalViaFramework(settingsKey)
+                ?: readSettingsGlobalViaXml(settingsKey)
+        }
+    }
+
+    private inline fun readTimedString(
+        cache: ConcurrentHashMap<String, TimedStringValue>,
+        key: String,
+        reader: () -> String?,
+    ): String? {
+        val now = System.nanoTime()
+        cache[key]?.let { cached ->
+            if (now - cached.readAtNanos < XPOSED_READ_CACHE_NANOS) return cached.value
+        }
+        return reader().also { value ->
+            cache[key] = TimedStringValue(value = value, readAtNanos = now)
+        }
+    }
+
+    private fun getStringSet(context: Context, key: String): Set<String> {
+        return prefs(context).getStringSet(key, emptySet()).orEmpty()
+    }
+
+    private fun readXposedString(key: String, defaultValue: String): String? {
+        HookConfigSnapshot.string(key, defaultValue)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getString(key, defaultValue)
+        }.getOrDefault(defaultValue)
+    }
+
+    private fun readXposedStringSet(key: String): Set<String> {
+        HookConfigSnapshot.stringSet(key, emptySet())?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getStringSet(key, emptySet()).orEmpty()
+        }.getOrDefault(emptySet())
+    }
+
+    private fun readXposedBoolean(
+        persistPropertyKey: String,
+        propertyKey: String,
+        settingsKey: String,
+        prefsKey: String,
+        defaultValue: Boolean
+    ): Boolean {
+        HookConfigSnapshot.boolean(prefsKey, defaultValue)?.let { return it }
+        readSystemPropertyToggle(persistPropertyKey)?.let { return it }
+        readSystemPropertyToggle(propertyKey)?.let { return it }
+        readSettingsGlobalToggle(settingsKey)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(prefsKey, defaultValue)
+        }.getOrDefault(defaultValue)
+    }
+
+    /**
+     * Newly introduced switches may already have a synchronized property value while an older
+     * API-102 preference snapshot does not contain their key yet. In that upgrade window the
+     * mirror is authoritative; otherwise the missing snapshot entry would incorrectly look like
+     * the default value until the user toggles the row twice.
+     */
+    private fun readXposedBooleanPreferringMirrors(
+        persistPropertyKey: String,
+        propertyKey: String,
+        settingsKey: String,
+        prefsKey: String,
+        defaultValue: Boolean,
+    ): Boolean {
+        readSystemPropertyToggle(persistPropertyKey)?.let { return it }
+        readSystemPropertyToggle(propertyKey)?.let { return it }
+        readSettingsGlobalToggle(settingsKey)?.let { return it }
+        HookConfigSnapshot.boolean(prefsKey, defaultValue)?.let { return it }
+        return runCatching {
+            val prefs = xposedPreferences
+            prefs.getBoolean(prefsKey, defaultValue)
+        }.getOrDefault(defaultValue)
+    }
+
+    private fun readSettingsGlobalViaFramework(settingsKey: String): String? {
+        return runCatching {
+            val activityThreadClass = Class.forName("android.app.ActivityThread")
+            val currentThread = activityThreadClass
+                .getMethod("currentActivityThread")
+                .invoke(null)
+                ?: return@runCatching null
+            val systemContext = activityThreadClass
+                .getMethod("getSystemContext")
+                .invoke(currentThread)
+                ?: return@runCatching null
+
+            val contentResolver = systemContext.javaClass
+                .getMethod("getContentResolver")
+                .invoke(systemContext)
+                ?: return@runCatching null
+
+            val settingsGlobalClass = Class.forName("android.provider.Settings\$Global")
+            val getStringMethod = settingsGlobalClass.getMethod(
+                "getString",
+                Class.forName("android.content.ContentResolver"),
+                String::class.java
+            )
+            getStringMethod.invoke(null, contentResolver, settingsKey) as? String
+        }.getOrNull()
+    }
+
+    private fun readSettingsGlobalViaXml(settingsKey: String): String? {
+        return runCatching {
+            val file = File("/data/system/users/0/settings_global.xml")
+            if (!file.exists()) return@runCatching null
+            val text = file.readText()
+            val escaped = Regex.escape(settingsKey)
+            val directOrder = Regex("<setting[^>]*name=\"$escaped\"[^>]*value=\"([^\"]*)\"[^>]*/?>")
+                .find(text)
+                ?.groupValues
+                ?.getOrNull(1)
+            if (directOrder != null) return@runCatching directOrder
+
+            val reversedOrder = Regex("<setting[^>]*value=\"([^\"]*)\"[^>]*name=\"$escaped\"[^>]*/?>")
+                .find(text)
+                ?.groupValues
+                ?.getOrNull(1)
+            reversedOrder
+        }.getOrNull()
+    }
+
+    private fun parseToggleValue(raw: String?): Boolean? {
+        val value = raw?.trim()?.lowercase() ?: return null
+        return when (value) {
+            "1", "true", "on", "enabled" -> true
+            "0", "false", "off", "disabled" -> false
+            else -> null
+        }
+    }
+
+    private fun Int.sanitizeAssistantPowerMode(): Int {
+        return when (this) {
+            ASSISTANT_POWER_MODE_NONE,
+            ASSISTANT_POWER_MODE_SYSTEM_DEFAULT -> this
+            else -> DEFAULT_ASSISTANT_POWER_MODE
+        }
+    }
+
+    private fun Int.sanitizeLauncherSearchBarMode(): Int {
+        return when (this) {
+            LAUNCHER_SEARCH_BAR_MODE_OFF,
+            LAUNCHER_SEARCH_BAR_MODE_INTERNATIONAL,
+            LAUNCHER_SEARCH_BAR_MODE_CHINA -> this
+            else -> DEFAULT_LAUNCHER_SEARCH_BAR_MODE
+        }
+    }
+
+    private fun Int.sanitizeSystemUiMonetColorSpecMode(): Int {
+        return when (this) {
+            SYSTEMUI_MONET_COLOR_SPEC_OFF,
+            SYSTEMUI_MONET_COLOR_SPEC_2025,
+            SYSTEMUI_MONET_COLOR_SPEC_2021 -> this
+            else -> DEFAULT_SYSTEMUI_MONET_COLOR_SPEC_MODE
+        }
+    }
+
+    private fun Int.sanitizeOosLocalizerConfigMode(): Int {
+        return when (this) {
+            OOS_LOCALIZER_CONFIG_DEFAULT,
+            OOS_LOCALIZER_CONFIG_CUSTOM -> this
+            else -> DEFAULT_OOS_LOCALIZER_CONFIG_MODE
+        }
+    }
+
+    private fun String?.sanitizeOosLocalizerRegion(): String {
+        return this
+            ?.trim()
+            ?.uppercase()
+            ?.takeIf { it.matches(Regex("[A-Z]{2}")) }
+            ?: DEFAULT_OOS_LOCALIZER_REGION
+    }
+
+    private fun String?.sanitizeOosLocalizerLocale(): String {
+        return this
+            ?.trim()
+            ?.replace('_', '-')
+            ?.takeIf { it.matches(Regex("[A-Za-z]{2,3}(-[A-Za-z]{2})?")) }
+            ?: DEFAULT_OOS_LOCALIZER_LOCALE
+    }
+
+    private fun String?.sanitizeOosLocalizerModel(): String {
+        return this
+            ?.trim()
+            ?.takeIf { it.matches(Regex("[A-Za-z0-9_.-]{2,32}")) }
+            ?: DEFAULT_OOS_LOCALIZER_MODEL
+    }
+
+    private fun syncFlagState(
+        enabled: Boolean,
+        propertyKeys: List<String>,
+        settingsGlobalKey: String,
+        flagFilePath: String
+    ) {
+        val value = if (enabled) "1" else "0"
+        val legacyFlagPath = when (flagFilePath) {
+            FLAG_FILE_PATH_NATIVE_NOTIFY_ICON -> LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFY_ICON
+            FLAG_FILE_PATH_EXTREME_REFRESH_165 -> LEGACY_FLAG_FILE_PATH_EXTREME_REFRESH_165
+            FLAG_FILE_PATH_RECENT_TASK_RADIUS -> LEGACY_FLAG_FILE_PATH_RECENT_TASK_RADIUS
+            FLAG_FILE_PATH_AOD_ENHANCE -> LEGACY_FLAG_FILE_PATH_AOD_ENHANCE
+            FLAG_FILE_PATH_OOS_LOCALIZER -> LEGACY_FLAG_FILE_PATH_OOS_LOCALIZER
+            FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES -> LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES
+            else -> null
+        }
+        runCatching {
+            val directCommands = propertyKeys.map { key -> "setprop $key $value" } +
+                listOf(
+                    "settings put global $settingsGlobalKey $value",
+                    "echo $value > $flagFilePath",
+                    "chmod 644 $flagFilePath"
+                ) +
+                if (legacyFlagPath != null) {
+                    listOf(
+                        "echo $value > $legacyFlagPath",
+                        "chmod 644 $legacyFlagPath"
+                    )
+                } else {
+                    emptyList()
+                }
+            syncCommandBatch.get()?.let { batch ->
+                batch.addAll(directCommands)
+                return@runCatching
+            }
+            executeSyncCommands("LSP sync toggle:$settingsGlobalKey", directCommands)
+        }
+    }
+
+    private fun syncScalarState(
+        value: String,
+        propertyKeys: List<String>,
+        settingsGlobalKey: String,
+        textFilePath: String? = null
+    ) {
+        runCatching {
+            val textFileCommands = if (textFilePath != null) {
+                listOf(
+                    "printf %s ${shellQuote(value)} > $textFilePath",
+                    "chmod 644 $textFilePath"
+                )
+            } else {
+                emptyList()
+            }
+            val directCommands = propertyKeys.map { key -> "setprop $key $value" } +
+                listOf("settings put global $settingsGlobalKey ${shellQuote(value)}") +
+                textFileCommands
+            syncCommandBatch.get()?.let { batch ->
+                batch.addAll(directCommands)
+                return@runCatching
+            }
+            executeSyncCommands("LSP sync scalar:$settingsGlobalKey", directCommands)
+        }
+    }
+
+    private fun executeSyncCommands(tag: String, commands: List<String>): Boolean {
+        if (commands.isEmpty()) return true
+        val directResult = ShellLogger.exec("$tag direct", *commands.toTypedArray())
+        if (directResult.isSuccess) return true
+
+        // libsu normally gives us a root shell. Only pay for a nested su process when that direct
+        // execution actually failed, instead of running every write twice.
+        val joinedCommand = commands.joinToString("; ")
+        return ShellLogger.exec("$tag su", "su -c ${shellQuote(joinedCommand)}").isSuccess
+    }
+
+    private fun shellQuote(value: String): String {
+        return "'" + value.replace("'", "'\"'\"'") + "'"
+    }
+
+    private fun prefs(context: Context): SharedPreferences {
+        val storageContext = prefsContext(context)
+        return storageContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    private fun prefsContext(context: Context): Context {
+        val deviceContext = context.createDeviceProtectedStorageContext()
+        runCatching {
+            val devicePrefsFile = File(
+                "/data/user_de/0/${context.packageName}/shared_prefs",
+                "$PREFS_NAME.xml"
+            )
+            if (!devicePrefsFile.exists()) {
+                deviceContext.moveSharedPreferencesFrom(context, PREFS_NAME)
+            }
+        }
+        return deviceContext
+    }
+
+    private fun makePrefsReadableForXposed(context: Context) {
+        runCatching {
+            val userPrefsDir = File(context.applicationInfo.dataDir, "shared_prefs")
+            val userPrefsFile = File(userPrefsDir, "$PREFS_NAME.xml")
+            if (userPrefsFile.exists()) {
+                userPrefsDir.setReadable(true, false)
+                userPrefsFile.setReadable(true, false)
+            }
+        }
+        runCatching {
+            val devicePrefsDir = File("/data/user_de/0/${context.packageName}/shared_prefs")
+            val devicePrefsFile = File(devicePrefsDir, "$PREFS_NAME.xml")
+            if (devicePrefsFile.exists()) {
+                devicePrefsDir.setReadable(true, false)
+                devicePrefsFile.setReadable(true, false)
+            }
+        }
+    }
+}

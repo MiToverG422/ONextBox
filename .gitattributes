@@ -1,0 +1,10 @@
+# Keep source, workflow and shell scripts portable across Windows / Linux.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.mp4 binary
+*.ttf binary

@@ -1,0 +1,5 @@
+ONextBox は GPL-3.0 に基づいて配布されます。
+
+ランタイム コンポーネントには、Apache-2.0 での AndroidX、Jetpack Compose、Kotlin および kotlinx ライブラリ、COUI/Miuix、Kyant0 Capsule、AndroidLiquidGlass、libsu、HiddenApiBypass、libxused、マテリアル カラー ユーティリティ、および Poko が含まれます。
+
+Android、ColorOS/OPlus ソフトウェア、ルート マネージャー、および LSPosed は互換性ターゲットまたはプラットフォームであり、ONextBox によって再ライセンスされません。各プロジェクトによって提供される著作権表示および完全なライセンス テキストがこの概要より優先されます。ソースの可用性と帰属リンクには、About ページから引き続きアクセスできます。

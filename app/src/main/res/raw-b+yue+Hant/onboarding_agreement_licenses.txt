@@ -1,0 +1,5 @@
+ONextBox 按 GPL-3.0 發佈。
+
+執行時用嘅元件包括按 Apache-2.0 提供嘅 AndroidX、Jetpack Compose、Kotlin 同 kotlinx、COUI/Miuix、Kyant0 Capsule、AndroidLiquidGlass、libsu、HiddenApiBypass、libxposed、Material Color Utilities 同 Poko。
+
+Android、ColorOS/OPlus 軟件、Root 管理器同 LSPosed 係相容目標或執行平台，唔會因為 ONextBox 而改變授權。呢頁只係簡要說明，各個專案附帶嘅版權聲明同完整授權文字優先；原始碼同署名連結可以喺「關於」頁面繼續睇。

@@ -1,0 +1,4 @@
+Use eSIM functions only for profiles, accounts, and devices owned by you or for which you have explicit authorization.
+
+Do not use them for telecom fraud, identity or number impersonation, unauthorized profile writing, evasion of real-name, billing, carrier risk-control, or regional requirements, or any other unlawful activity. Do not share QR codes, activation codes, confirmation codes, EIDs, or ICCIDs.
+

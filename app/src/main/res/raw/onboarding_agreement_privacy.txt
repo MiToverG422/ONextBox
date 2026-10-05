@@ -1,0 +1,7 @@
+ONextBox locally reads device and system information needed to show compatibility and status, including model, region, Android version, system properties, Root manager, LSPosed status, and redacted eSIM diagnostics.
+
+Settings are stored locally. Runtime logs are stored in the app private directory and are not automatically uploaded. Some enabled features write system settings or flags that can remain after uninstalling.
+
+LSPosed checks may temporarily copy its configuration database to the app cache for a read-only query and then delete it. User-initiated configuration backups are written only to the location you choose.
+
+Background update checks, when separately allowed, contact GitHub and therefore disclose ordinary network metadata such as your IP address to GitHub. ONextBox contains no advertising or analytics SDK and has no developer-operated account or telemetry server.

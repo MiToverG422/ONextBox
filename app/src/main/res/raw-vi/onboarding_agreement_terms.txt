@@ -1,0 +1,3 @@
+ONextBox cung cấp khả năng chẩn đoán và tùy chỉnh hệ thống. Một số hành động có thể sửa đổi cài đặt hệ thống, thuộc tính, tệp hoặc hoạt động của các ứng dụng khác. Chúng có thể gây ra sự cố, tính năng không khả dụng, vòng lặp khởi động, mất dữ liệu, cập nhật không thành công hoặc hậu quả về bảo hành và hỗ trợ.
+
+Sao lưu dữ liệu quan trọng và chuẩn bị phương pháp khôi phục hoạt động trước khi sử dụng. Trong chừng mực được pháp luật hiện hành cho phép, bạn có trách nhiệm quyết định áp dụng những thay đổi nào và về hậu quả của những thay đổi đó.

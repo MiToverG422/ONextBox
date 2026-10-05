@@ -1,0 +1,5 @@
+ONextBox 依據 GPL-3.0 發布。
+
+執行階段元件包括依據 Apache-2.0 提供的 AndroidX、Jetpack Compose、Kotlin 與 kotlinx、COUI/Miuix、Kyant0 Capsule、AndroidLiquidGlass、libsu、HiddenApiBypass、libxposed、Material Color Utilities 與 Poko。
+
+Android、ColorOS/OPlus 軟體、Root 管理器及 LSPosed 屬於相容目標或執行平台，不因 ONextBox 而改變其授權。本頁為簡要說明，各專案附帶的著作權聲明和完整授權文字具有優先效力；原始碼與署名連結可在「關於」頁面繼續查看。

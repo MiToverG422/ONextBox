@@ -1,0 +1,3 @@
+Root allows ONextBox to execute commands with the highest device privilege. LSPosed loads module code inside Android, System UI, Settings, the launcher, and other selected processes.
+
+Incorrect settings, incompatible system updates, or conflicts with other modules can weaken security or cause instability. Only grant access on a device you are authorized to manage. Review each scope in LSPosed and keep a tested way to disable modules or enter recovery.

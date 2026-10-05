@@ -1,0 +1,60 @@
+name: Sync source
+
+on:
+  push:
+    branches: [codex/source-sync-trigger]
+  workflow_dispatch:
+  schedule:
+    - cron: '7,37 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: public-source-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'MiToverG422/ONextBox'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out public main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          path: destination
+
+      - name: Test publication safeguards
+        run: python3 -m unittest discover -s destination/.github/tests -v
+
+      - name: Check out source snapshot
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ secrets.SOURCE_REPOSITORY }}
+          ref: main
+          path: source
+          ssh-key: ${{ secrets.SOURCE_READ_KEY }}
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+
+      - name: Publish eligible source files
+        run: python3 destination/.github/scripts/sync_source.py --source source --destination destination
+
+      - name: Commit changed snapshot
+        working-directory: destination
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Source snapshot is already up to date."
+            exit 0
+          fi
+          git -c core.whitespace=-blank-at-eof diff --cached --check
+          git config user.name "MiToverG422"
+          git config user.email "59342133+MiToverG422@users.noreply.github.com"
+          git commit -m "chore: update public source snapshot"
+          git push origin HEAD:main
