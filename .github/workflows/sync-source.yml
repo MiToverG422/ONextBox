@@ -2,7 +2,7 @@ name: Sync source
 
 on:
   push:
-    branches: [codex/source-sync-trigger]
+    branches: [source-sync]
   workflow_dispatch:
   schedule:
     - cron: '7,37 * * * *'
