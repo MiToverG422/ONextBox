@@ -15,6 +15,11 @@ on:
         description: "Optional base version name override"
         required: false
         type: string
+      notify_telegram:
+        description: "Send APKs to the configured Telegram topic"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -41,6 +46,9 @@ jobs:
       - name: Resolve channel and version
         id: version
         shell: bash
+        env:
+          INPUT_CHANNEL: ${{ inputs.channel }}
+          INPUT_VERSION: ${{ inputs.version_name }}
         run: |
           set -euo pipefail
 
@@ -50,8 +58,12 @@ jobs:
           CI_CODE="${GITHUB_SHA:0:8}"
 
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            CHANNEL="${{ github.event.inputs.channel }}"
-            INPUT_VERSION="${{ github.event.inputs.version_name }}"
+            CHANNEL="${INPUT_CHANNEL:-ci}"
+
+            if [[ -n "${INPUT_VERSION}" && ! "${INPUT_VERSION}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?([._-][A-Za-z0-9]+)*$ ]]; then
+              echo "::error::Version must start with X.Y or X.Y.Z and contain only a safe alphanumeric suffix."
+              exit 1
+            fi
 
             if [[ -z "${CHANNEL}" ]]; then
               CHANNEL="ci"
@@ -118,6 +130,7 @@ jobs:
         id: signing
         shell: bash
         env:
+          BUILD_CHANNEL: ${{ steps.version.outputs.channel }}
           ONEXTBOX_RELEASE_KEYSTORE_B64: ${{ secrets.ONEXTBOX_RELEASE_KEYSTORE_B64 }}
           ONEXTBOX_RELEASE_STORE_PASSWORD: ${{ secrets.ONEXTBOX_RELEASE_STORE_PASSWORD }}
           ONEXTBOX_RELEASE_KEY_ALIAS: ${{ secrets.ONEXTBOX_RELEASE_KEY_ALIAS }}
@@ -131,11 +144,16 @@ jobs:
           if [[ -n "${ONEXTBOX_RELEASE_KEYSTORE_B64}" && -n "${ONEXTBOX_RELEASE_STORE_PASSWORD}" && -n "${ONEXTBOX_RELEASE_KEY_ALIAS}" && -n "${ONEXTBOX_RELEASE_KEY_PASSWORD}" ]]; then
             mkdir -p .ci-signing
             KEYSTORE_PATH="${GITHUB_WORKSPACE}/.ci-signing/release.jks"
+            umask 077
             printf '%s' "${ONEXTBOX_RELEASE_KEYSTORE_B64}" | base64 -d > "${KEYSTORE_PATH}"
+            if ! keytool -list -keystore "${KEYSTORE_PATH}" -storepass:env ONEXTBOX_RELEASE_STORE_PASSWORD -alias "${ONEXTBOX_RELEASE_KEY_ALIAS}" >/dev/null 2>&1; then
+              echo "::error::Signing keystore, store password or key alias is invalid. No certificate will be replaced."
+              exit 1
+            fi
             HAS_RELEASE_SIGNING=true
             echo "Release signing keystore prepared"
           else
-            if [[ "${{ steps.version.outputs.channel }}" == "ci" ]]; then
+            if [[ "${BUILD_CHANNEL}" == "ci" ]]; then
               echo "::warning::Release signing secrets are incomplete. CI will use debug signing for this test build."
             else
               echo "::error::Release signing secrets are incomplete. Release builds must use one unified signing certificate."
@@ -147,11 +165,14 @@ jobs:
           echo "keystore_path=${KEYSTORE_PATH}" >> "${GITHUB_OUTPUT}"
 
       - name: Build APK
+        shell: bash
         env:
-          ONEXTBOX_RELEASE_STORE_PASSWORD: ${{ secrets.ONEXTBOX_RELEASE_STORE_PASSWORD }}
-          ONEXTBOX_RELEASE_KEY_ALIAS: ${{ secrets.ONEXTBOX_RELEASE_KEY_ALIAS }}
-          ONEXTBOX_RELEASE_KEY_PASSWORD: ${{ secrets.ONEXTBOX_RELEASE_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_ONEXTBOX_RELEASE_STORE_PASSWORD: ${{ secrets.ONEXTBOX_RELEASE_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_ONEXTBOX_RELEASE_KEY_ALIAS: ${{ secrets.ONEXTBOX_RELEASE_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_ONEXTBOX_RELEASE_KEY_PASSWORD: ${{ secrets.ONEXTBOX_RELEASE_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_ONEXTBOX_RELEASE_STORE_FILE: ${{ steps.signing.outputs.keystore_path }}
         run: |
+          set -euo pipefail
           if [ "${{ steps.version.outputs.build_variant }}" = "both" ]; then
             TASKS=(":app:assembleDebug" ":app:assembleRelease")
           elif [ "${{ steps.version.outputs.build_variant }}" = "debug" ]; then
@@ -175,16 +196,14 @@ jobs:
             "-PONEXTBOX_CI_SIGN_RELEASE_WITH_DEBUG=${SIGN_RELEASE_WITH_DEBUG}"
           )
 
-          if [ "${{ steps.signing.outputs.has_release_signing }}" = "true" ]; then
-            GRADLE_ARGS+=(
-              "-PONEXTBOX_RELEASE_STORE_FILE=${{ steps.signing.outputs.keystore_path }}"
-              "-PONEXTBOX_RELEASE_STORE_PASSWORD=${ONEXTBOX_RELEASE_STORE_PASSWORD}"
-              "-PONEXTBOX_RELEASE_KEY_ALIAS=${ONEXTBOX_RELEASE_KEY_ALIAS}"
-              "-PONEXTBOX_RELEASE_KEY_PASSWORD=${ONEXTBOX_RELEASE_KEY_PASSWORD}"
-            )
-          fi
-
           ./gradlew "${TASKS[@]}" "${GRADLE_ARGS[@]}" --no-daemon
+
+      - name: Remove temporary signing material
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f -- "${GITHUB_WORKSPACE}/.ci-signing/release.jks"
 
       - name: Prepare APK files
         id: apks
@@ -222,21 +241,36 @@ jobs:
             echo "files=${RELEASE_OUT}" >> "${GITHUB_OUTPUT}"
           fi
 
+      - name: Verify APK signatures and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          APKSIGNER="$(find "${SDK_ROOT}/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          test -n "${APKSIGNER}"
+          for apk in dist/*.apk; do
+            "${APKSIGNER}" verify "${apk}"
+          done
+          (cd dist && sha256sum -- *.apk > SHA256SUMS)
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: onextbox-${{ steps.version.outputs.version_name }}-${{ steps.version.outputs.version_code_label }}
-          path: dist/*.apk
+          path: |
+            dist/*.apk
+            dist/SHA256SUMS
+          if-no-files-found: error
 
       - name: Notify build to Telegram
-        if: always()
+        if: ${{ always() && inputs.notify_telegram }}
         continue-on-error: true
         env:
           TG_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           # https://t.me/ONextBox/4 (CI), https://t.me/ONextBox/2 (releases)
-          TG_CHAT_ID: "@ONextBox"
-          TG_CI_THREAD_ID: "4"
-          TG_RELEASE_THREAD_ID: "2"
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TG_CI_THREAD_ID: ${{ secrets.TELEGRAM_CI_THREAD_ID }}
+          TG_RELEASE_THREAD_ID: ${{ secrets.TELEGRAM_RELEASE_THREAD_ID }}
           BUILD_STATUS: ${{ job.status }}
           BUILD_CHANNEL: ${{ steps.version.outputs.channel }}
         shell: bash
@@ -262,6 +296,10 @@ jobs:
               print(f"Build status is {build_status}; skip Telegram notification.")
               raise SystemExit(0)
 
+          if not token or not chat_id or not ci_thread_id.isdigit() or not release_thread_id.isdigit():
+              print("::error::Telegram environment secrets are missing or invalid.")
+              raise SystemExit(1)
+
           branch = os.environ.get("GITHUB_REF_NAME", "")
           full_sha = os.environ.get("GITHUB_SHA", "")
           sha8 = full_sha[:8]
@@ -279,8 +317,8 @@ jobs:
                           return resp.status, resp.read().decode("utf-8", "ignore")
                   except urllib.error.HTTPError as e:
                       return e.code, e.read().decode("utf-8", "ignore")
-                  except Exception as e:
-                      return None, str(e)
+                  except Exception:
+                      return None, "Telegram transport failed; sensitive details omitted."
 
               boundary = f"----onextbox-{uuid.uuid4().hex}"
               crlf = "\r\n"
@@ -314,8 +352,8 @@ jobs:
                       return resp.status, resp.read().decode("utf-8", "ignore")
               except urllib.error.HTTPError as e:
                   return e.code, e.read().decode("utf-8", "ignore")
-              except Exception as e:
-                  return None, str(e)
+              except Exception:
+                  return None, "Telegram transport failed; sensitive details omitted."
 
           def is_ok(status, text) -> bool:
               if status is None:
@@ -411,7 +449,7 @@ jobs:
               if is_ok(status, text):
                   raise SystemExit(0)
               print("Telegram APK media group upload failed, fallback to single APK or text message:")
-              print((text or "unknown error")[:800])
+              print(f"HTTP status: {status}; response body omitted for privacy.")
 
           if build_status == "success" and can_upload(release_apk):
               fields = {
@@ -429,7 +467,7 @@ jobs:
               if is_ok(status, text):
                   raise SystemExit(0)
               print("Telegram release APK upload failed, fallback to text message:")
-              print((text or "unknown error")[:800])
+              print(f"HTTP status: {status}; response body omitted for privacy.")
 
           fields = {
               "chat_id": chat_id,
@@ -442,7 +480,8 @@ jobs:
           status, text = api_post("sendMessage", fields, files=None, timeout=30)
           if not is_ok(status, text):
               print("Telegram notification failed:")
-              print((text or "unknown error")[:800])
+              print(f"HTTP status: {status}; response body omitted for privacy.")
+              raise SystemExit(1)
 
           PY
 
