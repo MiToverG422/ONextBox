@@ -420,7 +420,6 @@ jobs:
           def can_upload(path: Path | None) -> bool:
               return path is not None and path.is_file() and path.stat().st_size <= max_size
 
-          files_uploaded = False
           if build_status == "success" and can_upload(release_apk) and can_upload(debug_apk):
               media = [
                   {
@@ -430,6 +429,8 @@ jobs:
                   {
                       "type": "document",
                       "media": "attach://apk1",
+                      "caption": msg,
+                      "parse_mode": "HTML",
                   },
               ]
               fields = {
@@ -447,14 +448,15 @@ jobs:
                   ],
               )
               if is_ok(status, text):
-                  files_uploaded = True
-              else:
-                  print("Telegram APK media group upload failed, fallback to single APK or text message:")
-                  print(f"HTTP status: {status}; response body omitted for privacy.")
+                  raise SystemExit(0)
+              print("Telegram APK media group upload failed, fallback to single APK or text message:")
+              print(f"HTTP status: {status}; response body omitted for privacy.")
 
-          if not files_uploaded and can_upload(release_apk):
+          if can_upload(release_apk):
               fields = {
                   "chat_id": chat_id,
+                  "caption": msg,
+                  "parse_mode": "HTML",
               }
               if thread_id:
                   fields["message_thread_id"] = thread_id
@@ -464,12 +466,11 @@ jobs:
                   files=[("document", (release_apk.name, "application/octet-stream", release_apk.read_bytes()))],
               )
               if is_ok(status, text):
-                  files_uploaded = True
-              else:
-                  print("Telegram release APK upload failed, fallback to text message:")
-                  print(f"HTTP status: {status}; response body omitted for privacy.")
+                  raise SystemExit(0)
+              print("Telegram release APK upload failed, fallback to text message:")
+              print(f"HTTP status: {status}; response body omitted for privacy.")
 
-          # Send the description separately, after the APK group/document.
+          # Only send standalone text when both APK upload attempts fail.
           fields = {
               "chat_id": chat_id,
               "text": msg,
