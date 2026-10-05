@@ -1,8 +1,6 @@
 name: Sync source
 
 on:
-  push:
-    branches: [source-sync]
   workflow_dispatch:
   schedule:
     - cron: '7,37 * * * *'
@@ -36,25 +34,10 @@ jobs:
           ref: main
           path: source
           ssh-key: ${{ secrets.SOURCE_READ_KEY }}
-          persist-credentials: false
+          persist-credentials: true
           fetch-depth: 1
           submodules: false
           lfs: false
 
-      - name: Publish eligible source files
-        run: python3 destination/.github/scripts/sync_source.py --source source --destination destination
-
-      - name: Commit changed snapshot
-        working-directory: destination
-        run: |
-          set -euo pipefail
-          git add -A
-          if git diff --cached --quiet; then
-            echo "Source snapshot is already up to date."
-            exit 0
-          fi
-          git -c core.whitespace=-blank-at-eof diff --cached --check
-          git config user.name "MiToverG422"
-          git config user.email "59342133+MiToverG422@users.noreply.github.com"
-          git commit -m "chore: update public source snapshot"
-          git push origin HEAD:main
+      - name: Publish latest eligible snapshot directly to main
+        run: bash destination/.github/scripts/publish_source.sh source destination
