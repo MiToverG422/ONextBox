@@ -53,6 +53,7 @@ object ModernXposedPreferenceSync : XposedServiceHelper.OnServiceListener {
                 }
                 localPreferences =
                     deviceContext.getSharedPreferences(GROUP, Context.MODE_PRIVATE).also {
+                        GoogleMessagesConfig.removeRetiredPreferences(it)
                         it.registerOnSharedPreferenceChangeListener(preferenceListener)
                     }
             }.onSuccess {

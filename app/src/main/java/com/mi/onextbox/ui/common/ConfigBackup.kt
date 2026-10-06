@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import com.mi.onextbox.BuildConfig
+import com.mi.onextbox.lsp.GoogleMessagesConfig
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.refresh.RefreshRatePreferences
 import com.mi.onextbox.refresh.RefreshRateControllerClient
@@ -95,6 +96,8 @@ object ConfigBackup {
             }
         }
         if (prefsRoot.has(LSP_PREFS_NAME)) {
+            // Do not revive removed features when importing an older configuration.
+            GoogleMessagesConfig.removeRetiredPreferences(prefs(context, LSP_PREFS_NAME))
             LspConfig.syncPermissionFeatures(context)
             // Restore the cross-process mirror as well as the exported preference value.
             val enabled = prefs(context, LSP_PREFS_NAME)

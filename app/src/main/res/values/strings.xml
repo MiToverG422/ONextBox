@@ -589,8 +589,14 @@
     <string name="feature_touch_rate_title">Touch sampling rate</string>
     <string name="feature_touch_rate_entry_summary">Read and select touch modes provided by this device</string>
     <string name="feature_touch_rate_tip_title">Tip</string>
+    <string name="feature_touch_rate_device_notice">Only tested on X9U (OPPO Find X9 Ultra). Other models have not yet been adapted; compatibility is not guaranteed.</string>
     <string name="feature_touch_rate_loading">Reading touch driver…</string>
     <string name="feature_touch_rate_unavailable">The OPlus touch mode interface is unavailable, or Root access was not granted</string>
+    <string name="feature_touch_rate_root_required">Grant ONextBox Root access in your Root manager, then tap Refresh. Enabling the LSPosed module alone does not grant Root access.</string>
+    <string name="feature_touch_rate_node_unsupported">The touch service reports no indexed report-rate support, and the current mode could not be read. This does not mean the touchscreen itself is unsupported.</string>
+    <string name="feature_touch_rate_hal_failed">The touch service could not be accessed or its reply could not be decoded. Tap Refresh to retry and share the diagnostic below if it persists.</string>
+    <string name="feature_touch_rate_read_failed">The interface is present, but its current mode could not be read. Changes are disabled until a successful read.</string>
+    <string name="feature_touch_rate_read_only">Current data is readable, but indexed writes are not confirmed as supported. Display only; mode changes are disabled.</string>
     <string name="feature_touch_rate_no_config">Touch service is available, but no OEM rate labels could be read</string>
     <string name="feature_touch_rate_no_distinct_presets">No OEM mode has a chip value different from the default</string>
     <string name="feature_touch_rate_status_group">Current status</string>
@@ -701,4 +707,11 @@
     <string name="feature_settings_region_entry_summary">International settings, Google entry and domestic options</string>
     <string name="feature_group_aod_brightness">AOD brightness</string>
     <string name="feature_group_aod_features">AOD features</string>
+    <string name="feature_google_messages_title">Google Messages</string>
+    <string name="feature_google_messages_chat_section">Chats</string>
+    <string name="feature_google_messages_gemini_title">Gemini chat</string>
+    <string name="feature_google_messages_gemini_summary">Show the Gemini entry when account and RCS requirements are met.</string>
+    <string name="feature_google_messages_notification_section">Notifications</string>
+    <string name="feature_google_messages_copy_otp_title">Copy verification code</string>
+    <string name="feature_google_messages_copy_otp_summary">Add Copy beside Read and Reply when an incoming SMS contains a code. Allow Google Messages to write to the clipboard, including in the background; otherwise, copying from notifications may not work.</string>
 </resources>

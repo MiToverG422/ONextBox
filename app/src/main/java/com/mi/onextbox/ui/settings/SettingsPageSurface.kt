@@ -40,6 +40,7 @@ import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.ColorOs17DetailTopBar
 import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.LocalAppUiStyle
+import com.mi.onextbox.ui.common.ScrollResetEffect
 import com.mi.onextbox.ui.layout.BlurredChromeBar
 import com.mi.onextbox.ui.layout.topBarColors
 import io.github.suqi8.coui.kmp.basic.Icon
@@ -77,7 +78,7 @@ fun SettingsPageSurface(
     bottomChrome: (@Composable () -> Unit)? = null,
     contentScrollable: Boolean = true,
     externalScrollState: ScrollState? = null,
-    scrollResetKey: Any? = null,
+    scrollResetKey: Int? = null,
     backgroundContent: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -104,12 +105,10 @@ fun SettingsPageSurface(
     // the parent entry while a detail page is active, so a plain remember would restore the
     // scrolled list but recreate an expanded title when returning.
     val topAppBarState = rememberTopAppBarState()
-    LaunchedEffect(scrollResetKey) {
-        if (scrollResetKey != null) {
-            scrollState.scrollTo(0)
-            topAppBarState.heightOffset = 0f
-            topAppBarState.contentOffset = 0f
-        }
+    ScrollResetEffect(scrollResetKey) {
+        scrollState.scrollTo(0)
+        topAppBarState.heightOffset = 0f
+        topAppBarState.contentOffset = 0f
     }
     SideEffect {
         // Detail bars are pinned. Leaving the old collapsible range in place makes the
@@ -277,19 +276,17 @@ private fun Material3ExpressiveSettingsPageSurface(
     bottomChrome: (@Composable () -> Unit)?,
     contentScrollable: Boolean,
     externalScrollState: ScrollState?,
-    scrollResetKey: Any?,
+    scrollResetKey: Int?,
     backgroundContent: (@Composable BoxScope.() -> Unit)?,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val internalScrollState = rememberScrollState()
     val scrollState = externalScrollState ?: internalScrollState
     val appBarState = rememberMaterialTopAppBarState()
-    LaunchedEffect(scrollResetKey) {
-        if (scrollResetKey != null) {
-            scrollState.scrollTo(0)
-            appBarState.heightOffset = 0f
-            appBarState.contentOffset = 0f
-        }
+    ScrollResetEffect(scrollResetKey) {
+        scrollState.scrollTo(0)
+        appBarState.heightOffset = 0f
+        appBarState.contentOffset = 0f
     }
     val scrollBehavior = MaterialTopAppBarDefaults.exitUntilCollapsedScrollBehavior(appBarState)
     val topBarColors = MaterialTopAppBarDefaults.topAppBarColors(

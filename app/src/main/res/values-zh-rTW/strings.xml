@@ -537,8 +537,14 @@
     <string name="feature_touch_rate_title">觸控採樣率</string>
     <string name="feature_touch_rate_entry_summary">讀取並切換裝置提供的觸控檔位</string>
     <string name="feature_touch_rate_tip_title">提示</string>
+    <string name="feature_touch_rate_device_notice">目前僅在 X9U（OPPO Find X9 Ultra）上測試過，暫未適配其他機型，不保證相容。</string>
     <string name="feature_touch_rate_loading">正在讀取觸控驅動…</string>
     <string name="feature_touch_rate_unavailable">目前裝置未開放 OPlus 觸控檔位介面，或尚未授予 Root 權限</string>
+    <string name="feature_touch_rate_root_required">請在 Root 管理器中授予 ONextBox 超級使用者權限，再點選「重新整理」。僅啟用 LSPosed 模組不等於授予 Root 權限。</string>
+    <string name="feature_touch_rate_node_unsupported">觸控服務未回報支援採樣率檔位介面，且無法讀取目前檔位。這不代表觸控螢幕本身不受支援。</string>
+    <string name="feature_touch_rate_hal_failed">無法存取觸控服務，或無法解析介面回傳的資料。請點選「重新整理」重試；仍失敗時可回報下方診斷資訊。</string>
+    <string name="feature_touch_rate_read_failed">介面已連接，但無法讀取目前檔位。讀取成功前暫停修改，避免寫入錯誤檔位。</string>
+    <string name="feature_touch_rate_read_only">已讀取目前資料，但介面未確認支援檔位寫入。暫時僅顯示資料，不開放修改。</string>
     <string name="feature_touch_rate_no_config">已連接觸控服務，但無法讀取附有頻率標示的官方檔位設定</string>
     <string name="feature_touch_rate_no_distinct_presets">原廠設定中沒有與預設晶片值不同的檔位</string>
     <string name="feature_touch_rate_status_group">目前狀態</string>
@@ -649,4 +655,11 @@
     <string name="feature_settings_region_entry_summary">國際版設定、Google 入口與國行選項</string>
     <string name="feature_group_aod_brightness">息屏亮度</string>
     <string name="feature_group_aod_features">息屏功能</string>
+    <string name="feature_google_messages_title">Google 訊息</string>
+    <string name="feature_google_messages_chat_section">聊天</string>
+    <string name="feature_google_messages_gemini_title">啟用 Gemini 聊天</string>
+    <string name="feature_google_messages_gemini_summary">符合帳號與 RCS 條件時顯示 Gemini 入口。</string>
+    <string name="feature_google_messages_notification_section">通知</string>
+    <string name="feature_google_messages_copy_otp_title">複製驗證碼</string>
+    <string name="feature_google_messages_copy_otp_summary">簡訊包含驗證碼時，在「已讀」和「回覆」旁增加「複製」。使用前，請允許 Google 訊息寫入剪貼簿（包括背景執行時），否則通知列複製可能無效。</string>
 </resources>

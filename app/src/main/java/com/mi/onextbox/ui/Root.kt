@@ -69,6 +69,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -87,6 +88,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -864,13 +866,14 @@ private fun FeatureLaunchQueueHitLayer(
 private class RootMainPagerState(
     val pagerState: PagerState,
     private val coroutineScope: CoroutineScope,
+    scrollResetGenerationState: MutableIntState,
 ) {
     var selectedPage by mutableIntStateOf(pagerState.currentPage)
         private set
 
     var isNavigating by mutableStateOf(false)
         private set
-    var scrollResetGeneration by mutableIntStateOf(0)
+    var scrollResetGeneration by scrollResetGenerationState
         private set
     private var navigationJob: Job? = null
 
@@ -925,8 +928,9 @@ private class RootMainPagerState(
 @Composable
 private fun rememberRootMainPagerState(pagerState: PagerState): RootMainPagerState {
     val coroutineScope = rememberCoroutineScope()
-    return remember(pagerState, coroutineScope) {
-        RootMainPagerState(pagerState, coroutineScope)
+    val scrollResetGeneration = rememberSaveable { mutableIntStateOf(0) }
+    return remember(pagerState, coroutineScope, scrollResetGeneration) {
+        RootMainPagerState(pagerState, coroutineScope, scrollResetGeneration)
     }
 }
 
@@ -1000,6 +1004,9 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureAppMarket : RootRoute
+
+    @Serializable
+    data object FeatureGoogleMessages : RootRoute
 
     @Serializable
     data object FeatureAthena : RootRoute
@@ -1100,6 +1107,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Esim -> RootRoute.FeatureEsim
     FeaturePageMode.EsimDiagnostics -> RootRoute.FeatureEsimDiagnostics
     FeaturePageMode.AppMarket -> RootRoute.FeatureAppMarket
+    FeaturePageMode.GoogleMessages -> RootRoute.FeatureGoogleMessages
     FeaturePageMode.Athena -> RootRoute.FeatureAthena
     FeaturePageMode.Settings -> RootRoute.FeatureSettings
     FeaturePageMode.SettingsRegion -> RootRoute.FeatureSettingsRegion
@@ -1610,6 +1618,7 @@ fun Root(
                     subclass(RootRoute.FeatureEsim::class)
                     subclass(RootRoute.FeatureEsimDiagnostics::class)
                     subclass(RootRoute.FeatureAppMarket::class)
+                    subclass(RootRoute.FeatureGoogleMessages::class)
                     subclass(RootRoute.FeatureAthena::class)
                     subclass(RootRoute.FeatureSettings::class)
                     subclass(RootRoute.FeatureSettingsRegion::class)
@@ -2856,6 +2865,9 @@ fun Root(
             }
             entry<RootRoute.FeatureAppMarket> {
                 featureEntryContent(FeaturePageMode.AppMarket)
+            }
+            entry<RootRoute.FeatureGoogleMessages> {
+                featureEntryContent(FeaturePageMode.GoogleMessages)
             }
             entry<RootRoute.FeatureAthena> {
                 featureEntryContent(FeaturePageMode.Athena)

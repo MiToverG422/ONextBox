@@ -105,7 +105,7 @@ class OosLspModuleEntry : XposedModule() {
                 PermissionUiStyleHooker.hookPermissionController(classLoader)
 
             PACKAGE_GOOGLE_APP -> OkGoogleHotwordCompatibilityHooker.hookGoogleApp(classLoader)
-
+            PACKAGE_GOOGLE_MESSAGES -> GoogleMessagesHooker.hook(classLoader)
         }
 
         if (packageName in OosLocalizerHooker.supportedPackageNames) {
@@ -133,5 +133,6 @@ class OosLspModuleEntry : XposedModule() {
         const val PACKAGE_PHONE = "com.android.phone"
         const val PACKAGE_APP_MARKET = "com.heytap.market"
         const val PACKAGE_GOOGLE_APP = "com.google.android.googlequicksearchbox"
+        const val PACKAGE_GOOGLE_MESSAGES = "com.google.android.apps.messaging"
     }
 }

@@ -85,6 +85,7 @@ import com.mi.onextbox.R
 import com.mi.onextbox.ui.home.HomePage
 import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.LocalAppUiStyle
+import com.mi.onextbox.ui.common.ScrollResetEffect
 import com.mi.onextbox.ui.layout.BlurredChromeBar
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.CardDefaults
@@ -130,7 +131,7 @@ fun Page(
     bottomChromePadding: Dp,
     onHomeHeroLongPress: () -> Unit,
     blurBackdrop: LayerBackdrop?,
-    scrollResetKey: Any? = null,
+    scrollResetKey: Int? = null,
 ) {
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressivePage(
@@ -139,17 +140,16 @@ fun Page(
             rootGranted = rootGranted,
             bottomChromePadding = bottomChromePadding,
             onHomeHeroLongPress = onHomeHeroLongPress,
+            scrollResetKey = scrollResetKey,
         )
         return
     }
     val scrollState = rememberScrollState()
     val topAppBarState = rememberTopAppBarState()
-    LaunchedEffect(scrollResetKey) {
-        if (scrollResetKey != null) {
-            scrollState.scrollTo(0)
-            topAppBarState.heightOffset = 0f
-            topAppBarState.contentOffset = 0f
-        }
+    ScrollResetEffect(scrollResetKey) {
+        scrollState.scrollTo(0)
+        topAppBarState.heightOffset = 0f
+        topAppBarState.contentOffset = 0f
     }
     val scrollBehavior = COUIScrollBehavior(state = topAppBarState)
     val density = LocalDensity.current
@@ -229,10 +229,16 @@ private fun Material3ExpressivePage(
     rootGranted: Boolean,
     bottomChromePadding: Dp,
     onHomeHeroLongPress: () -> Unit,
+    scrollResetKey: Int?,
 ) {
     val title = if (currentTab == 0) stringResource(R.string.tab_home) else ""
     val scrollState = rememberScrollState()
     val behavior = androidx.compose.material3.TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    ScrollResetEffect(scrollResetKey) {
+        scrollState.scrollTo(0)
+        behavior.state.heightOffset = 0f
+        behavior.state.contentOffset = 0f
+    }
     androidx.compose.material3.Scaffold(
         modifier = modifier.nestedScroll(behavior.nestedScrollConnection),
         containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer,

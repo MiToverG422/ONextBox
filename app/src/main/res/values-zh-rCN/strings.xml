@@ -587,8 +587,14 @@
     <string name="feature_touch_rate_title">触控采样率</string>
     <string name="feature_touch_rate_entry_summary">读取并切换设备提供的触控档位</string>
     <string name="feature_touch_rate_tip_title">提示</string>
+    <string name="feature_touch_rate_device_notice">目前仅在 X9U（OPPO Find X9 Ultra）上测试过，暂未适配其他机型，不保证兼容。</string>
     <string name="feature_touch_rate_loading">正在读取触控驱动…</string>
     <string name="feature_touch_rate_unavailable">当前设备未开放 OPlus 触控档位接口，或未授予 Root 权限</string>
+    <string name="feature_touch_rate_root_required">请在 Root 管理器中授予 ONextBox 超级用户权限，再点击“刷新”。仅启用 LSPosed 模块不等于授予 Root 权限。</string>
+    <string name="feature_touch_rate_node_unsupported">触控服务未报告支持采样率档位接口，且无法读取当前档位。这不代表触摸屏本身不受支持。</string>
+    <string name="feature_touch_rate_hal_failed">无法访问触控服务，或无法解析接口返回的数据。请点击“刷新”重试；仍失败时可反馈下方诊断信息。</string>
+    <string name="feature_touch_rate_read_failed">接口已连接，但无法读取当前档位。读取成功前暂停修改，避免写入错误档位。</string>
+    <string name="feature_touch_rate_read_only">已读到当前数据，但接口未确认支持档位写入。暂时仅显示数据，不开放修改。</string>
     <string name="feature_touch_rate_no_config">已连接触控服务，但无法读取带有频率标注的官方档位配置</string>
     <string name="feature_touch_rate_no_distinct_presets">原厂配置中没有与默认芯片值不同的档位</string>
     <string name="feature_touch_rate_status_group">当前状态</string>
@@ -699,4 +705,11 @@
     <string name="feature_settings_region_entry_summary">国际版设置、Google 入口与国行选项</string>
     <string name="feature_group_aod_brightness">息屏亮度</string>
     <string name="feature_group_aod_features">息屏功能</string>
+    <string name="feature_google_messages_title">Google 信息</string>
+    <string name="feature_google_messages_chat_section">聊天</string>
+    <string name="feature_google_messages_gemini_title">启用 Gemini 聊天</string>
+    <string name="feature_google_messages_gemini_summary">满足账号和 RCS 条件时显示 Gemini 入口。</string>
+    <string name="feature_google_messages_notification_section">通知</string>
+    <string name="feature_google_messages_copy_otp_title">复制验证码</string>
+    <string name="feature_google_messages_copy_otp_summary">短信包含验证码时，在“已读”和“回复”旁增加“复制”。使用前，请允许 Google 信息写入剪贴板（包括后台），否则通知栏复制可能无效。</string>
 </resources>

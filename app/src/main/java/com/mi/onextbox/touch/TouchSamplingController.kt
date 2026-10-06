@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Base64
 import com.mi.onextbox.ui.common.AppLogStore
 import com.mi.onextbox.ui.common.ShellLogger
+import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -16,12 +17,14 @@ data class TouchRatePreset(
 
 data class TouchSamplingState(
     val available: Boolean = false,
+    val canWrite: Boolean = false,
     val presets: List<TouchRatePreset> = emptyList(),
     val defaultChipValue: Int? = null,
     val currentIndex: Int? = null,
     val currentChipValue: Int? = null,
     val overrideEnabled: Boolean = false,
     val error: String? = null,
+    val diagnostic: String? = null,
 )
 
 data class TouchRateApplyResult(
@@ -50,7 +53,6 @@ object TouchSamplingController {
     private const val OVERRIDE_TARGET = "$OVERRIDE_DIR/touch_rate_target"
     private const val OVERRIDE_EXPECTED = "$OVERRIDE_DIR/touch_rate_expected"
     private const val OVERRIDE_SCRIPT = "/data/adb/service.d/onextbox_touch_rate.sh"
-    private val hexWord = Regex("(?<![0-9A-Za-z])[0-9a-fA-F]{8}(?![0-9A-Za-z])")
     private val rateModule = Regex(
         "<modules\\b[^>]*\\bid=\"report_rate\"[^>]*>(.*?)</modules>",
         RegexOption.DOT_MATCHES_ALL,
@@ -74,7 +76,7 @@ object TouchSamplingController {
         return runCatching {
             val before = readNow()
             // Recheck the complete OEM preset after an OTA or a configuration import.
-            if (!before.available || saved !in before.presets ||
+            if (!before.canWrite || saved !in before.presets ||
                 saved.chipValue == before.defaultChipValue
             ) {
                 AppLogStore.w("TouchSampling", "Auto apply skipped: saved preset no longer available")
@@ -95,7 +97,7 @@ object TouchSamplingController {
     suspend fun applyPreset(index: Int): TouchRateApplyResult = withContext(Dispatchers.IO) {
         val before = readNow()
         val preset = before.presets.firstOrNull { it.index == index }
-        if (!before.available || preset == null) {
+        if (!before.canWrite || preset == null) {
             return@withContext TouchRateApplyResult(false, null, before)
         }
         applyIndex(index, preset, before)
@@ -103,7 +105,7 @@ object TouchSamplingController {
 
     suspend fun restoreDefault(): TouchRateApplyResult = withContext(Dispatchers.IO) {
         val before = readNow()
-        if (!before.available) return@withContext TouchRateApplyResult(false, null, before)
+        if (!before.canWrite) return@withContext TouchRateApplyResult(false, null, before)
         if (before.overrideEnabled && !disableOverride()) {
             return@withContext TouchRateApplyResult(false, null, readNow())
         }
@@ -113,12 +115,12 @@ object TouchSamplingController {
     suspend fun setOverrideEnabled(context: Context, enabled: Boolean): TouchRateToggleResult =
         withContext(Dispatchers.IO) {
             val before = readNow()
-            if (!before.available) return@withContext TouchRateToggleResult(false, false, before)
             if (!enabled) {
                 val success = disableOverride()
                 val after = readNow()
                 return@withContext TouchRateToggleResult(success && !after.overrideEnabled, false, after)
             }
+            if (!before.canWrite) return@withContext TouchRateToggleResult(false, false, before)
             val index = before.currentIndex
             if (index == null || before.presets.none { it.index == index }) {
                 return@withContext TouchRateToggleResult(false, true, before)
@@ -203,6 +205,9 @@ object TouchSamplingController {
     ).isSuccess
 
     private fun readNow(): TouchSamplingState {
+        // A shell cached before Root was granted otherwise keeps reporting non-root
+        // until the whole app is restarted. Retry only in response to this read.
+        runCatching { Shell.getCachedShell()?.takeIf { !it.isRoot }?.close() }
         val root = ShellLogger.exec("TouchSampling", "id -u")
         if (!root.isSuccess || root.out.firstOrNull()?.trim() != "0") {
             return TouchSamplingState(error = "root")
@@ -211,8 +216,21 @@ object TouchSamplingController {
             "TouchSampling",
             "service call $SERVICE 2 i32 0 i32 $REPORT_RATE_NODE",
         )
-        if (!support.isSuccess || parcelInt(support.out.joinToString("\n")) != 1) {
-            return TouchSamplingState(error = "hal")
+        val supportValue = if (support.isSuccess) TouchSamplingProtocol.parcelInt(support.out.joinToString("\n")) else null
+        // Query the read-only node even if the capability query fails. Do not treat
+        // the capability response alone as proof that there is no readable data.
+        val current = ShellLogger.exec(
+            "TouchSampling",
+            "service call $SERVICE 3 i32 0 i32 $REPORT_RATE_NODE",
+        )
+        val currentMode = if (current.isSuccess) TouchSamplingProtocol.currentMode(current.out.joinToString("\n")) else null
+        val diagnostic = "Root: granted; node: $REPORT_RATE_NODE; support: ${supportValue ?: "invalid reply"}; readable: ${currentMode != null}"
+        AppLogStore.i("TouchSampling", diagnostic)
+        if (!TouchSamplingProtocol.canDisplay(supportValue, currentMode)) {
+            return TouchSamplingState(
+                error = if (supportValue == 0 || supportValue == -1) "hal_unsupported" else "hal",
+                diagnostic = diagnostic,
+            )
         }
         val configResult = ShellLogger.exec("TouchSampling", "cat $CONFIG")
         val config = if (configResult.isSuccess) {
@@ -220,31 +238,24 @@ object TouchSamplingController {
         } else {
             ParsedConfig()
         }
-        val current = ShellLogger.exec(
-            "TouchSampling",
-            "service call $SERVICE 3 i32 0 i32 $REPORT_RATE_NODE",
-        )
-        val currentParts = if (current.isSuccess) {
-            parcelString(current.out.joinToString("\n"))
-                ?.let { Regex("^\\s*(\\d+)\\s*,\\s*(-?\\d+)").find(it) }
-        } else {
-            null
-        }
         return TouchSamplingState(
             available = true,
+            canWrite = TouchSamplingProtocol.canWrite(supportValue, currentMode),
             presets = config.presets,
             defaultChipValue = config.defaultChipValue,
-            currentIndex = currentParts?.groupValues?.get(1)?.toIntOrNull(),
-            currentChipValue = currentParts?.groupValues?.get(2)?.toIntOrNull(),
+            currentIndex = currentMode?.first,
+            currentChipValue = currentMode?.second,
             overrideEnabled = ShellLogger.exec(
                 "TouchSampling",
                 "test -f $OVERRIDE_TARGET && test -f $OVERRIDE_SCRIPT",
             ).isSuccess,
             error = when {
                 config.presets.isEmpty() -> "config"
-                currentParts == null -> "read"
+                currentMode == null -> "read"
+                supportValue != 1 -> "read_only"
                 else -> null
             },
+            diagnostic = diagnostic,
         )
     }
 
@@ -265,22 +276,4 @@ object TouchSamplingController {
         return ParsedConfig(presets, codes.firstOrNull())
     }
 
-    private fun parcelInt(text: String): Int? = parcelWords(text).getOrNull(1)?.toLongOrNull(16)?.toInt()
-
-    private fun parcelString(text: String): String? {
-        val words = parcelWords(text)
-        if (words.size < 3 || words[0] != "00000000") return null
-        val length = words[1].toIntOrNull(16) ?: return null
-        if (length !in 0..4096) return null
-        val bytes = words.drop(2).flatMap { token ->
-            val value = token.toLong(16)
-            (0..3).map { byte -> ((value shr (byte * 8)) and 0xff).toByte() }
-        }.toByteArray()
-        if (bytes.size < length * 2) return null
-        return String(bytes, 0, length * 2, Charsets.UTF_16LE)
-    }
-
-    private fun parcelWords(text: String): List<String> = hexWord.findAll(text)
-        .map { it.value.lowercase() }
-        .toList()
 }

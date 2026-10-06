@@ -72,7 +72,8 @@ internal fun TouchSamplingPage() {
     SettingsGroup {
         SettingsCardRow(
             title = stringResource(R.string.feature_touch_rate_tip_title),
-            summary = stringResource(R.string.feature_touch_rate_driver_note),
+            summary = stringResource(R.string.feature_touch_rate_device_notice) + "\n\n" +
+                stringResource(R.string.feature_touch_rate_driver_note),
         )
     }
 
@@ -84,8 +85,12 @@ internal fun TouchSamplingPage() {
                 summary = "",
             )
             !snapshot.available -> SettingsCardRow(
-                title = stringResource(R.string.feature_touch_rate_unavailable),
-                summary = "",
+                title = stringResource(when (snapshot.error) {
+                    "root" -> R.string.feature_touch_rate_root_required
+                    "hal_unsupported" -> R.string.feature_touch_rate_node_unsupported
+                    else -> R.string.feature_touch_rate_hal_failed
+                }),
+                summary = snapshot.diagnostic.orEmpty(),
             )
             else -> {
                 val current = snapshot.presets.firstOrNull { it.index == snapshot.currentIndex }
@@ -131,7 +136,35 @@ internal fun TouchSamplingPage() {
         }
     }
 
-    if (snapshot == null || !snapshot.available) return
+    if (snapshot == null) return
+    if (!snapshot.available) {
+        // Previously this page returned before rendering Refresh, making a failed
+        // Root/HAL check impossible to retry without leaving/restarting the app.
+        SettingsGroup {
+            SettingsCardRow(
+                title = stringResource(R.string.feature_touch_rate_refresh),
+                summary = "",
+                onClick = if (busy) null else ({
+                    scope.launch {
+                        busy = true
+                        try { state = TouchSamplingController.read() } finally { busy = false }
+                    }
+                }),
+            )
+        }
+        return
+    }
+    if (!snapshot.canWrite) {
+        SettingsGroup {
+            SettingsCardRow(
+                title = stringResource(
+                    if (snapshot.currentIndex == null) R.string.feature_touch_rate_read_failed
+                    else R.string.feature_touch_rate_read_only,
+                ),
+                summary = snapshot.diagnostic.orEmpty(),
+            )
+        }
+    }
 
     if (selectablePresets.isNotEmpty()) {
         SettingsSection(title = stringResource(R.string.feature_touch_rate_presets_group))
@@ -151,7 +184,7 @@ internal fun TouchSamplingPage() {
                     } else {
                         detail
                     },
-                    onClick = if (busy) null else ({ applyPreset(preset.index) }),
+                    onClick = if (busy || !snapshot.canWrite) null else ({ applyPreset(preset.index) }),
                     hasDividerAbove = position > 0,
                     hasDividerBelow = position < selectablePresets.lastIndex,
                 )
@@ -163,7 +196,7 @@ internal fun TouchSamplingPage() {
         SettingsCardRow(
             title = stringResource(R.string.feature_touch_rate_restore),
             summary = "",
-            onClick = if (busy) null else ({
+            onClick = if (busy || !snapshot.canWrite) null else ({
                 scope.launch {
                     busy = true
                     try {
@@ -198,7 +231,7 @@ internal fun TouchSamplingPage() {
             title = stringResource(R.string.feature_touch_rate_override_title),
             summary = stringResource(R.string.feature_touch_rate_override_summary),
             checked = snapshot.overrideEnabled,
-            enabled = !busy,
+            enabled = !busy && (snapshot.canWrite || snapshot.overrideEnabled),
             onCheckedChange = { enabled ->
                 if (!busy) scope.launch {
                     busy = true
@@ -224,7 +257,7 @@ internal fun TouchSamplingPage() {
             title = stringResource(R.string.feature_touch_rate_auto_start),
             summary = "",
             checked = autoStartEnabled,
-            enabled = !busy,
+            enabled = !busy && (snapshot.canWrite || autoStartEnabled),
             onCheckedChange = { enabled ->
                 if (!busy) {
                     val saved = TouchSamplingPreferences.readSelectedPreset(context)

@@ -34,6 +34,7 @@
         <package android:name="com.oplus.aod" />
         <package android:name="com.oplus.euicc" />
         <package android:name="com.heytap.market" />
+        <package android:name="com.google.android.apps.messaging" />
         <package android:name="com.android.phone" />
         <package android:name="com.oneplus.aod" />
         <package android:name="com.coloros.aod" />

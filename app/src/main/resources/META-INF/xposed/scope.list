@@ -30,6 +30,7 @@ com.coloros.weather.service
 com.finshell.wallet
 com.google.android.webview
 com.google.android.googlequicksearchbox
+com.google.android.apps.messaging
 com.heytap.cloud
 com.heytap.market
 com.heytap.mcs

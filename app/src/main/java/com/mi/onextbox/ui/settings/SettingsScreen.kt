@@ -134,7 +134,7 @@ fun AboutMainRoute(
     modifier: Modifier,
     blurBackdrop: LayerBackdrop?,
     bottomContentPadding: Dp,
-    scrollResetKey: Any? = null,
+    scrollResetKey: Int? = null,
     onOpenAppSettings: () -> Unit,
     onOpenSoftwareUpdate: () -> Unit,
     onOpenContributors: () -> Unit,

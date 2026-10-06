@@ -14,7 +14,7 @@ fun ToolsMainRoute(
     modifier: Modifier,
     bottomContentPadding: Dp,
     blurBackdrop: LayerBackdrop?,
-    scrollResetKey: Any? = null,
+    scrollResetKey: Int? = null,
     onOpen: (FeaturePageMode) -> Unit,
 ) {
     SettingsPageSurface(

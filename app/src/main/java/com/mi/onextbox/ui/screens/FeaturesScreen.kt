@@ -170,6 +170,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Esim,
     EsimDiagnostics(true),
     AppMarket,
+    GoogleMessages,
     Athena,
     Settings,
     SettingsRegion(true),
@@ -208,7 +209,7 @@ fun FeatureMainRoute(
     newStyleEnabled: Boolean,
     hiddenSourceModes: Set<FeaturePageMode> = emptySet(),
     externalIconScales: Map<FeaturePageMode, () -> Float> = emptyMap(),
-    scrollResetKey: Any? = null,
+    scrollResetKey: Int? = null,
     onLaunchOriginChanged: (FeaturePageMode, FeatureLaunchOrigin) -> Unit = { _, _ -> },
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
 ) {
@@ -572,6 +573,7 @@ private fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Esim -> stringResource(R.string.feature_esim_title)
     FeaturePageMode.EsimDiagnostics -> stringResource(R.string.feature_group_esim_diagnostics)
     FeaturePageMode.AppMarket -> stringResource(R.string.feature_app_market_title)
+    FeaturePageMode.GoogleMessages -> stringResource(R.string.feature_google_messages_title)
     FeaturePageMode.Athena -> stringResource(R.string.feature_group_athena)
     FeaturePageMode.Settings -> stringResource(R.string.tab_settings)
     FeaturePageMode.SettingsRegion -> stringResource(R.string.feature_group_settings_hidden_features)
@@ -600,6 +602,7 @@ private fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (
     FeaturePageMode.Installer -> listOf("android", "system")
     FeaturePageMode.Esim -> listOf("com.oplus.euicc")
     FeaturePageMode.AppMarket -> listOf("com.heytap.market")
+    FeaturePageMode.GoogleMessages -> listOf("com.google.android.apps.messaging")
     FeaturePageMode.Athena -> listOf("android", "system", "com.oplus.athena")
     FeaturePageMode.Settings,
     FeaturePageMode.SettingsRegion -> listOf("com.android.settings")
@@ -913,6 +916,13 @@ private fun featureMainEntries(): List<FeatureMainEntry> = buildList {
                 titleRes = R.string.feature_app_market_title,
                 iconPackages = listOf("com.heytap.market"),
                 pageMode = FeaturePageMode.AppMarket,
+            )
+        )
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.feature_google_messages_title,
+                iconPackages = listOf("com.google.android.apps.messaging"),
+                pageMode = FeaturePageMode.GoogleMessages,
             )
         )
         add(
@@ -1316,6 +1326,7 @@ private fun FeatureSubPage(
         FeaturePageMode.Esim -> EsimFeaturesPage(onOpenSubPage = onOpenSubPage)
         FeaturePageMode.EsimDiagnostics -> EsimDiagnosticsPage()
         FeaturePageMode.AppMarket -> AppMarketFeaturesPage()
+        FeaturePageMode.GoogleMessages -> GoogleMessagesFeaturesPage()
         FeaturePageMode.Athena -> AthenaFeaturesPage()
         FeaturePageMode.Settings,
         FeaturePageMode.SettingsRegion -> SettingsFeaturesPage(

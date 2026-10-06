@@ -539,6 +539,11 @@
     <string name="feature_touch_rate_tip_title">提示</string>
     <string name="feature_touch_rate_loading">讀取緊觸控驅動程式…</string>
     <string name="feature_touch_rate_unavailable">呢部裝置未開放 OPlus 觸控檔位介面，或者未授予 Root 權限</string>
+    <string name="feature_touch_rate_root_required">請喺 Root 管理器授予 ONextBox 超級用戶權限，再撳「重新整理」。淨係啟用 LSPosed 模組唔等於授予 Root 權限。</string>
+    <string name="feature_touch_rate_node_unsupported">觸控服務未回報支援採樣率檔位介面，而且讀唔到目前檔位。呢個唔代表觸控螢幕本身唔受支援。</string>
+    <string name="feature_touch_rate_hal_failed">存取唔到觸控服務，或者解析唔到介面回傳嘅資料。請撳「重新整理」再試；仲係失敗嘅話，可以回報下面嘅診斷資訊。</string>
+    <string name="feature_touch_rate_read_failed">介面已連接，但讀唔到目前檔位。讀取成功之前暫停修改，避免寫入錯誤檔位。</string>
+    <string name="feature_touch_rate_read_only">已讀到目前資料，但介面未確認支援檔位寫入。暫時只顯示資料，唔開放修改。</string>
     <string name="feature_touch_rate_no_config">連接咗觸控服務，但讀唔到有頻率標示嘅官方檔位設定</string>
     <string name="feature_touch_rate_no_distinct_presets">原廠設定入面，冇其他同預設晶片值唔同嘅檔位</string>
     <string name="feature_touch_rate_status_group">目前狀態</string>
