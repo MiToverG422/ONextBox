@@ -985,6 +985,12 @@ private sealed interface RootRoute : NavKey {
     data object FeatureSystemUiControlCenter : RootRoute
 
     @Serializable
+    data object FeatureSystemUiSmallWindow : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiLockScreen : RootRoute
+
+    @Serializable
     data object FeatureNotificationRemoval : RootRoute
 
     @Serializable
@@ -1033,16 +1039,16 @@ private sealed interface RootRoute : NavKey {
     data object FeatureAod : RootRoute
 
     @Serializable
+    data object FeatureScreenshot : RootRoute
+
+    @Serializable
+    data object FeatureScreenRecording : RootRoute
+
+    @Serializable
     data object FeatureAssistant : RootRoute
 
-    @Serializable
-    data object FeatureOPlusLocalizer : RootRoute
 
-    @Serializable
-    data object FeatureOPlusLocalizerProperties : RootRoute
 
-    @Serializable
-    data object FeatureOPlusLocalizerScope : RootRoute
 
     @Serializable
     data object AppSettings : RootRoute
@@ -1100,6 +1106,8 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.SystemUiStatusBar -> RootRoute.FeatureSystemUiStatusBar
     FeaturePageMode.SystemUiNotificationCenter -> RootRoute.FeatureSystemUiNotificationCenter
     FeaturePageMode.SystemUiControlCenter -> RootRoute.FeatureSystemUiControlCenter
+    FeaturePageMode.SystemUiSmallWindow -> RootRoute.FeatureSystemUiSmallWindow
+    FeaturePageMode.SystemUiLockScreen -> RootRoute.FeatureSystemUiLockScreen
     FeaturePageMode.NotificationRemoval -> RootRoute.FeatureNotificationRemoval
     FeaturePageMode.MobileNetwork -> RootRoute.FeatureMobileNetwork
     FeaturePageMode.AndroidSystem -> RootRoute.FeatureAndroidSystem
@@ -1116,10 +1124,9 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.RefreshRate -> RootRoute.FeatureRefreshRate
     FeaturePageMode.Wallpapers -> RootRoute.FeatureWallpapers
     FeaturePageMode.Aod -> RootRoute.FeatureAod
+    FeaturePageMode.Screenshot -> RootRoute.FeatureScreenshot
+    FeaturePageMode.ScreenRecording -> RootRoute.FeatureScreenRecording
     FeaturePageMode.Assistant -> RootRoute.FeatureAssistant
-    FeaturePageMode.OPlusLocalizer -> RootRoute.FeatureOPlusLocalizer
-    FeaturePageMode.OPlusLocalizerProperties -> RootRoute.FeatureOPlusLocalizerProperties
-    FeaturePageMode.OPlusLocalizerScope -> RootRoute.FeatureOPlusLocalizerScope
 }
 
 private fun AboutPageMode.toRootRoute(): RootRoute? = when (this) {
@@ -1180,11 +1187,6 @@ private data class RootUiState(
     val aodPanoramicSupportEnabled: Boolean,
     val aodSettingsSwitchEnabled: Boolean,
     val aodSingleClickBlockEnabled: Boolean,
-    val oosLocalizerEnabled: Boolean,
-    val oosLocalizerConfigMode: Int,
-    val oosLocalizerRegion: String,
-    val oosLocalizerLocale: String,
-    val oosLocalizerModel: String,
     val assistantPowerMode: Int,
     val assistantGestureCircleEnabled: Boolean,
     val assistantGestureCircleC17Enabled: Boolean,
@@ -1241,11 +1243,6 @@ private data class RootActions(
     val onAodPanoramicSupportEnabledChange: (Boolean) -> Unit,
     val onAodSettingsSwitchEnabledChange: (Boolean) -> Unit,
     val onAodSingleClickBlockEnabledChange: (Boolean) -> Unit,
-    val onOosLocalizerEnabledChange: (Boolean) -> Unit,
-    val onOosLocalizerConfigModeChange: (Int) -> Unit,
-    val onOosLocalizerRegionChange: (String) -> Unit,
-    val onOosLocalizerLocaleChange: (String) -> Unit,
-    val onOosLocalizerModelChange: (String) -> Unit,
     val onAssistantPowerModeChange: (Int) -> Unit,
     val onAssistantGestureCircleEnabledChange: (Boolean) -> Unit,
     val onAssistantGestureCircleC17EnabledChange: (Boolean) -> Unit,
@@ -1291,16 +1288,6 @@ private fun RootFeatureEntry(
     FeatureSubRoute(
         modifier = Modifier.fillMaxSize(),
         pageMode = pageMode,
-        oosLocalizerEnabled = ui.oosLocalizerEnabled,
-        onOosLocalizerEnabledChange = actions.onOosLocalizerEnabledChange,
-        oosLocalizerConfigMode = ui.oosLocalizerConfigMode,
-        onOosLocalizerConfigModeChange = actions.onOosLocalizerConfigModeChange,
-        oosLocalizerRegion = ui.oosLocalizerRegion,
-        onOosLocalizerRegionChange = actions.onOosLocalizerRegionChange,
-        oosLocalizerLocale = ui.oosLocalizerLocale,
-        onOosLocalizerLocaleChange = actions.onOosLocalizerLocaleChange,
-        oosLocalizerModel = ui.oosLocalizerModel,
-        onOosLocalizerModelChange = actions.onOosLocalizerModelChange,
         permissionMonitorVisible = ui.permissionMonitorVisible,
         onPermissionMonitorVisibleChange = actions.onPermissionMonitorVisibleChange,
         nativeNotifyIconEnabled = ui.nativeNotifyIconEnabled,
@@ -1511,16 +1498,6 @@ fun Root(
     onAodSettingsSwitchEnabledChange: (Boolean) -> Unit,
     aodSingleClickBlockEnabled: Boolean,
     onAodSingleClickBlockEnabledChange: (Boolean) -> Unit,
-    oosLocalizerEnabled: Boolean,
-    onOosLocalizerEnabledChange: (Boolean) -> Unit,
-    oosLocalizerConfigMode: Int,
-    onOosLocalizerConfigModeChange: (Int) -> Unit,
-    oosLocalizerRegion: String,
-    onOosLocalizerRegionChange: (String) -> Unit,
-    oosLocalizerLocale: String,
-    onOosLocalizerLocaleChange: (String) -> Unit,
-    oosLocalizerModel: String,
-    onOosLocalizerModelChange: (String) -> Unit,
     assistantPowerMode: Int,
     onAssistantPowerModeChange: (Int) -> Unit,
     assistantGestureCircleEnabled: Boolean,
@@ -1611,6 +1588,8 @@ fun Root(
                     subclass(RootRoute.FeatureSystemUiStatusBar::class)
                     subclass(RootRoute.FeatureSystemUiNotificationCenter::class)
                     subclass(RootRoute.FeatureSystemUiControlCenter::class)
+                    subclass(RootRoute.FeatureSystemUiSmallWindow::class)
+                    subclass(RootRoute.FeatureSystemUiLockScreen::class)
                     subclass(RootRoute.FeatureNotificationRemoval::class)
                     subclass(RootRoute.FeatureMobileNetwork::class)
                     subclass(RootRoute.FeatureAndroidSystem::class)
@@ -1627,10 +1606,9 @@ fun Root(
                     subclass(RootRoute.FeatureRefreshRate::class)
                     subclass(RootRoute.FeatureWallpapers::class)
                     subclass(RootRoute.FeatureAod::class)
+                    subclass(RootRoute.FeatureScreenshot::class)
+                    subclass(RootRoute.FeatureScreenRecording::class)
                     subclass(RootRoute.FeatureAssistant::class)
-                    subclass(RootRoute.FeatureOPlusLocalizer::class)
-                    subclass(RootRoute.FeatureOPlusLocalizerProperties::class)
-                    subclass(RootRoute.FeatureOPlusLocalizerScope::class)
                     subclass(RootRoute.AppSettings::class)
                     subclass(RootRoute.DeveloperOptions::class)
                     subclass(RootRoute.SoftwareUpdate::class)
@@ -2518,11 +2496,6 @@ fun Root(
             aodPanoramicSupportEnabled = aodPanoramicSupportEnabled,
             aodSettingsSwitchEnabled = aodSettingsSwitchEnabled,
             aodSingleClickBlockEnabled = aodSingleClickBlockEnabled,
-            oosLocalizerEnabled = oosLocalizerEnabled,
-            oosLocalizerConfigMode = oosLocalizerConfigMode,
-            oosLocalizerRegion = oosLocalizerRegion,
-            oosLocalizerLocale = oosLocalizerLocale,
-            oosLocalizerModel = oosLocalizerModel,
             assistantPowerMode = assistantPowerMode,
             assistantGestureCircleEnabled = assistantGestureCircleEnabled,
             assistantGestureCircleC17Enabled = assistantGestureCircleC17Enabled,
@@ -2580,11 +2553,6 @@ fun Root(
             onAodPanoramicSupportEnabledChange = onAodPanoramicSupportEnabledChange,
             onAodSettingsSwitchEnabledChange = onAodSettingsSwitchEnabledChange,
             onAodSingleClickBlockEnabledChange = onAodSingleClickBlockEnabledChange,
-            onOosLocalizerEnabledChange = onOosLocalizerEnabledChange,
-            onOosLocalizerConfigModeChange = onOosLocalizerConfigModeChange,
-            onOosLocalizerRegionChange = onOosLocalizerRegionChange,
-            onOosLocalizerLocaleChange = onOosLocalizerLocaleChange,
-            onOosLocalizerModelChange = onOosLocalizerModelChange,
             onAssistantPowerModeChange = onAssistantPowerModeChange,
             onAssistantGestureCircleEnabledChange = onAssistantGestureCircleEnabledChange,
             onAssistantGestureCircleC17EnabledChange =
@@ -2845,6 +2813,12 @@ fun Root(
             entry<RootRoute.FeatureSystemUiControlCenter> {
                 featureEntryContent(FeaturePageMode.SystemUiControlCenter)
             }
+            entry<RootRoute.FeatureSystemUiSmallWindow> {
+                featureEntryContent(FeaturePageMode.SystemUiSmallWindow)
+            }
+            entry<RootRoute.FeatureSystemUiLockScreen> {
+                featureEntryContent(FeaturePageMode.SystemUiLockScreen)
+            }
             entry<RootRoute.FeatureNotificationRemoval> {
                 featureEntryContent(FeaturePageMode.NotificationRemoval)
             }
@@ -2893,17 +2867,14 @@ fun Root(
             entry<RootRoute.FeatureAod> {
                 featureEntryContent(FeaturePageMode.Aod)
             }
+            entry<RootRoute.FeatureScreenshot> {
+                featureEntryContent(FeaturePageMode.Screenshot)
+            }
+            entry<RootRoute.FeatureScreenRecording> {
+                featureEntryContent(FeaturePageMode.ScreenRecording)
+            }
             entry<RootRoute.FeatureAssistant> {
                 featureEntryContent(FeaturePageMode.Assistant)
-            }
-            entry<RootRoute.FeatureOPlusLocalizer> {
-                featureEntryContent(FeaturePageMode.OPlusLocalizer)
-            }
-            entry<RootRoute.FeatureOPlusLocalizerProperties> {
-                featureEntryContent(FeaturePageMode.OPlusLocalizerProperties)
-            }
-            entry<RootRoute.FeatureOPlusLocalizerScope> {
-                featureEntryContent(FeaturePageMode.OPlusLocalizerScope)
             }
             entry<RootRoute.AppSettings> { RootAboutEntry(AboutPageMode.AppSettings) }
             entry<RootRoute.DeveloperOptions> { RootAboutEntry(AboutPageMode.DeveloperOptions) }

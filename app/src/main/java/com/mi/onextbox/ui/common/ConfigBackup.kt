@@ -99,6 +99,8 @@ object ConfigBackup {
             // Do not revive removed features when importing an older configuration.
             GoogleMessagesConfig.removeRetiredPreferences(prefs(context, LSP_PREFS_NAME))
             LspConfig.syncPermissionFeatures(context)
+            LspConfig.syncSmallWindowFeatures(context)
+            LspConfig.syncKeyguardFeatures(context)
             // Restore the cross-process mirror as well as the exported preference value.
             val enabled = prefs(context, LSP_PREFS_NAME)
                 .getBoolean(SETTINGS_C15_ABOUT_LAYOUT_PREF_KEY, false)

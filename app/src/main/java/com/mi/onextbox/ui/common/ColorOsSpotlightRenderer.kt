@@ -21,6 +21,7 @@ internal class ColorOsSpotlightRenderer(
     private val host: View,
     style: Style,
     darkTheme: Boolean,
+    private val invalidate: () -> Unit = { host.invalidate() },
 ) {
     enum class Style {
         /** COUISpotLightEffect.TYPE_TRANSLUCENT_LARGE_1. */
@@ -28,6 +29,9 @@ internal class ColorOsSpotlightRenderer(
 
         /** COUISpotLightEffect.TYPE_OPAQUE_SMALL_2. */
         TopBarButton,
+
+        /** COUISpotLightEffect.TYPE_OPAQUE_MEDIUM_2, used by SearchBarBackgroundView. */
+        SearchBar,
 
         DialogPrimary,
         DialogSecondary,
@@ -47,7 +51,7 @@ internal class ColorOsSpotlightRenderer(
         minimumVisibleChange = 0.0001f
         addUpdateListener { _, value, _ ->
             progress = value.coerceIn(0f, 1f)
-            host.invalidate()
+            invalidate()
         }
     }
     private val positionXAnimation = SpringAnimation(positionXHolder).apply {
@@ -55,7 +59,7 @@ internal class ColorOsSpotlightRenderer(
         spring = followHandSpring(0.5f)
         addUpdateListener { _, value, _ ->
             positionX = value
-            host.invalidate()
+            invalidate()
         }
     }
     private val positionYAnimation = SpringAnimation(positionYHolder).apply {
@@ -63,7 +67,7 @@ internal class ColorOsSpotlightRenderer(
         spring = followHandSpring(0.5f)
         addUpdateListener { _, value, _ ->
             positionY = value
-            host.invalidate()
+            invalidate()
         }
     }
 
@@ -80,14 +84,14 @@ internal class ColorOsSpotlightRenderer(
         if (this.style == style && this.darkTheme == darkTheme) return
         this.style = style
         this.darkTheme = darkTheme
-        host.invalidate()
+        invalidate()
     }
 
     fun onSizeChanged(width: Int, height: Int) {
         this.width = width.toFloat()
         this.height = height.toFloat()
         shader?.setFloatUniform("resolution", this.width, this.height)
-        host.invalidate()
+        invalidate()
     }
 
     fun onDown(x: Float, y: Float) {
@@ -121,7 +125,7 @@ internal class ColorOsSpotlightRenderer(
         progress = 0f
         progressHolder.value = 0f
         extinguishing = false
-        host.invalidate()
+        invalidate()
     }
 
     fun draw(canvas: Canvas) {
@@ -175,7 +179,7 @@ internal class ColorOsSpotlightRenderer(
             positionY = normalizedY
             positionXHolder.value = normalizedX
             positionYHolder.value = normalizedY
-            host.invalidate()
+            invalidate()
         } else {
             positionXAnimation.animateToFinalPosition(normalizedX)
             positionYAnimation.animateToFinalPosition(normalizedY)
@@ -198,7 +202,7 @@ internal class ColorOsSpotlightRenderer(
             blendMode = BlendMode.OVERLAY,
         )
 
-        Style.TopBarButton -> Parameters(
+        Style.TopBarButton, Style.SearchBar -> Parameters(
             endIntensity = if (darkTheme) 0.15f else 1f,
             startRadius = 100f,
             endRadius = 500f,

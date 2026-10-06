@@ -40,6 +40,99 @@ object LspConfig {
     private const val MODULE_PACKAGE = "com.mi.onextbox"
     private const val PREFS_NAME = "lsp_features"
 
+    /** Independent small-window options share the normal backup/boot mirrors, no master gate. */
+    enum class SmallWindowFeature(val key: String) {
+        WhiteBar("small_window_white_bar"),
+        SafeEdgeInset("small_window_safe_edge_inset"),
+        HideRecents("small_window_hide_recents"),
+        KeepRunning("small_window_keep_running"),
+        MuteStashed("small_window_mute_stashed"),
+        LandscapeRatio("small_window_landscape_ratio"),
+        LargerSize("small_window_larger_size"),
+        CompactCaption("small_window_compact_caption"),
+        UnlimitedCount("small_window_unlimited_count"),
+        UnlimitedFrameRate("small_window_unlimited_frame_rate");
+
+        val propertyKey: String get() = "oost.$key"
+        val persistPropertyKey: String get() = "persist.sys.oost.$key"
+        val settingsKey: String get() = "oost_$key"
+    }
+
+    fun isSmallWindowFeatureEnabled(context: Context, feature: SmallWindowFeature): Boolean =
+        readSyncedToggle(
+            context = context,
+            persistPropertyKey = feature.persistPropertyKey,
+            propertyKey = feature.propertyKey,
+            settingsKey = feature.settingsKey,
+            flagFilePath = null,
+            legacyFlagFilePath = null,
+            prefsKey = feature.key,
+            defaultValue = false,
+        )
+
+    fun setSmallWindowFeatureEnabled(context: Context, feature: SmallWindowFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = feature.key,
+            enabled = enabled,
+            propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
+            settingsGlobalKey = feature.settingsKey,
+        )
+    }
+
+    fun isSmallWindowFeatureEnabledXposed(feature: SmallWindowFeature): Boolean {
+        HookConfigSnapshot.boolean(feature.key, false)?.let { return it }
+        readSystemPropertyToggle(feature.persistPropertyKey)?.let { return it }
+        readSystemPropertyToggle(feature.propertyKey)?.let { return it }
+        readSettingsGlobalToggle(feature.settingsKey)?.let { return it }
+        return runCatching { xposedPreferences.getBoolean(feature.key, false) }.getOrDefault(false)
+    }
+
+    fun syncSmallWindowFeatures(context: Context) {
+        SmallWindowFeature.entries.forEach { feature ->
+            setSmallWindowFeatureEnabled(context, feature, prefs(context).getBoolean(feature.key, false))
+        }
+    }
+
+    enum class KeyguardFeature(val key: String) {
+        FaceTapUnlock("keyguard_face_tap_unlock"),
+        FaceTapAnimation("keyguard_face_tap_animation"),
+        AodScreenshot("keyguard_aod_screenshot"),
+        ScreenOffRecording("keyguard_screen_off_recording");
+
+        val propertyKey: String get() = "oost.$key"
+        val persistPropertyKey: String get() = "persist.sys.oost.$key"
+        val settingsKey: String get() = "oost_$key"
+    }
+
+    fun isKeyguardFeatureEnabled(context: Context, feature: KeyguardFeature): Boolean =
+        readSyncedToggle(
+            context, feature.persistPropertyKey, feature.propertyKey, feature.settingsKey,
+            null, null, feature.key, false,
+        )
+
+    fun setKeyguardFeatureEnabled(context: Context, feature: KeyguardFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context, prefsKey = feature.key, enabled = enabled,
+            propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
+            settingsGlobalKey = feature.settingsKey,
+        )
+    }
+
+    fun isKeyguardFeatureEnabledXposed(feature: KeyguardFeature): Boolean {
+        HookConfigSnapshot.boolean(feature.key, false)?.let { return it }
+        readSystemPropertyToggle(feature.persistPropertyKey)?.let { return it }
+        readSystemPropertyToggle(feature.propertyKey)?.let { return it }
+        readSettingsGlobalToggle(feature.settingsKey)?.let { return it }
+        return runCatching { xposedPreferences.getBoolean(feature.key, false) }.getOrDefault(false)
+    }
+
+    fun syncKeyguardFeatures(context: Context) {
+        KeyguardFeature.entries.forEach { feature ->
+            setKeyguardFeatureEnabled(context, feature, prefs(context).getBoolean(feature.key, false))
+        }
+    }
+
     /** Permission Manager features share the same API 102, boot and backup mirrors. */
     enum class PermissionFeature(val key: String) {
         OldAppStartDialog("permission_old_app_start_dialog"),
@@ -200,7 +293,6 @@ object LspConfig {
     private const val KEY_EXTREME_REFRESH_165 = "extreme_refresh_165_enabled"
     private const val KEY_RECENT_TASK_RADIUS = "recent_task_radius_enabled"
     private const val KEY_AOD_ENHANCE = "aod_enhance_enabled"
-    private const val KEY_OOS_LOCALIZER = "oos_localizer_enabled"
     private const val KEY_ASSISTANT_POWER_MODE = "assistant_power_mode"
     private const val KEY_ASSISTANT_GESTURE_CIRCLE = "assistant_gesture_circle_enabled"
     private const val KEY_ASSISTANT_GESTURE_CIRCLE_C17 = "assistant_gesture_circle_c17_enabled"
@@ -285,31 +377,20 @@ object LspConfig {
     private const val KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "ok_google_hotword_compatibility_enabled"
     private const val KEY_LAUNCHER_HIDE_WIDGET_LABELS = "launcher_hide_widget_labels"
     private const val KEY_LAUNCHER_SEARCH_BAR_MODE = "launcher_taskbar_search_box"
-    private const val KEY_OOS_LOCALIZER_CONFIG_MODE = "oos_localizer_config_mode"
-    private const val KEY_OOS_LOCALIZER_REGION = "oos_localizer_region"
-    private const val KEY_OOS_LOCALIZER_LOCALE = "oos_localizer_locale"
-    private const val KEY_OOS_LOCALIZER_MODEL = "oos_localizer_model"
-    private const val KEY_OOS_LOCALIZER_DISABLED_PACKAGES = "oos_localizer_disabled_packages"
-    private const val KEY_OOS_LOCALIZER_DISABLED_FEATURES = "oos_localizer_disabled_features"
-    private const val KEY_OOS_LOCALIZER_PROPERTY_PREFIX = "oos_localizer_property_"
-    private const val KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX = "oos_localizer_app_feature_"
     private const val FLAG_FILE_PATH_NATIVE_NOTIFY_ICON = "/data/local/oost_native_notify_icon.flag"
     private const val FLAG_FILE_PATH_EXTREME_REFRESH_165 = "/data/local/oost_extreme_refresh_165.flag"
     private const val FLAG_FILE_PATH_RECENT_TASK_RADIUS = "/data/local/oost_recent_task_radius.flag"
     private const val FLAG_FILE_PATH_AOD_ENHANCE = "/data/local/oost_aod_enhance.flag"
-    private const val FLAG_FILE_PATH_OOS_LOCALIZER = "/data/local/oost_oos_localizer.flag"
     private const val FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES = "/data/local/oost_native_notification_bubbles.flag"
     private const val LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFY_ICON = "/data/local/tmp/oost_native_notify_icon.flag"
     private const val LEGACY_FLAG_FILE_PATH_EXTREME_REFRESH_165 = "/data/local/tmp/oost_extreme_refresh_165.flag"
     private const val LEGACY_FLAG_FILE_PATH_RECENT_TASK_RADIUS = "/data/local/tmp/oost_recent_task_radius.flag"
     private const val LEGACY_FLAG_FILE_PATH_AOD_ENHANCE = "/data/local/tmp/oost_aod_enhance.flag"
-    private const val LEGACY_FLAG_FILE_PATH_OOS_LOCALIZER = "/data/local/tmp/oost_oos_localizer.flag"
     private const val LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES = "/data/local/tmp/oost_native_notification_bubbles.flag"
     private const val PROP_KEY_NATIVE_NOTIFY_ICON = "oost.native_notify_icon"
     private const val PROP_KEY_EXTREME_REFRESH_165 = "oost.extreme_refresh_165"
     private const val PROP_KEY_RECENT_TASK_RADIUS = "oost.recent_task_radius"
     private const val PROP_KEY_AOD_ENHANCE = "oost.aod_enhance"
-    private const val PROP_KEY_OOS_LOCALIZER = "oost.oos_localizer"
     private const val PROP_KEY_ASSISTANT_POWER_MODE = "oost.assistant_power_mode"
     private const val PROP_KEY_ASSISTANT_GESTURE_CIRCLE = "oost.assistant_gesture_circle"
     private const val PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17 = "oost.assistant_gesture_circle_c17"
@@ -399,15 +480,10 @@ object LspConfig {
     private const val PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "oost.ok_google_hotword_compatibility"
     private const val PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS = "oost.launcher_hide_widget_labels"
     private const val PROP_KEY_LAUNCHER_SEARCH_BAR_MODE = "oost.launcher_taskbar_search_box"
-    private const val PROP_KEY_OOS_LOCALIZER_CONFIG_MODE = "oost.oos_localizer_config_mode"
-    private const val PROP_KEY_OOS_LOCALIZER_REGION = "oost.oos_localizer_region"
-    private const val PROP_KEY_OOS_LOCALIZER_LOCALE = "oost.oos_localizer_locale"
-    private const val PROP_KEY_OOS_LOCALIZER_MODEL = "oost.oos_localizer_model"
     private const val PERSIST_PROP_KEY_NATIVE_NOTIFY_ICON = "persist.sys.oost.native_notify_icon"
     private const val PERSIST_PROP_KEY_EXTREME_REFRESH_165 = "persist.sys.oost.extreme_refresh_165"
     private const val PERSIST_PROP_KEY_RECENT_TASK_RADIUS = "persist.sys.oost.recent_task_radius"
     private const val PERSIST_PROP_KEY_AOD_ENHANCE = "persist.sys.oost.aod_enhance"
-    private const val PERSIST_PROP_KEY_OOS_LOCALIZER = "persist.sys.oost.oos_localizer"
     private const val PERSIST_PROP_KEY_ASSISTANT_POWER_MODE = "persist.sys.oost.assistant_power_mode"
     private const val PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE = "persist.sys.oost.assistant_gesture_circle"
     private const val PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17 =
@@ -508,15 +584,10 @@ object LspConfig {
         "persist.sys.oost.launcher_hide_widget_labels"
     private const val PERSIST_PROP_KEY_LAUNCHER_SEARCH_BAR_MODE =
         "persist.sys.oost.launcher_taskbar_search_box"
-    private const val PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE = "persist.sys.oost.oos_localizer_config_mode"
-    private const val PERSIST_PROP_KEY_OOS_LOCALIZER_REGION = "persist.sys.oost.oos_localizer_region"
-    private const val PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE = "persist.sys.oost.oos_localizer_locale"
-    private const val PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL = "persist.sys.oost.oos_localizer_model"
     private const val SETTINGS_KEY_NATIVE_NOTIFY_ICON = "oost_native_notify_icon"
     private const val SETTINGS_KEY_EXTREME_REFRESH_165 = "oost_extreme_refresh_165"
     private const val SETTINGS_KEY_RECENT_TASK_RADIUS = "oost_recent_task_radius"
     private const val SETTINGS_KEY_AOD_ENHANCE = "oost_aod_enhance"
-    private const val SETTINGS_KEY_OOS_LOCALIZER = "oost_oos_localizer"
     private const val SETTINGS_KEY_ASSISTANT_POWER_MODE = "oost_assistant_power_mode"
     private const val SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE = "oost_assistant_gesture_circle"
     private const val SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE_C17 = "oost_assistant_gesture_circle_c17"
@@ -609,10 +680,6 @@ object LspConfig {
     private const val SETTINGS_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "oost_ok_google_hotword_compatibility"
     private const val SETTINGS_KEY_LAUNCHER_HIDE_WIDGET_LABELS = "oost_launcher_hide_widget_labels"
     private const val SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE = "oost_launcher_taskbar_search_box"
-    private const val SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE = "oost_oos_localizer_config_mode"
-    private const val SETTINGS_KEY_OOS_LOCALIZER_REGION = "oost_oos_localizer_region"
-    private const val SETTINGS_KEY_OOS_LOCALIZER_LOCALE = "oost_oos_localizer_locale"
-    private const val SETTINGS_KEY_OOS_LOCALIZER_MODEL = "oost_oos_localizer_model"
 
     private const val DEFAULT_RECENT_TASK_RADIUS_DP = 26
     private const val DEFAULT_AOD_INIT_DARK_BRIGHTNESS = 80
@@ -679,46 +746,9 @@ object LspConfig {
     const val ASSISTANT_POWER_MODE_NONE = -1
     const val ASSISTANT_POWER_MODE_SYSTEM_DEFAULT = 0
     private const val DEFAULT_ASSISTANT_POWER_MODE = ASSISTANT_POWER_MODE_NONE
-    const val DEFAULT_OOS_LOCALIZER_REGION = "CN"
-    const val DEFAULT_OOS_LOCALIZER_LOCALE = "zh-CN"
-    const val DEFAULT_OOS_LOCALIZER_MODEL = "PMA120"
-    const val OOS_LOCALIZER_CONFIG_DEFAULT = 0
-    const val OOS_LOCALIZER_CONFIG_CUSTOM = 1
-    private const val DEFAULT_OOS_LOCALIZER_CONFIG_MODE = OOS_LOCALIZER_CONFIG_DEFAULT
-    const val OOS_LOCALIZER_FEATURE_PROPERTIES = "properties"
-    const val OOS_LOCALIZER_FEATURE_REGION = "region"
-    const val OOS_LOCALIZER_FEATURE_LOCALE = "locale"
-    const val OOS_LOCALIZER_FEATURE_BUILD_MODEL = "build_model"
-    const val OOS_LOCALIZER_FEATURE_APP_FEATURES = "app_features"
 
-    val OOS_LOCALIZER_PROPERTY_DEFAULTS = linkedMapOf(
-        "ro.oplus.image.system_ext.area" to "domestic",
-        "ro.oplus.image.my_stock.type" to "domestic_OPPO",
-        "ro.build.display.id" to "PMA120_16.0.7.210(CN01)",
-        "ro.build.display.full_id" to "PMA120domestic_11_16.0.7.210(CN01)_2026051318470000",
-        "ro.build.version.ota" to "PMA120_11.A.45_0450_202605131847",
-        "ro.oplus.image.my_manifest.version" to "PMA120_11.A.45_0450_202605131847.97.41d84fe6",
-        "ro.build.display.ota" to "PMA120_11_A.45",
-        "ro.product.authentication" to "26C44PC2V997",
-        "persist.bluetooth.airpods_support" to "true"
-    )
 
-    val OOS_LOCALIZER_APP_FEATURE_DEFAULTS = linkedMapOf(
-        "com.android.incallui.region_cn" to "true",
-        "com.android.launcher.CN_VERSION" to "true",
-        "com.android.settings.cn_version" to "true",
-        "com.oplusos.deepthinker.cn.enable" to "true",
-        "com.oplus.aiwriter.main_host_address" to "String:aitool-infer-cn.heytapmobi.com",
-        "com.oplus.smartanalysis.rule_server_host" to "String:https://iwisdom.apps.coloros.com"
-    )
 
-    val OOS_LOCALIZER_FEATURE_DEFAULTS = linkedMapOf(
-        OOS_LOCALIZER_FEATURE_PROPERTIES to true,
-        OOS_LOCALIZER_FEATURE_REGION to true,
-        OOS_LOCALIZER_FEATURE_LOCALE to true,
-        OOS_LOCALIZER_FEATURE_BUILD_MODEL to true,
-        OOS_LOCALIZER_FEATURE_APP_FEATURES to true
-    )
 
     data class UiSnapshot(
         val nativeNotifyIconEnabled: Boolean,
@@ -745,11 +775,6 @@ object LspConfig {
         val gmsRegionRestrictionBypassEnabled: Boolean,
         val athenaC17SwipeUpProtectionEnabled: Boolean,
         val okGoogleHotwordCompatibilityEnabled: Boolean,
-        val oosLocalizerEnabled: Boolean,
-        val oosLocalizerConfigMode: Int,
-        val oosLocalizerRegion: String,
-        val oosLocalizerLocale: String,
-        val oosLocalizerModel: String,
         val assistantPowerMode: Int,
         val assistantGestureCircleEnabled: Boolean,
         val assistantGestureCircleC17Enabled: Boolean,
@@ -844,23 +869,6 @@ object LspConfig {
                 KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
                 DEFAULT_OK_GOOGLE_HOTWORD_COMPATIBILITY,
             ),
-            oosLocalizerEnabled = prefs.getBoolean(KEY_OOS_LOCALIZER, false),
-            oosLocalizerConfigMode = prefs.getInt(
-                KEY_OOS_LOCALIZER_CONFIG_MODE,
-                DEFAULT_OOS_LOCALIZER_CONFIG_MODE
-            ).sanitizeOosLocalizerConfigMode(),
-            oosLocalizerRegion = prefs.getString(
-                KEY_OOS_LOCALIZER_REGION,
-                DEFAULT_OOS_LOCALIZER_REGION
-            ).sanitizeOosLocalizerRegion(),
-            oosLocalizerLocale = prefs.getString(
-                KEY_OOS_LOCALIZER_LOCALE,
-                DEFAULT_OOS_LOCALIZER_LOCALE
-            ).sanitizeOosLocalizerLocale(),
-            oosLocalizerModel = prefs.getString(
-                KEY_OOS_LOCALIZER_MODEL,
-                DEFAULT_OOS_LOCALIZER_MODEL
-            ).sanitizeOosLocalizerModel(),
             assistantPowerMode = prefs.getInt(
                 KEY_ASSISTANT_POWER_MODE,
                 DEFAULT_ASSISTANT_POWER_MODE
@@ -913,11 +921,6 @@ object LspConfig {
             gmsRegionRestrictionBypassEnabled = isGmsRegionRestrictionBypassEnabled(context),
             athenaC17SwipeUpProtectionEnabled = isAthenaC17SwipeUpProtectionEnabled(context),
             okGoogleHotwordCompatibilityEnabled = isOkGoogleHotwordCompatibilityEnabled(context),
-            oosLocalizerEnabled = isOosLocalizerEnabled(context),
-            oosLocalizerConfigMode = getOosLocalizerConfigMode(context),
-            oosLocalizerRegion = getOosLocalizerRegion(context),
-            oosLocalizerLocale = getOosLocalizerLocale(context),
-            oosLocalizerModel = getOosLocalizerModel(context),
             assistantPowerMode = getAssistantPowerMode(context),
             assistantGestureCircleEnabled = isAssistantGestureCircleEnabled(context),
             assistantGestureCircleC17Enabled = isAssistantGestureCircleC17Enabled(context),
@@ -1023,246 +1026,6 @@ object LspConfig {
             settingsGlobalKey = SETTINGS_KEY_AOD_ENHANCE,
             flagFilePath = FLAG_FILE_PATH_AOD_ENHANCE
         )
-    }
-
-    fun isOosLocalizerEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER,
-            propertyKey = PROP_KEY_OOS_LOCALIZER,
-            settingsKey = SETTINGS_KEY_OOS_LOCALIZER,
-            flagFilePath = FLAG_FILE_PATH_OOS_LOCALIZER,
-            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_OOS_LOCALIZER,
-            prefsKey = KEY_OOS_LOCALIZER,
-            defaultValue = false
-        )
-    }
-
-    fun setOosLocalizerEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_OOS_LOCALIZER, enabled).commit()
-        syncReadableState(context)
-        syncFlagState(
-            enabled = enabled,
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER,
-                PROP_KEY_OOS_LOCALIZER
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER,
-            flagFilePath = FLAG_FILE_PATH_OOS_LOCALIZER
-        )
-    }
-
-    fun getOosLocalizerConfigMode(context: Context): Int {
-        return readSyncedInt(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE,
-            propertyKey = PROP_KEY_OOS_LOCALIZER_CONFIG_MODE,
-            settingsKey = SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE,
-            prefsKey = KEY_OOS_LOCALIZER_CONFIG_MODE,
-            defaultValue = DEFAULT_OOS_LOCALIZER_CONFIG_MODE
-        ).sanitizeOosLocalizerConfigMode()
-    }
-
-    fun setOosLocalizerConfigMode(context: Context, mode: Int) {
-        val sanitized = mode.sanitizeOosLocalizerConfigMode()
-        prefs(context).edit().putInt(KEY_OOS_LOCALIZER_CONFIG_MODE, sanitized).commit()
-        syncReadableState(context)
-        syncScalarState(
-            value = sanitized.toString(),
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE,
-                PROP_KEY_OOS_LOCALIZER_CONFIG_MODE
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE
-        )
-    }
-
-    fun getOosLocalizerRegion(context: Context): String {
-        return readSyncedString(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER_REGION,
-            propertyKey = PROP_KEY_OOS_LOCALIZER_REGION,
-            settingsKey = SETTINGS_KEY_OOS_LOCALIZER_REGION,
-            prefsKey = KEY_OOS_LOCALIZER_REGION,
-            defaultValue = DEFAULT_OOS_LOCALIZER_REGION
-        ).sanitizeOosLocalizerRegion()
-    }
-
-    fun setOosLocalizerRegion(context: Context, value: String) {
-        val sanitized = value.sanitizeOosLocalizerRegion()
-        prefs(context).edit().putString(KEY_OOS_LOCALIZER_REGION, sanitized).commit()
-        syncReadableState(context)
-        syncScalarState(
-            value = sanitized,
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER_REGION,
-                PROP_KEY_OOS_LOCALIZER_REGION
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_REGION
-        )
-    }
-
-    fun getOosLocalizerLocale(context: Context): String {
-        return readSyncedString(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE,
-            propertyKey = PROP_KEY_OOS_LOCALIZER_LOCALE,
-            settingsKey = SETTINGS_KEY_OOS_LOCALIZER_LOCALE,
-            prefsKey = KEY_OOS_LOCALIZER_LOCALE,
-            defaultValue = DEFAULT_OOS_LOCALIZER_LOCALE
-        ).sanitizeOosLocalizerLocale()
-    }
-
-    fun setOosLocalizerLocale(context: Context, value: String) {
-        val sanitized = value.sanitizeOosLocalizerLocale()
-        prefs(context).edit().putString(KEY_OOS_LOCALIZER_LOCALE, sanitized).commit()
-        syncReadableState(context)
-        syncScalarState(
-            value = sanitized,
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE,
-                PROP_KEY_OOS_LOCALIZER_LOCALE
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_LOCALE
-        )
-    }
-
-    fun getOosLocalizerModel(context: Context): String {
-        return readSyncedString(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL,
-            propertyKey = PROP_KEY_OOS_LOCALIZER_MODEL,
-            settingsKey = SETTINGS_KEY_OOS_LOCALIZER_MODEL,
-            prefsKey = KEY_OOS_LOCALIZER_MODEL,
-            defaultValue = DEFAULT_OOS_LOCALIZER_MODEL
-        ).sanitizeOosLocalizerModel()
-    }
-
-    fun setOosLocalizerModel(context: Context, value: String) {
-        val sanitized = value.sanitizeOosLocalizerModel()
-        prefs(context).edit().putString(KEY_OOS_LOCALIZER_MODEL, sanitized).commit()
-        syncReadableState(context)
-        syncScalarState(
-            value = sanitized,
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL,
-                PROP_KEY_OOS_LOCALIZER_MODEL
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_MODEL
-        )
-    }
-
-    fun getOosLocalizerProperty(context: Context, key: String): String {
-        val defaultValue = OOS_LOCALIZER_PROPERTY_DEFAULTS[key].orEmpty()
-        return prefs(context).getString(KEY_OOS_LOCALIZER_PROPERTY_PREFIX + key, defaultValue)
-            ?: defaultValue
-    }
-
-    fun setOosLocalizerProperty(context: Context, key: String, value: String) {
-        if (key !in OOS_LOCALIZER_PROPERTY_DEFAULTS) return
-        prefs(context).edit()
-            .putString(KEY_OOS_LOCALIZER_PROPERTY_PREFIX + key, value.trim())
-            .commit()
-        syncReadableState(context)
-    }
-
-    fun getOosLocalizerAppFeature(context: Context, key: String): String {
-        val defaultValue = OOS_LOCALIZER_APP_FEATURE_DEFAULTS[key].orEmpty()
-        return prefs(context).getString(KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX + key, defaultValue)
-            ?: defaultValue
-    }
-
-    fun setOosLocalizerAppFeature(context: Context, key: String, value: String) {
-        if (key !in OOS_LOCALIZER_APP_FEATURE_DEFAULTS) return
-        prefs(context).edit()
-            .putString(KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX + key, value.trim())
-            .commit()
-        syncReadableState(context)
-    }
-
-    fun setOosLocalizerCustomEntries(
-        context: Context,
-        propertyValues: Map<String, String>,
-        appFeatureValues: Map<String, String>,
-        featureEnabledStates: Map<String, Boolean>
-    ): Boolean {
-        val preferences = prefs(context)
-        val featureOverrides = getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_FEATURES).toMutableSet()
-        featureEnabledStates.forEach { (feature, enabled) ->
-            val defaultValue = OOS_LOCALIZER_FEATURE_DEFAULTS[feature] ?: return@forEach
-            if (enabled == defaultValue) {
-                featureOverrides.remove(feature)
-            } else {
-                featureOverrides.add(feature)
-            }
-        }
-        val editor = preferences.edit()
-            .putStringSet(KEY_OOS_LOCALIZER_DISABLED_FEATURES, featureOverrides.toSet())
-        propertyValues.forEach { (key, value) ->
-            if (key in OOS_LOCALIZER_PROPERTY_DEFAULTS) {
-                editor.putString(KEY_OOS_LOCALIZER_PROPERTY_PREFIX + key, value.trim())
-            }
-        }
-        appFeatureValues.forEach { (key, value) ->
-            if (key in OOS_LOCALIZER_APP_FEATURE_DEFAULTS) {
-                editor.putString(KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX + key, value.trim())
-            }
-        }
-        return editor.commit().also { committed ->
-            if (committed) syncReadableState(context)
-        }
-    }
-
-    fun isOosLocalizerPackageEnabled(context: Context, packageName: String): Boolean {
-        return packageName !in getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_PACKAGES)
-    }
-
-    fun setOosLocalizerPackageEnabled(context: Context, packageName: String, enabled: Boolean) {
-        val disabled = getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_PACKAGES).toMutableSet()
-        if (enabled) {
-            disabled.remove(packageName)
-        } else {
-            disabled.add(packageName)
-        }
-        prefs(context).edit().putStringSet(KEY_OOS_LOCALIZER_DISABLED_PACKAGES, disabled.toSet()).commit()
-        syncReadableState(context)
-    }
-
-    fun setOosLocalizerPackageStates(context: Context, enabledStates: Map<String, Boolean>): Boolean {
-        val disabled = getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_PACKAGES).toMutableSet()
-        enabledStates.forEach { (packageName, enabled) ->
-            if (enabled) {
-                disabled.remove(packageName)
-            } else {
-                disabled.add(packageName)
-            }
-        }
-        return prefs(context).edit()
-            .putStringSet(KEY_OOS_LOCALIZER_DISABLED_PACKAGES, disabled.toSet())
-            .commit()
-            .also { committed ->
-                if (committed) syncReadableState(context)
-            }
-    }
-
-    fun isOosLocalizerFeatureEnabled(context: Context, feature: String): Boolean {
-        val defaultValue = OOS_LOCALIZER_FEATURE_DEFAULTS[feature] ?: true
-        if (defaultValue) {
-            return feature !in getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_FEATURES)
-        }
-        return feature in getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_FEATURES)
-    }
-
-    fun setOosLocalizerFeatureEnabled(context: Context, feature: String, enabled: Boolean) {
-        if (feature !in OOS_LOCALIZER_FEATURE_DEFAULTS) return
-        val disabled = getStringSet(context, KEY_OOS_LOCALIZER_DISABLED_FEATURES).toMutableSet()
-        if (enabled) {
-            disabled.remove(feature)
-        } else {
-            disabled.add(feature)
-        }
-        prefs(context).edit().putStringSet(KEY_OOS_LOCALIZER_DISABLED_FEATURES, disabled.toSet()).commit()
-        syncReadableState(context)
     }
 
     fun getAssistantPowerMode(context: Context): Int {
@@ -2894,6 +2657,8 @@ object LspConfig {
         val batchedCommands = mutableListOf<String>()
         syncCommandBatch.set(batchedCommands)
         try {
+            SmallWindowFeature.entries.forEach { setSmallWindowFeatureEnabled(context, it, false) }
+            KeyguardFeature.entries.forEach { setKeyguardFeatureEnabled(context, it, false) }
             PermissionFeature.entries.forEach { setPermissionFeatureEnabled(context, it, false) }
             NotificationRemovalFeature.entries.forEach { setNotificationRemovalEnabled(context, it, false) }
             InstallerFeature.entries.forEach { setInstallerFeatureEnabled(context, it, it.defaultValue) }
@@ -2901,11 +2666,6 @@ object LspConfig {
             setExtremeRefresh165Enabled(context, false)
             setRecentTaskRadiusEnabled(context, false)
             setAodEnhanceEnabled(context, false)
-            setOosLocalizerEnabled(context, false)
-            setOosLocalizerConfigMode(context, DEFAULT_OOS_LOCALIZER_CONFIG_MODE)
-            setOosLocalizerRegion(context, DEFAULT_OOS_LOCALIZER_REGION)
-            setOosLocalizerLocale(context, DEFAULT_OOS_LOCALIZER_LOCALE)
-            setOosLocalizerModel(context, DEFAULT_OOS_LOCALIZER_MODEL)
             setAssistantPowerMode(context, DEFAULT_ASSISTANT_POWER_MODE)
             setAssistantGestureCircleEnabled(context, false)
             setAssistantGestureCircleC17Enabled(context, false)
@@ -3054,7 +2814,6 @@ object LspConfig {
         val extremeRefresh165Enabled = isExtremeRefresh165Enabled(context)
         val recentTaskRadiusEnabled = isRecentTaskRadiusEnabled(context)
         val aodEnhanceEnabled = isAodEnhanceEnabled(context)
-        val oosLocalizerEnabled = isOosLocalizerEnabled(context)
         val assistantPowerMode = getAssistantPowerMode(context)
         val assistantGestureCircleEnabled = isAssistantGestureCircleEnabled(context)
         val assistantGestureCircleC17Enabled = isAssistantGestureCircleC17Enabled(context)
@@ -3138,15 +2897,13 @@ object LspConfig {
         val okGoogleHotwordCompatibility = isOkGoogleHotwordCompatibilityEnabled(context)
         val launcherHideWidgetLabels = isLauncherHideWidgetLabelsEnabled(context)
         val launcherSearchBarMode = getLauncherSearchBarMode(context)
-        val oosLocalizerConfigMode = getOosLocalizerConfigMode(context)
-        val oosLocalizerRegion = getOosLocalizerRegion(context)
-        val oosLocalizerLocale = getOosLocalizerLocale(context)
-        val oosLocalizerModel = getOosLocalizerModel(context)
         syncReadableState(context)
         val batchedCommands = mutableListOf<String>()
         syncCommandBatch.set(batchedCommands)
         try {
         syncPermissionFeatures(context)
+        syncSmallWindowFeatures(context)
+        syncKeyguardFeatures(context)
         syncNotificationRemovalFeatures(context)
         syncInstallerFeatures(context)
         syncFlagState(
@@ -3184,15 +2941,6 @@ object LspConfig {
             ),
             settingsGlobalKey = SETTINGS_KEY_AOD_ENHANCE,
             flagFilePath = FLAG_FILE_PATH_AOD_ENHANCE
-        )
-        syncFlagState(
-            enabled = oosLocalizerEnabled,
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER,
-                PROP_KEY_OOS_LOCALIZER
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER,
-            flagFilePath = FLAG_FILE_PATH_OOS_LOCALIZER
         )
         syncScalarState(
             value = assistantPowerMode.toString(),
@@ -3691,38 +3439,6 @@ object LspConfig {
             ),
             settingsGlobalKey = SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE,
         )
-        syncScalarState(
-            value = oosLocalizerConfigMode.toString(),
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE,
-                PROP_KEY_OOS_LOCALIZER_CONFIG_MODE
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE
-        )
-        syncScalarState(
-            value = oosLocalizerRegion,
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER_REGION,
-                PROP_KEY_OOS_LOCALIZER_REGION
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_REGION
-        )
-        syncScalarState(
-            value = oosLocalizerLocale,
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE,
-                PROP_KEY_OOS_LOCALIZER_LOCALE
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_LOCALE
-        )
-        syncScalarState(
-            value = oosLocalizerModel,
-            propertyKeys = listOf(
-                PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL,
-                PROP_KEY_OOS_LOCALIZER_MODEL
-            ),
-            settingsGlobalKey = SETTINGS_KEY_OOS_LOCALIZER_MODEL
-        )
         } finally {
             syncCommandBatch.remove()
         }
@@ -3786,118 +3502,6 @@ object LspConfig {
             val prefs = xposedPreferences
             prefs.getBoolean(KEY_AOD_ENHANCE, false)
         }.getOrDefault(false)
-    }
-
-    fun isOosLocalizerEnabledXposed(): Boolean {
-        HookConfigSnapshot.boolean(KEY_OOS_LOCALIZER, false)?.let { return it }
-        readSystemPropertyToggle(PERSIST_PROP_KEY_OOS_LOCALIZER)?.let { return it }
-        readSystemPropertyToggle(PROP_KEY_OOS_LOCALIZER)?.let { return it }
-        readSettingsGlobalToggle(SETTINGS_KEY_OOS_LOCALIZER)?.let { return it }
-        readFlagFile(FLAG_FILE_PATH_OOS_LOCALIZER)?.let { return it }
-        readFlagFile(LEGACY_FLAG_FILE_PATH_OOS_LOCALIZER)?.let { return it }
-        return runCatching {
-            val prefs = xposedPreferences
-            prefs.getBoolean(KEY_OOS_LOCALIZER, false)
-        }.getOrDefault(false)
-    }
-
-    fun getOosLocalizerRegionXposed(): String {
-        HookConfigSnapshot.string(KEY_OOS_LOCALIZER_REGION, DEFAULT_OOS_LOCALIZER_REGION)?.let {
-            return it.sanitizeOosLocalizerRegion()
-        }
-        readSystemPropertyValue(PERSIST_PROP_KEY_OOS_LOCALIZER_REGION)?.let {
-            return it.sanitizeOosLocalizerRegion()
-        }
-        readSystemPropertyValue(PROP_KEY_OOS_LOCALIZER_REGION)?.let {
-            return it.sanitizeOosLocalizerRegion()
-        }
-        readSettingsGlobalValue(SETTINGS_KEY_OOS_LOCALIZER_REGION)?.let {
-            return it.sanitizeOosLocalizerRegion()
-        }
-        return runCatching {
-            val prefs = xposedPreferences
-            prefs.getString(KEY_OOS_LOCALIZER_REGION, DEFAULT_OOS_LOCALIZER_REGION)
-        }.getOrDefault(DEFAULT_OOS_LOCALIZER_REGION).sanitizeOosLocalizerRegion()
-    }
-
-    fun getOosLocalizerConfigModeXposed(): Int {
-        HookConfigSnapshot.int(
-            KEY_OOS_LOCALIZER_CONFIG_MODE,
-            DEFAULT_OOS_LOCALIZER_CONFIG_MODE,
-        )?.let { return it.sanitizeOosLocalizerConfigMode() }
-        readSystemPropertyValue(PERSIST_PROP_KEY_OOS_LOCALIZER_CONFIG_MODE)?.toIntOrNull()?.let {
-            return it.sanitizeOosLocalizerConfigMode()
-        }
-        readSystemPropertyValue(PROP_KEY_OOS_LOCALIZER_CONFIG_MODE)?.toIntOrNull()?.let {
-            return it.sanitizeOosLocalizerConfigMode()
-        }
-        readSettingsGlobalValue(SETTINGS_KEY_OOS_LOCALIZER_CONFIG_MODE)?.toIntOrNull()?.let {
-            return it.sanitizeOosLocalizerConfigMode()
-        }
-        return runCatching {
-            val prefs = xposedPreferences
-            prefs.getInt(KEY_OOS_LOCALIZER_CONFIG_MODE, DEFAULT_OOS_LOCALIZER_CONFIG_MODE)
-        }.getOrDefault(DEFAULT_OOS_LOCALIZER_CONFIG_MODE).sanitizeOosLocalizerConfigMode()
-    }
-
-    fun getOosLocalizerLocaleXposed(): String {
-        HookConfigSnapshot.string(KEY_OOS_LOCALIZER_LOCALE, DEFAULT_OOS_LOCALIZER_LOCALE)?.let {
-            return it.sanitizeOosLocalizerLocale()
-        }
-        readSystemPropertyValue(PERSIST_PROP_KEY_OOS_LOCALIZER_LOCALE)?.let {
-            return it.sanitizeOosLocalizerLocale()
-        }
-        readSystemPropertyValue(PROP_KEY_OOS_LOCALIZER_LOCALE)?.let {
-            return it.sanitizeOosLocalizerLocale()
-        }
-        readSettingsGlobalValue(SETTINGS_KEY_OOS_LOCALIZER_LOCALE)?.let {
-            return it.sanitizeOosLocalizerLocale()
-        }
-        return runCatching {
-            val prefs = xposedPreferences
-            prefs.getString(KEY_OOS_LOCALIZER_LOCALE, DEFAULT_OOS_LOCALIZER_LOCALE)
-        }.getOrDefault(DEFAULT_OOS_LOCALIZER_LOCALE).sanitizeOosLocalizerLocale()
-    }
-
-    fun getOosLocalizerModelXposed(): String {
-        HookConfigSnapshot.string(KEY_OOS_LOCALIZER_MODEL, DEFAULT_OOS_LOCALIZER_MODEL)?.let {
-            return it.sanitizeOosLocalizerModel()
-        }
-        readSystemPropertyValue(PERSIST_PROP_KEY_OOS_LOCALIZER_MODEL)?.let {
-            return it.sanitizeOosLocalizerModel()
-        }
-        readSystemPropertyValue(PROP_KEY_OOS_LOCALIZER_MODEL)?.let {
-            return it.sanitizeOosLocalizerModel()
-        }
-        readSettingsGlobalValue(SETTINGS_KEY_OOS_LOCALIZER_MODEL)?.let {
-            return it.sanitizeOosLocalizerModel()
-        }
-        return runCatching {
-            val prefs = xposedPreferences
-            prefs.getString(KEY_OOS_LOCALIZER_MODEL, DEFAULT_OOS_LOCALIZER_MODEL)
-        }.getOrDefault(DEFAULT_OOS_LOCALIZER_MODEL).sanitizeOosLocalizerModel()
-    }
-
-    fun getOosLocalizerPropertyXposed(key: String): String? {
-        val defaultValue = OOS_LOCALIZER_PROPERTY_DEFAULTS[key] ?: return null
-        return readXposedString(KEY_OOS_LOCALIZER_PROPERTY_PREFIX + key, defaultValue)
-            ?.takeIf { it.isNotBlank() }
-    }
-
-    fun getOosLocalizerAppFeatureXposed(key: String): String? {
-        val defaultValue = OOS_LOCALIZER_APP_FEATURE_DEFAULTS[key] ?: return null
-        return readXposedString(KEY_OOS_LOCALIZER_APP_FEATURE_PREFIX + key, defaultValue)
-            ?.takeIf { it.isNotBlank() }
-    }
-
-    fun isOosLocalizerPackageEnabledXposed(packageName: String): Boolean {
-        return packageName !in readXposedStringSet(KEY_OOS_LOCALIZER_DISABLED_PACKAGES)
-    }
-
-    fun isOosLocalizerFeatureEnabledXposed(feature: String): Boolean {
-        val defaultValue = OOS_LOCALIZER_FEATURE_DEFAULTS[feature] ?: true
-        val disabled = readXposedStringSet(KEY_OOS_LOCALIZER_DISABLED_FEATURES)
-        return if (defaultValue) feature !in disabled else feature in disabled
     }
 
     fun getAssistantPowerModeXposed(): Int {
@@ -4845,37 +4449,6 @@ object LspConfig {
         }
     }
 
-    private fun Int.sanitizeOosLocalizerConfigMode(): Int {
-        return when (this) {
-            OOS_LOCALIZER_CONFIG_DEFAULT,
-            OOS_LOCALIZER_CONFIG_CUSTOM -> this
-            else -> DEFAULT_OOS_LOCALIZER_CONFIG_MODE
-        }
-    }
-
-    private fun String?.sanitizeOosLocalizerRegion(): String {
-        return this
-            ?.trim()
-            ?.uppercase()
-            ?.takeIf { it.matches(Regex("[A-Z]{2}")) }
-            ?: DEFAULT_OOS_LOCALIZER_REGION
-    }
-
-    private fun String?.sanitizeOosLocalizerLocale(): String {
-        return this
-            ?.trim()
-            ?.replace('_', '-')
-            ?.takeIf { it.matches(Regex("[A-Za-z]{2,3}(-[A-Za-z]{2})?")) }
-            ?: DEFAULT_OOS_LOCALIZER_LOCALE
-    }
-
-    private fun String?.sanitizeOosLocalizerModel(): String {
-        return this
-            ?.trim()
-            ?.takeIf { it.matches(Regex("[A-Za-z0-9_.-]{2,32}")) }
-            ?: DEFAULT_OOS_LOCALIZER_MODEL
-    }
-
     private fun syncFlagState(
         enabled: Boolean,
         propertyKeys: List<String>,
@@ -4888,7 +4461,6 @@ object LspConfig {
             FLAG_FILE_PATH_EXTREME_REFRESH_165 -> LEGACY_FLAG_FILE_PATH_EXTREME_REFRESH_165
             FLAG_FILE_PATH_RECENT_TASK_RADIUS -> LEGACY_FLAG_FILE_PATH_RECENT_TASK_RADIUS
             FLAG_FILE_PATH_AOD_ENHANCE -> LEGACY_FLAG_FILE_PATH_AOD_ENHANCE
-            FLAG_FILE_PATH_OOS_LOCALIZER -> LEGACY_FLAG_FILE_PATH_OOS_LOCALIZER
             FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES -> LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES
             else -> null
         }

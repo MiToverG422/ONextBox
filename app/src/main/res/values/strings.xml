@@ -1,4 +1,9 @@
 <resources>
+    <string name="feature_search_hint">Search features</string>
+    <string name="feature_search_clear">Clear search</string>
+    <string name="feature_search_results">Results (%1$d)</string>
+    <string name="feature_search_empty">No matching features</string>
+    <string name="feature_search_empty_summary">Try another keyword</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">一个 COUI 风格的 OPlus 系统自定义工具箱</string>
 
@@ -338,35 +343,8 @@
     <string name="feature_assistant_show_hidden_content">Show hidden content</string>
     <string name="feature_assistant_legacy_notice_title">Compatibility notice</string>
     <string name="feature_assistant_legacy_notice_summary">The legacy options above rely on event interception and may suffer from delayed responses, gesture conflicts, or break after system updates. Prefer the international experimental features above</string>
-    <string name="feature_oos_localizer_title">Global Localizer</string>
-    <string name="feature_oos_localizer_home_summary">Only for OxygenOS and ColorOS Global</string>
-    <string name="feature_oos_localizer_summary">Requires the Magisk/KernelSU module, Spoofs supported apps as CN and Simplified Chinese, Reboot after switching</string>
-    <string name="feature_oos_localizer_master_switch">Master switch</string>
-    <string name="feature_oos_localizer_region_title">Region</string>
-    <string name="feature_oos_localizer_locale_title">Locale</string>
-    <string name="feature_oos_localizer_model_title">Device model</string>
 
-<string name="feature_oos_localizer_group_properties">Custom properties</string>
 
-<string name="feature_oos_localizer_group_scope">Custom scope</string>
-    <string name="feature_oos_localizer_config_title">Configuration</string>
-    <string name="feature_oos_localizer_config_default">Default configuration</string>
-    <string name="feature_oos_localizer_config_default_summary">Use the built-in default configuration, Custom configuration is recommended (model PMA120, spoof CN region and Simplified Chinese environment, and scope cannot be modified)</string>
-    <string name="feature_oos_localizer_config_custom">Custom configuration</string>
-    <string name="feature_oos_localizer_config_custom_summary">Use the following custom rule parameters and selected scope for spoofing</string>
-    <string name="feature_oos_localizer_feature_properties">System properties spoofing</string>
-    <string name="feature_oos_localizer_feature_region">Region spoofing</string>
-    <string name="feature_oos_localizer_feature_locale">Locale spoofing</string>
-    <string name="feature_oos_localizer_feature_build_model">Device model spoofing</string>
-    <string name="feature_oos_localizer_feature_app_features">Feature spoofing</string>
-    <string name="feature_oos_localizer_risk_title">High-risk feature warning</string>
-    <string name="feature_oos_localizer_risk_summary">These rules change system properties and feature flags for target apps, incorrect values may cause app crashes, abnormal behavior, boot issues, or data loss, the author is not responsible for any problems caused by custom configuration, save only after confirming the risk</string>
-    <string name="feature_oos_localizer_scope_notice_title">Scope notice</string>
-    <string name="feature_oos_localizer_scope_notice_summary">Custom scope only supports the listed packages for now, adding other package names manually is not supported yet</string>
-    <string name="feature_oos_localizer_action_reset">Reset</string>
-    <string name="feature_oos_localizer_action_save">Save</string>
-    <string name="feature_oos_localizer_reset_success">Custom content reset</string>
-    <string name="feature_oos_localizer_save_success">Custom content saved</string>
 
 
 <string name="about_codex_author_summary">Development assistance</string>
@@ -714,4 +692,44 @@
     <string name="feature_google_messages_notification_section">Notifications</string>
     <string name="feature_google_messages_copy_otp_title">Copy verification code</string>
     <string name="feature_google_messages_copy_otp_summary">Add Copy beside Read and Reply when an incoming SMS contains a code. Allow Google Messages to write to the clipboard, including in the background; otherwise, copying from notifications may not work.</string>
+    <string name="small_window_title">App small windows</string>
+    <string name="small_window_entry_summary">Small-window behavior, performance, appearance and layout</string>
+    <string name="small_window_group_behavior">Window behavior</string>
+    <string name="small_window_group_performance">Performance and limits</string>
+    <string name="small_window_group_edge">Edge-stash appearance</string>
+    <string name="small_window_group_layout">Size and layout</string>
+    <string name="small_window_white_bar">White bar when edge-stashed</string>
+    <string name="small_window_white_bar_summary">Smoothly cross-fade stashed app icons into a slim white bar, tap to reveal the stock app picker, dragging or editing restores icons, reversing continues from the current progress, touch areas stay unchanged</string>
+    <string name="small_window_safe_inset">Increase vertical safe spacing</string>
+    <string name="small_window_safe_inset_summary">Keep at least 48 dp from the top and bottom when moving a stashed handle, preserve larger system margins, smaller screens automatically bound the spacing</string>
+    <string name="small_window_hide_recents">Hide small windows from recents</string>
+    <string name="small_window_hide_recents_summary">Hide small-window cards from the stock launcher task list, keep tasks and apps running, split-screen tasks remain visible</string>
+    <string name="small_window_keep_running">Keep edge-stashed apps running</string>
+    <string name="small_window_keep_running_summary">Avoid C17 small-window freezing and frame-rate limits while stashed, keep thermal protection and normal background limits, apps may still pause themselves, power use and heat may increase</string>
+    <string name="small_window_mute_stashed">Mute edge-stashed media</string>
+    <string name="small_window_mute_stashed_summary">Mute media and game playback for stashed apps, restore it after expansion or disabling, keep calls, alarms and global volume unchanged, unsupported players retain their sound</string>
+    <string name="small_window_landscape_ratio">Preserve landscape screen aspect ratio</string>
+    <string name="small_window_landscape_ratio_summary">Use the screen aspect ratio for supported landscape small windows, retain native restrictions for non-resizable apps, tablets and unsupported ratios, reopen existing windows to apply</string>
+    <string name="small_window_larger_size">Increase maximum small-window size</string>
+    <string name="small_window_larger_size_summary">Increase the native maximum width by up to 15%, stay within screen width and vertical safe space, keep default and minimum sizes unchanged</string>
+    <string name="small_window_compact_caption">Compact small-window top controls</string>
+    <string name="small_window_compact_caption_summary">Reduce top margins and compatible fixed-height containers, keep room for buttons and update touch regions, split-screen top bars stay unchanged</string>
+    <string name="small_window_unlimited_count">Remove multi-window count limit</string>
+    <string name="small_window_unlimited_count_summary">Remove the C17 two-window cap, allow more small windows to stay open together, retain app compatibility and system resource protection, power use and heat may increase</string>
+    <string name="small_window_unlimited_frame_rate">Remove small-window frame-rate limit</string>
+    <string name="small_window_unlimited_frame_rate_summary">Remove C17 small-window frame-rate caps for supported apps, actual frame rates still depend on the app and display, retain thermal protection, power use and heat may increase</string>
+    <string name="keyguard_interaction_group">Lock screen interaction</string>
+    <string name="keyguard_face_tap_title">Keep fingerprint icon after unlock</string>
+    <string name="keyguard_face_tap_summary">Keep the icon after face verification, requires a system restart</string>
+    <string name="keyguard_face_tap_action">Unlock phone</string>
+    <string name="keyguard_face_tap_animation_title">Unlock fingerprint animation</string>
+    <string name="keyguard_face_tap_animation_summary">Only for tapping the icon after face unlock, official fingerprint animations are unaffected</string>
+    <string name="keyguard_page_title">Lock screen</string>
+    <string name="keyguard_page_entry_summary">Face-verified tap to unlock, native fingerprint animation</string>
+    <string name="feature_screenshot_title">Screenshots</string>
+    <string name="feature_screen_recording_title">Screen recording</string>
+    <string name="keyguard_aod_screenshot_title">AOD screenshots</string>
+    <string name="keyguard_aod_screenshot_summary">Use power + volume down on the always-on display, requires a system restart</string>
+    <string name="keyguard_screen_off_recording_title">Lock screen recording</string>
+    <string name="keyguard_screen_off_recording_summary">Allow system recording while locked and keep recording with the screen off, requires a system restart</string>
 </resources>

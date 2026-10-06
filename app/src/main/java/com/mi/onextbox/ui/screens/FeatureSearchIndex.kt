@@ -1,0 +1,163 @@
+package com.mi.onextbox.ui.screens
+
+import androidx.annotation.StringRes
+import com.mi.onextbox.R
+import java.text.Normalizer
+import java.util.Locale
+
+/** Explicit destinations: searching never changes a setting or invokes a Root operation. */
+internal object FeatureSearchIndex {
+    data class Entry(
+        val page: FeaturePageMode,
+        @param:StringRes val title: Int,
+        @param:StringRes val description: Int = 0,
+    )
+
+    val entries = listOf(
+        Entry(FeaturePageMode.Desktop, R.string.section_system_desktop),
+        Entry(FeaturePageMode.Desktop, R.string.event_page_tool_title, R.string.event_page_tool_summary),
+        Entry(FeaturePageMode.Desktop, R.string.feature_launcher_taskbar_search_box_title, R.string.feature_launcher_taskbar_search_box_summary),
+        Entry(FeaturePageMode.Desktop, R.string.feature_launcher_layout_unlock_title, R.string.feature_launcher_layout_unlock_summary),
+        Entry(FeaturePageMode.Desktop, R.string.feature_launcher_hide_widget_labels_title, R.string.feature_launcher_hide_widget_labels_summary),
+        Entry(FeaturePageMode.Desktop, R.string.feature_recent_task_radius_title, R.string.feature_recent_task_radius_summary),
+        Entry(FeaturePageMode.SystemUi, R.string.section_lsp),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_title, R.string.small_window_entry_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_white_bar, R.string.small_window_white_bar_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_safe_inset, R.string.small_window_safe_inset_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_hide_recents, R.string.small_window_hide_recents_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_keep_running, R.string.small_window_keep_running_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_mute_stashed, R.string.small_window_mute_stashed_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_landscape_ratio, R.string.small_window_landscape_ratio_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_larger_size, R.string.small_window_larger_size_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_compact_caption, R.string.small_window_compact_caption_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_unlimited_count, R.string.small_window_unlimited_count_summary),
+        Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_unlimited_frame_rate, R.string.small_window_unlimited_frame_rate_summary),
+        Entry(FeaturePageMode.SystemUiNative, R.string.feature_group_native),
+        Entry(FeaturePageMode.SystemUiNative, R.string.feature_native_notify_icon_title, R.string.feature_native_notify_icon_summary),
+        Entry(FeaturePageMode.SystemUiNative, R.string.feature_native_notification_bubbles_title, R.string.feature_native_notification_bubbles_summary),
+        Entry(FeaturePageMode.SystemUiNative, R.string.feature_native_power_menu_title, R.string.feature_native_power_menu_summary),
+        Entry(FeaturePageMode.SystemUiNative, R.string.feature_force_native_clipboard_overlay_title, R.string.feature_force_native_clipboard_overlay_summary),
+        Entry(FeaturePageMode.SystemUiLockScreen, R.string.keyguard_page_title, R.string.keyguard_page_entry_summary),
+        Entry(FeaturePageMode.SystemUiLockScreen, R.string.keyguard_face_tap_title, R.string.keyguard_face_tap_summary),
+        Entry(FeaturePageMode.SystemUiLockScreen, R.string.keyguard_face_tap_animation_title, R.string.keyguard_face_tap_animation_summary),
+        Entry(FeaturePageMode.Screenshot, R.string.feature_screenshot_title),
+        Entry(FeaturePageMode.Screenshot, R.string.keyguard_aod_screenshot_title, R.string.keyguard_aod_screenshot_summary),
+        Entry(FeaturePageMode.ScreenRecording, R.string.feature_screen_recording_title),
+        Entry(FeaturePageMode.ScreenRecording, R.string.keyguard_screen_off_recording_title, R.string.keyguard_screen_off_recording_summary),
+        Entry(FeaturePageMode.SystemUiDynamicColor, R.string.feature_group_dynamic_color),
+        Entry(FeaturePageMode.SystemUiDynamicColor, R.string.feature_monet_color_spec_title, R.string.feature_monet_color_spec_summary),
+        Entry(FeaturePageMode.SystemUiDynamicColor, R.string.feature_force_tonal_spot_title, R.string.feature_force_tonal_spot_summary),
+        Entry(FeaturePageMode.SystemUiStatusBar, R.string.feature_group_beautify),
+        Entry(FeaturePageMode.SystemUiStatusBar, R.string.feature_international_network_display_title, R.string.feature_international_network_display_summary),
+        Entry(FeaturePageMode.SystemUiStatusBar, R.string.feature_restore_c16_network_icon_order_title, R.string.feature_restore_c16_network_icon_order_summary),
+        Entry(FeaturePageMode.SystemUiStatusBar, R.string.feature_hide_mobile_roaming_indicator_title, R.string.feature_hide_mobile_roaming_indicator_summary),
+        Entry(FeaturePageMode.SystemUiStatusBar, R.string.feature_hide_network_activity_indicator_title, R.string.feature_hide_network_activity_indicator_summary),
+        Entry(FeaturePageMode.SystemUiNotificationCenter, R.string.feature_group_notification_center),
+        Entry(FeaturePageMode.SystemUiNotificationCenter, R.string.feature_international_notification_style_title, R.string.feature_international_notification_style_summary),
+        Entry(FeaturePageMode.SystemUiControlCenter, R.string.feature_group_control_center),
+        Entry(FeaturePageMode.SystemUiControlCenter, R.string.feature_hide_qs_edit_title, R.string.feature_hide_qs_edit_summary),
+        Entry(FeaturePageMode.SystemUiControlCenter, R.string.feature_hide_qs_settings_title, R.string.feature_hide_qs_settings_summary),
+        Entry(FeaturePageMode.SystemUiControlCenter, R.string.feature_hide_qs_top_carrier_title, R.string.feature_hide_qs_top_carrier_summary),
+        Entry(FeaturePageMode.SystemUiControlCenter, R.string.feature_hide_qs_more_title, R.string.feature_hide_qs_more_summary),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_title),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_overlay),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_vpn),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_developer),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_charging),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_flashlight),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_consumption),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_performance),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_dnd),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_hotspot),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_mute),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_gt),
+        Entry(FeaturePageMode.MobileNetwork, R.string.feature_mobile_network_title),
+        Entry(FeaturePageMode.MobileNetwork, R.string.feature_mobile_network_hide_phone_number_title, R.string.feature_mobile_network_hide_phone_number_summary),
+        Entry(FeaturePageMode.MobileNetwork, R.string.feature_mobile_network_force_carrier_options_title, R.string.feature_mobile_network_force_carrier_options_summary),
+        Entry(FeaturePageMode.MobileNetwork, R.string.feature_mobile_network_hide_ai_link_boost_title, R.string.feature_mobile_network_hide_ai_link_boost_summary),
+        Entry(FeaturePageMode.MobileNetwork, R.string.feature_mobile_network_hide_roaming_service_title, R.string.feature_mobile_network_hide_roaming_service_summary),
+        Entry(FeaturePageMode.MobileNetwork, R.string.feature_mobile_network_hide_high_data_sim_card_title, R.string.feature_mobile_network_hide_high_data_sim_card_summary),
+        Entry(FeaturePageMode.AndroidSystem, R.string.feature_android_system_title),
+        Entry(FeaturePageMode.AndroidSystem, R.string.feature_settings_gms_region_bypass_title, R.string.feature_settings_gms_region_bypass_summary),
+        Entry(FeaturePageMode.Installer, R.string.installer_title),
+        Entry(FeaturePageMode.Installer, R.string.installer_enable),
+        Entry(FeaturePageMode.Installer, R.string.installer_uninstall),
+        Entry(FeaturePageMode.Installer, R.string.installer_session),
+        Entry(FeaturePageMode.Installer, R.string.installer_paths),
+        Entry(FeaturePageMode.Installer, R.string.installer_follow),
+        Entry(FeaturePageMode.Installer, R.string.installer_target),
+        Entry(FeaturePageMode.Installer, R.string.installer_uninstaller_target),
+        Entry(FeaturePageMode.Esim, R.string.feature_esim_title),
+        Entry(FeaturePageMode.Esim, R.string.feature_esim_region_bypass_title, R.string.feature_esim_region_bypass_summary),
+        Entry(FeaturePageMode.Esim, R.string.feature_esim_profile_limit_bypass_title, R.string.feature_esim_profile_limit_bypass_summary),
+        Entry(FeaturePageMode.Esim, R.string.feature_esim_confirmation_prompt_title, R.string.feature_esim_confirmation_prompt_summary),
+        Entry(FeaturePageMode.EsimDiagnostics, R.string.feature_group_esim_diagnostics),
+        Entry(FeaturePageMode.AppMarket, R.string.feature_app_market_title),
+        Entry(FeaturePageMode.AppMarket, R.string.feature_app_market_region_bypass_title, R.string.feature_app_market_region_bypass_summary),
+        Entry(FeaturePageMode.AppMarket, R.string.feature_app_market_simplify_recommendations_title, R.string.feature_app_market_simplify_recommendations_summary),
+        Entry(FeaturePageMode.GoogleMessages, R.string.feature_google_messages_title),
+        Entry(FeaturePageMode.GoogleMessages, R.string.feature_google_messages_gemini_title, R.string.feature_google_messages_gemini_summary),
+        Entry(FeaturePageMode.GoogleMessages, R.string.feature_google_messages_copy_otp_title, R.string.feature_google_messages_copy_otp_summary),
+        Entry(FeaturePageMode.Athena, R.string.feature_group_athena),
+        Entry(FeaturePageMode.Athena, R.string.feature_athena_c17_swipe_up_protection_title, R.string.feature_athena_c17_swipe_up_protection_summary),
+        Entry(FeaturePageMode.Settings, R.string.tab_settings),
+        Entry(FeaturePageMode.Settings, R.string.feature_permission_monitor_title, R.string.feature_permission_monitor_summary),
+        Entry(FeaturePageMode.Settings, R.string.feature_settings_restore_app_open_button_title, R.string.feature_settings_restore_app_open_button_summary),
+        Entry(FeaturePageMode.Settings, R.string.feature_settings_skip_special_permission_risk_confirm_title, R.string.feature_settings_skip_special_permission_risk_confirm_summary),
+        Entry(FeaturePageMode.Settings, R.string.feature_settings_c15_about_layout_title, R.string.feature_settings_c15_about_layout_summary),
+        Entry(FeaturePageMode.Settings, R.string.feature_settings_unlock_refresh_rate_title, R.string.feature_settings_unlock_refresh_rate_summary),
+        Entry(FeaturePageMode.Settings, R.string.feature_settings_force_global_extreme_refresh_rate_title, R.string.feature_settings_force_global_extreme_refresh_rate_summary),
+        Entry(FeaturePageMode.Settings, R.string.feature_extreme_refresh_165_title, R.string.feature_extreme_refresh_165_summary),
+        Entry(FeaturePageMode.SettingsRegion, R.string.feature_group_settings_hidden_features),
+        Entry(FeaturePageMode.SettingsRegion, R.string.feature_settings_force_google_title, R.string.feature_settings_force_google_summary),
+        Entry(FeaturePageMode.SettingsRegion, R.string.feature_settings_international_title, R.string.feature_settings_international_summary),
+        Entry(FeaturePageMode.SettingsRegion, R.string.feature_settings_force_app_auto_start_title, R.string.feature_settings_force_app_auto_start_summary),
+        Entry(FeaturePageMode.SettingsRegion, R.string.feature_settings_international_wallet_title, R.string.feature_settings_international_wallet_summary),
+        Entry(FeaturePageMode.SettingsRegion, R.string.feature_settings_restore_domestic_about_device_title, R.string.feature_settings_restore_domestic_about_device_summary),
+        Entry(FeaturePageMode.SettingsRegion, R.string.feature_settings_restore_smart_lock_title, R.string.feature_settings_restore_smart_lock_summary),
+        Entry(FeaturePageMode.SettingsRegion, R.string.feature_settings_restore_domestic_auxiliary_functions_title, R.string.feature_settings_restore_domestic_auxiliary_functions_summary),
+        Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_manager_title),
+        Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_export_pages_title, R.string.feature_permission_export_pages_summary),
+        Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_native_dialogs_title, R.string.feature_permission_native_dialogs_summary),
+        Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_old_dialog_title, R.string.feature_permission_old_dialog_summary),
+        Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_always_allow_title, R.string.feature_permission_always_allow_summary),
+        Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_unlock_restricted_title, R.string.feature_permission_unlock_restricted_summary),
+        Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_disable_malicious_title, R.string.feature_permission_disable_malicious_summary),
+        Entry(FeaturePageMode.TouchSampling, R.string.feature_touch_rate_title),
+        Entry(FeaturePageMode.TouchSampling, R.string.feature_touch_rate_override_title, R.string.feature_touch_rate_override_summary),
+        Entry(FeaturePageMode.TouchSampling, R.string.feature_touch_rate_auto_start),
+        Entry(FeaturePageMode.RefreshRate, R.string.tab_refresh_rate),
+        Entry(FeaturePageMode.RefreshRate, R.string.refresh_rate_auto_start),
+        Entry(FeaturePageMode.Wallpapers, R.string.feature_wallpapers_title),
+        Entry(FeaturePageMode.Wallpapers, R.string.feature_wallpapers_red_one_entry_title, R.string.feature_wallpapers_red_one_entry_summary),
+        Entry(FeaturePageMode.Aod, R.string.feature_aod_enhance_title),
+        Entry(FeaturePageMode.Aod, R.string.feature_aod_enhance_toggle_title),
+        Entry(FeaturePageMode.Aod, R.string.feature_aod_panoramic_title),
+        Entry(FeaturePageMode.Aod, R.string.feature_aod_settings_switch_title),
+        Entry(FeaturePageMode.Aod, R.string.feature_aod_single_click_block_title),
+        Entry(FeaturePageMode.Assistant, R.string.feature_assistant_title),
+        Entry(FeaturePageMode.Assistant, R.string.feature_assistant_native_combined_title, R.string.feature_assistant_native_combined_summary),
+        Entry(FeaturePageMode.Assistant, R.string.feature_assistant_international_power_chord_title, R.string.feature_assistant_international_power_chord_summary),
+        Entry(FeaturePageMode.Assistant, R.string.feature_assistant_default_settings_title, R.string.feature_assistant_default_settings_summary),
+        Entry(FeaturePageMode.Assistant, R.string.feature_assistant_ok_google_compatibility_title, R.string.feature_assistant_ok_google_compatibility_summary),
+        Entry(FeaturePageMode.Assistant, R.string.feature_assistant_power_title, R.string.feature_assistant_power_summary),
+        Entry(FeaturePageMode.Assistant, R.string.feature_assistant_gesture_title, R.string.feature_assistant_gesture_summary),
+        Entry(FeaturePageMode.Assistant, R.string.feature_assistant_gesture_c17_title, R.string.feature_assistant_gesture_c17_summary),
+    )
+}
+
+internal fun featureSearchScore(query: String, title: String, description: String): Int {
+    fun normalize(value: String) = Normalizer.normalize(value, Normalizer.Form.NFKC)
+        .lowercase(Locale.ROOT).trim()
+    val needle = normalize(query)
+    if (needle.isEmpty()) return 0
+    val name = normalize(title)
+    val detail = normalize(description)
+    val tokens = needle.split(Regex("\\s+"))
+    if (!tokens.all { it in name || it in detail }) return 0
+    return when {
+        name == needle -> 3
+        needle in name -> 2
+        else -> 1
+    }
+}

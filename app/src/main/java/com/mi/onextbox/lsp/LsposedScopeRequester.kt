@@ -22,7 +22,6 @@ object LsposedScopeRequester {
     private const val CACHE_KEY_HAS_SETTINGS = "has_settings_scope"
     private const val CACHE_KEY_HAS_LAUNCHER = "has_launcher_scope"
     private const val CACHE_KEY_HAS_AOD = "has_aod_scope"
-    private const val CACHE_KEY_HAS_LOCALIZER = "has_localizer_scope"
     private const val CACHE_KEY_FRAMEWORK_VERSION = "framework_version"
     private const val DB_MODULE_ENABLED_CACHE_MS = 2_000L
     private const val ANDROID_UID_PER_USER_RANGE = 100_000
@@ -88,7 +87,6 @@ object LsposedScopeRequester {
         val hasSettingsScope: Boolean,
         val hasLauncherScope: Boolean,
         val hasAodScope: Boolean,
-        val hasLocalizerScopes: Boolean,
         val frameworkVersionText: String?
     ) {
         /**
@@ -340,11 +338,6 @@ object LsposedScopeRequester {
         AppLogStore.d("LSPosed", "Manager open attempt failed ($attempt): $reason")
     }
 
-    fun removeOosLocalizerScopes(context: Context? = null): Boolean {
-        initialize(context)
-        AppLogStore.i("LSPosed", "Static scope mode; dynamic scope removal is disabled")
-        return false
-    }
 
     fun hasRequiredScopes(context: Context? = null): Boolean {
         return snapshot(context).hasRequiredScopes
@@ -381,7 +374,6 @@ object LsposedScopeRequester {
             hasSettingsScope = moduleEnabled,
             hasLauncherScope = moduleEnabled,
             hasAodScope = moduleEnabled,
-            hasLocalizerScopes = moduleEnabled,
             frameworkVersionText = frameworkVersionText
         )
         cacheStatus(snapshot)
@@ -398,7 +390,6 @@ object LsposedScopeRequester {
             hasSettingsScope = false,
             hasLauncherScope = false,
             hasAodScope = false,
-            hasLocalizerScopes = false,
             frameworkVersionText = null
         )
     }
@@ -692,7 +683,6 @@ object LsposedScopeRequester {
         val hasSettingsScope: Boolean,
         val hasLauncherScope: Boolean,
         val hasAodScope: Boolean,
-        val hasLocalizerScopes: Boolean,
         val frameworkVersionText: String?
     ) {
         fun toSnapshot(serviceConnected: Boolean): StatusSnapshot {
@@ -706,7 +696,6 @@ object LsposedScopeRequester {
                 hasSettingsScope = normalizedHasScopes,
                 hasLauncherScope = normalizedHasScopes,
                 hasAodScope = normalizedHasScopes,
-                hasLocalizerScopes = normalizedHasScopes,
                 frameworkVersionText = frameworkVersionText?.takeIf { it.contains(" / API ") }
             )
         }
@@ -726,7 +715,6 @@ object LsposedScopeRequester {
                 .putBoolean(CACHE_KEY_HAS_SETTINGS, snapshot.hasSettingsScope)
                 .putBoolean(CACHE_KEY_HAS_LAUNCHER, snapshot.hasLauncherScope)
                 .putBoolean(CACHE_KEY_HAS_AOD, snapshot.hasAodScope)
-                .putBoolean(CACHE_KEY_HAS_LOCALIZER, snapshot.hasLocalizerScopes)
                 .putString(CACHE_KEY_FRAMEWORK_VERSION, snapshot.frameworkVersionText)
                 .apply()
         }
@@ -745,7 +733,6 @@ object LsposedScopeRequester {
                 prefs.contains(CACHE_KEY_HAS_SETTINGS) ||
                 prefs.contains(CACHE_KEY_HAS_LAUNCHER) ||
                 prefs.contains(CACHE_KEY_HAS_AOD) ||
-                prefs.contains(CACHE_KEY_HAS_LOCALIZER) ||
                 prefs.contains(CACHE_KEY_FRAMEWORK_VERSION)
             if (!hasAny) {
                 null
@@ -758,7 +745,6 @@ object LsposedScopeRequester {
                     hasSettingsScope = prefs.getBoolean(CACHE_KEY_HAS_SETTINGS, false),
                     hasLauncherScope = prefs.getBoolean(CACHE_KEY_HAS_LAUNCHER, false),
                     hasAodScope = prefs.getBoolean(CACHE_KEY_HAS_AOD, false),
-                    hasLocalizerScopes = prefs.getBoolean(CACHE_KEY_HAS_LOCALIZER, false),
                     frameworkVersionText = prefs.getString(CACHE_KEY_FRAMEWORK_VERSION, null)
                 )
             }

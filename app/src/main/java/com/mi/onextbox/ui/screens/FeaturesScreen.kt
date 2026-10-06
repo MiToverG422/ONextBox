@@ -22,6 +22,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -102,7 +104,6 @@ import com.mi.onextbox.lsp.EsimDiagnosticsSnapshot
 import com.mi.onextbox.lsp.EsimDiagnosticsStore
 import com.mi.onextbox.lsp.EsimProfileDiagnostic
 import com.mi.onextbox.lsp.LspConfig
-import com.mi.onextbox.lsp.OosLocalizerHooker
 import com.mi.onextbox.ui.common.AssistantScreenOption
 import com.mi.onextbox.ui.common.ColorOs17SettingsSlider
 import com.mi.onextbox.ui.common.CouiConfirmDialog
@@ -163,6 +164,8 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     SystemUiStatusBar(true),
     SystemUiNotificationCenter(true),
     SystemUiControlCenter(true),
+    SystemUiSmallWindow(true),
+    SystemUiLockScreen(true),
     NotificationRemoval(true),
     MobileNetwork,
     AndroidSystem,
@@ -179,10 +182,9 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     RefreshRate,
     Wallpapers,
     Aod,
+    Screenshot,
+    ScreenRecording,
     Assistant,
-    OPlusLocalizer,
-    OPlusLocalizerProperties(true),
-    OPlusLocalizerScope(true),
 }
 
 data class FeatureLaunchOrigin(
@@ -214,6 +216,12 @@ fun FeatureMainRoute(
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
 ) {
     var showRestartConfirm by remember { mutableStateOf(false) }
+    // The editor and result list read one state; no value/selection feedback loop.
+    val searchState = rememberTextFieldState()
+    val searchQuery = searchState.text.toString()
+    androidx.activity.compose.BackHandler(enabled = searchQuery.isNotBlank()) {
+        searchState.clearText()
+    }
     val restartTargets = remember { allFeatureRestartPackages() }
 
     SettingsPageSurface(
@@ -221,7 +229,8 @@ fun FeatureMainRoute(
         blurBackdrop = blurBackdrop,
         bottomContentPadding = subPageBottomExtension,
         scrollResetKey = scrollResetKey,
-        contentScrollable = !newStyleEnabled,
+        // Keep the scroll modifier/focus tree stable when the editor first receives IME focus.
+        contentScrollable = true,
         backgroundContent = if (newStyleEnabled) {
             // The video is owned by Root's stable base scene. Keeping an empty background slot
             // makes this page transparent without creating a second TextureView/MediaPlayer.
@@ -237,13 +246,18 @@ fun FeatureMainRoute(
         },
         modifier = modifier.fillMaxSize(),
     ) {
-        FeatureMainPage(
-            newStyleEnabled = newStyleEnabled,
-            hiddenSourceModes = hiddenSourceModes,
-            externalIconScales = externalIconScales,
-            onLaunchOriginChanged = onLaunchOriginChanged,
-            onOpen = onOpen,
-        )
+        FeatureSearchBar(state = searchState)
+        if (searchQuery.isNotBlank()) {
+            FeatureSearchResults(query = searchQuery, onOpen = { onOpen(it, null) })
+        } else {
+            FeatureMainPage(
+                newStyleEnabled = newStyleEnabled,
+                hiddenSourceModes = hiddenSourceModes,
+                externalIconScales = externalIconScales,
+                onLaunchOriginChanged = onLaunchOriginChanged,
+                onOpen = onOpen,
+            )
+        }
     }
 
     FeatureRestartConfirmDialog(
@@ -258,16 +272,6 @@ fun FeatureMainRoute(
 fun FeatureSubRoute(
     modifier: Modifier,
     pageMode: FeaturePageMode,
-    oosLocalizerEnabled: Boolean,
-    onOosLocalizerEnabledChange: (Boolean) -> Unit,
-    oosLocalizerConfigMode: Int,
-    onOosLocalizerConfigModeChange: (Int) -> Unit,
-    oosLocalizerRegion: String,
-    onOosLocalizerRegionChange: (String) -> Unit,
-    oosLocalizerLocale: String,
-    onOosLocalizerLocaleChange: (String) -> Unit,
-    oosLocalizerModel: String,
-    onOosLocalizerModelChange: (String) -> Unit,
     permissionMonitorVisible: Boolean,
     onPermissionMonitorVisibleChange: (Boolean) -> Unit,
     nativeNotifyIconEnabled: Boolean,
@@ -337,8 +341,6 @@ fun FeatureSubRoute(
     val context = LocalContext.current
     val resources = LocalResources.current
     val subPageStateHolder = rememberSaveableStateHolder()
-    var oosLocalizerPropertiesDraft by remember { mutableStateOf<OosLocalizerPropertiesDraft?>(null) }
-    var oosLocalizerScopeDraft by remember { mutableStateOf<OosLocalizerScopeDraft?>(null) }
     var restartConfirmMode by remember { mutableStateOf<FeaturePageMode?>(null) }
     val restartTargets = featureRestartPackages(pageMode)
 
@@ -372,37 +374,8 @@ fun FeatureSubRoute(
             .extendPastBottom(subPageBottomExtension),
     ) {
         subPageStateHolder.SaveableStateProvider(pageMode) {
-            val propertiesDraft = if (pageMode == FeaturePageMode.OPlusLocalizerProperties) {
-                oosLocalizerPropertiesDraft ?: createOosLocalizerPropertiesDraft(
-                    context = context,
-                    region = oosLocalizerRegion,
-                    locale = oosLocalizerLocale,
-                    model = oosLocalizerModel,
-                )
-            } else {
-                null
-            }
-            val scopePackages = OosLocalizerHooker.supportedPackageNames.sorted()
-            val scopeDraft = if (pageMode == FeaturePageMode.OPlusLocalizerScope) {
-                oosLocalizerScopeDraft ?: createOosLocalizerScopeDraft(
-                    context = context,
-                    scopePackages = scopePackages,
-                )
-            } else {
-                null
-            }
             FeatureSubPage(
                 mode = pageMode,
-                oosLocalizerEnabled = oosLocalizerEnabled,
-                onOosLocalizerEnabledChange = onOosLocalizerEnabledChange,
-                oosLocalizerConfigMode = oosLocalizerConfigMode,
-                onOosLocalizerConfigModeChange = onOosLocalizerConfigModeChange,
-                oosLocalizerRegion = oosLocalizerRegion,
-                onOosLocalizerRegionChange = onOosLocalizerRegionChange,
-                oosLocalizerLocale = oosLocalizerLocale,
-                onOosLocalizerLocaleChange = onOosLocalizerLocaleChange,
-                oosLocalizerModel = oosLocalizerModel,
-                onOosLocalizerModelChange = onOosLocalizerModelChange,
                 permissionMonitorVisible = permissionMonitorVisible,
                 onPermissionMonitorVisibleChange = onPermissionMonitorVisibleChange,
                 nativeNotifyIconEnabled = nativeNotifyIconEnabled,
@@ -470,11 +443,6 @@ fun FeatureSubRoute(
                 onAssistantNativePowerEnabledChange = onAssistantNativePowerEnabledChange,
                 assistantNativeCircleEnabled = assistantNativeCircleEnabled,
                 onAssistantNativeCircleEnabledChange = onAssistantNativeCircleEnabledChange,
-                oosLocalizerPropertiesDraft = propertiesDraft,
-                onOosLocalizerPropertiesDraftChange = { oosLocalizerPropertiesDraft = it },
-                oosLocalizerScopePackages = scopePackages,
-                oosLocalizerScopeDraft = scopeDraft,
-                onOosLocalizerScopeDraftChange = { oosLocalizerScopeDraft = it },
                 onOpenSubPage = onOpenSubPage,
             )
         }
@@ -496,53 +464,6 @@ fun FeatureSubRoute(
     )
 }
 
-private data class OosLocalizerPropertiesDraft(
-    val region: String,
-    val locale: String,
-    val model: String,
-    val propertyValues: Map<String, String>,
-    val appFeatureValues: Map<String, String>,
-    val featureEnabledStates: Map<String, Boolean>,
-)
-
-private data class OosLocalizerScopeDraft(
-    val packageEnabledStates: Map<String, Boolean>,
-)
-
-private fun createOosLocalizerPropertiesDraft(
-    context: Context,
-    region: String,
-    locale: String,
-    model: String,
-): OosLocalizerPropertiesDraft {
-    return OosLocalizerPropertiesDraft(
-        region = region,
-        locale = locale,
-        model = model,
-        propertyValues = LspConfig.OOS_LOCALIZER_PROPERTY_DEFAULTS.mapValues { (key, _) ->
-            LspConfig.getOosLocalizerProperty(context, key)
-        },
-        appFeatureValues = LspConfig.OOS_LOCALIZER_APP_FEATURE_DEFAULTS.mapValues { (key, _) ->
-            LspConfig.getOosLocalizerAppFeature(context, key)
-        },
-        featureEnabledStates = LspConfig.OOS_LOCALIZER_FEATURE_DEFAULTS.keys.associateWith { feature ->
-            LspConfig.isOosLocalizerFeatureEnabled(context, feature)
-        },
-    )
-}
-
-private fun createOosLocalizerScopeDraft(
-    context: Context,
-    scopePackages: List<String>,
-): OosLocalizerScopeDraft {
-    return OosLocalizerScopeDraft(
-        packageEnabledStates = scopePackages.associateWith { packageName ->
-            LspConfig.isOosLocalizerPackageEnabled(context, packageName)
-        },
-    )
-}
-
-
 private fun Modifier.extendPastBottom(extra: Dp): Modifier = layout { measurable, constraints ->
     val extraPx = extra.roundToPx()
     val placeable = measurable.measure(
@@ -557,7 +478,7 @@ private fun Modifier.extendPastBottom(extra: Dp): Modifier = layout { measurable
 }
 
 @Composable
-private fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
+internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Main -> stringResource(R.string.tab_features)
     FeaturePageMode.Desktop -> stringResource(R.string.section_system_desktop)
     FeaturePageMode.SystemUi -> stringResource(R.string.section_lsp)
@@ -566,6 +487,8 @@ private fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.SystemUiStatusBar -> stringResource(R.string.feature_group_beautify)
     FeaturePageMode.SystemUiNotificationCenter -> stringResource(R.string.feature_group_notification_center)
     FeaturePageMode.SystemUiControlCenter -> stringResource(R.string.feature_group_control_center)
+    FeaturePageMode.SystemUiSmallWindow -> stringResource(R.string.small_window_title)
+    FeaturePageMode.SystemUiLockScreen -> stringResource(R.string.keyguard_page_title)
     FeaturePageMode.NotificationRemoval -> stringResource(R.string.notification_removal_title)
     FeaturePageMode.MobileNetwork -> stringResource(R.string.feature_mobile_network_title)
     FeaturePageMode.AndroidSystem -> stringResource(R.string.feature_android_system_title)
@@ -582,10 +505,9 @@ private fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.RefreshRate -> stringResource(R.string.tab_refresh_rate)
     FeaturePageMode.Wallpapers -> stringResource(R.string.feature_wallpapers_title)
     FeaturePageMode.Aod -> stringResource(R.string.feature_aod_enhance_title)
+    FeaturePageMode.Screenshot -> stringResource(R.string.feature_screenshot_title)
+    FeaturePageMode.ScreenRecording -> stringResource(R.string.feature_screen_recording_title)
     FeaturePageMode.Assistant -> stringResource(R.string.feature_assistant_title)
-    FeaturePageMode.OPlusLocalizer -> stringResource(R.string.feature_oos_localizer_title)
-    FeaturePageMode.OPlusLocalizerProperties -> stringResource(R.string.feature_oos_localizer_group_properties)
-    FeaturePageMode.OPlusLocalizerScope -> stringResource(R.string.feature_oos_localizer_group_scope)
 }
 
 private fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (mode) {
@@ -596,6 +518,9 @@ private fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (
     FeaturePageMode.SystemUiStatusBar,
     FeaturePageMode.SystemUiNotificationCenter,
     FeaturePageMode.SystemUiControlCenter -> listOf("com.android.systemui")
+    FeaturePageMode.SystemUiLockScreen -> listOf("com.android.systemui")
+    FeaturePageMode.Screenshot -> listOf("android", "system", "com.oplus.screenshot")
+    FeaturePageMode.ScreenRecording -> listOf("android", "system", "com.android.systemui", "com.oplus.screenrecorder")
     FeaturePageMode.NotificationRemoval -> listOf("android", "system", "com.android.systemui")
     FeaturePageMode.MobileNetwork -> listOf("com.android.phone")
     FeaturePageMode.AndroidSystem -> listOf("android", "system")
@@ -618,10 +543,9 @@ private fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (
         "com.android.systemui",
         "com.google.android.googlequicksearchbox",
     )
-    FeaturePageMode.OPlusLocalizer,
-    FeaturePageMode.OPlusLocalizerProperties,
-    FeaturePageMode.OPlusLocalizerScope -> OosLocalizerHooker.supportedPackageNames.sorted()
     FeaturePageMode.Main,
+    // C17 flexible handles also live in system_server. Offer no misleading SystemUI-only restart.
+    FeaturePageMode.SystemUiSmallWindow,
     FeaturePageMode.EsimDiagnostics,
     FeaturePageMode.RefreshRate,
     FeaturePageMode.TouchSampling -> emptyList()
@@ -886,6 +810,20 @@ private fun featureMainEntries(): List<FeatureMainEntry> = buildList {
         )
         add(
             FeatureMainEntry(
+                titleRes = R.string.feature_screenshot_title,
+                iconPackages = listOf("com.oplus.screenshot", "com.coloros.screenshot"),
+                pageMode = FeaturePageMode.Screenshot,
+            )
+        )
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.feature_screen_recording_title,
+                iconPackages = listOf("com.oplus.screenrecorder", "com.coloros.screenrecorder"),
+                pageMode = FeaturePageMode.ScreenRecording,
+            )
+        )
+        add(
+            FeatureMainEntry(
                 titleRes = R.string.feature_assistant_title,
                 iconPackages = listOf(
                     "com.heytap.speechassist",
@@ -930,18 +868,6 @@ private fun featureMainEntries(): List<FeatureMainEntry> = buildList {
                 titleRes = R.string.feature_group_athena,
                 iconPackages = listOf("com.oplus.athena"),
                 pageMode = FeaturePageMode.Athena,
-            )
-        )
-        add(
-            FeatureMainEntry(
-                titleRes = R.string.feature_oos_localizer_title,
-                iconPackages = listOf(
-                    "com.oplus.aimemory",
-                    "com.oplus.appplatform",
-                    "com.oplus.exsystemservice",
-                    "com.android.settings",
-                ),
-                pageMode = FeaturePageMode.OPlusLocalizer,
             )
         )
 }
@@ -1192,16 +1118,6 @@ internal fun FeatureLaunchIcon(
 @Composable
 private fun FeatureSubPage(
     mode: FeaturePageMode,
-    oosLocalizerEnabled: Boolean,
-    onOosLocalizerEnabledChange: (Boolean) -> Unit,
-    oosLocalizerConfigMode: Int,
-    onOosLocalizerConfigModeChange: (Int) -> Unit,
-    oosLocalizerRegion: String,
-    onOosLocalizerRegionChange: (String) -> Unit,
-    oosLocalizerLocale: String,
-    onOosLocalizerLocaleChange: (String) -> Unit,
-    oosLocalizerModel: String,
-    onOosLocalizerModelChange: (String) -> Unit,
     permissionMonitorVisible: Boolean,
     onPermissionMonitorVisibleChange: (Boolean) -> Unit,
     nativeNotifyIconEnabled: Boolean,
@@ -1262,11 +1178,6 @@ private fun FeatureSubPage(
     onAssistantNativePowerEnabledChange: (Boolean) -> Unit,
     assistantNativeCircleEnabled: Boolean,
     onAssistantNativeCircleEnabledChange: (Boolean) -> Unit,
-    oosLocalizerPropertiesDraft: OosLocalizerPropertiesDraft?,
-    onOosLocalizerPropertiesDraftChange: (OosLocalizerPropertiesDraft) -> Unit,
-    oosLocalizerScopePackages: List<String>,
-    oosLocalizerScopeDraft: OosLocalizerScopeDraft?,
-    onOosLocalizerScopeDraftChange: (OosLocalizerScopeDraft) -> Unit,
     onOpenSubPage: (FeaturePageMode) -> Unit,
 ) {
     when (mode) {
@@ -1282,6 +1193,10 @@ private fun FeatureSubPage(
         )
         FeaturePageMode.NotificationRemoval -> NotificationRemovalPage()
         FeaturePageMode.SystemUi -> SystemUiCategoriesPage(onOpenSubPage)
+        FeaturePageMode.SystemUiSmallWindow -> SmallWindowFeaturesPage()
+        FeaturePageMode.SystemUiLockScreen -> KeyguardInteractionSettings()
+        FeaturePageMode.Screenshot -> CaptureFeaturesPage(LspConfig.KeyguardFeature.AodScreenshot)
+        FeaturePageMode.ScreenRecording -> CaptureFeaturesPage(LspConfig.KeyguardFeature.ScreenOffRecording)
         FeaturePageMode.SystemUiNative,
         FeaturePageMode.SystemUiDynamicColor,
         FeaturePageMode.SystemUiStatusBar,
@@ -1371,28 +1286,6 @@ private fun FeatureSubPage(
             onAssistantNativePowerEnabledChange = onAssistantNativePowerEnabledChange,
             assistantNativeCircleEnabled = assistantNativeCircleEnabled,
             onAssistantNativeCircleEnabledChange = onAssistantNativeCircleEnabledChange,
-        )
-        FeaturePageMode.OPlusLocalizer -> OPlusLocalizerFeaturesPage(
-            oosLocalizerEnabled = oosLocalizerEnabled,
-            onOosLocalizerEnabledChange = onOosLocalizerEnabledChange,
-            oosLocalizerConfigMode = oosLocalizerConfigMode,
-            onOosLocalizerConfigModeChange = onOosLocalizerConfigModeChange,
-            onOpenSubPage = onOpenSubPage,
-        )
-        FeaturePageMode.OPlusLocalizerProperties -> OPlusLocalizerPropertiesPage(
-            oosLocalizerRegion = oosLocalizerRegion,
-            onOosLocalizerRegionChange = onOosLocalizerRegionChange,
-            oosLocalizerLocale = oosLocalizerLocale,
-            onOosLocalizerLocaleChange = onOosLocalizerLocaleChange,
-            oosLocalizerModel = oosLocalizerModel,
-            onOosLocalizerModelChange = onOosLocalizerModelChange,
-            draft = oosLocalizerPropertiesDraft,
-            onDraftChange = onOosLocalizerPropertiesDraftChange,
-        )
-        FeaturePageMode.OPlusLocalizerScope -> OPlusLocalizerScopePage(
-            scopePackages = oosLocalizerScopePackages,
-            draft = oosLocalizerScopeDraft,
-            onDraftChange = onOosLocalizerScopeDraftChange,
         )
         FeaturePageMode.Main -> Unit
     }
@@ -3283,652 +3176,6 @@ private fun openDefaultAssistantSettings(context: Context) {
             context.getString(R.string.feature_assistant_default_settings_failed),
             Toast.LENGTH_SHORT,
         ).show()
-    }
-}
-
-@Composable
-private fun OPlusLocalizerFeaturesPage(
-    oosLocalizerEnabled: Boolean,
-    onOosLocalizerEnabledChange: (Boolean) -> Unit,
-    oosLocalizerConfigMode: Int,
-    onOosLocalizerConfigModeChange: (Int) -> Unit,
-    onOpenSubPage: (FeaturePageMode) -> Unit,
-) {
-    SettingsGroup {
-        SettingsToggleRow(
-            title = stringResource(R.string.feature_oos_localizer_master_switch),
-            summary = "",
-            checked = oosLocalizerEnabled,
-            onCheckedChange = onOosLocalizerEnabledChange,
-            hasDividerBelow = false,
-        )
-    }
-
-    LocalizerExpandableContent(visible = oosLocalizerEnabled) {
-        SettingsSection(title = stringResource(R.string.feature_oos_localizer_config_title))
-        SettingsGroup {
-            OosLocalizerConfigModeCard(
-                title = stringResource(R.string.feature_oos_localizer_config_default),
-                summary = stringResource(R.string.feature_oos_localizer_config_default_summary),
-                selected = oosLocalizerConfigMode == LspConfig.OOS_LOCALIZER_CONFIG_DEFAULT,
-                onClick = { onOosLocalizerConfigModeChange(LspConfig.OOS_LOCALIZER_CONFIG_DEFAULT) },
-                hasDividerBelow = true,
-            )
-            SettingsDivider()
-            OosLocalizerConfigModeCard(
-                title = stringResource(R.string.feature_oos_localizer_config_custom),
-                summary = stringResource(R.string.feature_oos_localizer_config_custom_summary),
-                selected = oosLocalizerConfigMode == LspConfig.OOS_LOCALIZER_CONFIG_CUSTOM,
-                onClick = { onOosLocalizerConfigModeChange(LspConfig.OOS_LOCALIZER_CONFIG_CUSTOM) },
-                hasDividerAbove = true,
-            )
-        }
-    }
-
-    LocalizerExpandableContent(
-        visible = oosLocalizerEnabled && oosLocalizerConfigMode == LspConfig.OOS_LOCALIZER_CONFIG_CUSTOM,
-    ) {
-        SettingsGroup {
-            SettingsCardRow(
-                title = stringResource(R.string.feature_oos_localizer_group_properties),
-                summary = "",
-                onClick = { onOpenSubPage(FeaturePageMode.OPlusLocalizerProperties) },
-                showArrow = true,
-                hasDividerBelow = true,
-            )
-            SettingsDivider()
-            SettingsCardRow(
-                title = stringResource(R.string.feature_oos_localizer_group_scope),
-                summary = "",
-                onClick = { onOpenSubPage(FeaturePageMode.OPlusLocalizerScope) },
-                showArrow = true,
-                hasDividerAbove = true,
-            )
-        }
-    }
-}
-
-@Composable
-private fun OosLocalizerConfigModeCard(
-    title: String,
-    summary: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    hasDividerAbove: Boolean = false,
-    hasDividerBelow: Boolean = false,
-) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveInferredSegmentPosition(hasDividerAbove, hasDividerBelow) {
-            Material3ExpressivePreferenceRow(
-                title = title,
-                summary = summary,
-                onClick = onClick,
-                role = Role.RadioButton,
-                endActions = {
-                    MaterialRadioButton(selected = selected, onClick = null)
-                },
-            )
-        }
-        return
-    }
-    BasicComponent(
-        onClick = onClick,
-        endActions = {
-            RadioButton(
-                selected = selected,
-                onClick = null,
-            )
-        },
-    ) {
-        SettingsRowTextContent(
-            title = title,
-            summary = summary.takeIf { it.isNotBlank() },
-        )
-    }
-}
-
-@Composable
-private fun OPlusLocalizerPropertiesPage(
-    oosLocalizerRegion: String,
-    onOosLocalizerRegionChange: (String) -> Unit,
-    oosLocalizerLocale: String,
-    onOosLocalizerLocaleChange: (String) -> Unit,
-    oosLocalizerModel: String,
-    onOosLocalizerModelChange: (String) -> Unit,
-    draft: OosLocalizerPropertiesDraft?,
-    onDraftChange: (OosLocalizerPropertiesDraft) -> Unit,
-) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val currentDraft = draft ?: createOosLocalizerPropertiesDraft(
-        context = context,
-        region = oosLocalizerRegion,
-        locale = oosLocalizerLocale,
-        model = oosLocalizerModel,
-    )
-    fun updateDraft(transform: (OosLocalizerPropertiesDraft) -> OosLocalizerPropertiesDraft) {
-        onDraftChange(transform(currentDraft))
-    }
-    val propertyValues = currentDraft.propertyValues
-    val appFeatureValues = currentDraft.appFeatureValues
-    val featureEnabledStates = currentDraft.featureEnabledStates
-    val regionEnabled = featureEnabledStates[LspConfig.OOS_LOCALIZER_FEATURE_REGION] ?: true
-    val localeEnabled = featureEnabledStates[LspConfig.OOS_LOCALIZER_FEATURE_LOCALE] ?: true
-    val modelEnabled = featureEnabledStates[LspConfig.OOS_LOCALIZER_FEATURE_BUILD_MODEL] ?: true
-    val propertiesEnabled = featureEnabledStates[LspConfig.OOS_LOCALIZER_FEATURE_PROPERTIES] ?: true
-    val appFeaturesEnabled = featureEnabledStates[LspConfig.OOS_LOCALIZER_FEATURE_APP_FEATURES] ?: true
-    fun saveCustomContent() {
-        onOosLocalizerRegionChange(currentDraft.region)
-        onOosLocalizerLocaleChange(currentDraft.locale)
-        onOosLocalizerModelChange(currentDraft.model)
-        coroutineScope.launch {
-            withContext(Dispatchers.IO) {
-                LspConfig.setOosLocalizerCustomEntries(
-                    context = context,
-                    propertyValues = propertyValues,
-                    appFeatureValues = appFeatureValues,
-                    featureEnabledStates = featureEnabledStates,
-                )
-            }
-            Toast.makeText(context, R.string.feature_oos_localizer_save_success, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun resetCustomContent() {
-        val defaultProperties = LspConfig.OOS_LOCALIZER_PROPERTY_DEFAULTS.toMap()
-        val defaultAppFeatures = LspConfig.OOS_LOCALIZER_APP_FEATURE_DEFAULTS.toMap()
-        val defaultFeatures = LspConfig.OOS_LOCALIZER_FEATURE_DEFAULTS.toMap()
-        onDraftChange(
-            OosLocalizerPropertiesDraft(
-                region = LspConfig.DEFAULT_OOS_LOCALIZER_REGION,
-                locale = LspConfig.DEFAULT_OOS_LOCALIZER_LOCALE,
-                model = LspConfig.DEFAULT_OOS_LOCALIZER_MODEL,
-                propertyValues = defaultProperties,
-                appFeatureValues = defaultAppFeatures,
-                featureEnabledStates = defaultFeatures,
-            )
-        )
-        onOosLocalizerRegionChange(LspConfig.DEFAULT_OOS_LOCALIZER_REGION)
-        onOosLocalizerLocaleChange(LspConfig.DEFAULT_OOS_LOCALIZER_LOCALE)
-        onOosLocalizerModelChange(LspConfig.DEFAULT_OOS_LOCALIZER_MODEL)
-        coroutineScope.launch {
-            withContext(Dispatchers.IO) {
-                LspConfig.setOosLocalizerCustomEntries(
-                    context = context,
-                    propertyValues = defaultProperties,
-                    appFeatureValues = defaultAppFeatures,
-                    featureEnabledStates = defaultFeatures,
-                )
-            }
-            Toast.makeText(context, R.string.feature_oos_localizer_reset_success, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    LocalizerActionButtons(
-        onReset = ::resetCustomContent,
-        onSave = ::saveCustomContent,
-    )
-
-    SettingsGroup {
-        LocalizerFeatureToggleRow(
-            feature = LspConfig.OOS_LOCALIZER_FEATURE_REGION,
-            enabledStates = featureEnabledStates,
-            onEnabledStatesChange = { states ->
-                updateDraft { it.copy(featureEnabledStates = states) }
-            },
-            hasDividerBelow = regionEnabled,
-        )
-        LocalizerExpandableContent(visible = regionEnabled) {
-            SettingsDivider()
-            FeatureSegmentPosition(index = 1, count = 2) {
-            LocalizerTextFieldRow(
-                title = stringResource(R.string.feature_oos_localizer_region_title),
-                value = currentDraft.region,
-                placeholder = LspConfig.DEFAULT_OOS_LOCALIZER_REGION,
-                onValueChange = { value ->
-                    updateDraft { it.copy(region = value) }
-                },
-                hasDividerAbove = true,
-                hasDividerBelow = true,
-            )
-            }
-        }
-    }
-
-    SettingsGroup {
-        LocalizerFeatureToggleRow(
-            feature = LspConfig.OOS_LOCALIZER_FEATURE_LOCALE,
-            enabledStates = featureEnabledStates,
-            onEnabledStatesChange = { states ->
-                updateDraft { it.copy(featureEnabledStates = states) }
-            },
-            hasDividerBelow = localeEnabled,
-        )
-        LocalizerExpandableContent(visible = localeEnabled) {
-            SettingsDivider()
-            FeatureSegmentPosition(index = 1, count = 2) {
-            LocalizerTextFieldRow(
-                title = stringResource(R.string.feature_oos_localizer_locale_title),
-                value = currentDraft.locale,
-                placeholder = LspConfig.DEFAULT_OOS_LOCALIZER_LOCALE,
-                onValueChange = { value ->
-                    updateDraft { it.copy(locale = value) }
-                },
-                hasDividerAbove = true,
-                hasDividerBelow = true,
-            )
-            }
-        }
-    }
-
-    SettingsGroup {
-        LocalizerFeatureToggleRow(
-            feature = LspConfig.OOS_LOCALIZER_FEATURE_BUILD_MODEL,
-            enabledStates = featureEnabledStates,
-            onEnabledStatesChange = { states ->
-                updateDraft { it.copy(featureEnabledStates = states) }
-            },
-            hasDividerBelow = modelEnabled,
-        )
-        LocalizerExpandableContent(visible = modelEnabled) {
-            SettingsDivider()
-            FeatureSegmentPosition(index = 1, count = 2) {
-            LocalizerTextFieldRow(
-                title = stringResource(R.string.feature_oos_localizer_model_title),
-                value = currentDraft.model,
-                placeholder = LspConfig.DEFAULT_OOS_LOCALIZER_MODEL,
-                onValueChange = { value ->
-                    updateDraft { it.copy(model = value) }
-                },
-                hasDividerAbove = true,
-            )
-            }
-        }
-    }
-
-    SettingsGroup {
-        LocalizerFeatureToggleRow(
-            feature = LspConfig.OOS_LOCALIZER_FEATURE_PROPERTIES,
-            enabledStates = featureEnabledStates,
-            onEnabledStatesChange = { states ->
-                updateDraft { it.copy(featureEnabledStates = states) }
-            },
-            hasDividerBelow = propertiesEnabled,
-        )
-        LocalizerExpandableContent(visible = propertiesEnabled) {
-            SettingsDivider()
-            LspConfig.OOS_LOCALIZER_PROPERTY_DEFAULTS.entries.forEachIndexed { index, entry ->
-                FeatureSegmentPosition(
-                    index = index + 1,
-                    count = LspConfig.OOS_LOCALIZER_PROPERTY_DEFAULTS.size + 1,
-                ) {
-                LocalizerTextFieldRow(
-                    title = entry.key,
-                    value = propertyValues[entry.key].orEmpty(),
-                    placeholder = entry.value,
-                    onValueChange = { value ->
-                        updateDraft {
-                            it.copy(propertyValues = it.propertyValues + (entry.key to value))
-                        }
-                    },
-                    hasDividerAbove = true,
-                    hasDividerBelow = index != LspConfig.OOS_LOCALIZER_PROPERTY_DEFAULTS.size - 1,
-                )
-                }
-                if (index != LspConfig.OOS_LOCALIZER_PROPERTY_DEFAULTS.size - 1) SettingsDivider()
-            }
-        }
-    }
-
-    SettingsGroup {
-        LocalizerFeatureToggleRow(
-            feature = LspConfig.OOS_LOCALIZER_FEATURE_APP_FEATURES,
-            enabledStates = featureEnabledStates,
-            onEnabledStatesChange = { states ->
-                updateDraft { it.copy(featureEnabledStates = states) }
-            },
-            hasDividerBelow = appFeaturesEnabled,
-        )
-        LocalizerExpandableContent(visible = appFeaturesEnabled) {
-            SettingsDivider()
-            LspConfig.OOS_LOCALIZER_APP_FEATURE_DEFAULTS.entries.forEachIndexed { index, entry ->
-                FeatureSegmentPosition(
-                    index = index + 1,
-                    count = LspConfig.OOS_LOCALIZER_APP_FEATURE_DEFAULTS.size + 1,
-                ) {
-                LocalizerTextFieldRow(
-                    title = entry.key,
-                    value = appFeatureValues[entry.key].orEmpty(),
-                    placeholder = entry.value,
-                    onValueChange = { value ->
-                        updateDraft {
-                            it.copy(appFeatureValues = it.appFeatureValues + (entry.key to value))
-                        }
-                    },
-                    hasDividerAbove = true,
-                    hasDividerBelow = index != LspConfig.OOS_LOCALIZER_APP_FEATURE_DEFAULTS.size - 1,
-                )
-                }
-                if (index != LspConfig.OOS_LOCALIZER_APP_FEATURE_DEFAULTS.size - 1) SettingsDivider()
-            }
-        }
-    }
-}
-
-@Composable
-private fun OPlusLocalizerScopePage(
-    scopePackages: List<String>,
-    draft: OosLocalizerScopeDraft?,
-    onDraftChange: (OosLocalizerScopeDraft) -> Unit,
-) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val currentDraft = draft ?: createOosLocalizerScopeDraft(
-        context = context,
-        scopePackages = scopePackages,
-    )
-    val packageEnabledStates = currentDraft.packageEnabledStates
-
-    fun saveScopeContent() {
-        coroutineScope.launch {
-            withContext(Dispatchers.IO) {
-                LspConfig.setOosLocalizerPackageStates(context, packageEnabledStates)
-            }
-            Toast.makeText(context, R.string.feature_oos_localizer_save_success, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun resetScopeContent() {
-        val defaultStates = scopePackages.associateWith { true }
-        onDraftChange(OosLocalizerScopeDraft(defaultStates))
-        coroutineScope.launch {
-            withContext(Dispatchers.IO) {
-                LspConfig.setOosLocalizerPackageStates(context, defaultStates)
-            }
-            Toast.makeText(context, R.string.feature_oos_localizer_reset_success, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    LocalizerActionButtons(
-        onReset = ::resetScopeContent,
-        onSave = ::saveScopeContent,
-        title = stringResource(R.string.feature_oos_localizer_scope_notice_title),
-        summary = stringResource(R.string.feature_oos_localizer_scope_notice_summary),
-        titleColor = COUITheme.colorScheme.onSurface,
-    )
-
-    SettingsGroup {
-        scopePackages.forEachIndexed { index, packageName ->
-            if (index > 0) SettingsDivider()
-            SettingsToggleRow(
-                title = packageName,
-                summary = "",
-                checked = packageEnabledStates[packageName] ?: true,
-                onCheckedChange = { enabled ->
-                    onDraftChange(
-                        currentDraft.copy(
-                            packageEnabledStates = currentDraft.packageEnabledStates + (packageName to enabled),
-                        )
-                    )
-                },
-                hasDividerAbove = index > 0,
-                hasDividerBelow = index != scopePackages.lastIndex,
-            )
-        }
-    }
-}
-
-@Composable
-private fun localizerFeatureTitle(feature: String): String {
-    return when (feature) {
-        LspConfig.OOS_LOCALIZER_FEATURE_PROPERTIES ->
-            stringResource(R.string.feature_oos_localizer_feature_properties)
-        LspConfig.OOS_LOCALIZER_FEATURE_REGION ->
-            stringResource(R.string.feature_oos_localizer_feature_region)
-        LspConfig.OOS_LOCALIZER_FEATURE_LOCALE ->
-            stringResource(R.string.feature_oos_localizer_feature_locale)
-        LspConfig.OOS_LOCALIZER_FEATURE_BUILD_MODEL ->
-            stringResource(R.string.feature_oos_localizer_feature_build_model)
-        LspConfig.OOS_LOCALIZER_FEATURE_APP_FEATURES ->
-            stringResource(R.string.feature_oos_localizer_feature_app_features)
-        else -> feature
-    }
-}
-@Composable
-private fun LocalizerActionButtons(
-    onReset: () -> Unit,
-    onSave: () -> Unit,
-    title: String = stringResource(R.string.feature_oos_localizer_risk_title),
-    summary: String = stringResource(R.string.feature_oos_localizer_risk_summary),
-    titleColor: Color = Color(0xFFFF4D5E),
-) {
-    val hapticClick = rememberHapticClick()
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        SettingsGroup {
-            Material3ExpressiveSegmentContentCard {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                ) {
-                    MaterialText(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (titleColor == Color(0xFFFF4D5E)) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                    )
-                    MaterialText(
-                        text = summary,
-                        modifier = Modifier.padding(top = 6.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 18.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        FilledTonalButton(
-                            onClick = {
-                                hapticClick()
-                                onReset()
-                            },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            MaterialText(stringResource(R.string.feature_oos_localizer_action_reset))
-                        }
-                        MaterialButton(
-                            onClick = {
-                                hapticClick()
-                                onSave()
-                            },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            MaterialText(stringResource(R.string.feature_oos_localizer_action_save))
-                        }
-                    }
-                }
-            }
-        }
-        return
-    }
-    SettingsGroup {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        ) {
-            Text(
-                text = title,
-                style = COUITheme.textStyles.body1,
-                color = titleColor,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 17.sp,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = summary,
-                style = COUITheme.textStyles.body1,
-                color = COUITheme.colorScheme.onSurfaceVariantSummary,
-                fontSize = 13.sp,
-            )
-            Spacer(modifier = Modifier.height(18.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Button(
-                    onClick = {
-                        hapticClick()
-                        onReset()
-                    },
-                    modifier = Modifier.weight(1f),
-                    cornerRadius = 20.dp,
-                    minHeight = 38.dp,
-                ) {
-                    Text(
-                        text = stringResource(R.string.feature_oos_localizer_action_reset),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-                Button(
-                    onClick = {
-                        hapticClick()
-                        onSave()
-                    },
-                    modifier = Modifier.weight(1f),
-                    cornerRadius = 20.dp,
-                    minHeight = 38.dp,
-                ) {
-                    Text(
-                        text = stringResource(R.string.feature_oos_localizer_action_save),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LocalizerExpandableContent(
-    visible: Boolean,
-    content: @Composable () -> Unit,
-) {
-    FeatureExpandableVisibility(visible = visible) {
-        Column(verticalArrangement = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-            Arrangement.spacedBy(2.dp)
-        } else {
-            Arrangement.Top
-        }) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun LocalizerFeatureToggleRow(
-    feature: String,
-    enabledStates: Map<String, Boolean>,
-    onEnabledStatesChange: (Map<String, Boolean>) -> Unit,
-    hasDividerAbove: Boolean = false,
-    hasDividerBelow: Boolean = false,
-) {
-    FeatureAnimatedSegmentPosition(index = 0, count = if (hasDividerBelow) 2 else 1) {
-        SettingsToggleRow(
-            title = localizerFeatureTitle(feature),
-            summary = "",
-            checked = enabledStates[feature] ?: true,
-            onCheckedChange = { enabled ->
-                onEnabledStatesChange(enabledStates + (feature to enabled))
-            },
-            hasDividerAbove = hasDividerAbove,
-            hasDividerBelow = hasDividerBelow,
-        )
-    }
-}
-
-@Composable
-private fun LocalizerTextFieldRow(
-    title: String,
-    value: String,
-    placeholder: String,
-    onValueChange: (String) -> Unit,
-    hasDividerAbove: Boolean = false,
-    hasDividerBelow: Boolean = false,
-) {
-    val focusManager = LocalFocusManager.current
-
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveInferredSegmentPosition(hasDividerAbove, hasDividerBelow) {
-            Material3ExpressiveSegmentContentCard {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                ) {
-                    MaterialText(
-                        text = title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    OutlinedTextField(
-                        value = value,
-                        onValueChange = onValueChange,
-                        placeholder = { MaterialText(placeholder) },
-                        singleLine = false,
-                        minLines = 1,
-                        maxLines = 3,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    )
-                }
-            }
-        }
-        return
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .settingsInteractiveRowHighlight(
-                interactionSource = remember { MutableInteractionSource() },
-                color = COUITheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                hasDividerAbove = hasDividerAbove,
-                hasDividerBelow = hasDividerBelow,
-            )
-            .padding(horizontal = 16.dp),
-    ) {
-        Text(
-            text = title,
-            style = COUITheme.textStyles.body1,
-            color = COUITheme.colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = placeholder,
-            backgroundMode = TextFieldMode.None,
-            singleLine = false,
-            minLines = 1,
-            maxLines = 3,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        )
     }
 }
 

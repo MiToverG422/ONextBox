@@ -1,4 +1,9 @@
 <resources>
+    <string name="feature_search_hint">搜索功能</string>
+    <string name="feature_search_clear">清空搜索</string>
+    <string name="feature_search_results">搜索结果（%1$d）</string>
+    <string name="feature_search_empty">未找到相关功能</string>
+    <string name="feature_search_empty_summary">试试其他关键词</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">一个 COUI 风格的 OPlus 系统自定义工具箱</string>
 
@@ -272,9 +277,6 @@
     <string name="feature_assistant_show_hidden_content">显示隐藏内容</string>
     <string name="feature_assistant_legacy_notice_title">兼容性提示</string>
     <string name="feature_assistant_legacy_notice_summary">以上旧版功能依靠事件拦截实现，可能出现响应延迟、手势冲突或系统更新后失效，建议优先使用上方的国际版实验性功能</string>
-    <string name="feature_oos_localizer_title">Global 本地化</string>
-    <string name="feature_oos_localizer_home_summary">仅限OxygenOS和ColorOS Global使用</string>
-    <string name="feature_oos_localizer_summary">此功能需要前置Magisk/KernelSU模块，将支持的应用伪装为CN与简体中文环境，需要重启系统</string>
 
 
     <string name="theme_mode_monet_system">莫奈跟随系统</string>
@@ -343,32 +345,8 @@
     <string name="feature_restart_all_scope_confirm_title">是否重启全部作用域</string>
     <string name="feature_restart_system_option">同时重启系统</string>
 
-<string name="feature_oos_localizer_master_switch">总开关</string>
-    <string name="feature_oos_localizer_region_title">地区</string>
-    <string name="feature_oos_localizer_locale_title">语言环境</string>
-    <string name="feature_oos_localizer_model_title">设备型号</string>
 
-<string name="feature_oos_localizer_group_properties">自定义属性</string>
 
-<string name="feature_oos_localizer_group_scope">自定义作用域</string>
-    <string name="feature_oos_localizer_config_title">配置模式</string>
-    <string name="feature_oos_localizer_config_default">默认配置</string>
-    <string name="feature_oos_localizer_config_default_summary">使用内置的默认配置，建议使用自定义配置（配置型号为PMA120，伪装CN区域和简体中文环境，且作用域无法修改）</string>
-    <string name="feature_oos_localizer_config_custom">自定义配置</string>
-    <string name="feature_oos_localizer_config_custom_summary">使用以下自定义的规则参数及选定作用域进行伪装</string>
-    <string name="feature_oos_localizer_feature_properties">系统属性伪装</string>
-    <string name="feature_oos_localizer_feature_region">地区伪装</string>
-    <string name="feature_oos_localizer_feature_locale">语言环境伪装</string>
-    <string name="feature_oos_localizer_feature_build_model">设备型号伪装</string>
-    <string name="feature_oos_localizer_feature_app_features">Feature 伪装</string>
-    <string name="feature_oos_localizer_risk_title">高风险功能提醒</string>
-    <string name="feature_oos_localizer_risk_summary">这些规则会修改目标应用读取到的系统属性和 Feature 标记，错误参数可能导致应用崩溃、行为异常、无法开机或数据丢失，因自定义配置造成的任何问题作者概不负责，请确认风险后再保存</string>
-    <string name="feature_oos_localizer_scope_notice_title">作用域声明</string>
-    <string name="feature_oos_localizer_scope_notice_summary">自定义作用域目前仅支持列表内的包名，暂时不能手动自定义其他包名</string>
-    <string name="feature_oos_localizer_action_reset">重置</string>
-    <string name="feature_oos_localizer_action_save">保存</string>
-    <string name="feature_oos_localizer_reset_success">自定义内容已重置</string>
-    <string name="feature_oos_localizer_save_success">自定义内容已保存</string>
 
 <string name="about_codex_author_summary">开发协助</string>
     <string name="about_codex_author_title">Codex</string>
@@ -712,4 +690,44 @@
     <string name="feature_google_messages_notification_section">通知</string>
     <string name="feature_google_messages_copy_otp_title">复制验证码</string>
     <string name="feature_google_messages_copy_otp_summary">短信包含验证码时，在“已读”和“回复”旁增加“复制”。使用前，请允许 Google 信息写入剪贴板（包括后台），否则通知栏复制可能无效。</string>
+    <string name="small_window_title">应用小窗</string>
+    <string name="small_window_entry_summary">小窗行为、性能限制、外观与布局调整</string>
+    <string name="small_window_group_behavior">小窗行为</string>
+    <string name="small_window_group_performance">性能与限制</string>
+    <string name="small_window_group_edge">贴边外观</string>
+    <string name="small_window_group_layout">尺寸与布局</string>
+    <string name="small_window_white_bar">小窗贴边显示为白色竖条</string>
+    <string name="small_window_white_bar_summary">贴边图标与细白条连贯渐变，点击展开原生图标以选择应用，拖动或编辑时恢复图标，快速反向操作接着当前进度过渡，不缩小触摸区域</string>
+    <string name="small_window_safe_inset">加大上下安全边距</string>
+    <string name="small_window_safe_inset_summary">移动贴边控件时，上下至少预留 48 dp，不减小系统原有边距，小屏幕自动限制范围</string>
+    <string name="small_window_hide_recents">多任务隐藏小窗应用</string>
+    <string name="small_window_hide_recents_summary">隐藏系统桌面最近任务列表中的小窗卡片，不删除任务、不关闭应用，不隐藏分屏任务</string>
+    <string name="small_window_keep_running">悬浮小窗贴边挂机</string>
+    <string name="small_window_keep_running_summary">贴边后避免 C17 小窗策略冻结与限帧，保留过热保护和正常后台限制，应用自身仍可能暂停，可能增加耗电与发热</string>
+    <string name="small_window_mute_stashed">小窗贴边媒体静音</string>
+    <string name="small_window_mute_stashed_summary">仅静音贴边应用的媒体与游戏声音，展开或关闭开关后恢复，不调整通话、闹钟或全局音量，不支持的播放器保留原声音</string>
+    <string name="small_window_landscape_ratio">横屏应用小窗保持屏幕比例</string>
+    <string name="small_window_landscape_ratio_summary">让支持的横屏小窗使用屏幕宽高比，保留不可调整尺寸应用、平板与不支持比例的系统限制，已有小窗请重新打开</string>
+    <string name="small_window_larger_size">增大小窗最大尺寸</string>
+    <string name="small_window_larger_size_summary">在原生最大宽度基础上最多增加 15%，限制在屏幕宽度与上下安全区域内，不改变默认尺寸和最小尺寸</string>
+    <string name="small_window_compact_caption">缩小小窗顶部控制区</string>
+    <string name="small_window_compact_caption_summary">减小按钮顶部留白，压缩兼容的固定高度容器，保留按钮空间并更新触摸区域，不修改分屏顶部栏</string>
+    <string name="small_window_unlimited_count">去除多小窗数量限制</string>
+    <string name="small_window_unlimited_count_summary">解除 C17 默认最多两个小窗的数量限制，允许同时保留更多小窗，不改变应用兼容性与系统资源保护，可能增加耗电与发热</string>
+    <string name="small_window_unlimited_frame_rate">去除小窗帧率限制</string>
+    <string name="small_window_unlimited_frame_rate_summary">解除 C17 对小窗应用额外施加的帧率限制，实际帧率仍取决于应用和屏幕，保留过热保护，可能增加耗电与发热</string>
+    <string name="keyguard_interaction_group">锁屏交互</string>
+    <string name="keyguard_face_tap_title">解锁后不隐藏指纹图标</string>
+    <string name="keyguard_face_tap_summary">人脸验证后保留图标，需要重启系统</string>
+    <string name="keyguard_face_tap_action">解锁手机</string>
+    <string name="keyguard_face_tap_animation_title">解锁指纹动画</string>
+    <string name="keyguard_face_tap_animation_summary">仅影响人脸解锁后再次点击指纹图标，不影响官方指纹动画</string>
+    <string name="keyguard_page_title">锁屏</string>
+    <string name="keyguard_page_entry_summary">人脸验证后点击进入，原生指纹动画</string>
+    <string name="feature_screenshot_title">截图</string>
+    <string name="feature_screen_recording_title">录屏</string>
+    <string name="keyguard_aod_screenshot_title">AOD 截图</string>
+    <string name="keyguard_aod_screenshot_summary">息屏显示时可按电源键与音量下键截图，需要重启系统</string>
+    <string name="keyguard_screen_off_recording_title">锁屏录屏</string>
+    <string name="keyguard_screen_off_recording_summary">允许系统录屏在锁屏时使用，息屏不暂停或停止，需要重启系统</string>
 </resources>

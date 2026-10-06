@@ -19,6 +19,16 @@ internal fun SystemUiCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
     FeatureCategoryLinks(
         entries = listOf(
             FeatureCategoryLink(
+                FeaturePageMode.SystemUiSmallWindow,
+                R.string.small_window_title,
+                R.string.small_window_entry_summary,
+            ),
+            FeatureCategoryLink(
+                FeaturePageMode.SystemUiLockScreen,
+                R.string.keyguard_page_title,
+                R.string.keyguard_page_entry_summary,
+            ),
+            FeatureCategoryLink(
                 FeaturePageMode.SystemUiStatusBar,
                 R.string.feature_group_beautify,
                 R.string.feature_system_ui_status_bar_entry_summary,

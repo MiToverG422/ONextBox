@@ -39,6 +39,8 @@ class OosLspModuleEntry : XposedModule() {
         FrameworkHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader)
         PermissionSystemHooker.hook(loader)
         NotificationRemovalHooker.hookSystemServer(loader)
+        SmallWindowHooker.hookSystemServer(loader)
+        KeyguardCaptureHooker.hookSystemServer(loader)
         InstallerRedirectHooker.hook(loader)
         SettingsGlobalExtremeRefreshRateHooker.hook(classLoader = loader)
         AssistantHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader)
@@ -54,7 +56,7 @@ class OosLspModuleEntry : XposedModule() {
         // API 102 reports every package that becomes ready in a process. SystemUI can later load
         // the framework package "android" via a package context, but framework hooks belong only
         // to onSystemServerStarting. Keep later named packages available for legitimate shared
-        // processes and localizer scopes while rejecting this ambiguous framework callback.
+        // processes while rejecting this ambiguous framework callback.
         if (packageName == PACKAGE_ANDROID) return
 
         val classLoader = param.classLoader
@@ -67,6 +69,9 @@ class OosLspModuleEntry : XposedModule() {
                 SystemUiHooker.hook(packageName, classLoader)
                 SystemUiRedOneHooker.hook(classLoader)
                 NotificationRemovalHooker.hookSystemUi(classLoader)
+                SmallWindowHooker.hookSystemUi(classLoader)
+                FaceTapUnlockHooker.hook(classLoader)
+                KeyguardCaptureHooker.hookSystemUi(classLoader)
             }
 
             PACKAGE_SETTINGS -> {
@@ -106,11 +111,10 @@ class OosLspModuleEntry : XposedModule() {
 
             PACKAGE_GOOGLE_APP -> OkGoogleHotwordCompatibilityHooker.hookGoogleApp(classLoader)
             PACKAGE_GOOGLE_MESSAGES -> GoogleMessagesHooker.hook(classLoader)
+            "com.oplus.screenshot" -> AodScreenshotHooker.hook(classLoader)
+            "com.oplus.screenrecorder" -> KeyguardCaptureHooker.hookRecorder(classLoader)
         }
 
-        if (packageName in OosLocalizerHooker.supportedPackageNames) {
-            OosLocalizerHooker.hook(packageName, classLoader)
-        }
     }
 
     override fun onHotReloading(param: XposedModuleInterface.HotReloadingParam): Boolean {

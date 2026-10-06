@@ -33,6 +33,7 @@ internal class ColorOsTopBarMaterialView(
     context: Context,
     darkTheme: Boolean,
     fallbackColor: Int,
+    private val searchCapsule: Boolean = false,
 ) : View(context) {
     private val density = resources.displayMetrics.density
     private val fallbackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -53,6 +54,8 @@ internal class ColorOsTopBarMaterialView(
     private var fallbackColor = fallbackColor
     private var nativeBackgroundApplied = false
     private var nativeCausticApplied = false
+    private var searchProgress = .4f
+    private var nativeSearchStrokeApplied = false
 
     init {
         setWillNotDraw(false)
@@ -77,6 +80,17 @@ internal class ColorOsTopBarMaterialView(
         this.fallbackColor = fallbackColor
         updateColorOsEdgeShader(width.toFloat(), height.toFloat())
         applyColorOsMaterial()
+    }
+
+    fun updateSearchProgress(progress: Float) {
+        if (!searchCapsule || searchProgress == progress) return
+        searchProgress = progress.coerceIn(0f, 1f)
+        if (isAttachedToWindow && width > 0 && height > 0) {
+            applyMaterialCornerAndShadow()
+            nativeCausticApplied = applyCausticShadow()
+            updateColorOsEdgeShader(width.toFloat(), height.toFloat())
+            invalidate()
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -106,6 +120,8 @@ internal class ColorOsTopBarMaterialView(
         if (!nativeBackgroundApplied) {
             drawFallbackMaterial(canvas)
         }
+        // Search uses the native capsule material channel (CAPSULE_7 for glass preset 1).
+        // Do not reuse the toolbar circle's constantly visible AGSL edge preset.
         val edgeShader = colorOsEdgeShader
         if (canvas.isHardwareAccelerated && edgeShader != null) {
             colorOsEdgePaint.shader = edgeShader
@@ -116,6 +132,7 @@ internal class ColorOsTopBarMaterialView(
         }
     }
 
+
     private fun applyColorOsMaterial() {
         if (!isAttachedToWindow || width <= 0 || height <= 0) return
 
@@ -124,7 +141,7 @@ internal class ColorOsTopBarMaterialView(
         background = ColorDrawable(Color.TRANSPARENT)
         nativeBackgroundApplied = applyBackgroundRenderEffect()
         if (!nativeBackgroundApplied) {
-            background = ColorDrawable(fallbackColor)
+            background = ColorDrawable(if (searchCapsule) Color.TRANSPARENT else fallbackColor)
         }
         applyMaterialCornerAndShadow()
         nativeCausticApplied = applyCausticShadow()
@@ -140,7 +157,14 @@ internal class ColorOsTopBarMaterialView(
             val blendModeLayer1: BlendMode
             val colorLayer2: Int
             val blendModeLayer2: BlendMode
-            if (darkTheme) {
+            if (searchCapsule) {
+                // ToolbarMaterialEffectResolver materialType=1: C17's translucent glass
+                // preset, shared across light/dark themes, rather than the opaque TOP_BAR.
+                colorLayer1 = Color.parseColor("#1A6E6E6E")
+                blendModeLayer1 = BlendMode.COLOR_DODGE
+                colorLayer2 = Color.parseColor("#24F1F1F1")
+                blendModeLayer2 = BlendMode.LUMINOSITY
+            } else if (darkTheme) {
                 colorLayer1 = Color.parseColor("#CC262626")
                 blendModeLayer1 = BlendMode.SRC_OVER
                 colorLayer2 = Color.parseColor("#B37F7F7F")
@@ -152,7 +176,8 @@ internal class ColorOsTopBarMaterialView(
                 blendModeLayer2 = BlendMode.LUMINOSITY
             }
 
-            val blur = RenderEffect.createBlurEffect(0f, 0f, Shader.TileMode.MIRROR)
+            val blurRadius = if (searchCapsule) 25f else 0f
+            val blur = RenderEffect.createBlurEffect(blurRadius, blurRadius, Shader.TileMode.MIRROR)
             val firstLayer = RenderEffect.createColorFilterEffect(
                 BlendModeColorFilter(colorLayer1, blendModeLayer1),
                 blur,
@@ -172,40 +197,41 @@ internal class ColorOsTopBarMaterialView(
     }
 
     private fun applyMaterialCornerAndShadow() {
-        runCatching {
+        val applied = runCatching {
             val materialUtilClass = Class.forName("com.oplus.view.material.OplusMaterialUtil")
             val edgeParamsClass = Class.forName("com.oplus.view.material.OplusMaterialEdgeParams")
             val shadowParamsClass = Class.forName("com.oplus.view.material.OplusMaterialShadowParams")
             val cornerParamsClass = Class.forName("com.oplus.view.material.OplusMaterialCornerParams")
 
-            // COUIMaterialStrokeEffect.TYPE_FRAMEWORK_CIRCLE_1.
-            val shadowFadeIn = if (darkTheme) 0.1f else 0.15f
-            // Clear the vendor edge channel so onDraw is the sole edge renderer.
+            // Search: TYPE_FRAMEWORK_CAPSULE_7; toolbar: TYPE_FRAMEWORK_CIRCLE_1.
+            val shadowFadeIn = if (searchCapsule) .05f else { if (darkTheme) 0.1f else 0.15f }
+            val edgeType = if (searchCapsule) 1 else 2
+            val edgeWidth = if (searchCapsule) 2.5f else 1.9f
+            // Toolbar keeps its Canvas edge; search delegates its edge to the native channel.
             val edgeParams = edgeParamsClass.getConstructor(
                 Int::class.javaPrimitiveType,
                 Float::class.javaPrimitiveType,
                 Float::class.javaPrimitiveType,
                 Float::class.javaPrimitiveType,
-            ).newInstance(2, 1.9f * density, 0f, 0f)
+            ).newInstance(edgeType, edgeWidth * density, 0f, 0f)
             val shadowParams = shadowParamsClass.getConstructor(
                 Int::class.javaPrimitiveType,
                 Float::class.javaPrimitiveType,
                 Float::class.javaPrimitiveType,
                 Float::class.javaPrimitiveType,
-            ).newInstance(2, 1f, shadowFadeIn, 1f)
+            ).newInstance(edgeType, 1f, shadowFadeIn * (if (searchCapsule) searchProgress else 1f), 1f)
             val cornerParams = cornerParamsClass.getConstructor(
                 Float::class.javaPrimitiveType,
                 Float::class.javaPrimitiveType,
-            ).newInstance(min(width, height) / 2f, 2f)
+            ).newInstance(min(width, height) / 2f, if (searchCapsule) 1f else 2f)
 
-            // The edge alpha stays zero in the RenderNode; onDraw owns the visible edge
-            // independently of whether these corner/shadow setters succeed.
+            // Do not add a second Canvas edge when the native capsule channel succeeds.
             materialUtilClass.getMethod(
                 "setCornerParams",
                 View::class.java,
                 cornerParamsClass,
             ).invoke(null, this, cornerParams)
-            materialUtilClass.getMethod(
+            val edgeApplied = materialUtilClass.getMethod(
                 "setEdgeParams",
                 View::class.java,
                 edgeParamsClass,
@@ -215,7 +241,9 @@ internal class ColorOsTopBarMaterialView(
                 View::class.java,
                 shadowParamsClass,
             ).invoke(null, this, shadowParams)
+            edgeApplied != false
         }
+        nativeSearchStrokeApplied = searchCapsule && applied.getOrDefault(false)
     }
 
     private fun updateColorOsEdgeShader(width: Float, height: Float) {
@@ -246,24 +274,28 @@ internal class ColorOsTopBarMaterialView(
         val densityScale = max(1f, density) * 0.34f
         val normalizedWidth = max(1f, width) / densityScale
         val normalizedHeight = max(1f, height) / densityScale
-        val lineScale = (1.9f * density) / 8f
+        val lineScale = ((if (searchCapsule) 2.5f else 1.9f) * density) / 8f
         val nearStart = max(2f * lineScale, 2f)
         val nearEnd = nearStart + max(6f * lineScale, 2f)
         val farStart = max(2f * lineScale, 2f)
         val farEnd = farStart + max(3f * lineScale, 2f)
         val nearFade = mapColorOsEdgeFade(
-            start = 0.06f,
+            start = if (searchCapsule) .2f else .06f,
             extent = 0.4f,
             normalizedWidth = normalizedWidth,
             normalizedHeight = normalizedHeight,
+            styleWidth = if (searchCapsule) 400f else 160f,
+            styleHeight = if (searchCapsule) 100f else 160f,
         )
         val farFade = mapColorOsEdgeFade(
-            start = 0.01f,
-            extent = 0.28f,
+            start = if (searchCapsule) .15f else .01f,
+            extent = if (searchCapsule) .35f else .28f,
             normalizedWidth = normalizedWidth,
             normalizedHeight = normalizedHeight,
+            styleWidth = if (searchCapsule) 400f else 160f,
+            styleHeight = if (searchCapsule) 100f else 160f,
         )
-        val edgeAlpha = if (darkTheme) 0.6f else 0.2f
+        val edgeAlpha = if (searchCapsule) .5f * searchProgress else if (darkTheme) .6f else .2f
         shader.setFloatUniform(
             "u_edgeArray",
             floatArrayOf(
@@ -296,9 +328,9 @@ internal class ColorOsTopBarMaterialView(
         extent: Float,
         normalizedWidth: Float,
         normalizedHeight: Float,
+        styleWidth: Float = 160f,
+        styleHeight: Float = 160f,
     ): Pair<Float, Float> {
-        val styleWidth = 160f
-        val styleHeight = 160f
         val stylePerimeter = (styleWidth + styleHeight) * 2f
         val actualPerimeter = (normalizedWidth + normalizedHeight) * 2f
         val total = start + extent
@@ -366,14 +398,15 @@ internal class ColorOsTopBarMaterialView(
 
     private fun applyCausticShadow(): Boolean {
         // COUI caustic level 6. Keep the normal View shadow as the safe fallback.
-        elevation = 16f * density
+        val shadowProgress = if (searchCapsule) searchProgress else 1f
+        elevation = 16f * density * shadowProgress
         val standardShadowColor = Color.argb(30, 0, 0, 0)
         outlineAmbientShadowColor = standardShadowColor
         outlineSpotShadowColor = standardShadowColor
 
         val causticApplied = runCatching {
             val materialUtilClass = Class.forName("com.oplus.view.material.OplusMaterialUtil")
-            val causticColor = if (darkTheme) 0x33FFFFFF else 0x2EFFFFFF
+            val causticColor = Color.argb(((if (darkTheme) 51 else 46) * shadowProgress).roundToInt(), 255, 255, 255)
             val colorApplied = materialUtilClass.getMethod(
                 "setOutlineCausticShadowColor",
                 View::class.java,
@@ -453,24 +486,28 @@ internal class ColorOsTopBarMaterialView(
 
     private fun drawFallbackMaterial(canvas: Canvas) {
         val radius = min(width, height) / 2f
+        val surfaceColor = if (searchCapsule) {
+            Color.argb(if (darkTheme) 72 else 115, Color.red(fallbackColor), Color.green(fallbackColor), Color.blue(fallbackColor))
+        } else fallbackColor
         fallbackPaint.shader = LinearGradient(
             0f,
             0f,
             width.toFloat(),
             height.toFloat(),
             intArrayOf(
-                blendColor(fallbackColor, Color.WHITE, if (darkTheme) 0.035f else 0.12f),
-                fallbackColor,
-                blendColor(fallbackColor, Color.BLACK, if (darkTheme) 0.10f else 0.04f),
+                blendColor(surfaceColor, Color.WHITE, if (darkTheme) 0.035f else 0.12f),
+                surfaceColor,
+                blendColor(surfaceColor, Color.BLACK, if (darkTheme) 0.10f else 0.04f),
             ),
             floatArrayOf(0f, 0.48f, 1f),
             Shader.TileMode.CLAMP,
         )
-        canvas.drawCircle(width / 2f, height / 2f, radius, fallbackPaint)
+        canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), radius, radius, fallbackPaint)
         fallbackPaint.shader = null
     }
 
     private fun drawFallbackEdge(canvas: Canvas) {
+        fallbackEdgePaint.alpha = if (searchCapsule) (255 * searchProgress).roundToInt() else 255
         val radius = min(width, height) / 2f - fallbackEdgePaint.strokeWidth / 2f
         val strong = if (darkTheme) 0x8FFFFFFF.toInt() else 0x3DFFFFFF
         val soft = if (darkTheme) 0x18FFFFFF else 0x12000000
@@ -480,7 +517,8 @@ internal class ColorOsTopBarMaterialView(
             intArrayOf(soft, strong, Color.TRANSPARENT, soft, strong, soft),
             floatArrayOf(0f, 0.13f, 0.38f, 0.62f, 0.83f, 1f),
         )
-        canvas.drawCircle(width / 2f, height / 2f, radius, fallbackEdgePaint)
+        val inset = fallbackEdgePaint.strokeWidth / 2f
+        canvas.drawRoundRect(inset, inset, width - inset, height - inset, radius, radius, fallbackEdgePaint)
         fallbackEdgePaint.shader = null
     }
 
@@ -502,10 +540,11 @@ internal class ColorOsTopBarMaterialView(
 internal class ColorOsTopBarSpotlightView(
     context: Context,
     darkTheme: Boolean,
+    style: ColorOsSpotlightRenderer.Style = ColorOsSpotlightRenderer.Style.TopBarButton,
 ) : View(context) {
     private val spotlight = ColorOsSpotlightRenderer(
         host = this,
-        style = ColorOsSpotlightRenderer.Style.TopBarButton,
+        style = style,
         darkTheme = darkTheme,
     )
 

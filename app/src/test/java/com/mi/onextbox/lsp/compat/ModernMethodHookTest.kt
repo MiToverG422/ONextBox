@@ -9,6 +9,17 @@ import org.junit.Test
 
 class ModernMethodHookTest {
     @Test
+    fun nullResultBeforeVoidReceiverCallSkipsOriginal() {
+        val method = Fixture::class.java.getDeclaredMethod("receive")
+        val param = ModernMethodHook.MethodHookParam(method, Fixture(), emptyArray())
+
+        param.result = null
+
+        assertTrue(param.returnEarly)
+        assertNull(param.resultOrThrow())
+    }
+
+    @Test
     fun settingResultBeforeCallSkipsOriginal() {
         val method = Fixture::class.java.getDeclaredMethod("echo", String::class.java)
         val param = ModernMethodHook.MethodHookParam(method, Fixture(), arrayOf("input"))
@@ -47,6 +58,9 @@ class ModernMethodHookTest {
     }
 
     private class Fixture {
+        @Suppress("unused")
+        fun receive() = Unit
+
         @Suppress("unused")
         fun echo(value: String): String = value
     }

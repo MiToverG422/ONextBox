@@ -26,6 +26,10 @@
         <package android:name="org.lsposed.manager" />
         <package android:name="io.github.libxposed.manager" />
         <package android:name="com.android.systemui" />
+        <package android:name="com.oplus.screenshot" />
+        <package android:name="com.coloros.screenshot" />
+        <package android:name="com.oplus.screenrecorder" />
+        <package android:name="com.coloros.screenrecorder" />
         <package android:name="com.android.launcher" />
         <package android:name="com.android.launcher3" />
         <package android:name="com.oplus.wallpapers" />

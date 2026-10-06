@@ -315,21 +315,6 @@ class MainActivity : ComponentActivity() {
             var aodSingleClickBlockEnabled by rememberSaveable {
                 mutableStateOf(initialLspConfig.aodSingleClickBlockEnabled)
             }
-            var oosLocalizerEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.oosLocalizerEnabled)
-            }
-            var oosLocalizerConfigMode by rememberSaveable {
-                mutableIntStateOf(initialLspConfig.oosLocalizerConfigMode)
-            }
-            var oosLocalizerRegion by rememberSaveable {
-                mutableStateOf(initialLspConfig.oosLocalizerRegion)
-            }
-            var oosLocalizerLocale by rememberSaveable {
-                mutableStateOf(initialLspConfig.oosLocalizerLocale)
-            }
-            var oosLocalizerModel by rememberSaveable {
-                mutableStateOf(initialLspConfig.oosLocalizerModel)
-            }
             var assistantPowerMode by rememberSaveable {
                 mutableIntStateOf(initialLspConfig.assistantPowerMode)
             }
@@ -377,11 +362,6 @@ class MainActivity : ComponentActivity() {
                 systemUiForceNativeClipboardOverlayEnabled = snapshot.systemUiForceNativeClipboardOverlayEnabled
                 settingsForceGoogleEntryEnabled = snapshot.settingsForceGoogleEntryEnabled
                 gmsRegionRestrictionBypassEnabled = snapshot.gmsRegionRestrictionBypassEnabled
-                oosLocalizerEnabled = snapshot.oosLocalizerEnabled
-                oosLocalizerConfigMode = snapshot.oosLocalizerConfigMode
-                oosLocalizerRegion = snapshot.oosLocalizerRegion
-                oosLocalizerLocale = snapshot.oosLocalizerLocale
-                oosLocalizerModel = snapshot.oosLocalizerModel
                 assistantPowerMode = snapshot.assistantPowerMode
                 assistantGestureCircleEnabled = snapshot.assistantGestureCircleEnabled
                 assistantGestureCircleC17Enabled = snapshot.assistantGestureCircleC17Enabled
@@ -743,46 +723,6 @@ class MainActivity : ComponentActivity() {
                     "AOD single-click wake block: $aodSingleClickBlockEnabled"
                 )
             }
-            LaunchedEffect(oosLocalizerEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setOosLocalizerEnabled(this@MainActivity, oosLocalizerEnabled)
-                }
-                if (oosLocalizerEnabled) {
-                    LsposedScopeRequester.requestRequiredScopes()
-                } else {
-                    LsposedScopeRequester.removeOosLocalizerScopes(this@MainActivity)
-                }
-                AppLogStore.i("OosLocalizer", "OOS localizer toggle: $oosLocalizerEnabled")
-            }
-            LaunchedEffect(oosLocalizerConfigMode) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setOosLocalizerConfigMode(this@MainActivity, oosLocalizerConfigMode)
-                }
-                AppLogStore.i("OosLocalizer", "Global localizer config mode: $oosLocalizerConfigMode")
-            }
-            LaunchedEffect(oosLocalizerRegion) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setOosLocalizerRegion(this@MainActivity, oosLocalizerRegion)
-                }
-                AppLogStore.i("OosLocalizer", "Global localizer region: $oosLocalizerRegion")
-            }
-            LaunchedEffect(oosLocalizerLocale) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setOosLocalizerLocale(this@MainActivity, oosLocalizerLocale)
-                }
-                AppLogStore.i("OosLocalizer", "Global localizer locale: $oosLocalizerLocale")
-            }
-            LaunchedEffect(oosLocalizerModel) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setOosLocalizerModel(this@MainActivity, oosLocalizerModel)
-                }
-                AppLogStore.i("OosLocalizer", "Global localizer model: $oosLocalizerModel")
-            }
             LaunchedEffect(assistantPowerMode) {
                 if (!settingsEffectsReady) return@LaunchedEffect
                 withContext(Dispatchers.IO) {
@@ -1046,16 +986,6 @@ class MainActivity : ComponentActivity() {
                 onAodSettingsSwitchEnabledChange = { aodSettingsSwitchEnabled = it },
                 aodSingleClickBlockEnabled = aodSingleClickBlockEnabled,
                 onAodSingleClickBlockEnabledChange = { aodSingleClickBlockEnabled = it },
-                oosLocalizerEnabled = oosLocalizerEnabled,
-                onOosLocalizerEnabledChange = { oosLocalizerEnabled = it },
-                oosLocalizerConfigMode = oosLocalizerConfigMode,
-                onOosLocalizerConfigModeChange = { oosLocalizerConfigMode = it },
-                oosLocalizerRegion = oosLocalizerRegion,
-                onOosLocalizerRegionChange = { oosLocalizerRegion = it },
-                oosLocalizerLocale = oosLocalizerLocale,
-                onOosLocalizerLocaleChange = { oosLocalizerLocale = it },
-                oosLocalizerModel = oosLocalizerModel,
-                onOosLocalizerModelChange = { oosLocalizerModel = it },
                 assistantPowerMode = assistantPowerMode,
                 onAssistantPowerModeChange = { assistantPowerMode = it },
                 assistantGestureCircleEnabled = assistantGestureCircleEnabled,

@@ -6,12 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.size
@@ -227,9 +225,11 @@ fun SettingsPageSurface(
             bottomChrome?.invoke()
         },
     ) { innerPadding ->
-        val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
         val contentModifier = Modifier
                 .fillMaxSize()
+                // Root already consumes IME insets. Unlike raw asPaddingValues(), this
+                // respects consumed insets and cannot subtract the keyboard twice.
+                .imePadding()
                 .then(
                     if (backgroundContent == null && blurBackdrop != null) {
                         Modifier.layerBackdrop(blurBackdrop)
@@ -242,7 +242,7 @@ fun SettingsPageSurface(
                     start = 0.dp,
                     top = innerPadding.calculateTopPadding() + 12.dp,
                     end = 0.dp,
-                    bottom = maxOf(innerPadding.calculateBottomPadding(), bottomContentPadding) + imeBottomPadding + 12.dp,
+                    bottom = maxOf(innerPadding.calculateBottomPadding(), bottomContentPadding) + 12.dp,
                 )
         Box(
             modifier = Modifier
@@ -324,7 +324,6 @@ private fun Material3ExpressiveSettingsPageSurface(
         },
         bottomBar = { bottomChrome?.invoke() },
     ) { innerPadding ->
-        val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
         Box(
             modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
             contentAlignment = Alignment.TopCenter,
@@ -334,12 +333,13 @@ private fun Material3ExpressiveSettingsPageSurface(
                 modifier = Modifier
                     .widthIn(max = 680.dp)
                     .fillMaxSize()
+                    .imePadding()
                     .then(if (contentScrollable) Modifier.verticalScroll(scrollState) else Modifier)
                     .padding(
                         start = 0.dp,
                         top = innerPadding.calculateTopPadding() + 12.dp,
                         end = 0.dp,
-                        bottom = maxOf(innerPadding.calculateBottomPadding(), bottomContentPadding) + imeBottomPadding + 12.dp,
+                        bottom = maxOf(innerPadding.calculateBottomPadding(), bottomContentPadding) + 12.dp,
                     ),
                 content = content,
             )
