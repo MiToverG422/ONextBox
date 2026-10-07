@@ -82,6 +82,7 @@ import com.mi.onextbox.ui.common.AppLocale
 import com.mi.onextbox.ui.common.AppIcons
 import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.LocalAppUiStyle
+import com.mi.onextbox.ui.common.LspMissingScopesNotice
 import com.mi.onextbox.ui.common.bottomTabs
 import com.mi.onextbox.ui.common.readCachedRootAccessInfo
 import io.github.suqi8.coui.kmp.basic.Card
@@ -134,9 +135,11 @@ fun HomePage(
         if (lifecycleOwner == null) {
             onDispose { }
         } else {
+            var skipCurrentResume = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
             val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
-                    lspRefreshKey += 1
+                    if (skipCurrentResume) skipCurrentResume = false
+                    else lspRefreshKey += 1
                 }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
@@ -148,9 +151,11 @@ fun HomePage(
 
     HomeHeroCard(
         rootGranted = rootGranted,
-        lsposedModuleEnabled = versionInfo.lsposedModuleEnabled,
+        lsposedReady = versionInfo.lsposedReady,
+        lsposedStatus = versionInfo.lsposedStatus,
         onLongPress = onHeroLongPress,
     )
+    LspMissingScopesNotice(versionInfo.lsposedStatus, versionInfo.missingScopes)
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressiveHomeInfoCard(
             rootGranted = rootGranted,

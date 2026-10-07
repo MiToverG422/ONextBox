@@ -21,11 +21,7 @@ import java.lang.ref.WeakReference
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * C17 only: a normal dismiss request after LIVE face authentication, not a biometric override.
- * The native HAL/icon windows are never changed, an owned child copies the stock idle icon.
- * Unknown firmware interfaces fail closed, native authentication and swipe remain untouched.
- */
+/** Lockscreen entry after live face authentication, unsupported interfaces remain untouched. */
 internal object FaceTapUnlockHooker {
     private const val TAG = "ONextBox-FaceTap"
     private val main by lazy { Handler(Looper.getMainLooper()) }
@@ -77,7 +73,7 @@ internal object FaceTapUnlockHooker {
             val biometricSource = Reflect.findClass("android.hardware.biometrics.BiometricSourceType", loader)
             faceSource = biometricSource.getField("FACE").get(null)
             val utils = Reflect.findClass("com.oplus.systemui.biometrics.finger.KeyguardFingerprintUtils", loader)
-            exact(utils, "getZoomOut")
+            Reflect.findDeclaredMethodExact(utils, "getZoomOut")
             fingerprintUtils = utils.getField("INSTANCE").get(null)
             val integer = Int::class.javaPrimitiveType!!
             val boolean = Boolean::class.javaPrimitiveType!!
@@ -92,30 +88,30 @@ internal object FaceTapUnlockHooker {
             auth.getDeclaredField("keyguardViewMediatorLazy")
             icon.getDeclaredField("onScreenFingerprintUiMech")
             host.getDeclaredField("mDozing")
-            exact(monitor, "getCurrentUser")
-            exact(monitor, "getIsFaceAuthenticated")
-            exact(monitor, "isUnlockingWithBiometricAllowed", biometricSource)
-            exact(monitor, "getUserCanSkipBouncer", integer)
-            exact(monitor, "isEncryptedOrLockdown", integer)
-            exact(monitor, "isSimPinSecure")
-            exact(monitor, "isBouncerShowing")
-            exact(auth, "isBiometricPromptShowing")
-            exact(mediator, "dismiss", Reflect.findClass("com.android.internal.policy.IKeyguardDismissCallback", loader), CharSequence::class.java)
-            val face = exact(monitor, "handleFaceAuthenticated", integer, boolean)
+            Reflect.findDeclaredMethodExact(monitor, "getCurrentUser")
+            Reflect.findDeclaredMethodExact(monitor, "getIsFaceAuthenticated")
+            Reflect.findDeclaredMethodExact(monitor, "isUnlockingWithBiometricAllowed", biometricSource)
+            Reflect.findDeclaredMethodExact(monitor, "getUserCanSkipBouncer", integer)
+            Reflect.findDeclaredMethodExact(monitor, "isEncryptedOrLockdown", integer)
+            Reflect.findDeclaredMethodExact(monitor, "isSimPinSecure")
+            Reflect.findDeclaredMethodExact(monitor, "isBouncerShowing")
+            Reflect.findDeclaredMethodExact(auth, "isBiometricPromptShowing")
+            Reflect.findDeclaredMethodExact(mediator, "dismiss", Reflect.findClass("com.android.internal.policy.IKeyguardDismissCallback", loader), CharSequence::class.java)
+            val face = Reflect.findDeclaredMethodExact(monitor, "handleFaceAuthenticated", integer, boolean)
             val clears = listOf(
-                exact(monitor, "handleStartedGoingToSleep", integer),
-                exact(monitor, "handleUserSwitching", integer, Runnable::class.java),
-                exact(monitor, "handleUserSwitchComplete", integer),
+                Reflect.findDeclaredMethodExact(monitor, "handleStartedGoingToSleep", integer),
+                Reflect.findDeclaredMethodExact(monitor, "handleUserSwitching", integer, Runnable::class.java),
+                Reflect.findDeclaredMethodExact(monitor, "handleUserSwitchComplete", integer),
             )
-            val reset = exact(monitor, "handleKeyguardReset")
-            val show = exact(target, "fpIconShow", integer, boolean)
-            val hide = exact(target, "fpIconHide", integer)
-            val stopReveal = exact(target, "stopOpticalAnimation")
-            val visibility = exact(icon, "onVisibilityChanged", View::class.java, integer)
-            val iconTouch = exact(icon, "onTouchEvent", MotionEvent::class.java)
-            val attach = exact(host, "onAttachedToWindow")
-            val detach = exact(host, "onDetachedFromWindow")
-            val dispatch = exact(host, "dispatchTouchEvent", MotionEvent::class.java)
+            val reset = Reflect.findDeclaredMethodExact(monitor, "handleKeyguardReset")
+            val show = Reflect.findDeclaredMethodExact(target, "fpIconShow", integer, boolean)
+            val hide = Reflect.findDeclaredMethodExact(target, "fpIconHide", integer)
+            val stopReveal = Reflect.findDeclaredMethodExact(target, "stopOpticalAnimation")
+            val visibility = Reflect.findDeclaredMethodExact(icon, "onVisibilityChanged", View::class.java, integer)
+            val iconTouch = Reflect.findDeclaredMethodExact(icon, "onTouchEvent", MotionEvent::class.java)
+            val attach = Reflect.findDeclaredMethodExact(host, "onAttachedToWindow")
+            val detach = Reflect.findDeclaredMethodExact(host, "onDetachedFromWindow")
+            val dispatch = Reflect.findDeclaredMethodExact(host, "dispatchTouchEvent", MotionEvent::class.java)
             haptics.prepare(loader)
 
             after(face) { param ->
@@ -191,9 +187,6 @@ internal object FaceTapUnlockHooker {
             HookLog.i(TAG, "Face tap interaction installed, native authentication unchanged")
         }
     }
-
-    private fun exact(target: Class<*>, name: String, vararg args: Class<*>): Method =
-        target.getDeclaredMethod(name, *args).apply { isAccessible = true }
 
     private fun before(method: Method, action: (ModernMethodHook.MethodHookParam) -> Unit) {
         ModernHookRegistry.installCompat("face-tap:${method.declaringClass.name}:${method.name}:before", method, object : ModernMethodHook() {

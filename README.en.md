@@ -143,6 +143,10 @@ chmod +x gradlew
 | `debugSlim` | Enables code shrinking and resource shrinking, with the debuggable flag disabled; intended for local on-device experience testing | `app/build/outputs/apk/debugSlim/app-debugSlim.apk` |
 | `release` | Optimized builds and release validation | `app/build/outputs/apk/release/app-release.apk` |
 
+Release builds require `ONEXTBOX_RELEASE_STORE_FILE`, `ONEXTBOX_RELEASE_STORE_PASSWORD`, `ONEXTBOX_RELEASE_KEY_ALIAS` and `ONEXTBOX_RELEASE_KEY_PASSWORD` in the Git-ignored `signing.properties` file or equivalent Gradle properties, builds without signing credentials fail instead of silently using a debug certificate
+
+Before committing, run `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug`, use `./gradlew` on Linux / macOS, manual Actions builds run the same checks
+
 <a id="credits"></a>
 
 ## 📚 References, sources & credits

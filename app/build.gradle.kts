@@ -15,8 +15,7 @@ val ciVersionName = (project.findProperty("ONEXTBOX_VERSION_NAME") as String?)
     ?.takeIf { it.isNotBlank() }
     ?: "17.0"
 
-// Android requires versionCode to be an integer. Keep the install-time value fixed at 1,
-// and expose the product-facing EX code separately for the UI and build artifacts.
+// Android install version and product build label.
 val androidVersionCode = 1
 val appVersionCodeLabel = "EX01"
 
@@ -90,11 +89,11 @@ android {
     buildTypes {
         debug {
             if (isGithubCi) {
-                // Keep CI debug APK size smaller (e.g. Telegram upload limit).
+                // Optimized CI debug build.
                 isMinifyEnabled = true
                 isShrinkResources = true
                 if (hasExternalReleaseSigning) {
-                    // Ensure CI debug/release variants can share the same certificate when both are built.
+                    // Shared certificate for CI variants.
                     signingConfig = signingConfigs.getByName("ciRelease")
                 }
                 proguardFiles(
@@ -127,8 +126,8 @@ android {
                     signingConfig = signingConfigs.getByName("debug")
                 }
                 else -> {
-                    // Last-resort fallback to avoid unsigned release outputs.
-                    signingConfig = signingConfigs.getByName("debug")
+                    // Release signing must be configured explicitly.
+                    signingConfig = null
                 }
             }
             proguardFiles(
@@ -192,6 +191,14 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
+    }
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    doFirst {
+        check(hasExternalReleaseSigning || ciSignReleaseWithDebug) {
+            "Configure release signing, or explicitly enable ONEXTBOX_CI_SIGN_RELEASE_WITH_DEBUG for a test build"
+        }
     }
 }
 

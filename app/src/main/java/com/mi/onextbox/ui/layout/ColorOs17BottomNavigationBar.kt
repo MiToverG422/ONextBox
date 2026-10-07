@@ -409,12 +409,7 @@ private fun rememberColorOs17BottomBarTouchMotion(): ColorOs17BottomBarTouchMoti
     return remember { ColorOs17BottomBarTouchMotion() }
 }
 
-/**
- * Compose counterpart of C17's COUIRubberAnimatorUnit + COUIDeformAnimatorUnit.
- *
- * AndroidX SpringAnimation has the same continuously-retargetable DynamicAnimation contract as
- * C17's o3.f. MOVE therefore updates one running spring instead of canceling it every frame.
- */
+/** Retargetable bottom-bar spring for drag translation and deformation. */
 private class ColorOs17BottomBarTouchMotion {
     var translationX by mutableFloatStateOf(0f)
         private set

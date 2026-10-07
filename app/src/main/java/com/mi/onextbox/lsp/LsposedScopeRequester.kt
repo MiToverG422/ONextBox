@@ -3,47 +3,42 @@ package com.mi.onextbox.lsp
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
+import android.os.Looper
 import android.os.Process
-import android.os.SystemClock
 import com.mi.onextbox.ui.common.AppLogStore
+import com.mi.onextbox.ui.common.LspHomeDisplay
+import com.mi.onextbox.ui.common.LspHomeDisplayCache
+import com.mi.onextbox.ui.common.RootStartupCheck
 import com.mi.onextbox.ui.common.ShellLogger
+import com.topjohnwu.superuser.Shell
 import java.io.File
-import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 object LsposedScopeRequester {
-    private const val LSPOSED_API_VERSION = 102
     private const val CACHE_PREFS = "lsposed_status_cache"
-    private const val CACHE_KEY_MODULE_ENABLED = "module_enabled"
-    private const val CACHE_KEY_HAS_SYSTEM = "has_system_scope"
-    private const val CACHE_KEY_HAS_ANDROID = "has_android_scope"
-    private const val CACHE_KEY_HAS_SYSTEMUI = "has_systemui_scope"
-    private const val CACHE_KEY_HAS_SETTINGS = "has_settings_scope"
-    private const val CACHE_KEY_HAS_LAUNCHER = "has_launcher_scope"
-    private const val CACHE_KEY_HAS_AOD = "has_aod_scope"
-    private const val CACHE_KEY_FRAMEWORK_VERSION = "framework_version"
-    private const val DB_MODULE_ENABLED_CACHE_MS = 2_000L
     private const val ANDROID_UID_PER_USER_RANGE = 100_000
     private const val LSPOSED_SECRET_CODE = "5776733"
     private const val MAX_REPORTED_MANAGER_FAILURES = 6
 
     private val LSPOSED_CONFIG_DB_PATHS = listOf(
         "/data/adb/lspd/config/modules_config.db",
-        "/data/adb/lspd/modules_config.db"
-    )
-    private val LSPOSED_MODULE_PROP_PATHS = listOf(
-        "/data/adb/modules/zygisk_lsposed/module.prop",
-        "/data/adb/modules/lsposed/module.prop",
-        "/data/adb/modules/riru_lsposed/module.prop",
-        "/data/adb/modules_update/zygisk_lsposed/module.prop",
-        "/data/adb/modules_update/lsposed/module.prop",
-        "/data/adb/modules_update/riru_lsposed/module.prop",
+        "/data/adb/lspd/modules_config.db",
     )
     private val LSPOSED_MANAGER_PACKAGES = listOf(
         "org.lsposed.manager",
         "org.lsposed.manager.debug",
-        "io.github.libxposed.manager"
+        "io.github.libxposed.manager",
     )
     private val LSPOSED_ACTION_SCRIPT_PATHS = listOf(
         "/data/adb/modules/zygisk_lsposed/action.sh",
@@ -54,48 +49,29 @@ object LsposedScopeRequester {
         "/data/adb/modules_update/riru_lsposed/action.sh",
     )
 
-    private val packageColumnCandidates = listOf(
-        "module_pkg_name",
-        "modulePackageName",
-        "package_name",
-        "packageName",
-        "pkg_name",
-        "pkg",
-        "name",
-        "module"
-    )
-
-    private val enabledColumnCandidates = listOf(
-        "enabled",
-        "enable",
-        "is_enabled",
-        "isEnabled"
-    )
-
-    private val userIdColumnCandidates = listOf(
-        "user_id",
-        "userId",
-        "userid",
-    )
-
     data class StatusSnapshot(
-        val serviceConnected: Boolean,
-        val moduleEnabled: Boolean,
-        val hasSystemScope: Boolean,
-        val hasAndroidScope: Boolean,
-        val hasSystemUiScope: Boolean,
-        val hasSettingsScope: Boolean,
-        val hasLauncherScope: Boolean,
-        val hasAodScope: Boolean,
-        val frameworkVersionText: String?
+        val moduleState: LspModuleState = LspModuleState.UNKNOWN,
+        val status: LspStatus = LspStatus.CHECKING,
+        val serviceConnected: Boolean = false,
+        val frameworkVersionText: String? = null,
+        val verifiedScopes: Set<String>? = null,
+        val missingScopes: Set<String> = emptySet(),
+        val isRefreshing: Boolean = false,
+        val source: String = "none",
+        val reason: String = "checking",
     ) {
-        /**
-         * Compatibility projection used by existing screens. LSPosed does not expose a stable,
-         * public per-scope query API here, so these booleans must not be presented as an
-         * independently verified scope list. [moduleEnabled] is the reliable onboarding signal.
-         */
-        val hasRequiredScopes: Boolean
-            get() = hasSystemScope && hasSystemUiScope
+        val moduleEnabled: Boolean get() = moduleState == LspModuleState.ENABLED
+        val isReady: Boolean get() = moduleEnabled && status == LspStatus.READY
+        val moduleReady: Boolean get() = isReady
+        val canContinue: Boolean get() = moduleEnabled && !isRefreshing &&
+            status != LspStatus.CHECKING && status != LspStatus.API_UNSUPPORTED
+        val hasSystemScope: Boolean get() = "system" in verifiedScopes.orEmpty()
+        val hasAndroidScope: Boolean get() = "android" in verifiedScopes.orEmpty()
+        val hasSystemUiScope: Boolean get() = "com.android.systemui" in verifiedScopes.orEmpty()
+        val hasSettingsScope: Boolean get() = "com.android.settings" in verifiedScopes.orEmpty()
+        val hasLauncherScope: Boolean get() = "com.android.launcher" in verifiedScopes.orEmpty()
+        val hasAodScope: Boolean get() = "com.oplus.aod" in verifiedScopes.orEmpty()
+        val hasRequiredScopes: Boolean get() = hasSystemScope && hasSystemUiScope
     }
 
     enum class ManagerOpenMethod {
@@ -121,14 +97,54 @@ object LsposedScopeRequester {
             get() = status != ManagerOpenStatus.FAILED
     }
 
+
     @Volatile
     private var appContext: Context? = null
-    private val dbReadLock = Any()
-    @Volatile
-    private var cachedDbModuleEnabled: CachedDbModuleEnabled? = null
+    private val initializationLock = Any()
+    private val probeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val mutableStates = MutableStateFlow(StatusSnapshot())
+    val states: StateFlow<StatusSnapshot> = mutableStates.asStateFlow()
+    private val displayLock = Any()
+    private val mutableHomeDisplay = MutableStateFlow<LspHomeDisplay?>(null)
+    internal val homeDisplayStates: StateFlow<LspHomeDisplay?> = mutableHomeDisplay.asStateFlow()
+    private var lastReportedSnapshot: StatusSnapshot? = null
+    private val refreshCoordinator = LspRefreshCoordinator(
+        scope = probeScope,
+        load = { readSnapshot() },
+        onRefreshing = { mutableStates.value = mutableStates.value.copy(isRefreshing = true) },
+        onResult = { result ->
+            mutableStates.value = result
+            publishHomeDisplay()
+            if (lastReportedSnapshot != result) {
+                lastReportedSnapshot = result
+                AppLogStore.i(
+                    "LSPosed",
+                    "module=${result.moduleState} status=${result.status} " +
+                        "connected=${result.serviceConnected} ready=${result.isReady} " +
+                        "source=${result.source} reason=${result.reason}",
+                )
+            }
+        },
+    )
 
     fun initialize(context: Context? = null) {
-        context?.applicationContext?.let { appContext = it }
+        val application = context?.applicationContext ?: return
+        val first = synchronized(initializationLock) {
+            if (appContext != null) false else {
+                mutableHomeDisplay.value = LspHomeDisplayCache.read(application)
+                appContext = application
+                true
+            }
+        }
+        if (first) {
+            probeScope.launch {
+                runCatching {
+                    application.createDeviceProtectedStorageContext()
+                        .getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+                }
+                if (states.value.status == LspStatus.CHECKING) refreshCoordinator.refresh()
+            }
+        }
     }
 
     fun requestRequiredScopes(): Boolean {
@@ -144,13 +160,7 @@ object LsposedScopeRequester {
         return openManager(context).isSuccess
     }
 
-    /**
-     * Opens an installed LSPosed manager when it is addressable as a normal application. Modern
-     * parasitic/randomized managers are intentionally invisible to package enumeration, so a
-     * rooted secret-code broadcast is used as the final fallback. A dispatched secret code means
-     * the framework accepted the launch request; Android does not provide an acknowledgement that
-     * the manager UI actually became visible.
-     */
+/** Manager launcher with a Root secret-code fallback, dispatch success does not confirm that the UI opened. */
     fun openManager(context: Context): ManagerOpenResult {
         initialize(context)
         val applicationContext = context.applicationContext
@@ -225,14 +235,6 @@ object LsposedScopeRequester {
             status = ManagerOpenStatus.FAILED,
             failureSummary = failureSummary,
         )
-    }
-
-    /** Bypasses the short database cache when returning from the external manager. */
-    fun refreshSnapshot(context: Context? = null): StatusSnapshot {
-        synchronized(dbReadLock) {
-            cachedDbModuleEnabled = null
-        }
-        return snapshot(context)
     }
 
     private fun managerActivityClassCandidates(packageName: String): List<String> = buildList {
@@ -339,415 +341,193 @@ object LsposedScopeRequester {
     }
 
 
-    fun hasRequiredScopes(context: Context? = null): Boolean {
-        return snapshot(context).hasRequiredScopes
-    }
+
+    fun hasRequiredScopes(context: Context? = null): Boolean = snapshot(context).hasRequiredScopes
 
     fun cachedSnapshot(context: Context? = null): StatusSnapshot {
-        context?.applicationContext?.let { appContext = it }
-        return readCachedStatus()?.toSnapshot(serviceConnected = false) ?: emptySnapshot()
+        initialize(context)
+        return states.value
     }
 
     fun snapshot(context: Context? = null): StatusSnapshot {
         initialize(context)
-        val cached = readCachedStatus()
-        val dbModuleEnabled = readModuleEnabledFromLsposedDb()
-        val runtimeSystemScopeActive = LspRuntimeStatus.isSystemScopeActive()
-        val runtimeSystemUiScopeActive = LspRuntimeStatus.isSystemUiScopeActive()
-
-        val moduleEnabled = when (dbModuleEnabled) {
-            false -> false
-            true -> true
-            null -> runtimeSystemScopeActive || runtimeSystemUiScopeActive || cached?.moduleEnabled == true
+        val current = states.value
+        if (current.status != LspStatus.CHECKING && !current.isRefreshing) return current
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            refreshCoordinator.refresh()
+            return states.value
         }
-
-        val frameworkVersionText = readLsposedModuleVersionText()
-            ?: readLsposedManagerVersionText()
-            ?: cached?.frameworkVersionText?.takeIf { it.contains(" / API ") }
-            ?: "LSPosed"
-        val snapshot = StatusSnapshot(
-            serviceConnected = false,
-            moduleEnabled = moduleEnabled,
-            hasSystemScope = moduleEnabled,
-            hasAndroidScope = moduleEnabled,
-            hasSystemUiScope = moduleEnabled,
-            hasSettingsScope = moduleEnabled,
-            hasLauncherScope = moduleEnabled,
-            hasAodScope = moduleEnabled,
-            frameworkVersionText = frameworkVersionText
-        )
-        cacheStatus(snapshot)
-        return snapshot
+        return runBlocking { refreshCoordinator.awaitSnapshot() }
     }
 
-    private fun emptySnapshot(): StatusSnapshot {
-        return StatusSnapshot(
-            serviceConnected = false,
-            moduleEnabled = false,
-            hasSystemScope = false,
-            hasAndroidScope = false,
-            hasSystemUiScope = false,
-            hasSettingsScope = false,
-            hasLauncherScope = false,
-            hasAodScope = false,
-            frameworkVersionText = null
-        )
+    fun refreshSnapshot(context: Context? = null): StatusSnapshot {
+        initialize(context)
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            refreshCoordinator.refresh(invalidate = true)
+            return states.value
+        }
+        return runBlocking { refreshCoordinator.awaitSnapshot(invalidate = true) }
     }
 
-    private fun readModuleEnabledFromLsposedDb(): Boolean? {
-        val now = SystemClock.elapsedRealtime()
-        cachedDbModuleEnabled
-            ?.takeIf { now - it.timestampMs < DB_MODULE_ENABLED_CACHE_MS }
-            ?.let { return it.value }
+    fun onFrameworkServiceChanged() {
+        refreshCoordinator.refresh(invalidate = true)
+    }
 
-        return synchronized(dbReadLock) {
-            val lockedNow = SystemClock.elapsedRealtime()
-            cachedDbModuleEnabled
-                ?.takeIf { lockedNow - it.timestampMs < DB_MODULE_ENABLED_CACHE_MS }
-                ?.let { return@synchronized it.value }
+    fun onRootAccessChanged() {
+        refreshCoordinator.refresh(invalidate = true)
+    }
 
-            val value = readModuleEnabledFromLsposedDbUncached()
-            cachedDbModuleEnabled = CachedDbModuleEnabled(
-                timestampMs = SystemClock.elapsedRealtime(),
-                value = value
+    internal fun onRootStartupCompleted() {
+        publishHomeDisplay()
+    }
+
+    private fun publishHomeDisplay() = synchronized(displayLock) {
+        val context = appContext ?: return@synchronized
+        val display = lspHomeDisplayForCache(states.value, RootStartupCheck.states.value)
+            ?: return@synchronized
+        if (mutableHomeDisplay.value == display) return@synchronized
+        mutableHomeDisplay.value = display
+        LspHomeDisplayCache.write(context, display)
+    }
+
+    private fun readSnapshot(): StatusSnapshot =
+        try {
+            val configured = readConfiguration()
+            val framework = runCatching { LspFrameworkService.readSnapshot() }.getOrNull()
+            val requiredScopes = if (configured.moduleState == LspModuleState.ENABLED) {
+                readRequiredScopes()
+            } else emptySet()
+            val evaluated = LspDetectionPolicy.evaluate(
+                configured.moduleState, framework, Process.myUid() / ANDROID_UID_PER_USER_RANGE,
+                configuredScopes = configured.scopes,
+                requiredScopes = requiredScopes ?: setOf("system", "com.android.systemui"),
             )
-            value
-        }
-    }
-
-    private fun readModuleEnabledFromLsposedDbUncached(): Boolean? {
-        val context = appContext ?: return null
-        val packageName = context.packageName.takeIf { it.isNotBlank() } ?: return null
-        val dbCopy = File(context.cacheDir, "lsposed_modules_config.db")
-        LSPOSED_CONFIG_DB_PATHS.forEach { sourcePath ->
-            val enabled = runCatching {
-                copyLsposedDb(sourcePath, dbCopy)
-                readModuleEnabledFromDbCopy(dbCopy, packageName)
-            }.onFailure { throwable ->
-                AppLogStore.w(
-                    "LSPosed",
-                    "Read module enabled from $sourcePath failed: ${throwable.message.orEmpty()}"
-                )
-            }.getOrNull()
-            deleteLsposedDbCopy(dbCopy)
-            if (enabled != null) return enabled
-        }
-        return null
-    }
-
-    private fun readLsposedManagerVersionText(): String? {
-        val context = appContext ?: return null
-        return LSPOSED_MANAGER_PACKAGES.firstNotNullOfOrNull { packageName ->
-            runCatching {
-                val info = context.packageManager.getPackageInfo(packageName, 0)
-                val versionName = info.versionName
-                    ?.trim()
-                    ?.takeIf { it.isNotBlank() }
-                    ?: return@runCatching null
-                val versionCode = info.longVersionCode.takeIf { it > 0L }
-
-                if (versionCode != null) {
-                    "LSPosed $versionName ($versionCode) / API $LSPOSED_API_VERSION"
-                } else {
-                    "LSPosed $versionName / API $LSPOSED_API_VERSION"
-                }
-            }.getOrNull()
-        }
-    }
-
-    /**
-     * Modern LSPosed builds can use a randomized or fork-specific manager package, so the
-     * manager APK is no longer a reliable source of the framework version. Magisk/KernelSU
-     * modules still expose their framework version through module.prop.
-     */
-    private fun readLsposedModuleVersionText(): String? {
-        val paths = LSPOSED_MODULE_PROP_PATHS.joinToString(" ") { shellQuote(it) }
-        val command =
-            "for prop in $paths; do if [ -f \"\$prop\" ]; then cat \"\$prop\"; exit 0; fi; done; exit 1"
-        val directResult = ShellLogger.exec("LSPosed module.prop direct", command)
-        val lines = if (directResult.isSuccess && directResult.out.isNotEmpty()) {
-            directResult.out
-        } else {
-            val rootResult = ShellLogger.exec(
-                "LSPosed module.prop su",
-                "su -c ${shellQuote(command)}",
+            val requirementsUnavailable = requiredScopes == null && evaluated.status !in
+                setOf(LspStatus.API_UNSUPPORTED, LspStatus.MISSING_SCOPE)
+            StatusSnapshot(
+                moduleState = evaluated.moduleState,
+                status = if (requirementsUnavailable) LspStatus.UNKNOWN else evaluated.status,
+                serviceConnected = evaluated.serviceConnected,
+                frameworkVersionText = evaluated.frameworkVersionText,
+                verifiedScopes = configured.scopes,
+                missingScopes = evaluated.missingScopes,
+                source = evaluated.source,
+                reason = when {
+                    requirementsUnavailable -> "requirements_unavailable"
+                    evaluated.reason == "config_unavailable" -> configured.unavailableReason
+                    else -> evaluated.reason
+                },
             )
-            if (!rootResult.isSuccess) return null
-            rootResult.out
+        } catch (cancel: CancellationException) {
+            throw cancel
+        } catch (error: Exception) {
+            AppLogStore.w("LSPosed", "Status probe failed: " + error.javaClass.simpleName)
+            StatusSnapshot(status = LspStatus.UNKNOWN, reason = "probe_failed")
         }
-        val properties = lines.mapNotNull { line ->
-            val separator = line.indexOf('=')
-            if (separator <= 0) return@mapNotNull null
-            val key = line.substring(0, separator).trim()
-            val value = line.substring(separator + 1).trim()
-            if (key.isBlank() || value.isBlank()) null else key to value
-        }.toMap()
-        val version = properties["version"]?.takeIf { it.isNotBlank() } ?: return null
-        val versionCode = properties["versionCode"]?.takeIf { it.isNotBlank() }
-        val frameworkName = properties["name"]
-            ?.let { name ->
-                when {
-                    name.contains("LSPosed IT", ignoreCase = true) -> "LSPosed IT"
-                    name.contains("LSPosed", ignoreCase = true) -> "LSPosed"
-                    else -> null
+
+    private fun readConfiguration(): LspDbConfiguration {
+        val context = appContext ?: return LspDbConfiguration()
+        val packageName = context.packageName.takeIf(String::isNotBlank) ?: return LspDbConfiguration()
+        // Status checks only use an existing Root shell.
+        val shell = runCatching {
+            Shell.getCachedShell()?.takeIf { it.isRoot && it.isAlive }
+        }.getOrNull() ?: return LspDbConfiguration(unavailableReason = "root_shell_unavailable")
+        for (sourcePath in LSPOSED_CONFIG_DB_PATHS) {
+            val copy = File.createTempFile("lsp_state_", ".db", context.cacheDir)
+            try {
+                File(copy.absolutePath + "-wal").createNewFile()
+                val output = mutableListOf<String>()
+                val errors = mutableListOf<String>()
+                val result = shell.newJob()
+                    .add(LspDbSnapshotScript.command(sourcePath, copy.absolutePath, Process.myUid()))
+                    .to(output, errors).exec()
+                if (!result.isSuccess) {
+                    if ("missing" in output) continue
+                    return LspDbConfiguration()
                 }
+                return readConfigurationFromCopy(copy, packageName)
+            } catch (error: Exception) {
+                AppLogStore.w("LSPosed", "Configuration probe failed: " + error.javaClass.simpleName)
+                return LspDbConfiguration()
+            } finally {
+                deleteDbCopy(copy)
             }
-            ?: "LSPosed"
-        return buildString {
-            append(frameworkName)
-            append(' ')
-            append(version)
-            versionCode
-                ?.takeUnless { code ->
-                    Regex("\\(\\s*${Regex.escape(code)}\\s*\\)").containsMatchIn(version)
-                }
-                ?.let {
-                append(" (")
-                append(it)
-                append(')')
-            }
-            append(" / API ")
-            append(LSPOSED_API_VERSION)
         }
+        return LspDbConfiguration()
     }
 
-    private fun copyLsposedDb(sourcePath: String, target: File) {
-        val targetPath = target.absolutePath
-        val uid = Process.myUid()
-        val copyCommands = mutableListOf(
-            "rm -f ${shellQuote(targetPath)} ${shellQuote("$targetPath-wal")} ${shellQuote("$targetPath-shm")} ${shellQuote("$targetPath-journal")}",
-            "cp -f ${shellQuote(sourcePath)} ${shellQuote(targetPath)}",
-            "[ ! -f ${shellQuote("$sourcePath-wal")} ] || cp -f ${shellQuote("$sourcePath-wal")} ${shellQuote("$targetPath-wal")}",
-            "[ ! -f ${shellQuote("$sourcePath-shm")} ] || cp -f ${shellQuote("$sourcePath-shm")} ${shellQuote("$targetPath-shm")}",
-            "[ ! -f ${shellQuote("$sourcePath-journal")} ] || cp -f ${shellQuote("$sourcePath-journal")} ${shellQuote("$targetPath-journal")}",
-            "chown $uid:$uid ${shellQuote(targetPath)}",
-            "chmod 600 ${shellQuote(targetPath)}"
-        )
-        copyCommands += "if [ -f ${shellQuote("$targetPath-wal")} ]; then chown $uid:$uid ${shellQuote("$targetPath-wal")}; chmod 600 ${shellQuote("$targetPath-wal")}; fi"
-        copyCommands += "if [ -f ${shellQuote("$targetPath-shm")} ]; then chown $uid:$uid ${shellQuote("$targetPath-shm")}; chmod 600 ${shellQuote("$targetPath-shm")}; fi"
-        copyCommands += "if [ -f ${shellQuote("$targetPath-journal")} ]; then chown $uid:$uid ${shellQuote("$targetPath-journal")}; chmod 600 ${shellQuote("$targetPath-journal")}; fi"
-        val command = copyCommands.joinToString("; ")
-
-        val directResult = ShellLogger.exec("LSPosed copy db direct", command)
-        if (directResult.isSuccess && target.exists()) return
-
-        val suResult = ShellLogger.exec("LSPosed copy db su", "su -c ${shellQuote(command)}")
-        if (!suResult.isSuccess || !target.exists()) {
-            error("Unable to copy LSPosed config database from $sourcePath")
-        }
-    }
-
-    private fun deleteLsposedDbCopy(dbCopy: File) {
-        runCatching { dbCopy.delete() }
-        runCatching { File("${dbCopy.absolutePath}-wal").delete() }
-        runCatching { File("${dbCopy.absolutePath}-shm").delete() }
-        runCatching { File("${dbCopy.absolutePath}-journal").delete() }
-    }
-
-    private fun readModuleEnabledFromDbCopy(dbFile: File, packageName: String): Boolean? {
-        if (!dbFile.exists() || dbFile.length() <= 0L) return null
+    @Suppress("DEPRECATION")
+    private fun readRequiredScopes(): Set<String>? {
+        val context = appContext ?: return null
         return runCatching {
-            SQLiteDatabase.openDatabase(
-                dbFile.absolutePath,
-                null,
-                SQLiteDatabase.OPEN_READONLY
-            ).use { db ->
-                readModuleEnabledFromKnownSchema(db, packageName)
-                    ?: readModuleEnabledFromDiscoveredSchema(db, packageName)
+            val stream = context.classLoader.getResourceAsStream("META-INF/xposed/scope.list")
+                ?: error("Missing scope metadata")
+            val recommended = stream.bufferedReader(Charsets.UTF_8).use { reader ->
+                LspScopeRequirements.parse(reader.readText())
             }
-        }.onFailure { throwable ->
-            AppLogStore.w("LSPosed", "Read LSPosed database failed: ${throwable.message.orEmpty()}")
+            LspScopeRequirements.installed(recommended) { packageName ->
+                try {
+                    context.packageManager.getApplicationInfo(packageName, 0)
+                    true
+                } catch (_: PackageManager.NameNotFoundException) {
+                    false
+                }
+            }
+        }.onFailure { error ->
+            AppLogStore.w("LSPosed", "Scope metadata probe failed: " + error.javaClass.simpleName)
         }.getOrNull()
     }
 
-    private fun readModuleEnabledFromKnownSchema(db: SQLiteDatabase, packageName: String): Boolean? {
+    private fun readConfigurationFromCopy(copy: File, packageName: String): LspDbConfiguration {
         val userId = Process.myUid() / ANDROID_UID_PER_USER_RANGE
-        val modernValue = runCatching {
+        return SQLiteDatabase.openDatabase(copy.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            val tables = mutableMapOf<String, Set<String>>()
             db.rawQuery(
-                "SELECT enabled FROM modules_state WHERE module_pkg_name = ? AND user_id = ? LIMIT 1",
-                arrayOf(packageName, userId.toString())
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('modules_state', 'modules', 'scope')",
+                emptyArray(),
             ).use { cursor ->
-                if (cursor.moveToFirst()) {
-                    parseEnabledValue(cursor.getString(0))
-                } else {
-                    null
-                }
-            }
-        }.getOrNull()
-        if (modernValue != null) return modernValue
-
-        return runCatching {
-            db.rawQuery(
-                "SELECT enabled FROM modules WHERE module_pkg_name = ? LIMIT 1",
-                arrayOf(packageName)
-            ).use { cursor ->
-                if (cursor.moveToFirst()) {
-                    parseEnabledValue(cursor.getString(0))
-                } else {
-                    null
-                }
-            }
-        }.getOrNull()
-    }
-
-    private fun readModuleEnabledFromDiscoveredSchema(db: SQLiteDatabase, packageName: String): Boolean? {
-        val tables = readUserTables(db)
-        val userId = Process.myUid() / ANDROID_UID_PER_USER_RANGE
-        for (table in tables) {
-            val columns = readColumns(db, table)
-            val packageColumn = findCandidateColumn(columns, packageColumnCandidates) ?: continue
-            val enabledColumn = findCandidateColumn(columns, enabledColumnCandidates) ?: continue
-            val userIdColumn = findCandidateColumn(columns, userIdColumnCandidates)
-            val enabled = runCatching {
-                val whereClause = buildString {
-                    append("${sqlIdent(packageColumn)} = ?")
-                    if (userIdColumn != null) {
-                        append(" AND ${sqlIdent(userIdColumn)} = ?")
+                while (cursor.moveToNext()) {
+                    val table = cursor.getString(0)
+                    db.rawQuery("PRAGMA table_info(" + table + ")", emptyArray()).use { columns ->
+                        val name = columns.getColumnIndexOrThrow("name")
+                        tables[table] = buildSet {
+                            while (columns.moveToNext()) add(columns.getString(name))
+                        }
                     }
                 }
-                val selectionArgs = if (userIdColumn != null) {
-                    arrayOf(packageName, userId.toString())
-                } else {
-                    arrayOf(packageName)
+            }
+            val schema = LspDbRules.schema(tables, userId) ?: return@use LspDbConfiguration()
+            val arguments = if (schema.perUser) arrayOf(packageName, userId.toString()) else arrayOf(packageName)
+            val moduleState = db.rawQuery(LspDbRules.query(schema), arguments).use { cursor ->
+                val rows = buildList<String?> {
+                    while (cursor.moveToNext()) add(if (cursor.isNull(0)) null else cursor.getString(0))
                 }
-                db.rawQuery(
-                    "SELECT ${sqlIdent(enabledColumn)} FROM ${sqlIdent(table)} WHERE $whereClause LIMIT 1",
-                    selectionArgs
-                ).use { cursor ->
-                    if (cursor.moveToFirst()) parseEnabledValue(cursor.getString(0)) else null
+                LspDbRules.moduleState(rows)
+            }
+            val scopeQuery = LspDbRules.scopeQuery(tables)
+            val scopes = if (scopeQuery == null) null else runCatching {
+                db.rawQuery(scopeQuery, arrayOf(packageName, userId.toString())).use { cursor ->
+                    val rows = buildList<String?> {
+                        while (cursor.moveToNext()) add(if (cursor.isNull(0)) null else cursor.getString(0))
+                    }
+                    LspDbRules.scopes(rows)
                 }
+            }.onFailure { error ->
+                AppLogStore.w("LSPosed", "Scope configuration probe failed: " + error.javaClass.simpleName)
             }.getOrNull()
-            if (enabled != null) return enabled
+            LspDbConfiguration(moduleState, scopes)
         }
-        return null
     }
 
-    private fun readUserTables(db: SQLiteDatabase): List<String> {
-        return db.rawQuery(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
-            emptyArray()
-        ).use { cursor ->
-            buildList {
-                while (cursor.moveToNext()) {
-                    cursor.getString(0)?.takeIf { it.isNotBlank() }?.let(::add)
-                }
+    private fun deleteDbCopy(copy: File) {
+        for (suffix in listOf("", "-wal", "-shm", "-journal")) {
+            val file = File(copy.absolutePath + suffix)
+            if (!runCatching { !file.exists() || file.delete() }.getOrDefault(false)) {
+                AppLogStore.w("LSPosed", "Could not remove private configuration snapshot")
             }
         }
     }
 
-    private fun readColumns(db: SQLiteDatabase, table: String): List<String> {
-        return db.rawQuery("PRAGMA table_info(${sqlIdent(table)})", emptyArray()).use { cursor ->
-            val nameIndex = cursor.getColumnIndex("name")
-            buildList {
-                while (cursor.moveToNext()) {
-                    cursor.getString(nameIndex)?.takeIf { it.isNotBlank() }?.let(::add)
-                }
-            }
-        }
-    }
+    private fun shellQuote(value: String): String = "'" + value.replace("'", "'\"'\"'") + "'"
 
-    private fun findCandidateColumn(columns: List<String>, candidates: List<String>): String? {
-        val byLowerName = columns.associateBy { it.lowercase(Locale.ROOT) }
-        return candidates.firstNotNullOfOrNull { candidate ->
-            byLowerName[candidate.lowercase(Locale.ROOT)]
-        }
-    }
-
-    private fun parseEnabledValue(raw: String?): Boolean? {
-        val value = raw?.trim()?.lowercase(Locale.ROOT) ?: return null
-        return when (value) {
-            "1", "true", "t", "yes", "y", "on", "enabled" -> true
-            "0", "false", "f", "no", "n", "off", "disabled" -> false
-            else -> value.toIntOrNull()?.let { it != 0 }
-        }
-    }
-
-    private fun sqlIdent(value: String): String {
-        return "\"" + value.replace("\"", "\"\"") + "\""
-    }
-
-    private fun shellQuote(value: String): String {
-        return "'" + value.replace("'", "'\"'\"'") + "'"
-    }
-
-    private data class CachedDbModuleEnabled(
-        val timestampMs: Long,
-        val value: Boolean?
-    )
-
-    private data class CachedStatus(
-        val moduleEnabled: Boolean,
-        val hasSystemScope: Boolean,
-        val hasAndroidScope: Boolean,
-        val hasSystemUiScope: Boolean,
-        val hasSettingsScope: Boolean,
-        val hasLauncherScope: Boolean,
-        val hasAodScope: Boolean,
-        val frameworkVersionText: String?
-    ) {
-        fun toSnapshot(serviceConnected: Boolean): StatusSnapshot {
-            val normalizedHasScopes = moduleEnabled
-            return StatusSnapshot(
-                serviceConnected = serviceConnected,
-                moduleEnabled = moduleEnabled,
-                hasSystemScope = normalizedHasScopes,
-                hasAndroidScope = normalizedHasScopes,
-                hasSystemUiScope = normalizedHasScopes,
-                hasSettingsScope = normalizedHasScopes,
-                hasLauncherScope = normalizedHasScopes,
-                hasAodScope = normalizedHasScopes,
-                frameworkVersionText = frameworkVersionText?.takeIf { it.contains(" / API ") }
-            )
-        }
-    }
-
-    private fun cacheStatus(snapshot: StatusSnapshot) {
-        val context = appContext ?: return
-        runCatching {
-            val prefs = context
-                .createDeviceProtectedStorageContext()
-                .getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE)
-            prefs.edit()
-                .putBoolean(CACHE_KEY_MODULE_ENABLED, snapshot.moduleEnabled)
-                .putBoolean(CACHE_KEY_HAS_SYSTEM, snapshot.hasSystemScope)
-                .putBoolean(CACHE_KEY_HAS_ANDROID, snapshot.hasAndroidScope)
-                .putBoolean(CACHE_KEY_HAS_SYSTEMUI, snapshot.hasSystemUiScope)
-                .putBoolean(CACHE_KEY_HAS_SETTINGS, snapshot.hasSettingsScope)
-                .putBoolean(CACHE_KEY_HAS_LAUNCHER, snapshot.hasLauncherScope)
-                .putBoolean(CACHE_KEY_HAS_AOD, snapshot.hasAodScope)
-                .putString(CACHE_KEY_FRAMEWORK_VERSION, snapshot.frameworkVersionText)
-                .apply()
-        }
-    }
-
-    private fun readCachedStatus(): CachedStatus? {
-        val context = appContext ?: return null
-        return runCatching {
-            val prefs = context
-                .createDeviceProtectedStorageContext()
-                .getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE)
-            val hasAny = prefs.contains(CACHE_KEY_MODULE_ENABLED) ||
-                prefs.contains(CACHE_KEY_HAS_SYSTEM) ||
-                prefs.contains(CACHE_KEY_HAS_ANDROID) ||
-                prefs.contains(CACHE_KEY_HAS_SYSTEMUI) ||
-                prefs.contains(CACHE_KEY_HAS_SETTINGS) ||
-                prefs.contains(CACHE_KEY_HAS_LAUNCHER) ||
-                prefs.contains(CACHE_KEY_HAS_AOD) ||
-                prefs.contains(CACHE_KEY_FRAMEWORK_VERSION)
-            if (!hasAny) {
-                null
-            } else {
-                CachedStatus(
-                    moduleEnabled = prefs.getBoolean(CACHE_KEY_MODULE_ENABLED, false),
-                    hasSystemScope = prefs.getBoolean(CACHE_KEY_HAS_SYSTEM, false),
-                    hasAndroidScope = prefs.getBoolean(CACHE_KEY_HAS_ANDROID, false),
-                    hasSystemUiScope = prefs.getBoolean(CACHE_KEY_HAS_SYSTEMUI, false),
-                    hasSettingsScope = prefs.getBoolean(CACHE_KEY_HAS_SETTINGS, false),
-                    hasLauncherScope = prefs.getBoolean(CACHE_KEY_HAS_LAUNCHER, false),
-                    hasAodScope = prefs.getBoolean(CACHE_KEY_HAS_AOD, false),
-                    frameworkVersionText = prefs.getString(CACHE_KEY_FRAMEWORK_VERSION, null)
-                )
-            }
-        }.getOrNull()
-    }
 }

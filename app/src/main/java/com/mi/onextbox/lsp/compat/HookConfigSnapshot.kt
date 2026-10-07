@@ -4,12 +4,7 @@ import android.content.SharedPreferences
 
 internal const val MODERN_PREFERENCES_READY_KEY = "__onextbox_api102_snapshot_ready"
 
-/**
- * Process-local immutable view of API 102 remote preferences.
- *
- * Hook callbacks only read the volatile map reference. Binder/framework preference updates rebuild
- * the map outside hot paths and swap it atomically.
- */
+/** Immutable preference snapshot, replaced atomically outside Hook callbacks. */
 internal object HookConfigSnapshot {
     @Volatile
     private var values: Map<String, Any?>? = null

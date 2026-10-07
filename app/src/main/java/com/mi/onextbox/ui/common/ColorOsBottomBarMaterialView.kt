@@ -1,5 +1,6 @@
 package com.mi.onextbox.ui.common
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
@@ -21,13 +22,9 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/**
- * ColorOS 17's floating bottom-bar material (FRAMEWORK_BOTTOM_BAR + CAPSULE_3).
- *
- * The constants here are mirrored from the ColorOS 17 MMS APK. The vendor RenderNode APIs
- * provide the real background blur and caustic shadow on ColorOS; the Canvas path is only a
- * fallback for devices where those hidden APIs are unavailable.
- */
+/** Floating bottom-bar material with vendor blur and shadows, using Canvas as a fallback. */
+// High-API effects are guarded at creation and have a plain fallback.
+@SuppressLint("NewApi")
 internal class ColorOsBottomBarMaterialView(
     context: Context,
     darkTheme: Boolean,
@@ -41,7 +38,7 @@ internal class ColorOsBottomBarMaterialView(
     }
     private val colorOsEdgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            blendMode = BlendMode.SRC_OVER
+            if (android.os.Build.VERSION.SDK_INT >= 29) blendMode = BlendMode.SRC_OVER
         }
     }
     private val colorOsEdgeShader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

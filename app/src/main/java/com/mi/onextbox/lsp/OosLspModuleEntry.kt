@@ -104,6 +104,8 @@ class OosLspModuleEntry : XposedModule() {
 
             PACKAGE_APP_MARKET -> AppMarketHooker.hook(classLoader)
 
+            FileManagerCardRules.PACKAGE_NAME -> FileManagerHooker.hook(classLoader)
+
             "com.oplus.securitypermission" -> SecurityPermissionHooker.hook(classLoader)
 
             "com.android.permissioncontroller", "com.google.android.permissioncontroller" ->
@@ -111,6 +113,7 @@ class OosLspModuleEntry : XposedModule() {
 
             PACKAGE_GOOGLE_APP -> OkGoogleHotwordCompatibilityHooker.hookGoogleApp(classLoader)
             PACKAGE_GOOGLE_MESSAGES -> GoogleMessagesHooker.hook(classLoader)
+            "com.heytap.mcs" -> OppoPushMonitorHooker.hook(classLoader)
             "com.oplus.screenshot" -> AodScreenshotHooker.hook(classLoader)
             "com.oplus.screenrecorder" -> KeyguardCaptureHooker.hookRecorder(classLoader)
         }

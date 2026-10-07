@@ -47,12 +47,7 @@ object SettingsHooker {
             .onFailure { log("Settings refresh-rate hook registration failed", it) }
     }
 
-    /**
-     * ColorOS 17 derives the Settings edition from com.android.settings.cn_version through
-     * CustomizeFeatureUtils.isExpVersion(). Do not force the decoupled Style to EXP here: the
-     * domestic Settings APK still launches domestic activities, and EXP's fragment allow-list
-     * rejects pages such as AppManagerDashboardFragment and SoundSettingsFragment.
-     */
+/** Settings edition gate, retaining domestic style and its fragment allow-list. */
     private fun hookInternationalSettings(classLoader: ClassLoader) {
         var hookCount = 0
 

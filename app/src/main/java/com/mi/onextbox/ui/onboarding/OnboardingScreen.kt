@@ -61,6 +61,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -115,6 +116,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mi.onextbox.R
+import com.mi.onextbox.lsp.LspStatus
 import com.mi.onextbox.lsp.LsposedScopeRequester
 import com.mi.onextbox.ui.common.ONextBoxLogo
 import com.mi.onextbox.ui.common.AppLocale
@@ -129,6 +131,8 @@ import com.mi.onextbox.ui.common.RootAccessState
 import com.mi.onextbox.ui.common.isMonet
 import com.mi.onextbox.ui.common.queryRootAccess
 import com.mi.onextbox.ui.common.readCachedRootAccessInfo
+import com.mi.onextbox.ui.common.lspStatusText
+import com.mi.onextbox.ui.common.LspMissingScopesNotice
 import com.mi.onextbox.ui.onboarding.OnboardingPreferences.Agreement
 import com.mi.onextbox.ui.onboarding.OnboardingPreferences.DraftStep
 import com.mi.onextbox.ui.platform.findActivity
@@ -148,6 +152,7 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.ColorSchemeMode
 import io.github.suqi8.coui.kmp.theme.ThemeController
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -280,10 +285,11 @@ fun OnboardingScreen(
         mutableStateOf(readCachedRootAccessInfo(context) ?: RootAccessInfo(RootAccessState.NotGranted))
     }
     var rootVerifiedThisRun by remember { mutableStateOf(false) }
-    var lspSnapshot by remember(context) {
-        mutableStateOf(LsposedScopeRequester.cachedSnapshot(context))
-    }
+    val lspSnapshot by LsposedScopeRequester.states.collectAsState()
     var lspChecking by remember { mutableStateOf(false) }
+    var lspRefreshPending by remember { mutableStateOf(false) }
+    var lspRefreshFailed by remember { mutableStateOf(false) }
+    var completionVerified by remember { mutableStateOf(false) }
     var lspOpenFailed by remember { mutableStateOf(false) }
     var saveFailed by remember { mutableStateOf(false) }
     var isExiting by remember { mutableStateOf(false) }
@@ -294,18 +300,43 @@ fun OnboardingScreen(
 
     fun moveTo(newStep: DraftStep) {
         if (OnboardingPreferences.saveDraftStep(context, newStep)) {
+            completionVerified = false
             step = newStep
         }
     }
 
     fun refreshLsp() {
-        if (lspChecking) return
+        if (lspChecking) {
+            lspRefreshPending = true
+            return
+        }
+        lspChecking = true
+        lspRefreshFailed = false
+        completionVerified = false
         scope.launch {
-            lspChecking = true
-            lspSnapshot = withContext(Dispatchers.IO) {
-                LsposedScopeRequester.refreshSnapshot(context)
+            try {
+                val refreshed = withContext(Dispatchers.IO) {
+                    LsposedScopeRequester.refreshSnapshot(context)
+                }
+                if (step == DraftStep.Complete && !isExiting) {
+                    if (refreshed.canContinue) {
+                        completionVerified = true
+                    } else {
+                        moveTo(DraftStep.Lsposed)
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                lspRefreshFailed = true
+                if (step == DraftStep.Complete && !isExiting) moveTo(DraftStep.Lsposed)
+            } finally {
+                lspChecking = false
+                if (isActive && lspRefreshPending) {
+                    lspRefreshPending = false
+                    if (step == DraftStep.Lsposed || step == DraftStep.Complete) refreshLsp()
+                }
             }
-            lspChecking = false
         }
     }
 
@@ -332,18 +363,32 @@ fun OnboardingScreen(
         }
     }
 
-    LaunchedEffect(step) {
+    LaunchedEffect(context, step) {
         if (step == DraftStep.Lsposed) refreshLsp()
-        if (step == DraftStep.Complete) onDestinationPreparationRequested()
+        if (step == DraftStep.Complete) {
+            onDestinationPreparationRequested()
+            refreshLsp()
+        }
     }
     DisposableEffect(lifecycleOwner, step) {
+        var skipCurrentResume = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && step == DraftStep.Lsposed) {
-                refreshLsp()
+            if (event == Lifecycle.Event.ON_RESUME &&
+                (step == DraftStep.Lsposed || step == DraftStep.Complete)) {
+                if (skipCurrentResume) skipCurrentResume = false
+                else refreshLsp()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(step, lspSnapshot.moduleState, lspSnapshot.status, lspSnapshot.isRefreshing) {
+        if (step == DraftStep.Complete && completionVerified && !isExiting && !lspChecking &&
+            !lspSnapshot.isRefreshing &&
+            lspSnapshot.status != LspStatus.CHECKING &&
+            !lspSnapshot.canContinue) {
+            moveTo(DraftStep.Lsposed)
+        }
     }
 
     // LocalContext is deliberately re-localized in OnboardingActivity without recreating it.
@@ -526,9 +571,10 @@ fun OnboardingScreen(
                             rootReady = rootVerifiedThisRun || rootInfo.state == RootAccessState.Granted,
                             snapshot = lspSnapshot,
                             checking = lspChecking,
+                            refreshFailed = lspRefreshFailed,
                             openFailed = lspOpenFailed,
                             onOpenOrNext = {
-                                if (lspSnapshot.moduleEnabled) {
+                                if (!lspRefreshFailed && lspSnapshot.canContinue) {
                                     moveTo(DraftStep.Complete)
                                 } else {
                                     scope.launch {
@@ -548,48 +594,59 @@ fun OnboardingScreen(
                             saveFailed = saveFailed,
                             exitProgress = exitProgress.value,
                             isExiting = isExiting,
+                            canFinish = completionVerified && !lspChecking && !lspRefreshFailed &&
+                                lspSnapshot.status != LspStatus.CHECKING && lspSnapshot.canContinue,
                             onButtonBoundsChanged = { completeButtonBoundsInRoot = it },
                             onFinish = {
-                                if (!isExiting) {
-                                    // ColorOS starts the destination before playing the completion
-                                    // surface exit. Keep Root fully composed underneath this opaque
-                                    // onboarding layer so the final dissolve never exposes an empty
-                                    // frame or waits for Root's first layout.
+                                if (!isExiting && completionVerified && !lspChecking &&
+                                    !lspRefreshFailed && lspSnapshot.status != LspStatus.CHECKING &&
+                                    lspSnapshot.canContinue) {
+                                    // Prepare the destination underneath the completion animation.
                                     onDestinationPreparationRequested()
                                     isExiting = true
                                     saveFailed = false
                                     scope.launch {
-                                        exitProgress.snapTo(0f)
-                                        exitProgress.animateTo(
-                                            1f,
-                                            tween(
-                                                durationMillis = 1_000,
-                                                easing = LinearEasing,
-                                            ),
-                                        )
-                                        // BootReg commits provisioning only after its one-second
-                                        // completion surface has finished. Keep this page alive for
-                                        // the whole animation, then atomically enter the app.
-                                        val saved = OnboardingPreferences.complete(
-                                            context,
-                                            allowBackgroundUpdates,
-                                        )
-                                        saveFailed = !saved
-                                        if (saved) {
-                                            onActivationCommitted(
-                                                rootVerifiedThisRun ||
-                                                    rootInfo.state == RootAccessState.Granted,
-                                            )
-                                            // Commit Root's completed state on a separate frame before
-                                            // removing the transparent onboarding surface.
-                                            withFrameNanos { }
-                                            onExitFinished()
-                                        } else {
-                                            isExiting = false
+                                        var committed = false
+                                        try {
+                                            exitProgress.snapTo(0f)
                                             exitProgress.animateTo(
-                                                0f,
-                                                tween(durationMillis = 0),
+                                                1f,
+                                                tween(
+                                                    durationMillis = 1_000,
+                                                    easing = LinearEasing,
+                                                ),
                                             )
+                                            val refreshed = withContext(Dispatchers.IO) {
+                                                LsposedScopeRequester.refreshSnapshot(context)
+                                            }
+                                            if (!refreshed.canContinue) {
+                                                moveTo(DraftStep.Lsposed)
+                                                return@launch
+                                            }
+                                            val saved = OnboardingPreferences.complete(
+                                                context,
+                                                allowBackgroundUpdates,
+                                            )
+                                            saveFailed = !saved
+                                            if (saved) {
+                                                committed = true
+                                                onActivationCommitted(
+                                                    rootVerifiedThisRun ||
+                                                        rootInfo.state == RootAccessState.Granted,
+                                                )
+                                                withFrameNanos { }
+                                                onExitFinished()
+                                            }
+                                        } catch (cancelled: CancellationException) {
+                                            throw cancelled
+                                        } catch (_: Exception) {
+                                            lspRefreshFailed = true
+                                            moveTo(DraftStep.Lsposed)
+                                        } finally {
+                                            if (!committed) {
+                                                isExiting = false
+                                                exitProgress.snapTo(0f)
+                                            }
                                         }
                                     }
                                 }
@@ -1700,7 +1757,7 @@ private fun FeatureStylePreview(
         }
     }
 
-    BoxWithConstraints(
+    Box(
         modifier = modifier
             .clip(RoundedCornerShape(28.dp))
             .background(if (newStyleEnabled) Color(0xFF202126) else Color(0xFFF2F3F5))
@@ -3047,11 +3104,17 @@ private fun LsposedPage(
     rootReady: Boolean,
     snapshot: LsposedScopeRequester.StatusSnapshot,
     checking: Boolean,
+    refreshFailed: Boolean,
     openFailed: Boolean,
     onOpenOrNext: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val status = when {
+        refreshFailed -> LspStatus.UNKNOWN
+        else -> snapshot.status
+    }
+    val refreshing = checking || snapshot.isRefreshing || status == LspStatus.CHECKING
     RuntimePageFrame(
         title = stringResource(R.string.onboarding_lsp_title),
         summary = stringResource(R.string.onboarding_lsp_summary),
@@ -3059,22 +3122,23 @@ private fun LsposedPage(
         statusContent = {
             RuntimePair(
                 rootReady = rootReady,
-                lspReady = snapshot.moduleEnabled,
+                lspReady = snapshot.isReady && !refreshFailed,
             )
             Spacer(modifier = Modifier.height(16.dp))
             RuntimeDetailCard(
                 title = stringResource(R.string.onboarding_lsp_card_title),
-                detail = when {
-                    checking -> stringResource(R.string.onboarding_lsp_checking)
-                    snapshot.moduleEnabled -> stringResource(
-                        R.string.onboarding_lsp_enabled,
-                        snapshot.frameworkVersionText ?: "LSPosed",
-                    )
-                    else -> stringResource(R.string.onboarding_lsp_disabled)
+                detail = lspStatusText(status, snapshot.frameworkVersionText),
+                color = when {
+                    status == LspStatus.READY -> ActivationGreen
+                    status == LspStatus.DISABLED -> ActivationRed
+                    else -> ActivationBlue
                 },
-                color = if (snapshot.moduleEnabled) ActivationGreen else ActivationBlue,
-                loading = checking,
+                loading = status == LspStatus.CHECKING,
             )
+            if (status == LspStatus.MISSING_SCOPE && snapshot.missingScopes.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                LspMissingScopesNotice(status, snapshot.missingScopes)
+            }
             if (openFailed) {
                 Text(
                     text = stringResource(R.string.onboarding_lsposed_open_failed),
@@ -3092,17 +3156,18 @@ private fun LsposedPage(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .clip(RoundedCornerShape(18.dp))
-                    .clickable(enabled = !checking, onClick = onRefresh)
+                    .clickable(enabled = !refreshing, onClick = onRefresh)
                     .padding(horizontal = 18.dp, vertical = 10.dp),
             )
         },
-        primaryLabel = if (snapshot.moduleEnabled) {
+        primaryLabel = if (!refreshFailed && snapshot.moduleEnabled && status != LspStatus.API_UNSUPPORTED) {
             stringResource(R.string.onboarding_next)
         } else {
             stringResource(R.string.onboarding_open_lsposed)
         },
-        primaryEnabled = !checking,
+        primaryEnabled = !refreshing,
         onPrimaryAction = onOpenOrNext,
+        scrollStatus = true,
     )
 }
 
@@ -3115,7 +3180,9 @@ private fun RuntimePageFrame(
     primaryLabel: String,
     primaryEnabled: Boolean,
     onPrimaryAction: () -> Unit,
+    scrollStatus: Boolean = false,
 ) {
+    val statusScrollState = rememberScrollState()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -3139,6 +3206,7 @@ private fun RuntimePageFrame(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
+                .then(if (scrollStatus) Modifier.verticalScroll(statusScrollState) else Modifier)
                 .padding(top = 42.dp),
             content = statusContent,
         )
@@ -3305,6 +3373,7 @@ private fun CompletePage(
     saveFailed: Boolean,
     exitProgress: Float,
     isExiting: Boolean,
+    canFinish: Boolean,
     onButtonBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit,
     onFinish: () -> Unit,
 ) {
@@ -3389,7 +3458,7 @@ private fun CompletePage(
             }
             C17FixedArrowButton(
                 visible = !isExiting,
-                enabled = !isExiting,
+                enabled = !isExiting && canFinish,
                 contentDescription = stringResource(R.string.onboarding_enter_app),
                 onBoundsChanged = onButtonBoundsChanged,
                 onClick = onFinish,

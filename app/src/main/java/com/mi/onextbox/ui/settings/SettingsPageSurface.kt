@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +37,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.ColorOs17DetailTopBar
+import com.mi.onextbox.ui.common.ColorOsScrollEntranceHost
+import com.mi.onextbox.ui.common.rememberColorOsScrollEntrance
 import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.ScrollResetEffect
@@ -75,6 +78,8 @@ fun SettingsPageSurface(
     bottomContentPadding: Dp = 0.dp,
     bottomChrome: (@Composable () -> Unit)? = null,
     contentScrollable: Boolean = true,
+    scrollEntranceEnabled: Boolean = false,
+    edgeToEdgeBottom: Boolean = false,
     externalScrollState: ScrollState? = null,
     scrollResetKey: Int? = null,
     backgroundContent: (@Composable BoxScope.() -> Unit)? = null,
@@ -90,6 +95,7 @@ fun SettingsPageSurface(
             bottomContentPadding = bottomContentPadding,
             bottomChrome = bottomChrome,
             contentScrollable = contentScrollable,
+            edgeToEdgeBottom = edgeToEdgeBottom,
             externalScrollState = externalScrollState,
             scrollResetKey = scrollResetKey,
             backgroundContent = backgroundContent,
@@ -99,6 +105,7 @@ fun SettingsPageSurface(
     }
     val internalScrollState = rememberScrollState()
     val scrollState = externalScrollState ?: internalScrollState
+    val cardEntrance = rememberColorOsScrollEntrance(scrollState)
     // Save the app-bar collapse state together with the list scroll state. NavDisplay removes
     // the parent entry while a detail page is active, so a plain remember would restore the
     // scrolled list but recreate an expanded title when returning.
@@ -242,9 +249,13 @@ fun SettingsPageSurface(
                     start = 0.dp,
                     top = innerPadding.calculateTopPadding() + 12.dp,
                     end = 0.dp,
-                    bottom = maxOf(innerPadding.calculateBottomPadding(), bottomContentPadding) + 12.dp,
+                    bottom = if (edgeToEdgeBottom) 0.dp else {
+                        maxOf(innerPadding.calculateBottomPadding(), bottomContentPadding) + 12.dp
+                    },
                 )
-        Box(
+        ColorOsScrollEntranceHost(
+            state = cardEntrance,
+            enabled = scrollEntranceEnabled,
             modifier = Modifier
                 .fillMaxSize()
                 .then(
@@ -275,6 +286,7 @@ private fun Material3ExpressiveSettingsPageSurface(
     bottomContentPadding: Dp,
     bottomChrome: (@Composable () -> Unit)?,
     contentScrollable: Boolean,
+    edgeToEdgeBottom: Boolean,
     externalScrollState: ScrollState?,
     scrollResetKey: Int?,
     backgroundContent: (@Composable BoxScope.() -> Unit)?,
@@ -325,7 +337,11 @@ private fun Material3ExpressiveSettingsPageSurface(
         bottomBar = { bottomChrome?.invoke() },
     ) { innerPadding ->
         Box(
-            modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
+            modifier = Modifier.fillMaxSize().consumeWindowInsets(
+                if (edgeToEdgeBottom) {
+                    PaddingValues(top = innerPadding.calculateTopPadding())
+                } else innerPadding,
+            ),
             contentAlignment = Alignment.TopCenter,
         ) {
             backgroundContent?.invoke(this)
@@ -339,7 +355,9 @@ private fun Material3ExpressiveSettingsPageSurface(
                         start = 0.dp,
                         top = innerPadding.calculateTopPadding() + 12.dp,
                         end = 0.dp,
-                        bottom = maxOf(innerPadding.calculateBottomPadding(), bottomContentPadding) + 12.dp,
+                        bottom = if (edgeToEdgeBottom) 0.dp else {
+                            maxOf(innerPadding.calculateBottomPadding(), bottomContentPadding) + 12.dp
+                        },
                     ),
                 content = content,
             )

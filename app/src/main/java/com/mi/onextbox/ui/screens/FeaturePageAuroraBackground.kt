@@ -24,12 +24,7 @@ import kotlin.math.sin
 
 private const val FeatureAuroraFrameIntervalMillis = 33L
 
-/**
- * Lightweight shader background shown when the one-shot Features video is hidden.
- *
- * The draw loop lives in a modifier node, so moving the four soft color fields only invalidates
- * this layer instead of recomposing the Features page. Detaching the page cancels the loop.
- */
+/** Shader background for the Features page, with drawing stopped when detached. */
 @Composable
 internal fun FeaturePageAuroraBackground(
     isDarkTheme: Boolean,

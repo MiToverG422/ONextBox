@@ -1,5 +1,6 @@
 package com.mi.onextbox.ui.common
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
@@ -13,6 +14,7 @@ import android.graphics.RuntimeShader
 import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
@@ -20,6 +22,8 @@ import androidx.core.graphics.ColorUtils
 import kotlin.math.min
 import kotlin.math.max
 
+// High-API effects are guarded at creation and have a plain fallback.
+@SuppressLint("NewApi")
 internal class ColorOsDialogMaterialView(
     context: Context,
     private val darkTheme: Boolean,
@@ -34,7 +38,9 @@ internal class ColorOsDialogMaterialView(
     private var nativeStroke = false
     private var buttonNativeStroke = false
     private val materialPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val edgeShader = runCatching { RuntimeShader(ColorOs17ShadowEdgeShader) }.getOrNull()
+    private val edgeShader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        runCatching { RuntimeShader(ColorOs17ShadowEdgeShader) }.getOrNull()
+    } else null
     private val spotlight = if (kind == Kind.Panel) null else ColorOsSpotlightRenderer(
         this, if (kind == Kind.Primary) ColorOsSpotlightRenderer.Style.DialogPrimary else ColorOsSpotlightRenderer.Style.DialogSecondary, darkTheme,
     )
@@ -76,6 +82,7 @@ internal class ColorOsDialogMaterialView(
     }
 
     private fun materialEnabled(): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return@runCatching false
         Settings.System.getInt(context.contentResolver, "system_material_blur_enable", 0) == 1 &&
             context.getSystemService(WindowManager::class.java).isCrossWindowBlurEnabled
     }.getOrDefault(false)
@@ -160,6 +167,7 @@ internal class ColorOsDialogMaterialView(
     }.getOrDefault(false)
 
     private fun applyButtonBlur(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
         val primary = kind == Kind.Primary
         val firstColor = if (primary) ColorUtils.setAlphaComponent(accent, if (darkTheme) 230 else 229)
             else if (darkTheme) 0x33FFFFFF else 0xCCFFFFFF.toInt()
@@ -172,6 +180,7 @@ internal class ColorOsDialogMaterialView(
     }
 
     private fun setBackgroundEffect(effect: RenderEffect?): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return@runCatching false
         Class.forName("com.oplus.view.OplusViewBackgroundRenderEffect")
             .getMethod("setBackgroundRenderEffect", RenderEffect::class.java, View::class.java).invoke(null, effect, this)
         true

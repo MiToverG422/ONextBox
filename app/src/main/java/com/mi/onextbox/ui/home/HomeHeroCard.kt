@@ -31,10 +31,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mi.onextbox.R
+import com.mi.onextbox.lsp.LspStatus
 import com.mi.onextbox.ui.common.AppUiTokens
 import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.ONextBoxLogo
+import com.mi.onextbox.ui.common.lspStatusText
 import com.mi.onextbox.ui.common.rememberHapticLongPress
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.squircle.squircleSurface
@@ -44,20 +46,22 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Composable
 fun HomeHeroCard(
     rootGranted: Boolean,
-    lsposedModuleEnabled: Boolean,
+    lsposedReady: Boolean,
+    lsposedStatus: LspStatus,
     onLongPress: () -> Unit,
 ) {
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveHomeHeroCard(rootGranted, lsposedModuleEnabled, onLongPress)
+        Material3ExpressiveHomeHeroCard(rootGranted, lsposedReady, lsposedStatus, onLongPress)
         return
     }
     val hapticLongPress = rememberHapticLongPress()
     val appVersionName = rememberAppVersionName()
     val deviceMarketName = rememberDeviceMarketName()
-    val heroColor = if (rootGranted && lsposedModuleEnabled) {
-        Color(0xFF147DF5)
-    } else {
-        Color(0xFFD9443F)
+    val heroColor = when {
+        rootGranted && lsposedReady -> Color(0xFF147DF5)
+        lsposedStatus == LspStatus.CHECKING -> Color(0xFF64758A)
+        !rootGranted || lsposedStatus == LspStatus.DISABLED -> Color(0xFFD9443F)
+        else -> Color(0xFF64758A)
     }
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
@@ -138,18 +142,30 @@ fun HomeHeroCard(
 @Composable
 private fun Material3ExpressiveHomeHeroCard(
     rootGranted: Boolean,
-    lsposedModuleEnabled: Boolean,
+    lsposedReady: Boolean,
+    lsposedStatus: LspStatus,
     onLongPress: () -> Unit,
 ) {
     val hapticLongPress = rememberHapticLongPress()
-    val successful = rootGranted && lsposedModuleEnabled
+    val successful = rootGranted && lsposedReady
+    val failed = lsposedStatus != LspStatus.CHECKING &&
+        (!rootGranted || lsposedStatus == LspStatus.DISABLED)
     val colors = androidx.compose.material3.MaterialTheme.colorScheme
-    val container = if (successful) colors.secondaryContainer else colors.errorContainer
-    val foreground = if (successful) colors.onSecondaryContainer else colors.onErrorContainer
+    val container = when {
+        successful -> colors.secondaryContainer
+        failed -> colors.errorContainer
+        else -> colors.surfaceContainerHigh
+    }
+    val foreground = when {
+        successful -> colors.onSecondaryContainer
+        failed -> colors.onErrorContainer
+        else -> colors.onSurface
+    }
     val title = when {
         successful -> stringResource(R.string.onboarding_runtime_ready)
+        lsposedStatus == LspStatus.CHECKING -> stringResource(R.string.app_name)
         !rootGranted -> stringResource(R.string.home_status_root_missing)
-        else -> stringResource(R.string.lsp_status_module_disabled)
+        else -> lspStatusText(lsposedStatus)
     }
     val supporting = stringResource(R.string.about_version, rememberAppVersionName())
     androidx.compose.material3.Surface(

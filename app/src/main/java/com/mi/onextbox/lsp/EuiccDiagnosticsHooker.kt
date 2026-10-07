@@ -1,4 +1,5 @@
 package com.mi.onextbox.lsp
+import android.annotation.SuppressLint
 
 import android.app.Application
 import android.content.BroadcastReceiver
@@ -81,6 +82,7 @@ internal object EuiccDiagnosticsHooker {
         requestCollection(application, classLoader)
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag") // The legacy overload is used only below API 33.
     private fun registerRefreshReceiver(context: Context, classLoader: ClassLoader?) {
         if (!receiverRegistered.compareAndSet(false, true)) return
         val receiver = object : BroadcastReceiver() {
@@ -379,8 +381,10 @@ internal object EuiccDiagnosticsHooker {
         }
     }
 
+    @SuppressLint("MissingPermission") // Runs inside the privileged eSIM process.
     private fun readEid(context: Context): String {
         val telephonyEid = runCatching {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return@runCatching null
             context.getSystemService(TelephonyManager::class.java)
                 ?.uiccCardsInfo
                 ?.firstOrNull { it.isEuicc }

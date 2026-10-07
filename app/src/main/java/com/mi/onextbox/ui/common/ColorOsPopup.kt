@@ -621,6 +621,7 @@ private fun applyOplusPopupBlur(
     density: Float,
     cornerRadiusDp: Float = ColorOsPopupCornerRadius.value,
 ): Boolean = runCatching {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
     if (Settings.System.getInt(view.context.contentResolver, "system_material_blur_enable", 0) != 1) {
         return false
     }

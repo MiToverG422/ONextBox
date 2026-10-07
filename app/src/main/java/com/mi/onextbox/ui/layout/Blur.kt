@@ -123,12 +123,7 @@ fun BlurredChromeBar(
     }
 }
 
-/**
- * AppBarBlurOverlayBehavior follows the native app bar's full, offset bounds. The Compose
- * bar instead reduces its measured height while collapsing, so reconstruct the full bounds
- * here. Keeping the gradient's origin at the negative app-bar offset avoids squeezing it
- * into the remaining toolbar/status-bar area. The visible bottom still ends at bar + extra.
- */
+/** Full blur bounds for a collapsing app bar, preserving the gradient origin. */
 private fun Modifier.appBarEffectBounds(
     extension: Dp,
     topOffsetPx: () -> Float,

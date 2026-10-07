@@ -10,6 +10,7 @@ object TouchSamplingPreferences {
     private const val KEY_HZ = "selected_hz"
     private const val KEY_CHIP_VALUE = "selected_chip_value"
     private const val KEY_IST = "selected_ist"
+    private const val KEY_BACKEND = "selected_backend"
 
     fun readAutoStartEnabled(context: Context): Boolean = prefs(context)
         .getBoolean(KEY_AUTO_START_ENABLED, false)
@@ -18,26 +19,28 @@ object TouchSamplingPreferences {
         prefs(context).edit().putBoolean(KEY_AUTO_START_ENABLED, enabled).apply()
     }
 
-    fun saveSelectedPreset(context: Context, preset: TouchRatePreset) {
-        prefs(context).edit()
+    fun saveSelectedPreset(context: Context, preset: TouchRatePreset, backendId: String? = null) {
+        val editor = prefs(context).edit()
             .putInt(KEY_INDEX, preset.index)
-            .putInt(KEY_HZ, preset.hz)
             .putInt(KEY_CHIP_VALUE, preset.chipValue)
             .putBoolean(KEY_IST, preset.isIstMode)
-            .apply()
+        preset.hz?.let { editor.putInt(KEY_HZ, it) } ?: editor.remove(KEY_HZ)
+        backendId?.let { editor.putString(KEY_BACKEND, it) } ?: editor.remove(KEY_BACKEND)
+        editor.apply()
     }
+
+    fun readSelectedBackendId(context: Context): String? = prefs(context).getString(KEY_BACKEND, null)
 
     fun readSelectedPreset(context: Context): TouchRatePreset? {
         val preferences = prefs(context)
-        if (!preferences.contains(KEY_INDEX) || !preferences.contains(KEY_HZ) ||
-            !preferences.contains(KEY_CHIP_VALUE) || !preferences.contains(KEY_IST)
+        if (!preferences.contains(KEY_INDEX) || !preferences.contains(KEY_CHIP_VALUE)
         ) return null
         return TouchRatePreset(
             index = preferences.getInt(KEY_INDEX, -1),
-            hz = preferences.getInt(KEY_HZ, 0),
+            hz = preferences.getInt(KEY_HZ, 0).takeIf { it in 30..4000 },
             chipValue = preferences.getInt(KEY_CHIP_VALUE, -1),
             isIstMode = preferences.getBoolean(KEY_IST, false),
-        ).takeIf { it.index > 0 && it.hz in 30..4000 && it.chipValue >= 0 }
+        ).takeIf { it.index in 1..255 && it.chipValue >= 0 }
     }
 
     fun clearSelectedPreset(context: Context) {
@@ -46,6 +49,7 @@ object TouchSamplingPreferences {
             .remove(KEY_HZ)
             .remove(KEY_CHIP_VALUE)
             .remove(KEY_IST)
+            .remove(KEY_BACKEND)
             .apply()
     }
 

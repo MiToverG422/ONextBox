@@ -144,6 +144,10 @@ chmod +x gradlew
 | `debugSlim` | 启用代码压缩、资源缩减，关闭可调试标记；用于本地实机体验测试 | `app/build/outputs/apk/debugSlim/app-debugSlim.apk` |
 | `release` | 优化构建与发布验证 | `app/build/outputs/apk/release/app-release.apk` |
 
+正式构建需要在被 Git 忽略的 `signing.properties` 中配置 `ONEXTBOX_RELEASE_STORE_FILE`、`ONEXTBOX_RELEASE_STORE_PASSWORD`、`ONEXTBOX_RELEASE_KEY_ALIAS` 和 `ONEXTBOX_RELEASE_KEY_PASSWORD`，也可通过同名 Gradle 属性传入，缺少签名配置时构建会失败，不会自动使用 Debug 证书
+
+提交前运行 `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug`，Linux / macOS 使用 `./gradlew`，手动 Actions 构建同样会执行这些检查
+
 <a id="credits"></a>
 
 ## 📚 引用、来源与致谢

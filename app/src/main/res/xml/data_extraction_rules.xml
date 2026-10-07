@@ -1,18 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Never restore acceptance or privileged-device authorization onto another device. -->
+        <!-- Device authorization and runtime diagnostics stay on this device. -->
         <exclude domain="sharedpref" path="onextbox_activation.xml" />
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="sharedpref" path="root_status_cache.xml" />
+        <exclude domain="sharedpref" path="lsp_home_display_cache.xml" />
+        <exclude domain="device_sharedpref" path="push_monitor.xml" />
+        <exclude domain="device_sharedpref" path="lsposed_status_cache.xml" />
+        <exclude domain="file" path="logs/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="onextbox_activation.xml" />
+        <exclude domain="sharedpref" path="root_status_cache.xml" />
+        <exclude domain="sharedpref" path="lsp_home_display_cache.xml" />
+        <exclude domain="device_sharedpref" path="push_monitor.xml" />
+        <exclude domain="device_sharedpref" path="lsposed_status_cache.xml" />
+        <exclude domain="file" path="logs/" />
     </device-transfer>
 </data-extraction-rules>

@@ -1,5 +1,6 @@
 package com.mi.onextbox.ui.common
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -16,14 +17,9 @@ import android.view.View
 import java.lang.reflect.Method
 import kotlin.math.abs
 
-/**
- * Native ColorOS 17 app-bar gradient blur.
- *
- * This follows AppBarBlurHelper rather than approximating it with a foreground bitmap blur:
- * OplusRenderEffect supplies the compositor background blur and the drawable supplies the
- * theme-dependent vertical tint. Keeping both on the same View also preserves the system's
- * status-bar sampling and the soft transition below the toolbar.
- */
+/** App-bar gradient blur with compositor background blur and theme tint. */
+// High-API effects are guarded at creation and have a plain fallback.
+@SuppressLint("NewApi")
 internal class ColorOsAppBarBlurView(
     context: Context,
     darkTheme: Boolean,
@@ -171,7 +167,7 @@ internal class ColorOsAppBarBlurView(
     }
 }
 
-/** Exact port of C17's GradientBackgroundDrawable. */
+/** App-bar gradient drawable. */
 private class ColorOsAppBarGradientDrawable(
     private val baseColor: Int,
     private val positions: FloatArray,

@@ -6,6 +6,10 @@ import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
+import com.mi.onextbox.lsp.ConfigSyncStatus
+import com.mi.onextbox.ui.common.rememberConfigState
+import com.mi.onextbox.lsp.commitOrReport
 import android.os.LocaleList
 import android.view.ContextThemeWrapper
 import androidx.activity.ComponentActivity
@@ -94,6 +98,7 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val PREF_BLUR_EFFECT_ENABLED = "blur_effect_enabled"
         const val PREF_FEATURE_PAGE_NEW_STYLE = "feature_page_new_style"
+        const val PREF_COLOROS_PROGRESSIVE_CARD_ANIMATION = "coloros_progressive_card_animation"
         const val PREF_FEATURE_PAGE_VIDEO_HIDDEN = "feature_page_video_hidden"
         const val PREF_POP_DIRECTION_FOLLOWS_SWIPE_EDGE = "pop_direction_follows_swipe_edge"
         const val PREF_SHOW_FPS_MONITOR = "show_fps_monitor"
@@ -144,32 +149,66 @@ class MainActivity : ComponentActivity() {
                     readCachedRootAccessInfo(this@MainActivity)?.state == RootAccessState.Granted,
                 )
             }
-            var blurEffectEnabled by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_BLUR_EFFECT_ENABLED, false))
+            var blurEffectEnabled by rememberConfigState(
+                prefs.getBoolean(PREF_BLUR_EFFECT_ENABLED, false),
+            ) { value ->
+                prefs.edit()
+                    .putBoolean(PREF_BLUR_EFFECT_ENABLED, value)
+                    .commitOrReport()
+                AppLogStore.i("Settings", "Blur effect: $value")
             }
-            var featurePageNewStyleEnabled by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_FEATURE_PAGE_NEW_STYLE, true))
+            var featurePageNewStyleEnabled by rememberConfigState(
+                prefs.getBoolean(PREF_FEATURE_PAGE_NEW_STYLE, true),
+            ) { value ->
+                prefs.edit()
+                    .putBoolean(PREF_FEATURE_PAGE_NEW_STYLE, value)
+                    .commitOrReport()
+                AppLogStore.i("Settings", "New Features page style: $value")
             }
-            var featurePageVideoHidden by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_FEATURE_PAGE_VIDEO_HIDDEN, false))
+            var featurePageVideoHidden by rememberConfigState(
+                prefs.getBoolean(PREF_FEATURE_PAGE_VIDEO_HIDDEN, false),
+            ) { value ->
+                prefs.edit()
+                    .putBoolean(PREF_FEATURE_PAGE_VIDEO_HIDDEN, value)
+                    .commitOrReport()
+                AppLogStore.i("Settings", "Features page background video hidden: $value")
             }
-            var popDirectionFollowsSwipeEdge by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_POP_DIRECTION_FOLLOWS_SWIPE_EDGE, false))
+            var progressiveCardAnimationEnabled by rememberConfigState(
+                prefs.getBoolean(PREF_COLOROS_PROGRESSIVE_CARD_ANIMATION, true),
+            ) { value ->
+                prefs.edit()
+                    .putBoolean(PREF_COLOROS_PROGRESSIVE_CARD_ANIMATION, value)
+                    .commitOrReport()
             }
-            var showFpsMonitor by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_SHOW_FPS_MONITOR, false))
+            var popDirectionFollowsSwipeEdge by rememberConfigState(
+                prefs.getBoolean(PREF_POP_DIRECTION_FOLLOWS_SWIPE_EDGE, false),
+            ) { value ->
+                prefs.edit()
+                    .putBoolean(PREF_POP_DIRECTION_FOLLOWS_SWIPE_EDGE, value)
+                    .commitOrReport()
+                AppLogStore.i("Settings", "Pop follows swipe edge: $value")
             }
-            var liquidGlassBottomBarEnabled by rememberSaveable {
-                mutableStateOf(
-                    prefs.getBoolean(PREF_LIQUID_GLASS_BOTTOM_BAR, false) &&
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
-                )
+            var showFpsMonitor by rememberConfigState(
+                prefs.getBoolean(PREF_SHOW_FPS_MONITOR, false),
+            ) { value ->
+                prefs.edit()
+                    .putBoolean(PREF_SHOW_FPS_MONITOR, value)
+                    .commitOrReport()
+                AppLogStore.i("Settings", "Show FPS monitor: $value")
+            }
+            var liquidGlassBottomBarEnabled by rememberConfigState(
+                prefs.getBoolean(PREF_LIQUID_GLASS_BOTTOM_BAR, false) &&
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+            ) { value ->
+                prefs.edit()
+                    .putBoolean(PREF_LIQUID_GLASS_BOTTOM_BAR, value)
+                    .commitOrReport()
+                AppLogStore.i("Settings", "LiquidGlass bottom bar: $value")
             }
             var currentTab by rememberSaveable {
                 mutableIntStateOf(0)
             }
-            // Preferences are authoritative after recreation; restoring a saved old tag would
-            // override a language selected from a settings popup.
+            // Reload the selected language from preferences after recreation.
             var appLanguageTag by remember {
                 mutableStateOf(AppLocale.getSelectedLanguageTag(this@MainActivity))
             }
@@ -201,14 +240,20 @@ class MainActivity : ComponentActivity() {
             var appUiStyle by rememberSaveable {
                 mutableStateOf(initiallySelectedUiStyle)
             }
-            var materialFloatingBottomBarEnabled by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_MATERIAL_FLOATING_BOTTOM_BAR, false))
+            var materialFloatingBottomBarEnabled by rememberConfigState(
+                prefs.getBoolean(PREF_MATERIAL_FLOATING_BOTTOM_BAR, false),
+            ) { value ->
+                prefs.edit().putBoolean(PREF_MATERIAL_FLOATING_BOTTOM_BAR, value).commitOrReport()
             }
-            var materialHapticsEnabled by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_MATERIAL_HAPTICS, true))
+            var materialHapticsEnabled by rememberConfigState(
+                prefs.getBoolean(PREF_MATERIAL_HAPTICS, true),
+            ) { value ->
+                prefs.edit().putBoolean(PREF_MATERIAL_HAPTICS, value).commitOrReport()
             }
-            var materialSwitchIconsEnabled by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_MATERIAL_SWITCH_ICONS, false))
+            var materialSwitchIconsEnabled by rememberConfigState(
+                prefs.getBoolean(PREF_MATERIAL_SWITCH_ICONS, false),
+            ) { value ->
+                prefs.edit().putBoolean(PREF_MATERIAL_SWITCH_ICONS, value).commitOrReport()
             }
             var appThemeKeyColor by rememberSaveable {
                 mutableStateOf(AppThemeKeyColor.get(this@MainActivity))
@@ -240,45 +285,105 @@ class MainActivity : ComponentActivity() {
             val initialLspConfig = remember {
                 LspConfig.readCachedUiSnapshot(this@MainActivity)
             }
-            var nativeNotifyIconEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.nativeNotifyIconEnabled)
+            val nativeNotifyIconEnabledState = rememberConfigState(
+                initialLspConfig.nativeNotifyIconEnabled,
+            ) { value ->
+                LspConfig.setNativeNotifyIconEnabled(this@MainActivity, value)
             }
-            var nativeNotificationBubblesEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.nativeNotificationBubblesEnabled)
+            var nativeNotifyIconEnabled by nativeNotifyIconEnabledState
+            val nativeNotificationBubblesEnabledState = rememberConfigState(
+                initialLspConfig.nativeNotificationBubblesEnabled,
+            ) { value ->
+                LspConfig.setNativeNotificationBubblesEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var systemUiInternationalNetworkDisplayEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.systemUiInternationalNetworkDisplayEnabled)
+            var nativeNotificationBubblesEnabled by nativeNotificationBubblesEnabledState
+            val systemUiInternationalNetworkDisplayEnabledState = rememberConfigState(
+                initialLspConfig.systemUiInternationalNetworkDisplayEnabled,
+            ) { value ->
+                LspConfig.setSystemUiInternationalNetworkDisplayEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var systemUiHideMobileRoamingIndicatorEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.systemUiHideMobileRoamingIndicatorEnabled)
+            var systemUiInternationalNetworkDisplayEnabled by systemUiInternationalNetworkDisplayEnabledState
+            val systemUiHideMobileRoamingIndicatorEnabledState = rememberConfigState(
+                initialLspConfig.systemUiHideMobileRoamingIndicatorEnabled,
+            ) { value ->
+                LspConfig.setSystemUiHideMobileRoamingIndicatorEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var systemUiInternationalNotificationStyleEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.systemUiInternationalNotificationStyleEnabled)
+            var systemUiHideMobileRoamingIndicatorEnabled by systemUiHideMobileRoamingIndicatorEnabledState
+            val systemUiInternationalNotificationStyleEnabledState = rememberConfigState(
+                initialLspConfig.systemUiInternationalNotificationStyleEnabled,
+            ) { value ->
+                LspConfig.setSystemUiInternationalNotificationStyleEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var systemUiHideQsEditEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.systemUiHideQsEditEnabled)
+            var systemUiInternationalNotificationStyleEnabled by systemUiInternationalNotificationStyleEnabledState
+            val systemUiHideQsEditEnabledState = rememberConfigState(
+                initialLspConfig.systemUiHideQsEditEnabled,
+            ) { value ->
+                LspConfig.setSystemUiHideQsEditEnabled(this@MainActivity, value)
             }
-            var systemUiHideQsSettingsEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.systemUiHideQsSettingsEnabled)
+            var systemUiHideQsEditEnabled by systemUiHideQsEditEnabledState
+            val systemUiHideQsSettingsEnabledState = rememberConfigState(
+                initialLspConfig.systemUiHideQsSettingsEnabled,
+            ) { value ->
+                LspConfig.setSystemUiHideQsSettingsEnabled(this@MainActivity, value)
             }
-            var systemUiHideQsTopCarrierEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.systemUiHideQsTopCarrierEnabled)
+            var systemUiHideQsSettingsEnabled by systemUiHideQsSettingsEnabledState
+            val systemUiHideQsTopCarrierEnabledState = rememberConfigState(
+                initialLspConfig.systemUiHideQsTopCarrierEnabled,
+            ) { value ->
+                LspConfig.setSystemUiHideQsTopCarrierEnabled(this@MainActivity, value)
             }
-            var systemUiHideQsMoreEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.systemUiHideQsMoreEnabled)
+            var systemUiHideQsTopCarrierEnabled by systemUiHideQsTopCarrierEnabledState
+            val systemUiHideQsMoreEnabledState = rememberConfigState(
+                initialLspConfig.systemUiHideQsMoreEnabled,
+            ) { value ->
+                LspConfig.setSystemUiHideQsMoreEnabled(this@MainActivity, value)
             }
-            var systemUiForceNativeClipboardOverlayEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.systemUiForceNativeClipboardOverlayEnabled)
+            var systemUiHideQsMoreEnabled by systemUiHideQsMoreEnabledState
+            val systemUiForceNativeClipboardOverlayEnabledState = rememberConfigState(
+                initialLspConfig.systemUiForceNativeClipboardOverlayEnabled,
+            ) { value ->
+                LspConfig.setSystemUiForceNativeClipboardOverlayEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var settingsForceGoogleEntryEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.settingsForceGoogleEntryEnabled)
+            var systemUiForceNativeClipboardOverlayEnabled by systemUiForceNativeClipboardOverlayEnabledState
+            val settingsForceGoogleEntryEnabledState = rememberConfigState(
+                initialLspConfig.settingsForceGoogleEntryEnabled,
+            ) { value ->
+                LspConfig.setSettingsForceGoogleEntryEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var gmsRegionRestrictionBypassEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.gmsRegionRestrictionBypassEnabled)
+            var settingsForceGoogleEntryEnabled by settingsForceGoogleEntryEnabledState
+            val gmsRegionRestrictionBypassEnabledState = rememberConfigState(
+                initialLspConfig.gmsRegionRestrictionBypassEnabled,
+            ) { value ->
+                LspConfig.setGmsRegionRestrictionBypassEnabled(
+                    this@MainActivity,
+                    value,
+                )
             }
-            var extremeRefresh165Enabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.extremeRefresh165Enabled)
+            var gmsRegionRestrictionBypassEnabled by gmsRegionRestrictionBypassEnabledState
+            val extremeRefresh165EnabledState = rememberConfigState(
+                initialLspConfig.extremeRefresh165Enabled,
+            ) { value ->
+                LspConfig.setExtremeRefresh165Enabled(this@MainActivity, value)
             }
+            var extremeRefresh165Enabled by extremeRefresh165EnabledState
             var permissionMonitorVisible by rememberSaveable {
                 mutableStateOf(false)
             }
@@ -288,89 +393,152 @@ class MainActivity : ComponentActivity() {
             var assistantScreenOption by rememberSaveable {
                 mutableStateOf(AssistantScreenOption.Default)
             }
-            var recentTaskRadiusEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.recentTaskRadiusEnabled)
+            val recentTaskRadiusEnabledState = rememberConfigState(
+                initialLspConfig.recentTaskRadiusEnabled,
+            ) { value ->
+                LspConfig.setRecentTaskRadiusEnabled(this@MainActivity, value)
             }
-            var recentTaskRadiusDp by rememberSaveable {
-                mutableIntStateOf(initialLspConfig.recentTaskRadiusDp)
+            var recentTaskRadiusEnabled by recentTaskRadiusEnabledState
+            val recentTaskRadiusDpState = rememberConfigState(
+                initialLspConfig.recentTaskRadiusDp,
+            ) { value ->
+                LspConfig.setRecentTaskRadiusDp(this@MainActivity, value)
             }
-            var aodEnhanceEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.aodEnhanceEnabled)
+            var recentTaskRadiusDp by recentTaskRadiusDpState
+            val aodEnhanceEnabledState = rememberConfigState(
+                initialLspConfig.aodEnhanceEnabled,
+            ) { value ->
+                LspConfig.setAodEnhanceEnabled(this@MainActivity, value)
             }
-            var aodInitDarkBrightness by rememberSaveable {
-                mutableIntStateOf(initialLspConfig.aodInitDarkBrightness)
+            var aodEnhanceEnabled by aodEnhanceEnabledState
+            val aodInitDarkBrightnessState = rememberConfigState(
+                initialLspConfig.aodInitDarkBrightness,
+            ) { value ->
+                LspConfig.setAodInitDarkBrightness(this@MainActivity, value)
             }
-            var aodInitBrightBrightness by rememberSaveable {
-                mutableIntStateOf(initialLspConfig.aodInitBrightBrightness)
+            var aodInitDarkBrightness by aodInitDarkBrightnessState
+            val aodInitBrightBrightnessState = rememberConfigState(
+                initialLspConfig.aodInitBrightBrightness,
+            ) { value ->
+                LspConfig.setAodInitBrightBrightness(this@MainActivity, value)
             }
-            var aodRunningBrightnessMultiplier by rememberSaveable {
-                mutableFloatStateOf(initialLspConfig.aodRunningBrightnessMultiplier)
+            var aodInitBrightBrightness by aodInitBrightBrightnessState
+            val aodRunningBrightnessMultiplierState = rememberConfigState(
+                initialLspConfig.aodRunningBrightnessMultiplier,
+            ) { value ->
+                LspConfig.setAodRunningBrightnessMultiplier(
+                    this@MainActivity,
+                    value
+                )
             }
-            var aodPanoramicSupportEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.aodPanoramicSupportEnabled)
+            var aodRunningBrightnessMultiplier by aodRunningBrightnessMultiplierState
+            val aodPanoramicSupportEnabledState = rememberConfigState(
+                initialLspConfig.aodPanoramicSupportEnabled,
+            ) { value ->
+                LspConfig.setAodPanoramicSupportEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var aodSettingsSwitchEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.aodSettingsSwitchEnabled)
+            var aodPanoramicSupportEnabled by aodPanoramicSupportEnabledState
+            val aodSettingsSwitchEnabledState = rememberConfigState(
+                initialLspConfig.aodSettingsSwitchEnabled,
+            ) { value ->
+                LspConfig.setAodSettingsSwitchEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var aodSingleClickBlockEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.aodSingleClickBlockEnabled)
+            var aodSettingsSwitchEnabled by aodSettingsSwitchEnabledState
+            val aodSingleClickBlockEnabledState = rememberConfigState(
+                initialLspConfig.aodSingleClickBlockEnabled,
+            ) { value ->
+                LspConfig.setAodSingleClickBlockEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var assistantPowerMode by rememberSaveable {
-                mutableIntStateOf(initialLspConfig.assistantPowerMode)
+            var aodSingleClickBlockEnabled by aodSingleClickBlockEnabledState
+            val assistantPowerModeState = rememberConfigState(
+                initialLspConfig.assistantPowerMode,
+            ) { value ->
+                LspConfig.setAssistantPowerMode(this@MainActivity, value)
             }
-            var assistantGestureCircleEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.assistantGestureCircleEnabled)
+            var assistantPowerMode by assistantPowerModeState
+            val assistantGestureCircleEnabledState = rememberConfigState(
+                initialLspConfig.assistantGestureCircleEnabled,
+            ) { value ->
+                LspConfig.setAssistantGestureCircleEnabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var assistantGestureCircleC17Enabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.assistantGestureCircleC17Enabled)
+            var assistantGestureCircleEnabled by assistantGestureCircleEnabledState
+            val assistantGestureCircleC17EnabledState = rememberConfigState(
+                initialLspConfig.assistantGestureCircleC17Enabled,
+            ) { value ->
+                LspConfig.setAssistantGestureCircleC17Enabled(
+                    this@MainActivity,
+                    value
+                )
             }
-            var assistantNativePowerEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.assistantNativePowerEnabled)
+            var assistantGestureCircleC17Enabled by assistantGestureCircleC17EnabledState
+            val assistantNativePowerEnabledState = rememberConfigState(
+                initialLspConfig.assistantNativePowerEnabled,
+            ) { value ->
+                LspConfig.setAssistantNativePowerEnabled(
+                    this@MainActivity,
+                    value,
+                )
             }
-            var assistantNativeCircleEnabled by rememberSaveable {
-                mutableStateOf(initialLspConfig.assistantNativeCircleEnabled)
+            var assistantNativePowerEnabled by assistantNativePowerEnabledState
+            val assistantNativeCircleEnabledState = rememberConfigState(
+                initialLspConfig.assistantNativeCircleEnabled,
+            ) { value ->
+                LspConfig.setAssistantNativeCircleEnabled(
+                    this@MainActivity,
+                    value,
+                )
             }
-            var settingsEffectsReady by remember {
-                mutableStateOf(false)
-            }
+            var assistantNativeCircleEnabled by assistantNativeCircleEnabledState
             var resumeRefreshEnabled by remember {
                 mutableStateOf(false)
             }
             fun applyLspConfigSnapshot(snapshot: LspConfig.UiSnapshot) {
-                nativeNotifyIconEnabled = snapshot.nativeNotifyIconEnabled
-                nativeNotificationBubblesEnabled = snapshot.nativeNotificationBubblesEnabled
-                extremeRefresh165Enabled = snapshot.extremeRefresh165Enabled
-                recentTaskRadiusEnabled = snapshot.recentTaskRadiusEnabled
-                recentTaskRadiusDp = snapshot.recentTaskRadiusDp
-                aodEnhanceEnabled = snapshot.aodEnhanceEnabled
-                aodInitDarkBrightness = snapshot.aodInitDarkBrightness
-                aodInitBrightBrightness = snapshot.aodInitBrightBrightness
-                aodRunningBrightnessMultiplier = snapshot.aodRunningBrightnessMultiplier
-                aodPanoramicSupportEnabled = snapshot.aodPanoramicSupportEnabled
-                aodSettingsSwitchEnabled = snapshot.aodSettingsSwitchEnabled
-                aodSingleClickBlockEnabled = snapshot.aodSingleClickBlockEnabled
-                systemUiInternationalNetworkDisplayEnabled =
-                    snapshot.systemUiInternationalNetworkDisplayEnabled
-                systemUiHideMobileRoamingIndicatorEnabled =
-                    snapshot.systemUiHideMobileRoamingIndicatorEnabled
-                systemUiInternationalNotificationStyleEnabled =
-                    snapshot.systemUiInternationalNotificationStyleEnabled
-                systemUiHideQsEditEnabled = snapshot.systemUiHideQsEditEnabled
-                systemUiHideQsSettingsEnabled = snapshot.systemUiHideQsSettingsEnabled
-                systemUiHideQsTopCarrierEnabled = snapshot.systemUiHideQsTopCarrierEnabled
-                systemUiHideQsMoreEnabled = snapshot.systemUiHideQsMoreEnabled
-                systemUiForceNativeClipboardOverlayEnabled = snapshot.systemUiForceNativeClipboardOverlayEnabled
-                settingsForceGoogleEntryEnabled = snapshot.settingsForceGoogleEntryEnabled
-                gmsRegionRestrictionBypassEnabled = snapshot.gmsRegionRestrictionBypassEnabled
-                assistantPowerMode = snapshot.assistantPowerMode
-                assistantGestureCircleEnabled = snapshot.assistantGestureCircleEnabled
-                assistantGestureCircleC17Enabled = snapshot.assistantGestureCircleC17Enabled
-                assistantNativePowerEnabled = snapshot.assistantNativePowerEnabled
-                assistantNativeCircleEnabled = snapshot.assistantNativeCircleEnabled
+                nativeNotifyIconEnabledState.replaceFromSource(snapshot.nativeNotifyIconEnabled)
+                nativeNotificationBubblesEnabledState.replaceFromSource(snapshot.nativeNotificationBubblesEnabled)
+                extremeRefresh165EnabledState.replaceFromSource(snapshot.extremeRefresh165Enabled)
+                recentTaskRadiusEnabledState.replaceFromSource(snapshot.recentTaskRadiusEnabled)
+                recentTaskRadiusDpState.replaceFromSource(snapshot.recentTaskRadiusDp)
+                aodEnhanceEnabledState.replaceFromSource(snapshot.aodEnhanceEnabled)
+                aodInitDarkBrightnessState.replaceFromSource(snapshot.aodInitDarkBrightness)
+                aodInitBrightBrightnessState.replaceFromSource(snapshot.aodInitBrightBrightness)
+                aodRunningBrightnessMultiplierState.replaceFromSource(snapshot.aodRunningBrightnessMultiplier)
+                aodPanoramicSupportEnabledState.replaceFromSource(snapshot.aodPanoramicSupportEnabled)
+                aodSettingsSwitchEnabledState.replaceFromSource(snapshot.aodSettingsSwitchEnabled)
+                aodSingleClickBlockEnabledState.replaceFromSource(snapshot.aodSingleClickBlockEnabled)
+                systemUiInternationalNetworkDisplayEnabledState.replaceFromSource(snapshot.systemUiInternationalNetworkDisplayEnabled)
+                systemUiHideMobileRoamingIndicatorEnabledState.replaceFromSource(snapshot.systemUiHideMobileRoamingIndicatorEnabled)
+                systemUiInternationalNotificationStyleEnabledState.replaceFromSource(snapshot.systemUiInternationalNotificationStyleEnabled)
+                systemUiHideQsEditEnabledState.replaceFromSource(snapshot.systemUiHideQsEditEnabled)
+                systemUiHideQsSettingsEnabledState.replaceFromSource(snapshot.systemUiHideQsSettingsEnabled)
+                systemUiHideQsTopCarrierEnabledState.replaceFromSource(snapshot.systemUiHideQsTopCarrierEnabled)
+                systemUiHideQsMoreEnabledState.replaceFromSource(snapshot.systemUiHideQsMoreEnabled)
+                systemUiForceNativeClipboardOverlayEnabledState.replaceFromSource(snapshot.systemUiForceNativeClipboardOverlayEnabled)
+                settingsForceGoogleEntryEnabledState.replaceFromSource(snapshot.settingsForceGoogleEntryEnabled)
+                gmsRegionRestrictionBypassEnabledState.replaceFromSource(snapshot.gmsRegionRestrictionBypassEnabled)
+                assistantPowerModeState.replaceFromSource(snapshot.assistantPowerMode)
+                assistantGestureCircleEnabledState.replaceFromSource(snapshot.assistantGestureCircleEnabled)
+                assistantGestureCircleC17EnabledState.replaceFromSource(snapshot.assistantGestureCircleC17Enabled)
+                assistantNativePowerEnabledState.replaceFromSource(snapshot.assistantNativePowerEnabled)
+                assistantNativeCircleEnabledState.replaceFromSource(snapshot.assistantNativeCircleEnabled)
+            }
+            LaunchedEffect(Unit) {
+                ConfigSyncStatus.failures.collect {
+                    Toast.makeText(this@MainActivity, R.string.config_sync_failed, Toast.LENGTH_LONG).show()
+                }
             }
             suspend fun applyRefreshStateWithoutWriteBack(state: StartupRefreshState) {
-                settingsEffectsReady = false
-                withFrameNanos { }
                 applyLspConfigSnapshot(state.lspSnapshot)
                 if (rootGranted != state.rootGranted) {
                     rootGranted = state.rootGranted
@@ -378,9 +546,6 @@ class MainActivity : ComponentActivity() {
                 permissionMonitorVisible = state.permissionMonitorVisible
                 launcherLayoutUnlocked = state.launcherLayoutUnlocked
                 assistantScreenOption = state.assistantScreenOption
-                withFrameNanos { }
-                withFrameNanos { }
-                settingsEffectsReady = true
             }
             LaunchedEffect(onboardingCompleted) {
                 withFrameNanos { }
@@ -390,13 +555,11 @@ class MainActivity : ComponentActivity() {
                 }
                 AppLogStore.i("App", "MainActivity started")
                 if (!onboardingCompleted) {
-                    settingsEffectsReady = false
                     resumeRefreshEnabled = false
                     return@LaunchedEffect
                 }
                 UpdateNotificationScheduler.schedule(this@MainActivity)
                 UpdateNotificationScheduler.checkNow(this@MainActivity)
-                delay(1_200)
                 val startupState = withContext(Dispatchers.IO) {
                     LsposedScopeRequester.initialize(this@MainActivity)
                     val currentRootAccess = queryRootAccess(this@MainActivity)
@@ -425,8 +588,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
             DisposableEffect(resumeRefreshEnabled, onboardingCompleted) {
+                var skipCurrentResume = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME && resumeRefreshEnabled) {
+                        if (skipCurrentResume) {
+                            skipCurrentResume = false
+                            return@LifecycleEventObserver
+                        }
                         rootCheckScope.launch {
                             val refreshState = withContext(Dispatchers.IO) {
                                 val currentRootAccess = queryRootAccess(this@MainActivity)
@@ -447,337 +615,6 @@ class MainActivity : ComponentActivity() {
                 onDispose {
                     lifecycle.removeObserver(observer)
                 }
-            }
-            LaunchedEffect(blurEffectEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                prefs.edit()
-                    .putBoolean(PREF_BLUR_EFFECT_ENABLED, blurEffectEnabled)
-                    .apply()
-                AppLogStore.i("Settings", "Blur effect: $blurEffectEnabled")
-            }
-            LaunchedEffect(featurePageNewStyleEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                prefs.edit()
-                    .putBoolean(PREF_FEATURE_PAGE_NEW_STYLE, featurePageNewStyleEnabled)
-                    .apply()
-                AppLogStore.i("Settings", "New Features page style: $featurePageNewStyleEnabled")
-            }
-            LaunchedEffect(featurePageVideoHidden) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                prefs.edit()
-                    .putBoolean(PREF_FEATURE_PAGE_VIDEO_HIDDEN, featurePageVideoHidden)
-                    .apply()
-                AppLogStore.i("Settings", "Features page background video hidden: $featurePageVideoHidden")
-            }
-            LaunchedEffect(popDirectionFollowsSwipeEdge) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                prefs.edit()
-                    .putBoolean(PREF_POP_DIRECTION_FOLLOWS_SWIPE_EDGE, popDirectionFollowsSwipeEdge)
-                    .apply()
-                AppLogStore.i("Settings", "Pop follows swipe edge: $popDirectionFollowsSwipeEdge")
-            }
-            LaunchedEffect(showFpsMonitor) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                prefs.edit()
-                    .putBoolean(PREF_SHOW_FPS_MONITOR, showFpsMonitor)
-                    .apply()
-                AppLogStore.i("Settings", "Show FPS monitor: $showFpsMonitor")
-            }
-            LaunchedEffect(liquidGlassBottomBarEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                prefs.edit()
-                    .putBoolean(PREF_LIQUID_GLASS_BOTTOM_BAR, liquidGlassBottomBarEnabled)
-                    .apply()
-                AppLogStore.i("Settings", "LiquidGlass bottom bar: $liquidGlassBottomBarEnabled")
-            }
-            LaunchedEffect(materialFloatingBottomBarEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                prefs.edit().putBoolean(PREF_MATERIAL_FLOATING_BOTTOM_BAR, materialFloatingBottomBarEnabled).apply()
-            }
-            LaunchedEffect(materialHapticsEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                prefs.edit().putBoolean(PREF_MATERIAL_HAPTICS, materialHapticsEnabled).apply()
-            }
-            LaunchedEffect(materialSwitchIconsEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                prefs.edit().putBoolean(PREF_MATERIAL_SWITCH_ICONS, materialSwitchIconsEnabled).apply()
-            }
-            LaunchedEffect(nativeNotifyIconEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setNativeNotifyIconEnabled(this@MainActivity, nativeNotifyIconEnabled)
-                }
-                AppLogStore.i("NativeNotifyIcon", "Native notify icon toggle: $nativeNotifyIconEnabled")
-            }
-            LaunchedEffect(nativeNotificationBubblesEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setNativeNotificationBubblesEnabled(
-                        this@MainActivity,
-                        nativeNotificationBubblesEnabled
-                    )
-                }
-                AppLogStore.i(
-                    "NativeNotificationBubbles",
-                    "Native notification bubbles toggle: $nativeNotificationBubblesEnabled"
-                )
-            }
-            LaunchedEffect(systemUiInternationalNetworkDisplayEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setSystemUiInternationalNetworkDisplayEnabled(
-                        this@MainActivity,
-                        systemUiInternationalNetworkDisplayEnabled
-                    )
-                }
-                AppLogStore.i(
-                    "SystemUI",
-                    "International network display: $systemUiInternationalNetworkDisplayEnabled"
-                )
-            }
-            LaunchedEffect(systemUiHideMobileRoamingIndicatorEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setSystemUiHideMobileRoamingIndicatorEnabled(
-                        this@MainActivity,
-                        systemUiHideMobileRoamingIndicatorEnabled
-                    )
-                }
-                AppLogStore.i(
-                    "SystemUI",
-                    "Hide mobile roaming indicator: $systemUiHideMobileRoamingIndicatorEnabled"
-                )
-            }
-            LaunchedEffect(systemUiInternationalNotificationStyleEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setSystemUiInternationalNotificationStyleEnabled(
-                        this@MainActivity,
-                        systemUiInternationalNotificationStyleEnabled
-                    )
-                }
-                AppLogStore.i(
-                    "SystemUI",
-                    "International notification style: $systemUiInternationalNotificationStyleEnabled"
-                )
-            }
-            LaunchedEffect(systemUiHideQsEditEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setSystemUiHideQsEditEnabled(this@MainActivity, systemUiHideQsEditEnabled)
-                }
-                AppLogStore.i("SystemUI", "Hide QS edit entry: $systemUiHideQsEditEnabled")
-            }
-            LaunchedEffect(systemUiHideQsSettingsEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setSystemUiHideQsSettingsEnabled(this@MainActivity, systemUiHideQsSettingsEnabled)
-                }
-                AppLogStore.i("SystemUI", "Hide QS settings button: $systemUiHideQsSettingsEnabled")
-            }
-            LaunchedEffect(systemUiHideQsTopCarrierEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setSystemUiHideQsTopCarrierEnabled(this@MainActivity, systemUiHideQsTopCarrierEnabled)
-                }
-                AppLogStore.i("SystemUI", "Hide QS top carrier: $systemUiHideQsTopCarrierEnabled")
-            }
-            LaunchedEffect(systemUiHideQsMoreEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setSystemUiHideQsMoreEnabled(this@MainActivity, systemUiHideQsMoreEnabled)
-                }
-                AppLogStore.i("SystemUI", "Hide QS more entry: $systemUiHideQsMoreEnabled")
-            }
-            LaunchedEffect(systemUiForceNativeClipboardOverlayEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setSystemUiForceNativeClipboardOverlayEnabled(
-                        this@MainActivity,
-                        systemUiForceNativeClipboardOverlayEnabled
-                    )
-                }
-                AppLogStore.i(
-                    "SystemUI",
-                    "Force native clipboard overlay: $systemUiForceNativeClipboardOverlayEnabled"
-                )
-            }
-            LaunchedEffect(settingsForceGoogleEntryEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setSettingsForceGoogleEntryEnabled(
-                        this@MainActivity,
-                        settingsForceGoogleEntryEnabled
-                    )
-                }
-                AppLogStore.i("SettingsHook", "Force Google entry: $settingsForceGoogleEntryEnabled")
-            }
-            LaunchedEffect(gmsRegionRestrictionBypassEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setGmsRegionRestrictionBypassEnabled(
-                        this@MainActivity,
-                        gmsRegionRestrictionBypassEnabled,
-                    )
-                }
-                AppLogStore.i(
-                    "GmsRegion",
-                    "CN-GMS restriction bypass: $gmsRegionRestrictionBypassEnabled",
-                )
-            }
-            LaunchedEffect(extremeRefresh165Enabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setExtremeRefresh165Enabled(this@MainActivity, extremeRefresh165Enabled)
-                }
-                AppLogStore.i("ExtremeRefresh165", "165Hz extreme refresh toggle: $extremeRefresh165Enabled")
-            }
-            LaunchedEffect(recentTaskRadiusEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setRecentTaskRadiusEnabled(this@MainActivity, recentTaskRadiusEnabled)
-                }
-                AppLogStore.i("RecentTaskRadius", "Recent task radius toggle: $recentTaskRadiusEnabled")
-            }
-            LaunchedEffect(recentTaskRadiusDp) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                delay(CONFIG_WRITE_DEBOUNCE_MS)
-                withContext(Dispatchers.IO) {
-                    LspConfig.setRecentTaskRadiusDp(this@MainActivity, recentTaskRadiusDp)
-                }
-                AppLogStore.i("RecentTaskRadius", "Recent task radius dp: $recentTaskRadiusDp")
-            }
-            LaunchedEffect(aodEnhanceEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAodEnhanceEnabled(this@MainActivity, aodEnhanceEnabled)
-                }
-                AppLogStore.i("AodEnhance", "AOD enhance toggle: $aodEnhanceEnabled")
-            }
-            LaunchedEffect(aodInitDarkBrightness) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                delay(CONFIG_WRITE_DEBOUNCE_MS)
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAodInitDarkBrightness(this@MainActivity, aodInitDarkBrightness)
-                }
-                AppLogStore.i("AodEnhance", "AOD init dark brightness: $aodInitDarkBrightness")
-            }
-            LaunchedEffect(aodInitBrightBrightness) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                delay(CONFIG_WRITE_DEBOUNCE_MS)
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAodInitBrightBrightness(this@MainActivity, aodInitBrightBrightness)
-                }
-                AppLogStore.i("AodEnhance", "AOD init bright brightness: $aodInitBrightBrightness")
-            }
-            LaunchedEffect(aodRunningBrightnessMultiplier) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                delay(CONFIG_WRITE_DEBOUNCE_MS)
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAodRunningBrightnessMultiplier(
-                        this@MainActivity,
-                        aodRunningBrightnessMultiplier
-                    )
-                }
-                AppLogStore.i(
-                    "AodEnhance",
-                    "AOD running brightness multiplier: $aodRunningBrightnessMultiplier"
-                )
-            }
-            LaunchedEffect(aodPanoramicSupportEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAodPanoramicSupportEnabled(
-                        this@MainActivity,
-                        aodPanoramicSupportEnabled
-                    )
-                }
-                AppLogStore.i(
-                    "AodEnhance",
-                    "AOD panoramic support: $aodPanoramicSupportEnabled"
-                )
-            }
-            LaunchedEffect(aodSettingsSwitchEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAodSettingsSwitchEnabled(
-                        this@MainActivity,
-                        aodSettingsSwitchEnabled
-                    )
-                }
-                AppLogStore.i(
-                    "AodEnhance",
-                    "AOD settings switch support: $aodSettingsSwitchEnabled"
-                )
-            }
-            LaunchedEffect(aodSingleClickBlockEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAodSingleClickBlockEnabled(
-                        this@MainActivity,
-                        aodSingleClickBlockEnabled
-                    )
-                }
-                AppLogStore.i(
-                    "AodEnhance",
-                    "AOD single-click wake block: $aodSingleClickBlockEnabled"
-                )
-            }
-            LaunchedEffect(assistantPowerMode) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAssistantPowerMode(this@MainActivity, assistantPowerMode)
-                }
-                AppLogStore.i("Assistant", "Power long press mode: $assistantPowerMode")
-            }
-            LaunchedEffect(assistantGestureCircleEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAssistantGestureCircleEnabled(
-                        this@MainActivity,
-                        assistantGestureCircleEnabled
-                    )
-                }
-                AppLogStore.i("Assistant", "Gesture Circle to Search: $assistantGestureCircleEnabled")
-            }
-            LaunchedEffect(assistantGestureCircleC17Enabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAssistantGestureCircleC17Enabled(
-                        this@MainActivity,
-                        assistantGestureCircleC17Enabled
-                    )
-                }
-                AppLogStore.i(
-                    "Assistant",
-                    "Gesture Circle to Search (ColorOS 17): $assistantGestureCircleC17Enabled"
-                )
-            }
-            LaunchedEffect(assistantNativePowerEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAssistantNativePowerEnabled(
-                        this@MainActivity,
-                        assistantNativePowerEnabled,
-                    )
-                }
-                AppLogStore.i(
-                    "Assistant",
-                    "Native international assistant route: $assistantNativePowerEnabled",
-                )
-            }
-            LaunchedEffect(assistantNativeCircleEnabled) {
-                if (!settingsEffectsReady) return@LaunchedEffect
-                withContext(Dispatchers.IO) {
-                    LspConfig.setAssistantNativeCircleEnabled(
-                        this@MainActivity,
-                        assistantNativeCircleEnabled,
-                    )
-                }
-                AppLogStore.i(
-                    "Assistant",
-                    "Native Circle to Search route: $assistantNativeCircleEnabled",
-                )
             }
 
             val systemDensity = LocalDensity.current
@@ -808,6 +645,8 @@ class MainActivity : ComponentActivity() {
                 onBlurEffectEnabledChange = { blurEffectEnabled = it },
                 featurePageNewStyleEnabled = featurePageNewStyleEnabled,
                 onFeaturePageNewStyleEnabledChange = { featurePageNewStyleEnabled = it },
+                progressiveCardAnimationEnabled = progressiveCardAnimationEnabled,
+                onProgressiveCardAnimationEnabledChange = { progressiveCardAnimationEnabled = it },
                 featurePageVideoHidden = featurePageVideoHidden,
                 onFeaturePageVideoHiddenChange = { featurePageVideoHidden = it },
                 popDirectionFollowsSwipeEdge = popDirectionFollowsSwipeEdge,
@@ -1049,7 +888,6 @@ class MainActivity : ComponentActivity() {
                         onActivationCommitted = { granted ->
                             rootGranted = granted
                             onboardingCompleted = true
-                            settingsEffectsReady = false
                             resumeRefreshEnabled = false
                             val allowBackgroundUpdates =
                                 OnboardingPreferences.isBackgroundNetworkAllowed(this@MainActivity)
@@ -1086,11 +924,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Re-localizes both the activation surface and the Root destination without recreating the
-     * activity. ContextThemeWrapper keeps the real Activity in the base-context chain, which is
-     * required by Root's window and lifecycle helpers once it is pre-rendered below onboarding.
-     */
+/** Localized UI context that preserves the Activity for window and lifecycle access. */
     private fun createLocalizedUiContext(languageTag: String): Context {
         val locales = if (languageTag.isBlank()) {
             Resources.getSystem().configuration.locales

@@ -1,5 +1,4 @@
 system
-android
 com.android.systemui
 com.oplus.screenshot
 com.oplus.screenrecorder
@@ -16,3 +15,5 @@ com.android.phone
 com.google.android.googlequicksearchbox
 com.google.android.apps.messaging
 com.heytap.market
+com.coloros.filemanager
+com.heytap.mcs

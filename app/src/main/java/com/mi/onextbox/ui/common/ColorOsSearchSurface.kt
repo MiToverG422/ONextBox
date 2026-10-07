@@ -48,6 +48,7 @@ internal fun ColorOsSearchSurface(
     modifier: Modifier,
     background: Color,
     focused: Boolean,
+    editorEmpty: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val dark = COUITheme.colorScheme.background.luminance() < .5f
@@ -57,6 +58,7 @@ internal fun ColorOsSearchSurface(
         spring(dampingRatio = .8f, stiffness = 194.955f), label = "Search material")
     val motion = remember { SearchMotion() }
     val editing = rememberUpdatedState(focused)
+    val emptyEditor = rememberUpdatedState(editorEmpty)
     LaunchedEffect(focused) {
         // The waterdrop handle is a Popup anchored to the editor's visible bounds.
         // A tap's scale/rebound can move that anchor across its clip edge every frame.
@@ -85,6 +87,9 @@ internal fun ColorOsSearchSurface(
                 val origin = down.position
                 var last = origin
                 var draggingCapsule = false
+                var emptyDragEligible = emptyEditor.value
+                var slopChecked = false
+                var decorativeEmptyDrag = false
                 fun lightPosition(x: Float, y: Float): Pair<Float, Float> = colorOsSearchLocalPosition(
                     x, y, size.width.toFloat(), size.height.toFloat(),
                     motion.press.value * motion.xScale.value, motion.press.value * motion.yScale.value,
@@ -100,6 +105,14 @@ internal fun ColorOsSearchSurface(
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         last = change.position
                         if (!change.pressed) break
+                        val singlePointer = event.changes.none {
+                            it.id != down.id && (it.pressed || it.previousPressed)
+                        }
+                        if (!emptyEditor.value || !singlePointer) {
+                            emptyDragEligible = false
+                            if (decorativeEmptyDrag) motion.snapToRest()
+                            decorativeEmptyDrag = false
+                        }
                         val dx = last.x - origin.x
                         val dy = last.y - origin.y
                         lightPosition(last.x, last.y).let { light.onMove(it.first, it.second) }
@@ -107,7 +120,20 @@ internal fun ColorOsSearchSurface(
                         val finalChange = awaitPointerEvent(PointerEventPass.Final).changes
                             .firstOrNull { it.id == down.id } ?: break
                         val pastSlop = abs(dx) + abs(dy) > 5f * density
-                        if (!colorOsSearchMotionAllowed(editing.value, pastSlop, finalChange.isConsumed)) continue
+                        if (pastSlop && !slopChecked) {
+                            slopChecked = true
+                            // Empty horizontal drags have no text or handle to move.
+                            decorativeEmptyDrag = colorOsSearchEmptyDragAllowed(
+                                editorEmpty = emptyDragEligible,
+                                singlePointer = singlePointer,
+                                horizontal = abs(dx) > abs(dy),
+                                elapsedMillis = change.uptimeMillis - down.uptimeMillis,
+                                longPressTimeoutMillis = viewConfiguration.longPressTimeoutMillis,
+                            )
+                        }
+                        if (!colorOsSearchMotionAllowed(
+                            editing.value, pastSlop, finalChange.isConsumed, decorativeEmptyDrag,
+                        )) continue
                         draggingCapsule = draggingCapsule || pastSlop
                         val deform = colorOsSearchDeformation(dx, dy, size.width.toFloat(), size.height.toFloat(), density)
                         motion.x.to(colorOsSearchRubber(dx, .05f, 28f * density), .15f, .15f)
@@ -151,8 +177,21 @@ internal fun ColorOsSearchSurface(
 }
 
 // Editing taps need a stable handle anchor; unclaimed capsule drags still get rubber motion.
-internal fun colorOsSearchMotionAllowed(editorFocused: Boolean, pastSlop: Boolean, consumed: Boolean): Boolean =
-    !consumed && (!editorFocused || pastSlop)
+internal fun colorOsSearchMotionAllowed(
+    editorFocused: Boolean,
+    pastSlop: Boolean,
+    consumed: Boolean,
+    decorativeEmptyDrag: Boolean = false,
+): Boolean = (!consumed || decorativeEmptyDrag) && (!editorFocused || pastSlop)
+
+internal fun colorOsSearchEmptyDragAllowed(
+    editorEmpty: Boolean,
+    singlePointer: Boolean,
+    horizontal: Boolean,
+    elapsedMillis: Long,
+    longPressTimeoutMillis: Long,
+): Boolean = editorEmpty && singlePointer && horizontal &&
+    elapsedMillis >= 0L && elapsedMillis < longPressTimeoutMillis
 
 internal fun colorOsSearchLocalPosition(
     x: Float, y: Float, width: Float, height: Float,

@@ -26,6 +26,8 @@
         <package android:name="org.lsposed.manager" />
         <package android:name="io.github.libxposed.manager" />
         <package android:name="com.android.systemui" />
+        <package android:name="com.android.settings" />
+        <package android:name="com.oplus.athena" />
         <package android:name="com.oplus.screenshot" />
         <package android:name="com.coloros.screenshot" />
         <package android:name="com.oplus.screenrecorder" />
@@ -38,6 +40,17 @@
         <package android:name="com.oplus.aod" />
         <package android:name="com.oplus.euicc" />
         <package android:name="com.heytap.market" />
+        <package android:name="com.coloros.filemanager" />
+        <package android:name="com.heytap.mcs" />
+        <intent>
+            <action android:name="com.heytap.mcs.action.RECEIVE_MCS_MESSAGE" />
+        </intent>
+        <intent>
+            <action android:name="com.heytap.msp.push.RECEIVE_MCS_MESSAGE" />
+        </intent>
+        <intent>
+            <action android:name="com.coloros.mcs.action.RECEIVE_MCS_MESSAGE" />
+        </intent>
         <package android:name="com.google.android.apps.messaging" />
         <package android:name="com.android.phone" />
         <package android:name="com.oneplus.aod" />
@@ -59,6 +72,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <permission android:name="${applicationId}.permission.PUSH_MONITOR" android:protectionLevel="signature" />
+    <uses-permission android:name="${applicationId}.permission.PUSH_MONITOR" />
 
     <application
         android:name=".ONextBoxApplication"
@@ -105,6 +120,12 @@
             android:name=".ui.settings.UpdateCheckJobService"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <provider
+            android:name=".push.PushMonitorProvider"
+            android:authorities="${applicationId}.pushmonitor"
+            android:directBootAware="true"
+            android:exported="true" />
 
         <receiver
             android:name=".boot.BootSyncReceiver"

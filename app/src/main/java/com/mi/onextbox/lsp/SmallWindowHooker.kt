@@ -27,11 +27,7 @@ import java.lang.reflect.Method
 import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Two verified C17 source paths: old Zoom handles in SystemUI and new flexible handles in
- * system_server. Only appearance/safe positioning is changed, never task, audio or freeze policy.
- * Nothing is installed unless explicitly enabled at process startup. No process is restarted here.
- */
+/** Small-window appearance and safe positioning, independent of task, audio and freeze policies. */
 internal object SmallWindowHooker {
     private const val TAG = "ONextBox-SmallWindow"
     private val styles = WeakHashMap<FrameLayout, AnimatedStyle>()
@@ -69,15 +65,12 @@ internal object SmallWindowHooker {
             .onFailure { HookLog.w(TAG, "Handle interface not matched (${variant.name}); stock appearance kept", it) }
     }
 
-    private fun exact(target: Class<*>, name: String, vararg types: Class<*>): Method =
-        target.getDeclaredMethod(name, *types).apply { isAccessible = true }
-
     private fun installSafeInset(target: Class<*>, variant: Variant) {
         // Validate all dependencies before installing a callback in a critical system process.
         target.getDeclaredField("mContext")
-        exact(target, "getScreenHeight")
-        exact(target, "getContainerHeight")
-        val method = exact(target, "getMovingEdgeLimit")
+        Reflect.findDeclaredMethodExact(target, "getScreenHeight")
+        Reflect.findDeclaredMethodExact(target, "getContainerHeight")
+        val method = Reflect.findDeclaredMethodExact(target, "getMovingEdgeLimit")
         val failed = AtomicBoolean(false)
         ModernHookRegistry.installCompat("small-window:${variant.name}:inset", method, object : ModernMethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
@@ -118,46 +111,46 @@ internal object SmallWindowHooker {
         )
         (fields + "mFloatHandleViewContainer").forEach(target::getDeclaredField)
         if (variant == Variant.Flexible) {
-            exact(target, "isEditMode")
-            exact(target, "getFloatHandleInfoList")
+            Reflect.findDeclaredMethodExact(target, "isEditMode")
+            Reflect.findDeclaredMethodExact(target, "getFloatHandleInfoList")
         } else {
-            exact(target.getDeclaredField("mTouchHandler").type, "isTouching")
+            Reflect.findDeclaredMethodExact(target.getDeclaredField("mTouchHandler").type, "isTouching")
         }
-        exact(Reflect.findClass(variant.controllerClass, loader), "getMaxDistanceToScreenInHalfHidden")
+        Reflect.findDeclaredMethodExact(Reflect.findClass(variant.controllerClass, loader), "getMaxDistanceToScreenInHalfHidden")
         val info = Reflect.findClass(
             if (variant == Variant.Flexible) "com.android.server.wm.floathandle.FloatHandleInfo"
             else "com.oplus.zoom.ui.floathandle.FloatHandleInfo", loader,
         )
         val methods = if (variant == Variant.Flexible) listOf(
-            exact(target, "initView", Context::class.java, integer),
-            exact(target, "initState", info, integer, integer),
-            exact(target, "setCurrentMode", integer),
-            exact(target, "setChangingToNextMode", integer),
-            exact(target, "updateViewLayoutParams", boolean, boolean),
-            exact(target, "exeRefreshOption"),
-            exact(target, "onLongPressUpAnimEnd"),
-            exact(target, "onTouch", View::class.java, MotionEvent::class.java),
+            Reflect.findDeclaredMethodExact(target, "initView", Context::class.java, integer),
+            Reflect.findDeclaredMethodExact(target, "initState", info, integer, integer),
+            Reflect.findDeclaredMethodExact(target, "setCurrentMode", integer),
+            Reflect.findDeclaredMethodExact(target, "setChangingToNextMode", integer),
+            Reflect.findDeclaredMethodExact(target, "updateViewLayoutParams", boolean, boolean),
+            Reflect.findDeclaredMethodExact(target, "exeRefreshOption"),
+            Reflect.findDeclaredMethodExact(target, "onLongPressUpAnimEnd"),
+            Reflect.findDeclaredMethodExact(target, "onTouch", View::class.java, MotionEvent::class.java),
             // Restore before native list mutations so icon animation setup never sees our alpha 0.
-            exact(target, "updateForMultiIconIncrease", info),
-            exact(target, "updateForMultiIconReduce", boolean, boolean, info),
-            exact(target, "updateViewForIncrease", info),
-            exact(target, "resetToFullMode", boolean),
-            exact(target, "setLaunchFlag", integer),
+            Reflect.findDeclaredMethodExact(target, "updateForMultiIconIncrease", info),
+            Reflect.findDeclaredMethodExact(target, "updateForMultiIconReduce", boolean, boolean, info),
+            Reflect.findDeclaredMethodExact(target, "updateViewForIncrease", info),
+            Reflect.findDeclaredMethodExact(target, "resetToFullMode", boolean),
+            Reflect.findDeclaredMethodExact(target, "setLaunchFlag", integer),
         ) else listOf(
-            exact(target, "initState", info, integer, integer),
-            exact(target, "updateArrowStyle", boolean),
-            exact(target, "updateIconStyle", String::class.java, integer),
-            exact(target, "refreshFloatHandleView", String::class.java, integer),
-            exact(target, "relayout"),
-            exact(target, "onTouch", View::class.java, MotionEvent::class.java),
+            Reflect.findDeclaredMethodExact(target, "initState", info, integer, integer),
+            Reflect.findDeclaredMethodExact(target, "updateArrowStyle", boolean),
+            Reflect.findDeclaredMethodExact(target, "updateIconStyle", String::class.java, integer),
+            Reflect.findDeclaredMethodExact(target, "refreshFloatHandleView", String::class.java, integer),
+            Reflect.findDeclaredMethodExact(target, "relayout"),
+            Reflect.findDeclaredMethodExact(target, "onTouch", View::class.java, MotionEvent::class.java),
         )
-        val detach = exact(target, "onDetachedFromWindow")
+        val detach = Reflect.findDeclaredMethodExact(target, "onDetachedFromWindow")
         // Resolve animator/transition signatures before registering any of this hook group.
-        val transition = if (variant == Variant.Flexible) exact(
+        val transition = if (variant == Variant.Flexible) Reflect.findDeclaredMethodExact(
             target, "startSwitchModeAnimation", integer, integer,
             Reflect.findClass("com.android.server.wm.floathandle.SwitchModeAnimCallback", loader),
-        ) else exact(target, "createAnimatorForPanAndRebound", integer, integer)
-        val iconTransition = if (variant == Variant.Zoom) exact(target, "startAnimationForIconTransaction") else null
+        ) else Reflect.findDeclaredMethodExact(target, "createAnimatorForPanAndRebound", integer, integer)
+        val iconTransition = if (variant == Variant.Zoom) Reflect.findDeclaredMethodExact(target, "startAnimationForIconTransaction") else null
         methods.forEach { method ->
             ModernHookRegistry.installCompat("small-window:${variant.name}:${method.name}", method, object : ModernMethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {

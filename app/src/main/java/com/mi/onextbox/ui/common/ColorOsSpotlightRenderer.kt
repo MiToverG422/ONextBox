@@ -1,5 +1,6 @@
 package com.mi.onextbox.ui.common
 
+import android.annotation.SuppressLint
 import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -10,13 +11,9 @@ import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 
-/**
- * Local equivalent of ColorOS 17's COUISpotLightEffectDrawable.
- *
- * ColorOS keeps the spotlight in raw render pixels (rather than dp), follows the active
- * pointer with a soft spring and expands the radius while the light extinguishes. Keeping
- * those details together here lets popup surfaces and toolbar controls share the exact path.
- */
+/** Spring-driven spotlight renderer for material surfaces. */
+// High-API effects are guarded at creation and have a plain fallback.
+@SuppressLint("NewApi")
 internal class ColorOsSpotlightRenderer(
     private val host: View,
     style: Style,

@@ -36,15 +36,8 @@ internal enum class BootregVideoScaleMode {
 }
 
 /**
- * Lightweight local-resource video host for the standard H.264 assets from BootReg.
- *
- * It deliberately uses the framework decoder rather than COEEngine. Consequently it must not be
- * used for BootReg's side-by-side colour/depth videos (for example anim_of_complete_page.mp4).
- * A transparent TextureView is kept hidden until the decoder reports its first rendered frame, so
- * the [backgroundColor] remains visible instead of a black Surface flash. The decoder is retained
- * on the final frame until this composable leaves composition.
- *
- * @param playCount Total number of plays. Use [Int.MAX_VALUE] for a native continuous loop.
+ * Local H.264 player, not for side-by-side colour/matte videos, retains the final frame.
+ * @param playCount Total plays, [Int.MAX_VALUE] enables continuous looping.
  */
 @Composable
 internal fun BootregVideoPlayer(

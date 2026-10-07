@@ -34,8 +34,11 @@ class BootSyncReceiver : BroadcastReceiver() {
                         AppLogStore.i("BootSync", "Skipped before first-run activation")
                         return@runCatching
                     }
-                    LspConfig.syncTogglesForBoot(appContext)
-                    AppLogStore.i("BootSync", "LSP toggles synced on $action")
+                    if (LspConfig.syncTogglesForBoot(appContext)) {
+                        AppLogStore.i("BootSync", "LSP toggles synced on $action")
+                    } else {
+                        AppLogStore.w("BootSync", "LSP mirror synchronization failed on $action")
+                    }
                     if (action == Intent.ACTION_BOOT_COMPLETED) {
                         TouchSamplingController.applyOnBootIfEnabled(appContext)
                         RefreshRateAutoApplier.applyIfEnabled(appContext)

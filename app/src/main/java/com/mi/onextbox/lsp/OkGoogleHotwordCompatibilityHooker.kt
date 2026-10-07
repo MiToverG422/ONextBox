@@ -10,15 +10,7 @@ import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Runtime-only compatibility for the Google App hotword registration path on CN firmware.
- *
- * This deliberately does not grant a permission, alter packages.xml, or make Google globally
- * privileged. It only returns PERMISSION_GRANTED from the permission-manager checks that target
- * the Google App and one of the four permissions an international privileged installation has.
- * MANAGE_ASSISTANT_AUDIO is intentionally excluded: it is a broader assistant-management
- * permission and was not present in the verified privileged baseline.
- */
+/** Google hotword permission-check compatibility, without persistent grants or package changes, excluding MANAGE_ASSISTANT_AUDIO. */
 internal object OkGoogleHotwordCompatibilityHooker {
     private const val TAG = "ONextBox-OkGoogle"
     private const val GOOGLE_APP_PACKAGE = "com.google.android.googlequicksearchbox"
@@ -74,11 +66,7 @@ internal object OkGoogleHotwordCompatibilityHooker {
         }
     }
 
-    /**
-     * Google sometimes self-checks whether it is a system application before enabling a feature.
-     * In its own process only, present the public FLAG_SYSTEM bit on responses for itself. This
-     * leaves the package manager's stored application state unchanged.
-     */
+/** Google-process view of its own FLAG_SYSTEM bit, without changing package-manager state. */
     fun hookGoogleApp(classLoader: ClassLoader?) {
         if (!isEnabledAtProcessStart()) return
 

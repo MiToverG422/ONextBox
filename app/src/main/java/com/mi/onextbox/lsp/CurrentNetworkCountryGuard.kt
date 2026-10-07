@@ -7,11 +7,7 @@ import android.provider.Settings
 import android.telephony.TelephonyManager
 import java.util.Locale
 
-/**
- * Detects the country currently reported by registered mobile networks and connected Wi-Fi.
- * Device sales region and SIM home country are intentionally not used: they do not represent the
- * network the phone is using now and would keep a CN device blocked after travelling abroad.
- */
+/** Detects the active network country, not the device sales region or SIM home country. */
 internal object CurrentNetworkCountryGuard {
     private const val CHINA_ISO = "CN"
     private const val WIFI_COUNTRY_SETTING = "wifi_country_code"

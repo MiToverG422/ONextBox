@@ -5,14 +5,7 @@ import android.content.SharedPreferences
 import androidx.annotation.RawRes
 import com.mi.onextbox.R
 
-/**
- * Durable state for ONextBox's first-run activation flow.
- *
- * This state deliberately lives outside the ordinary app preferences. Root and LSPosed runtime
- * status can change at any time, while accepting the current policies and finishing activation is
- * a one-time user decision. Keeping the two kinds of state separate also prevents a failed runtime
- * probe from accidentally reopening or completing onboarding.
- */
+/** First-run progress and policy acceptance, stored separately from runtime permission checks. */
 object OnboardingPreferences {
     const val PREFERENCES_NAME = "onextbox_activation"
     const val CURRENT_SCHEMA_VERSION = 1
@@ -185,13 +178,7 @@ object OnboardingPreferences {
             putBoolean(KEY_ALLOW_BACKGROUND_UPDATE_CHECKS, allowed)
         }
 
-    /**
-     * Completes activation in one SharedPreferences transaction.
-     *
-     * The method fails closed if even one required agreement is missing. The optional background
-     * update choice is committed together with the completion marker so no intermediate state can
-     * briefly enable a scheduler.
-     */
+/** Commits activation and update consent together, only after all required agreements are accepted. */
     fun complete(context: Context, allowBackgroundUpdateChecks: Boolean): Boolean {
         val preferences = preferencesOrNull(context) ?: return false
         if (preferences.getInt(KEY_SCHEMA_VERSION, 0) != CURRENT_SCHEMA_VERSION) return false

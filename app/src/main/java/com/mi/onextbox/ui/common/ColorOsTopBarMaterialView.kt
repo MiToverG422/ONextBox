@@ -1,5 +1,6 @@
 package com.mi.onextbox.ui.common
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
@@ -22,13 +23,9 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/**
- * The material face used by ColorOS 17 toolbar buttons.
- *
- * On ColorOS this delegates blur, edge, inner shadow and caustic shadow to the same
- * Oplus render-node APIs used by COUIToolbar. A small Canvas fallback keeps the button
- * usable on non-Oplus builds and if a vendor API changes in a future release.
- */
+/** Toolbar-button material with vendor blur and shadows, using Canvas as a fallback. */
+// High-API effects are guarded at creation and have a plain fallback.
+@SuppressLint("NewApi")
 internal class ColorOsTopBarMaterialView(
     context: Context,
     darkTheme: Boolean,
@@ -42,7 +39,7 @@ internal class ColorOsTopBarMaterialView(
         strokeWidth = 1.9f * density
     }
     private val colorOsEdgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        blendMode = BlendMode.SRC_OVER
+        if (android.os.Build.VERSION.SDK_INT >= 29) blendMode = BlendMode.SRC_OVER
     }
     private val colorOsEdgeShader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         runCatching { RuntimeShader(ColorOs17ShadowEdgeShader) }.getOrNull()

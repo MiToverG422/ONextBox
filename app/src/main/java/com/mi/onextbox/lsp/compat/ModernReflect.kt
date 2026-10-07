@@ -119,6 +119,14 @@ internal object ModernReflect {
         )
     }
 
+    internal fun findDeclaredMethodExact(
+        targetClass: Class<*>,
+        methodName: String,
+        vararg parameterTypes: Class<*>,
+    ): Method = targetClass.getDeclaredMethod(methodName, *parameterTypes).apply {
+        isAccessible = true
+    }
+
     private fun findBestMethod(
         targetClass: Class<*>,
         methodName: String,

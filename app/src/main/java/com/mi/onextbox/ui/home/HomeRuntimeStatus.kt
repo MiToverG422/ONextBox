@@ -1,19 +1,20 @@
 package com.mi.onextbox.ui.home
 
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -22,15 +23,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mi.onextbox.R
+import com.mi.onextbox.lsp.LspStatus
 import com.mi.onextbox.lsp.LsposedScopeRequester
 import com.mi.onextbox.ui.common.AppUiTokens
+import com.mi.onextbox.ui.common.RootStartupCheck
+import com.mi.onextbox.ui.common.homeLspDisplayStatus
+import com.mi.onextbox.ui.common.lspStatusText
 import com.mi.onextbox.ui.common.readCachedRootAccessInfo
 import com.mi.onextbox.ui.common.rememberHapticClick
 import io.github.suqi8.coui.kmp.basic.Card
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 data class HomeVersionInfo(
@@ -38,48 +42,37 @@ data class HomeVersionInfo(
     val lsposed: String? = null,
     val lsposedModuleEnabled: Boolean = false,
     val lsposedReady: Boolean = false,
+    val lsposedStatus: LspStatus = LspStatus.UNKNOWN,
+    val missingScopes: Set<String> = emptySet(),
 )
 
 @Composable
 fun rememberHomeVersionInfo(rootGranted: Boolean, refreshKey: Int = 0): HomeVersionInfo {
     val context = LocalContext.current
-    val initialVersionInfo = remember(context) {
-        buildCachedHomeVersionInfo(context)
+    val lsposedSnapshot by LsposedScopeRequester.states.collectAsState()
+    val cachedDisplay by LsposedScopeRequester.homeDisplayStates.collectAsState()
+    val rootStartupPending by RootStartupCheck.states.collectAsState()
+    var rootManager by remember(context) {
+        mutableStateOf(readCachedRootAccessInfo(context)?.managerVersion)
     }
-    val versionInfo by produceState(
-        initialValue = initialVersionInfo,
-        key1 = context,
-        key2 = rootGranted,
-        key3 = refreshKey,
-    ) {
-        if (refreshKey == 0) {
-            delay(1_200)
-        }
-        value = withContext(Dispatchers.IO) {
-            val lsposedSnapshot = runCatching {
-                LsposedScopeRequester.snapshot(context)
-            }.getOrNull()
-            val cachedRootManager = readCachedRootAccessInfo(context)?.managerVersion
-            HomeVersionInfo(
-                rootManager = cachedRootManager ?: value.rootManager,
-                lsposed = lsposedSnapshot?.frameworkVersionText ?: value.lsposed,
-                lsposedModuleEnabled = lsposedSnapshot?.moduleEnabled == true,
-                lsposedReady = lsposedSnapshot?.moduleEnabled == true,
-            )
+    LaunchedEffect(context, rootGranted, refreshKey) {
+        rootManager = withContext(Dispatchers.IO) {
+            if (refreshKey == 0) LsposedScopeRequester.snapshot(context)
+            else LsposedScopeRequester.refreshSnapshot(context)
+            readCachedRootAccessInfo(context)?.managerVersion
         }
     }
-    return versionInfo
-}
-
-private fun buildCachedHomeVersionInfo(context: Context): HomeVersionInfo {
-    val lsposedSnapshot = runCatching {
-        LsposedScopeRequester.cachedSnapshot(context)
-    }.getOrNull()
     return HomeVersionInfo(
-        rootManager = readCachedRootAccessInfo(context)?.managerVersion,
-        lsposed = lsposedSnapshot?.frameworkVersionText,
-        lsposedModuleEnabled = lsposedSnapshot?.moduleEnabled == true,
-        lsposedReady = lsposedSnapshot?.moduleEnabled == true,
+        rootManager = rootManager,
+        lsposed = cachedDisplay?.frameworkVersionText ?: lsposedSnapshot.frameworkVersionText,
+        lsposedModuleEnabled = lsposedSnapshot.moduleEnabled,
+        lsposedReady = cachedDisplay?.let { it.status == LspStatus.READY } ?: lsposedSnapshot.isReady,
+        lsposedStatus = cachedDisplay?.status ?: homeLspDisplayStatus(
+            status = lsposedSnapshot.status,
+            reason = lsposedSnapshot.reason,
+            rootStartupPending = rootStartupPending,
+        ),
+        missingScopes = cachedDisplay?.missingScopes ?: lsposedSnapshot.missingScopes,
     )
 }
 
@@ -105,11 +98,7 @@ fun HomeRuntimeStatusCards(
         )
         RuntimeStatusCard(
             title = stringResource(R.string.home_status_lsp),
-            detail = when {
-                !versionInfo.lsposedModuleEnabled -> stringResource(R.string.lsp_status_module_disabled)
-                versionInfo.lsposedReady -> versionInfo.lsposed ?: stringResource(R.string.home_info_unknown)
-                else -> stringResource(R.string.lsp_status_missing_scope)
-            },
+            detail = lspStatusText(versionInfo.lsposedStatus, versionInfo.lsposed, showChecking = false),
             modifier = Modifier
                 .weight(1f)
                 .requiredHeight(90.dp),

@@ -17,11 +17,7 @@ import com.mi.onextbox.lsp.compat.ModernReflect as Reflect
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executors
 
-/**
- * Read-only handoff when face success stops the AOD-to-keyguard fingerprint reveal
- * Copies official resource frames, not the native drawable/callback or its HAL window
- * This is independent of the optional face-tap unlock effect and never authorizes entry
- */
+/** Read-only AOD fingerprint-frame handoff, separate from tap feedback and never used to authorize entry. */
 internal class FaceTapWakeHandoff {
     data class Capture(
         val source: WeakReference<Any>, val native: WeakReference<AnimationDrawable>,

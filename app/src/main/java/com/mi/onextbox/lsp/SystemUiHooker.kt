@@ -89,7 +89,6 @@ object SystemUiHooker {
     @Volatile private var observedNativePowerMenuDialog: Any? = null
 
     fun hook(packageName: String, classLoader: ClassLoader?) {
-        LspRuntimeStatus.markSystemUiScopeActive()
         if (LspConfig.isSystemUiInternationalNetworkDisplayEnabledXposed()) {
             hookInternationalNetworkDisplayResource()
         }
@@ -144,12 +143,7 @@ object SystemUiHooker {
         log("SystemUI hooked in $packageName")
     }
 
-    /**
-     * ColorOS 17 writes VIBRANT for most non-blue theme colors. That style also saturates the
-     * framework neutral palette, so AOSP Material pages such as PermissionController end up with
-     * a strongly tinted full-screen background. Keep the user's seed color and only force the
-     * palette style selected by SystemUI's dynamic-color controller to TONAL_SPOT.
-     */
+/** Dynamic palette style override, preserving the selected seed colour. */
     private fun hookForceTonalSpotStyle(classLoader: ClassLoader?) {
         val controllerClass = XposedHelpers.findClassIfExists(
             THEME_OVERLAY_CONTROLLER_CLASS,
@@ -188,11 +182,7 @@ object SystemUiHooker {
         log("SystemUI Tonal Spot palette hooks: ${methods.size}")
     }
 
-    /**
-     * ColorOS 17 does not expose a color-spec selector. Its bundled Monet library accepts the
-     * specification as DynamicScheme constructor argument 5, then normalizes and stores it.
-     * Replacing that argument is the earliest stable point to force SPEC_2021 or SPEC_2025.
-     */
+/** Monet colour-spec override at the DynamicScheme constructor. */
     private fun hookForceMonetColorSpec(classLoader: ClassLoader?, mode: Int) {
         val specName = when (mode) {
             LspConfig.SYSTEMUI_MONET_COLOR_SPEC_2025 -> "SPEC_2025"
@@ -627,11 +617,7 @@ object SystemUiHooker {
         }
     }
 
-    /**
-     * ColorOS 17 places both the stacked-mobile and regular-mobile slots before Wi-Fi. Moving the
-     * Wi-Fi slot in the source array restores ColorOS 16's Wi-Fi -> SIM1 -> SIM2 visual order and
-     * lets the existing icon controller keep handling subscription additions and removals.
-     */
+/** Wi-Fi and mobile-icon slot ordering, preserving subscription updates. */
     private fun hookRestoreC16NetworkIconOrder(classLoader: ClassLoader?) {
         var hookCount = 0
         STATUS_BAR_ICON_LIST_CLASSES.forEach { className ->

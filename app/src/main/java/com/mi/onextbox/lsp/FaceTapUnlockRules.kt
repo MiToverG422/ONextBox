@@ -30,7 +30,7 @@ internal object FaceTapUnlockRules {
             x >= left && x < right && y >= top && y < bottom
     }
 
-    /** Matches C17 isInFingerViewArea, the animation container may be screen-width sized. */
+    /** Fingerprint-icon hit area. */
     fun nativeIconBounds(
         locationX: Int, locationY: Int, containerWidth: Int, containerHeight: Int,
         drawableWidth: Int, drawableHeight: Int, zoom: Float, screenWidth: Int, screenHeight: Int,

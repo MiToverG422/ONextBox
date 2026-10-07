@@ -4,15 +4,18 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import com.mi.onextbox.ui.common.ShellLogger
+import com.mi.onextbox.lsp.LspPreferenceStore.readSystemPropertyValue
+import com.mi.onextbox.lsp.LspPreferenceStore.readFlagFile
+import com.mi.onextbox.lsp.LspPreferenceStore.readSettingsGlobalToggle
+import com.mi.onextbox.lsp.LspPreferenceStore.readSettingsGlobalValue
+import com.mi.onextbox.lsp.LspPreferenceStore.prefs
+import com.mi.onextbox.lsp.LspPreferenceStore.readSystemPropertyToggle
 import com.topjohnwu.superuser.Shell
 import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import com.mi.onextbox.lsp.compat.ModernRemotePreferences as XSharedPreferences
 import java.io.File
-import java.lang.reflect.Method
-import java.util.concurrent.ConcurrentHashMap
 
-// Preference writes here are intentionally synchronous: root/Xposed readers must see the
-// persisted file immediately before permissions and the readable mirror are synchronized.
+// Feature preferences and system-mirror synchronization.
 @SuppressLint("ApplySharedPref", "UseKtx")
 object LspConfig {
     /** Collects boot-time writes so dozens of values can be synchronized in one root shell. */
@@ -21,24 +24,40 @@ object LspConfig {
         XSharedPreferences(PREFS_NAME)
     }
 
-    /**
-     * Hook callbacks can run once per frame or once per notification. Keep the synchronized
-     * framework values briefly in-process so those callbacks do not repeatedly resolve hidden
-     * APIs, cross the Settings provider, or parse settings_global.xml.
-     */
-    private const val XPOSED_READ_CACHE_NANOS = 500_000_000L
-    private data class TimedStringValue(val value: String?, val readAtNanos: Long)
-    private val systemPropertyReadCache = ConcurrentHashMap<String, TimedStringValue>()
-    private val settingsGlobalReadCache = ConcurrentHashMap<String, TimedStringValue>()
-    private val systemPropertiesGetMethod: Method? by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        runCatching {
-            Class.forName("android.os.SystemProperties")
-                .getMethod("get", String::class.java, String::class.java)
-        }.getOrNull()
-    }
-
     private const val MODULE_PACKAGE = "com.mi.onextbox"
     private const val PREFS_NAME = "lsp_features"
+
+    private const val KEY_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP = "file_manager_hide_secure_access_tip"
+    private const val PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP =
+        "oost.$KEY_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP"
+    private const val PERSIST_PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP =
+        "persist.sys.$PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP"
+    private const val SETTINGS_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP =
+        "oost_$KEY_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP"
+
+    fun isFileManagerHideSecureAccessTipEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP, false)
+
+    fun setFileManagerHideSecureAccessTipEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+                PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+            ),
+            settingsGlobalKey = SETTINGS_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+        )
+    }
+
+    fun isFileManagerHideSecureAccessTipEnabledXposed(): Boolean = readXposedBoolean(
+        persistPropertyKey = PERSIST_PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+        propertyKey = PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+        settingsKey = SETTINGS_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+        prefsKey = KEY_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+        defaultValue = false,
+    )
 
     /** Independent small-window options share the normal backup/boot mirrors, no master gate. */
     enum class SmallWindowFeature(val key: String) {
@@ -59,16 +78,7 @@ object LspConfig {
     }
 
     fun isSmallWindowFeatureEnabled(context: Context, feature: SmallWindowFeature): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = feature.persistPropertyKey,
-            propertyKey = feature.propertyKey,
-            settingsKey = feature.settingsKey,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = feature.key,
-            defaultValue = false,
-        )
+        LspPreferenceStore.readBoolean(context, feature.key, false)
 
     fun setSmallWindowFeatureEnabled(context: Context, feature: SmallWindowFeature, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -106,10 +116,7 @@ object LspConfig {
     }
 
     fun isKeyguardFeatureEnabled(context: Context, feature: KeyguardFeature): Boolean =
-        readSyncedToggle(
-            context, feature.persistPropertyKey, feature.propertyKey, feature.settingsKey,
-            null, null, feature.key, false,
-        )
+        LspPreferenceStore.readBoolean(context, feature.key, false)
 
     fun setKeyguardFeatureEnabled(context: Context, feature: KeyguardFeature, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -148,16 +155,7 @@ object LspConfig {
     }
 
     fun isPermissionFeatureEnabled(context: Context, feature: PermissionFeature): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = feature.persistPropertyKey,
-            propertyKey = feature.propertyKey,
-            settingsKey = feature.settingsKey,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = feature.key,
-            defaultValue = false,
-        )
+        LspPreferenceStore.readBoolean(context, feature.key, false)
 
     fun setPermissionFeatureEnabled(context: Context, feature: PermissionFeature, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -202,16 +200,7 @@ object LspConfig {
     }
 
     fun isNotificationRemovalEnabled(context: Context, feature: NotificationRemovalFeature): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = feature.persistPropertyKey,
-            propertyKey = feature.propertyKey,
-            settingsKey = feature.settingsKey,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = feature.key,
-            defaultValue = false,
-        )
+        LspPreferenceStore.readBoolean(context, feature.key, false)
 
     fun setNotificationRemovalEnabled(context: Context, feature: NotificationRemovalFeature, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -747,9 +736,6 @@ object LspConfig {
     const val ASSISTANT_POWER_MODE_SYSTEM_DEFAULT = 0
     private const val DEFAULT_ASSISTANT_POWER_MODE = ASSISTANT_POWER_MODE_NONE
 
-
-
-
     data class UiSnapshot(
         val nativeNotifyIconEnabled: Boolean,
         val nativeNotificationBubblesEnabled: Boolean,
@@ -930,20 +916,11 @@ object LspConfig {
     }
 
     fun isNativeNotifyIconEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_NATIVE_NOTIFY_ICON,
-            propertyKey = PROP_KEY_NATIVE_NOTIFY_ICON,
-            settingsKey = SETTINGS_KEY_NATIVE_NOTIFY_ICON,
-            flagFilePath = FLAG_FILE_PATH_NATIVE_NOTIFY_ICON,
-            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFY_ICON,
-            prefsKey = KEY_NATIVE_NOTIFY_ICON,
-            defaultValue = true
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_NATIVE_NOTIFY_ICON, true)
     }
 
     fun setNativeNotifyIconEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_NATIVE_NOTIFY_ICON, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_NATIVE_NOTIFY_ICON, enabled).commitOrReport()) return
         syncReadableState(context)
         syncFlagState(
             enabled = enabled,
@@ -957,20 +934,11 @@ object LspConfig {
     }
 
     fun isExtremeRefresh165Enabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_EXTREME_REFRESH_165,
-            propertyKey = PROP_KEY_EXTREME_REFRESH_165,
-            settingsKey = SETTINGS_KEY_EXTREME_REFRESH_165,
-            flagFilePath = FLAG_FILE_PATH_EXTREME_REFRESH_165,
-            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_EXTREME_REFRESH_165,
-            prefsKey = KEY_EXTREME_REFRESH_165,
-            defaultValue = false
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_EXTREME_REFRESH_165, false)
     }
 
     fun setExtremeRefresh165Enabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_EXTREME_REFRESH_165, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_EXTREME_REFRESH_165, enabled).commitOrReport()) return
         syncReadableState(context)
         syncFlagState(
             enabled = enabled,
@@ -988,7 +956,7 @@ object LspConfig {
     }
 
     fun setRecentTaskRadiusEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_RECENT_TASK_RADIUS, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_RECENT_TASK_RADIUS, enabled).commitOrReport()) return
         syncReadableState(context)
         syncFlagState(
             enabled = enabled,
@@ -1002,20 +970,11 @@ object LspConfig {
     }
 
     fun isAodEnhanceEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_AOD_ENHANCE,
-            propertyKey = PROP_KEY_AOD_ENHANCE,
-            settingsKey = SETTINGS_KEY_AOD_ENHANCE,
-            flagFilePath = FLAG_FILE_PATH_AOD_ENHANCE,
-            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_AOD_ENHANCE,
-            prefsKey = KEY_AOD_ENHANCE,
-            defaultValue = false
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_AOD_ENHANCE, false)
     }
 
     fun setAodEnhanceEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_AOD_ENHANCE, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_AOD_ENHANCE, enabled).commitOrReport()) return
         syncReadableState(context)
         syncFlagState(
             enabled = enabled,
@@ -1029,19 +988,12 @@ object LspConfig {
     }
 
     fun getAssistantPowerMode(context: Context): Int {
-        return readSyncedInt(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_POWER_MODE,
-            propertyKey = PROP_KEY_ASSISTANT_POWER_MODE,
-            settingsKey = SETTINGS_KEY_ASSISTANT_POWER_MODE,
-            prefsKey = KEY_ASSISTANT_POWER_MODE,
-            defaultValue = DEFAULT_ASSISTANT_POWER_MODE
-        ).sanitizeAssistantPowerMode()
+        return LspPreferenceStore.readInt(context, KEY_ASSISTANT_POWER_MODE, DEFAULT_ASSISTANT_POWER_MODE).sanitizeAssistantPowerMode()
     }
 
     fun setAssistantPowerMode(context: Context, mode: Int) {
         val normalized = mode.sanitizeAssistantPowerMode()
-        prefs(context).edit().putInt(KEY_ASSISTANT_POWER_MODE, normalized).commit()
+        if (!prefs(context).edit().putInt(KEY_ASSISTANT_POWER_MODE, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = normalized.toString(),
@@ -1054,20 +1006,11 @@ object LspConfig {
     }
 
     fun isAssistantGestureCircleEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE,
-            propertyKey = PROP_KEY_ASSISTANT_GESTURE_CIRCLE,
-            settingsKey = SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ASSISTANT_GESTURE_CIRCLE,
-            defaultValue = false
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_ASSISTANT_GESTURE_CIRCLE, false)
     }
 
     fun setAssistantGestureCircleEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_ASSISTANT_GESTURE_CIRCLE, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_ASSISTANT_GESTURE_CIRCLE, enabled).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = if (enabled) "1" else "0",
@@ -1080,20 +1023,11 @@ object LspConfig {
     }
 
     fun isAssistantGestureCircleC17Enabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17,
-            propertyKey = PROP_KEY_ASSISTANT_GESTURE_CIRCLE_C17,
-            settingsKey = SETTINGS_KEY_ASSISTANT_GESTURE_CIRCLE_C17,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ASSISTANT_GESTURE_CIRCLE_C17,
-            defaultValue = false
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_ASSISTANT_GESTURE_CIRCLE_C17, false)
     }
 
     fun setAssistantGestureCircleC17Enabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_ASSISTANT_GESTURE_CIRCLE_C17, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_ASSISTANT_GESTURE_CIRCLE_C17, enabled).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = if (enabled) "1" else "0",
@@ -1106,20 +1040,11 @@ object LspConfig {
     }
 
     fun isAssistantNativePowerEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_NATIVE_POWER,
-            propertyKey = PROP_KEY_ASSISTANT_NATIVE_POWER,
-            settingsKey = SETTINGS_KEY_ASSISTANT_NATIVE_POWER,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ASSISTANT_NATIVE_POWER,
-            defaultValue = false,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_ASSISTANT_NATIVE_POWER, false)
     }
 
     fun setAssistantNativePowerEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_ASSISTANT_NATIVE_POWER, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_ASSISTANT_NATIVE_POWER, enabled).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = if (enabled) "1" else "0",
@@ -1132,22 +1057,13 @@ object LspConfig {
     }
 
     fun isAssistantInternationalPowerChordEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
-            propertyKey = PROP_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
-            settingsKey = SETTINGS_KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD,
-            defaultValue = true,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD, true)
     }
 
     fun setAssistantInternationalPowerChordEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit()
+        if (!prefs(context).edit()
             .putBoolean(KEY_ASSISTANT_INTERNATIONAL_POWER_CHORD, enabled)
-            .commit()
+            .commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = if (enabled) "1" else "0",
@@ -1160,20 +1076,11 @@ object LspConfig {
     }
 
     fun isAssistantNativeCircleEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ASSISTANT_NATIVE_CIRCLE,
-            propertyKey = PROP_KEY_ASSISTANT_NATIVE_CIRCLE,
-            settingsKey = SETTINGS_KEY_ASSISTANT_NATIVE_CIRCLE,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ASSISTANT_NATIVE_CIRCLE,
-            defaultValue = false,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_ASSISTANT_NATIVE_CIRCLE, false)
     }
 
     fun setAssistantNativeCircleEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_ASSISTANT_NATIVE_CIRCLE, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_ASSISTANT_NATIVE_CIRCLE, enabled).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = if (enabled) "1" else "0",
@@ -1193,7 +1100,7 @@ object LspConfig {
 
     fun setRecentTaskRadiusDp(context: Context, value: Int) {
         val normalized = value.coerceIn(0, 260)
-        prefs(context).edit().putInt(KEY_RECENT_TASK_RADIUS_DP, normalized).commit()
+        if (!prefs(context).edit().putInt(KEY_RECENT_TASK_RADIUS_DP, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = normalized.toString(),
@@ -1213,7 +1120,7 @@ object LspConfig {
 
     fun setAodInitDarkBrightness(context: Context, value: Int) {
         val normalized = value.coerceIn(0, 255)
-        prefs(context).edit().putInt(KEY_AOD_INIT_DARK_BRIGHTNESS, normalized).commit()
+        if (!prefs(context).edit().putInt(KEY_AOD_INIT_DARK_BRIGHTNESS, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = normalized.toString(),
@@ -1233,7 +1140,7 @@ object LspConfig {
 
     fun setAodInitBrightBrightness(context: Context, value: Int) {
         val normalized = value.coerceIn(0, 255)
-        prefs(context).edit().putInt(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, normalized).commit()
+        if (!prefs(context).edit().putInt(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = normalized.toString(),
@@ -1256,7 +1163,7 @@ object LspConfig {
 
     fun setAodRunningBrightnessMultiplier(context: Context, value: Float) {
         val normalized = value.coerceIn(1.0f, 3.0f)
-        prefs(context).edit().putFloat(KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER, normalized).commit()
+        if (!prefs(context).edit().putFloat(KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = normalized.toString(),
@@ -1273,7 +1180,7 @@ object LspConfig {
     }
 
     fun setAodPanoramicSupportEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_AOD_PANORAMIC_SUPPORT, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_AOD_PANORAMIC_SUPPORT, enabled).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = if (enabled) "1" else "0",
@@ -1290,7 +1197,7 @@ object LspConfig {
     }
 
     fun setAodSettingsSwitchEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_AOD_SETTINGS_SWITCH, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_AOD_SETTINGS_SWITCH, enabled).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = if (enabled) "1" else "0",
@@ -1307,7 +1214,7 @@ object LspConfig {
     }
 
     fun setAodSingleClickBlockEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_AOD_SINGLE_CLICK_BLOCK, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_AOD_SINGLE_CLICK_BLOCK, enabled).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = if (enabled) "1" else "0",
@@ -1320,20 +1227,11 @@ object LspConfig {
     }
 
     fun isNativeNotificationBubblesEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_NATIVE_NOTIFICATION_BUBBLES,
-            propertyKey = PROP_KEY_NATIVE_NOTIFICATION_BUBBLES,
-            settingsKey = SETTINGS_KEY_NATIVE_NOTIFICATION_BUBBLES,
-            flagFilePath = FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES,
-            legacyFlagFilePath = LEGACY_FLAG_FILE_PATH_NATIVE_NOTIFICATION_BUBBLES,
-            prefsKey = KEY_NATIVE_NOTIFICATION_BUBBLES,
-            defaultValue = DEFAULT_NATIVE_NOTIFICATION_BUBBLES
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_NATIVE_NOTIFICATION_BUBBLES, DEFAULT_NATIVE_NOTIFICATION_BUBBLES)
     }
 
     fun setNativeNotificationBubblesEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_NATIVE_NOTIFICATION_BUBBLES, enabled).commit()
+        if (!prefs(context).edit().putBoolean(KEY_NATIVE_NOTIFICATION_BUBBLES, enabled).commitOrReport()) return
         syncReadableState(context)
         syncFlagState(
             enabled = enabled,
@@ -1347,16 +1245,7 @@ object LspConfig {
     }
 
     fun isSystemUiInternationalNetworkDisplayEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
-            propertyKey = PROP_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY,
-            defaultValue = DEFAULT_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY, DEFAULT_SYSTEMUI_INTERNATIONAL_NETWORK_DISPLAY)
     }
 
     fun setSystemUiInternationalNetworkDisplayEnabled(context: Context, enabled: Boolean) {
@@ -1373,16 +1262,7 @@ object LspConfig {
     }
 
     fun isSystemUiHideMobileRoamingIndicatorEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
-            propertyKey = PROP_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR,
-            defaultValue = DEFAULT_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR, DEFAULT_SYSTEMUI_HIDE_MOBILE_ROAMING_INDICATOR)
     }
 
     fun setSystemUiHideMobileRoamingIndicatorEnabled(context: Context, enabled: Boolean) {
@@ -1399,16 +1279,7 @@ object LspConfig {
     }
 
     fun isSystemUiHideNetworkActivityIndicatorEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
-            propertyKey = PROP_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
-            defaultValue = DEFAULT_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR, DEFAULT_SYSTEMUI_HIDE_NETWORK_ACTIVITY_INDICATOR)
     }
 
     fun setSystemUiHideNetworkActivityIndicatorEnabled(context: Context, enabled: Boolean) {
@@ -1425,16 +1296,7 @@ object LspConfig {
     }
 
     fun isSystemUiNativePowerMenuEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
-            propertyKey = PROP_KEY_SYSTEMUI_NATIVE_POWER_MENU,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_NATIVE_POWER_MENU,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_NATIVE_POWER_MENU,
-            defaultValue = DEFAULT_SYSTEMUI_NATIVE_POWER_MENU,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_NATIVE_POWER_MENU, DEFAULT_SYSTEMUI_NATIVE_POWER_MENU)
     }
 
     fun setSystemUiNativePowerMenuEnabled(context: Context, enabled: Boolean) {
@@ -1451,16 +1313,7 @@ object LspConfig {
     }
 
     fun isSystemUiRestoreC16NetworkIconOrderEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
-            propertyKey = PROP_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
-            defaultValue = DEFAULT_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER, DEFAULT_SYSTEMUI_RESTORE_C16_NETWORK_ICON_ORDER)
     }
 
     fun setSystemUiRestoreC16NetworkIconOrderEnabled(context: Context, enabled: Boolean) {
@@ -1477,16 +1330,7 @@ object LspConfig {
     }
 
     fun isSystemUiInternationalNotificationStyleEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
-            propertyKey = PROP_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE,
-            defaultValue = DEFAULT_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE, DEFAULT_SYSTEMUI_INTERNATIONAL_NOTIFICATION_STYLE)
     }
 
     fun setSystemUiInternationalNotificationStyleEnabled(context: Context, enabled: Boolean) {
@@ -1503,16 +1347,7 @@ object LspConfig {
     }
 
     fun isSystemUiForceTonalSpotEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
-            propertyKey = PROP_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_FORCE_TONAL_SPOT,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_FORCE_TONAL_SPOT,
-            defaultValue = DEFAULT_SYSTEMUI_FORCE_TONAL_SPOT,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_FORCE_TONAL_SPOT, DEFAULT_SYSTEMUI_FORCE_TONAL_SPOT)
     }
 
     fun setSystemUiForceTonalSpotEnabled(context: Context, enabled: Boolean) {
@@ -1529,19 +1364,12 @@ object LspConfig {
     }
 
     fun getSystemUiMonetColorSpecMode(context: Context): Int {
-        return readSyncedInt(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
-            propertyKey = PROP_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
-            prefsKey = KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE,
-            defaultValue = DEFAULT_SYSTEMUI_MONET_COLOR_SPEC_MODE,
-        ).sanitizeSystemUiMonetColorSpecMode()
+        return LspPreferenceStore.readInt(context, KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE, DEFAULT_SYSTEMUI_MONET_COLOR_SPEC_MODE).sanitizeSystemUiMonetColorSpecMode()
     }
 
     fun setSystemUiMonetColorSpecMode(context: Context, mode: Int) {
         val normalized = mode.sanitizeSystemUiMonetColorSpecMode()
-        prefs(context).edit().putInt(KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE, normalized).commit()
+        if (!prefs(context).edit().putInt(KEY_SYSTEMUI_MONET_COLOR_SPEC_MODE, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = normalized.toString(),
@@ -1554,16 +1382,7 @@ object LspConfig {
     }
 
     fun isSystemUiHideQsEditEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_EDIT,
-            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_EDIT,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_EDIT,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_HIDE_QS_EDIT,
-            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_EDIT
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_HIDE_QS_EDIT, DEFAULT_SYSTEMUI_HIDE_QS_EDIT)
     }
 
     fun setSystemUiHideQsEditEnabled(context: Context, enabled: Boolean) {
@@ -1580,16 +1399,7 @@ object LspConfig {
     }
 
     fun isSystemUiHideQsSettingsEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
-            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_SETTINGS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_HIDE_QS_SETTINGS,
-            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_SETTINGS
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_HIDE_QS_SETTINGS, DEFAULT_SYSTEMUI_HIDE_QS_SETTINGS)
     }
 
     fun setSystemUiHideQsSettingsEnabled(context: Context, enabled: Boolean) {
@@ -1606,16 +1416,7 @@ object LspConfig {
     }
 
     fun isSystemUiHideQsTopCarrierEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
-            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER,
-            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_TOP_CARRIER
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_HIDE_QS_TOP_CARRIER, DEFAULT_SYSTEMUI_HIDE_QS_TOP_CARRIER)
     }
 
     fun setSystemUiHideQsTopCarrierEnabled(context: Context, enabled: Boolean) {
@@ -1632,16 +1433,7 @@ object LspConfig {
     }
 
     fun isSystemUiHideQsMoreEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_HIDE_QS_MORE,
-            propertyKey = PROP_KEY_SYSTEMUI_HIDE_QS_MORE,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_HIDE_QS_MORE,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_HIDE_QS_MORE,
-            defaultValue = DEFAULT_SYSTEMUI_HIDE_QS_MORE
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_HIDE_QS_MORE, DEFAULT_SYSTEMUI_HIDE_QS_MORE)
     }
 
     fun setSystemUiHideQsMoreEnabled(context: Context, enabled: Boolean) {
@@ -1658,16 +1450,7 @@ object LspConfig {
     }
 
     fun isSystemUiForceNativeClipboardOverlayEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
-            propertyKey = PROP_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
-            settingsKey = SETTINGS_KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY,
-            defaultValue = DEFAULT_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY, DEFAULT_SYSTEMUI_FORCE_NATIVE_CLIPBOARD_OVERLAY)
     }
 
     fun setSystemUiForceNativeClipboardOverlayEnabled(context: Context, enabled: Boolean) {
@@ -1684,16 +1467,7 @@ object LspConfig {
     }
 
     fun isSettingsInternationalEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL,
-            propertyKey = PROP_KEY_SETTINGS_INTERNATIONAL,
-            settingsKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_INTERNATIONAL,
-            defaultValue = DEFAULT_SETTINGS_INTERNATIONAL
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_INTERNATIONAL, DEFAULT_SETTINGS_INTERNATIONAL)
     }
 
     fun setSettingsInternationalEnabled(context: Context, enabled: Boolean) {
@@ -1710,16 +1484,7 @@ object LspConfig {
     }
 
     fun isSettingsForceAppAutoStartEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_APP_AUTO_START,
-            propertyKey = PROP_KEY_SETTINGS_FORCE_APP_AUTO_START,
-            settingsKey = SETTINGS_KEY_SETTINGS_FORCE_APP_AUTO_START,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_FORCE_APP_AUTO_START,
-            defaultValue = DEFAULT_SETTINGS_FORCE_APP_AUTO_START
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_FORCE_APP_AUTO_START, DEFAULT_SETTINGS_FORCE_APP_AUTO_START)
     }
 
     fun setSettingsForceAppAutoStartEnabled(context: Context, enabled: Boolean) {
@@ -1736,16 +1501,7 @@ object LspConfig {
     }
 
     fun isSettingsInternationalWalletEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_INTERNATIONAL_WALLET,
-            propertyKey = PROP_KEY_SETTINGS_INTERNATIONAL_WALLET,
-            settingsKey = SETTINGS_KEY_SETTINGS_INTERNATIONAL_WALLET,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_INTERNATIONAL_WALLET,
-            defaultValue = DEFAULT_SETTINGS_INTERNATIONAL_WALLET
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_INTERNATIONAL_WALLET, DEFAULT_SETTINGS_INTERNATIONAL_WALLET)
     }
 
     fun setSettingsInternationalWalletEnabled(context: Context, enabled: Boolean) {
@@ -1762,29 +1518,11 @@ object LspConfig {
     }
 
     fun isSettingsRestoreDomesticAboutDeviceEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
-            propertyKey = PROP_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
-            settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
-            defaultValue = DEFAULT_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE, DEFAULT_SETTINGS_RESTORE_DOMESTIC_ABOUT_DEVICE)
     }
 
     fun isSettingsRestoreDomesticAuxiliaryFunctionsEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
-            propertyKey = PROP_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
-            settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
-            defaultValue = DEFAULT_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS, DEFAULT_SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS)
     }
 
     fun setSettingsRestoreDomesticAboutDeviceEnabled(context: Context, enabled: Boolean) {
@@ -1813,16 +1551,7 @@ object LspConfig {
         )
     }
 
-    fun isSettingsSkipSpecialPermissionRiskConfirmEnabled(context: Context): Boolean = readSyncedToggle(
-        context = context,
-        persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
-        propertyKey = PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
-        settingsKey = SETTINGS_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
-        flagFilePath = null,
-        legacyFlagFilePath = null,
-        prefsKey = KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
-        defaultValue = DEFAULT_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
-    )
+    fun isSettingsSkipSpecialPermissionRiskConfirmEnabled(context: Context): Boolean = LspPreferenceStore.readBoolean(context, KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM, DEFAULT_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM)
 
     fun setSettingsSkipSpecialPermissionRiskConfirmEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -1837,16 +1566,7 @@ object LspConfig {
         )
     }
 
-    fun isSettingsRestoreAppOpenButtonEnabled(context: Context): Boolean = readSyncedToggle(
-        context = context,
-        persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
-        propertyKey = PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
-        settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
-        flagFilePath = null,
-        legacyFlagFilePath = null,
-        prefsKey = KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
-        defaultValue = DEFAULT_SETTINGS_RESTORE_APP_OPEN_BUTTON,
-    )
+    fun isSettingsRestoreAppOpenButtonEnabled(context: Context): Boolean = LspPreferenceStore.readBoolean(context, KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON, DEFAULT_SETTINGS_RESTORE_APP_OPEN_BUTTON)
 
     fun setSettingsRestoreAppOpenButtonEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -1862,16 +1582,7 @@ object LspConfig {
     }
 
     fun isSettingsC15AboutLayoutEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
-            propertyKey = PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
-            settingsKey = SETTINGS_KEY_SETTINGS_C15_ABOUT_LAYOUT,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_C15_ABOUT_LAYOUT,
-            defaultValue = DEFAULT_SETTINGS_C15_ABOUT_LAYOUT,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_C15_ABOUT_LAYOUT, DEFAULT_SETTINGS_C15_ABOUT_LAYOUT)
     }
 
     fun setSettingsC15AboutLayoutEnabled(context: Context, enabled: Boolean) {
@@ -1887,16 +1598,7 @@ object LspConfig {
         )
     }
 
-    fun isWallpapersRedOneEntryEnabled(context: Context): Boolean = readSyncedToggle(
-        context = context,
-        persistPropertyKey = PERSIST_PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
-        propertyKey = PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
-        settingsKey = SETTINGS_KEY_WALLPAPERS_RED_ONE_ENTRY,
-        flagFilePath = null,
-        legacyFlagFilePath = null,
-        prefsKey = KEY_WALLPAPERS_RED_ONE_ENTRY,
-        defaultValue = DEFAULT_WALLPAPERS_RED_ONE_ENTRY,
-    )
+    fun isWallpapersRedOneEntryEnabled(context: Context): Boolean = LspPreferenceStore.readBoolean(context, KEY_WALLPAPERS_RED_ONE_ENTRY, DEFAULT_WALLPAPERS_RED_ONE_ENTRY)
 
     fun setWallpapersRedOneEntryEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -1912,16 +1614,7 @@ object LspConfig {
     }
 
     fun isSettingsRefreshRateUnlocked(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
-            propertyKey = PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
-            settingsKey = SETTINGS_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_UNLOCK_REFRESH_RATE,
-            defaultValue = DEFAULT_SETTINGS_UNLOCK_REFRESH_RATE,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_UNLOCK_REFRESH_RATE, DEFAULT_SETTINGS_UNLOCK_REFRESH_RATE)
     }
 
     fun setSettingsRefreshRateUnlocked(context: Context, enabled: Boolean) {
@@ -1938,16 +1631,7 @@ object LspConfig {
     }
 
     fun isSettingsForceGlobalExtremeRefreshRateEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
-            propertyKey = PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
-            settingsKey = SETTINGS_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
-            defaultValue = DEFAULT_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE, DEFAULT_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE)
     }
 
     fun setSettingsForceGlobalExtremeRefreshRateEnabled(context: Context, enabled: Boolean) {
@@ -1964,16 +1648,7 @@ object LspConfig {
     }
 
     fun isSettingsRestoreSmartLockEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
-            propertyKey = PROP_KEY_SETTINGS_RESTORE_SMART_LOCK,
-            settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_SMART_LOCK,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_RESTORE_SMART_LOCK,
-            defaultValue = DEFAULT_SETTINGS_RESTORE_SMART_LOCK,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_RESTORE_SMART_LOCK, DEFAULT_SETTINGS_RESTORE_SMART_LOCK)
     }
 
     fun setSettingsRestoreSmartLockEnabled(context: Context, enabled: Boolean) {
@@ -1990,16 +1665,7 @@ object LspConfig {
     }
 
     fun isSettingsForceGoogleEntryEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
-            propertyKey = PROP_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
-            settingsKey = SETTINGS_KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_SETTINGS_FORCE_GOOGLE_ENTRY,
-            defaultValue = DEFAULT_SETTINGS_FORCE_GOOGLE_ENTRY
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_FORCE_GOOGLE_ENTRY, DEFAULT_SETTINGS_FORCE_GOOGLE_ENTRY)
     }
 
     fun setSettingsForceGoogleEntryEnabled(context: Context, enabled: Boolean) {
@@ -2016,16 +1682,7 @@ object LspConfig {
     }
 
     fun isGmsRegionRestrictionBypassEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
-            propertyKey = PROP_KEY_GMS_REGION_RESTRICTION_BYPASS,
-            settingsKey = SETTINGS_KEY_GMS_REGION_RESTRICTION_BYPASS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_GMS_REGION_RESTRICTION_BYPASS,
-            defaultValue = DEFAULT_GMS_REGION_RESTRICTION_BYPASS,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_GMS_REGION_RESTRICTION_BYPASS, DEFAULT_GMS_REGION_RESTRICTION_BYPASS)
     }
 
     fun setGmsRegionRestrictionBypassEnabled(context: Context, enabled: Boolean) {
@@ -2042,16 +1699,7 @@ object LspConfig {
     }
 
     fun isEsimRegionRestrictionBypassEnabled(context: Context): Boolean {
-        val enabled = readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
-            propertyKey = PROP_KEY_ESIM_REGION_RESTRICTION_BYPASS,
-            settingsKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_BYPASS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ESIM_REGION_RESTRICTION_BYPASS,
-            defaultValue = DEFAULT_ESIM_REGION_RESTRICTION_BYPASS,
-        )
+        val enabled = LspPreferenceStore.readBoolean(context, KEY_ESIM_REGION_RESTRICTION_BYPASS, DEFAULT_ESIM_REGION_RESTRICTION_BYPASS)
         return enabled && isEsimRegionRestrictionBypassAvailable(context)
     }
 
@@ -2085,16 +1733,7 @@ object LspConfig {
     }
 
     fun isEsimRegionRestrictionOverrideEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
-            propertyKey = PROP_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
-            settingsKey = SETTINGS_KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ESIM_REGION_RESTRICTION_OVERRIDE,
-            defaultValue = DEFAULT_ESIM_REGION_RESTRICTION_OVERRIDE,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_ESIM_REGION_RESTRICTION_OVERRIDE, DEFAULT_ESIM_REGION_RESTRICTION_OVERRIDE)
     }
 
     fun setEsimRegionRestrictionOverrideEnabled(context: Context, enabled: Boolean) {
@@ -2130,18 +1769,7 @@ object LspConfig {
     }
 
     fun isEsimConfirmationCodePromptEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
-            propertyKey = PROP_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
-            settingsKey = SETTINGS_KEY_ESIM_CONFIRMATION_CODE_PROMPT,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ESIM_CONFIRMATION_CODE_PROMPT,
-            // Preserve the behavior of existing installations until the new independent switch
-            // is changed for the first time.
-            defaultValue = isEsimRegionRestrictionBypassEnabled(context),
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_ESIM_CONFIRMATION_CODE_PROMPT, isEsimRegionRestrictionBypassEnabled(context))
     }
 
     fun setEsimConfirmationCodePromptEnabled(context: Context, enabled: Boolean) {
@@ -2158,16 +1786,7 @@ object LspConfig {
     }
 
     fun isEsimProfileLimitBypassEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
-            propertyKey = PROP_KEY_ESIM_PROFILE_LIMIT_BYPASS,
-            settingsKey = SETTINGS_KEY_ESIM_PROFILE_LIMIT_BYPASS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ESIM_PROFILE_LIMIT_BYPASS,
-            defaultValue = DEFAULT_ESIM_PROFILE_LIMIT_BYPASS,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_ESIM_PROFILE_LIMIT_BYPASS, DEFAULT_ESIM_PROFILE_LIMIT_BYPASS)
     }
 
     fun setEsimProfileLimitBypassEnabled(context: Context, enabled: Boolean) {
@@ -2184,16 +1803,7 @@ object LspConfig {
     }
 
     fun isMobileNetworkHideAiLinkBoostEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
-            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
-            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
-            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_AI_LINK_BOOST,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_MOBILE_NETWORK_HIDE_AI_LINK_BOOST, DEFAULT_MOBILE_NETWORK_HIDE_AI_LINK_BOOST)
 
     fun setMobileNetworkHideAiLinkBoostEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -2209,16 +1819,7 @@ object LspConfig {
     }
 
     fun isMobileNetworkHideRoamingServiceEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
-            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
-            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
-            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_ROAMING_SERVICE,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_MOBILE_NETWORK_HIDE_ROAMING_SERVICE, DEFAULT_MOBILE_NETWORK_HIDE_ROAMING_SERVICE)
 
     fun setMobileNetworkHideRoamingServiceEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -2234,16 +1835,7 @@ object LspConfig {
     }
 
     fun isMobileNetworkHideHighDataSimCardEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
-            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
-            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
-            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD, DEFAULT_MOBILE_NETWORK_HIDE_HIGH_DATA_SIM_CARD)
 
     fun setMobileNetworkHideHighDataSimCardEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -2259,16 +1851,7 @@ object LspConfig {
     }
 
     fun isMobileNetworkHideSmartCloudAccelerationEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
-            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
-            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
-            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION, DEFAULT_MOBILE_NETWORK_HIDE_SMART_CLOUD_ACCELERATION)
 
     fun setMobileNetworkHideSmartCloudAccelerationEnabled(
         context: Context,
@@ -2287,16 +1870,7 @@ object LspConfig {
     }
 
     fun isMobileNetworkHidePhoneNumberEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
-            propertyKey = PROP_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
-            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
-            defaultValue = DEFAULT_MOBILE_NETWORK_HIDE_PHONE_NUMBER,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_MOBILE_NETWORK_HIDE_PHONE_NUMBER, DEFAULT_MOBILE_NETWORK_HIDE_PHONE_NUMBER)
 
     fun setMobileNetworkHidePhoneNumberEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -2312,16 +1886,7 @@ object LspConfig {
     }
 
     fun isMobileNetworkForceCarrierOptionsEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
-            propertyKey = PROP_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
-            settingsKey = SETTINGS_KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
-            defaultValue = DEFAULT_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS, DEFAULT_MOBILE_NETWORK_FORCE_CARRIER_OPTIONS)
 
     fun setMobileNetworkForceCarrierOptionsEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -2337,16 +1902,7 @@ object LspConfig {
     }
 
     fun isAppMarketRegionRestrictionBypassEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
-            propertyKey = PROP_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
-            settingsKey = SETTINGS_KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_APP_MARKET_REGION_RESTRICTION_BYPASS,
-            defaultValue = DEFAULT_APP_MARKET_REGION_RESTRICTION_BYPASS,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_APP_MARKET_REGION_RESTRICTION_BYPASS, DEFAULT_APP_MARKET_REGION_RESTRICTION_BYPASS)
 
     fun setAppMarketRegionRestrictionBypassEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -2362,16 +1918,7 @@ object LspConfig {
     }
 
     fun isAppMarketRemoveSplashRecommendationsEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
-            propertyKey = PROP_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
-            settingsKey = SETTINGS_KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
-            defaultValue = DEFAULT_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS, DEFAULT_APP_MARKET_REMOVE_SPLASH_RECOMMENDATIONS)
 
     fun setAppMarketRemoveSplashRecommendationsEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -2387,17 +1934,7 @@ object LspConfig {
     }
 
     fun isAppMarketRemoveUpdateDownloadRecommendationsEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey =
-                PERSIST_PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
-            propertyKey = PROP_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
-            settingsKey = SETTINGS_KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
-            defaultValue = DEFAULT_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS, DEFAULT_APP_MARKET_REMOVE_UPDATE_DOWNLOAD_RECOMMENDATIONS)
 
     fun setAppMarketRemoveUpdateDownloadRecommendationsEnabled(
         context: Context,
@@ -2416,16 +1953,7 @@ object LspConfig {
     }
 
     fun isAppMarketRemoveMineRecommendationsEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
-            propertyKey = PROP_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
-            settingsKey = SETTINGS_KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
-            defaultValue = DEFAULT_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS, DEFAULT_APP_MARKET_REMOVE_MINE_RECOMMENDATIONS)
 
     fun setAppMarketRemoveMineRecommendationsEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -2441,16 +1969,7 @@ object LspConfig {
     }
 
     fun isAppMarketHideSearchHomeRecommendationsEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
-            propertyKey = PROP_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
-            settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
-            defaultValue = DEFAULT_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS, DEFAULT_APP_MARKET_HIDE_SEARCH_HOME_RECOMMENDATIONS)
 
     fun setAppMarketHideSearchHomeRecommendationsEnabled(
         context: Context,
@@ -2469,16 +1988,7 @@ object LspConfig {
     }
 
     fun isAppMarketHideSearchResultRecommendationsEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
-            propertyKey = PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
-            settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
-            defaultValue = DEFAULT_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS, DEFAULT_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS)
 
     fun setAppMarketHideSearchResultRecommendationsEnabled(
         context: Context,
@@ -2497,16 +2007,7 @@ object LspConfig {
     }
 
     fun isAppMarketHideDetailRecommendationsEnabled(context: Context): Boolean =
-        readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
-            propertyKey = PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
-            settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
-            defaultValue = DEFAULT_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
-        )
+        LspPreferenceStore.readBoolean(context, KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS, DEFAULT_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS)
 
     fun setAppMarketHideDetailRecommendationsEnabled(context: Context, enabled: Boolean) {
         setSyncedBooleanPreference(
@@ -2540,16 +2041,7 @@ object LspConfig {
     }
 
     fun isAthenaC17SwipeUpProtectionEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
-            propertyKey = PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
-            settingsKey = SETTINGS_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
-            defaultValue = DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_ATHENA_C17_SWIPE_UP_PROTECTION, DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION)
     }
 
     fun setAthenaC17SwipeUpProtectionEnabled(context: Context, enabled: Boolean) {
@@ -2566,16 +2058,7 @@ object LspConfig {
     }
 
     fun isOkGoogleHotwordCompatibilityEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
-            propertyKey = PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
-            settingsKey = SETTINGS_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY,
-            defaultValue = DEFAULT_OK_GOOGLE_HOTWORD_COMPATIBILITY,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY, DEFAULT_OK_GOOGLE_HOTWORD_COMPATIBILITY)
     }
 
     fun setOkGoogleHotwordCompatibilityEnabled(context: Context, enabled: Boolean) {
@@ -2592,16 +2075,7 @@ object LspConfig {
     }
 
     fun isLauncherHideWidgetLabelsEnabled(context: Context): Boolean {
-        return readSyncedToggle(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
-            propertyKey = PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
-            settingsKey = SETTINGS_KEY_LAUNCHER_HIDE_WIDGET_LABELS,
-            flagFilePath = null,
-            legacyFlagFilePath = null,
-            prefsKey = KEY_LAUNCHER_HIDE_WIDGET_LABELS,
-            defaultValue = DEFAULT_LAUNCHER_HIDE_WIDGET_LABELS,
-        )
+        return LspPreferenceStore.readBoolean(context, KEY_LAUNCHER_HIDE_WIDGET_LABELS, DEFAULT_LAUNCHER_HIDE_WIDGET_LABELS)
     }
 
     fun setLauncherHideWidgetLabelsEnabled(context: Context, enabled: Boolean) {
@@ -2618,18 +2092,13 @@ object LspConfig {
     }
 
     fun getLauncherSearchBarMode(context: Context): Int {
-        val mode = readSyncedInt(
-            context = context,
-            persistPropertyKey = PERSIST_PROP_KEY_LAUNCHER_SEARCH_BAR_MODE,
-            propertyKey = PROP_KEY_LAUNCHER_SEARCH_BAR_MODE,
-            settingsKey = SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE,
-            prefsKey = KEY_LAUNCHER_SEARCH_BAR_MODE,
-            defaultValue = DEFAULT_LAUNCHER_SEARCH_BAR_MODE,
-        ).sanitizeLauncherSearchBarMode()
-        // The first version stored this key as a boolean. Convert it once so the API 102
-        // preference snapshot exposes the new three-state value to the launcher process.
-        if (prefs(context).all[KEY_LAUNCHER_SEARCH_BAR_MODE] !is Number) {
-            prefs(context).edit().putInt(KEY_LAUNCHER_SEARCH_BAR_MODE, mode).commit()
+        val preferences = prefs(context)
+        val stored = preferences.all[KEY_LAUNCHER_SEARCH_BAR_MODE]
+        val mode = launcherSearchBarModeValue(stored).sanitizeLauncherSearchBarMode()
+        // Migrate the old Boolean setting to a three-state mode.
+        if (stored is Boolean && preferences.edit()
+                .putInt(KEY_LAUNCHER_SEARCH_BAR_MODE, mode).commitOrReport()
+        ) {
             syncReadableState(context)
         }
         return mode
@@ -2637,7 +2106,7 @@ object LspConfig {
 
     fun setLauncherSearchBarMode(context: Context, mode: Int) {
         val normalized = mode.sanitizeLauncherSearchBarMode()
-        prefs(context).edit().putInt(KEY_LAUNCHER_SEARCH_BAR_MODE, normalized).commit()
+        if (!prefs(context).edit().putInt(KEY_LAUNCHER_SEARCH_BAR_MODE, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = normalized.toString(),
@@ -2796,6 +2265,7 @@ object LspConfig {
                 context,
                 DEFAULT_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
             )
+            setFileManagerHideSecureAccessTipEnabled(context, false)
             setAthenaC17SwipeUpProtectionEnabled(
                 context,
                 DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION,
@@ -2809,7 +2279,7 @@ object LspConfig {
         return executeSyncCommands("LSP reset", batchedCommands)
     }
 
-    fun syncTogglesForBoot(context: Context) {
+    fun syncTogglesForBoot(context: Context): Boolean {
         val nativeEnabled = isNativeNotifyIconEnabled(context)
         val extremeRefresh165Enabled = isExtremeRefresh165Enabled(context)
         val recentTaskRadiusEnabled = isRecentTaskRadiusEnabled(context)
@@ -2893,6 +2363,7 @@ object LspConfig {
             isAppMarketHideSearchResultRecommendationsEnabled(context)
         val appMarketHideDetailRecommendations =
             isAppMarketHideDetailRecommendationsEnabled(context)
+        val fileManagerHideSecureAccessTip = isFileManagerHideSecureAccessTipEnabled(context)
         val athenaC17SwipeUpProtection = isAthenaC17SwipeUpProtectionEnabled(context)
         val okGoogleHotwordCompatibility = isOkGoogleHotwordCompatibilityEnabled(context)
         val launcherHideWidgetLabels = isLauncherHideWidgetLabelsEnabled(context)
@@ -3408,6 +2879,14 @@ object LspConfig {
             settingsGlobalKey = SETTINGS_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
         )
         syncScalarState(
+            value = if (fileManagerHideSecureAccessTip) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+                PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+            ),
+            settingsGlobalKey = SETTINGS_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+        )
+        syncScalarState(
             value = if (athenaC17SwipeUpProtection) "1" else "0",
             propertyKeys = listOf(
                 PERSIST_PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
@@ -3442,14 +2921,11 @@ object LspConfig {
         } finally {
             syncCommandBatch.remove()
         }
-        executeSyncCommands("LSP boot sync", batchedCommands)
+        return executeSyncCommands("LSP boot sync", batchedCommands)
     }
 
     fun syncReadableState(context: Context) {
-        makePrefsReadableForXposed(context)
-        runCatching {
-            makePrefsReadableForXposed(prefsContext(context))
-        }
+        ModernXposedPreferenceSync.syncNow(context)
     }
 
     fun isNativeNotifyIconEnabledXposed(): Boolean {
@@ -3890,7 +3366,7 @@ object LspConfig {
         )
     }
 
-    fun isSettingsSkipSpecialPermissionRiskConfirmEnabledXposed(): Boolean = readXposedBooleanPreferringMirrors(
+    fun isSettingsSkipSpecialPermissionRiskConfirmEnabledXposed(): Boolean = readXposedBooleanWithFallback(
         persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
         propertyKey = PROP_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
         settingsKey = SETTINGS_KEY_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
@@ -3898,7 +3374,7 @@ object LspConfig {
         defaultValue = DEFAULT_SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM,
     )
 
-    fun isSettingsRestoreAppOpenButtonEnabledXposed(): Boolean = readXposedBooleanPreferringMirrors(
+    fun isSettingsRestoreAppOpenButtonEnabledXposed(): Boolean = readXposedBooleanWithFallback(
         persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
         propertyKey = PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
         settingsKey = SETTINGS_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON,
@@ -3907,7 +3383,7 @@ object LspConfig {
     )
 
     fun isSettingsC15AboutLayoutEnabledXposed(): Boolean {
-        return readXposedBooleanPreferringMirrors(
+        return readXposedBooleanWithFallback(
             persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
             propertyKey = PROP_KEY_SETTINGS_C15_ABOUT_LAYOUT,
             settingsKey = SETTINGS_KEY_SETTINGS_C15_ABOUT_LAYOUT,
@@ -3916,7 +3392,7 @@ object LspConfig {
         )
     }
 
-    fun isWallpapersRedOneEntryEnabledXposed(): Boolean = readXposedBooleanPreferringMirrors(
+    fun isWallpapersRedOneEntryEnabledXposed(): Boolean = readXposedBooleanWithFallback(
         persistPropertyKey = PERSIST_PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
         propertyKey = PROP_KEY_WALLPAPERS_RED_ONE_ENTRY,
         settingsKey = SETTINGS_KEY_WALLPAPERS_RED_ONE_ENTRY,
@@ -3925,7 +3401,7 @@ object LspConfig {
     )
 
     fun isSettingsRefreshRateUnlockedXposed(): Boolean {
-        return readXposedBooleanPreferringMirrors(
+        return readXposedBooleanWithFallback(
             persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
             propertyKey = PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
             settingsKey = SETTINGS_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
@@ -3935,7 +3411,7 @@ object LspConfig {
     }
 
     fun isSettingsForceGlobalExtremeRefreshRateEnabledXposed(): Boolean {
-        return readXposedBooleanPreferringMirrors(
+        return readXposedBooleanWithFallback(
             persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
             propertyKey = PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
             settingsKey = SETTINGS_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
@@ -4118,7 +3594,7 @@ object LspConfig {
         )
 
     fun isAppMarketHideSearchResultRecommendationsEnabledXposed(): Boolean =
-        readXposedBooleanPreferringMirrors(
+        readXposedBooleanWithFallback(
             persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
             propertyKey = PROP_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
             settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_SEARCH_RESULT_RECOMMENDATIONS,
@@ -4127,7 +3603,7 @@ object LspConfig {
         )
 
     fun isAppMarketHideDetailRecommendationsEnabledXposed(): Boolean =
-        readXposedBooleanPreferringMirrors(
+        readXposedBooleanWithFallback(
             persistPropertyKey = PERSIST_PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
             propertyKey = PROP_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
             settingsKey = SETTINGS_KEY_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
@@ -4186,56 +3662,6 @@ object LspConfig {
         }.getOrDefault(DEFAULT_LAUNCHER_SEARCH_BAR_MODE).sanitizeLauncherSearchBarMode()
     }
 
-    private fun readSystemPropertyToggle(propertyKey: String): Boolean? {
-        return parseToggleValue(readSystemPropertyValue(propertyKey))
-    }
-
-    private fun readSyncedToggle(
-        context: Context,
-        persistPropertyKey: String,
-        propertyKey: String,
-        settingsKey: String,
-        flagFilePath: String?,
-        legacyFlagFilePath: String?,
-        prefsKey: String,
-        defaultValue: Boolean
-    ): Boolean {
-        readSystemPropertyToggle(persistPropertyKey)?.let { return it }
-        readSystemPropertyToggle(propertyKey)?.let { return it }
-        readSettingsGlobalToggle(settingsKey)?.let { return it }
-        flagFilePath?.let { readFlagFile(it)?.let { value -> return value } }
-        legacyFlagFilePath?.let { readFlagFile(it)?.let { value -> return value } }
-        return prefs(context).getBoolean(prefsKey, defaultValue)
-    }
-
-    private fun readSyncedInt(
-        context: Context,
-        persistPropertyKey: String,
-        propertyKey: String,
-        settingsKey: String,
-        prefsKey: String,
-        defaultValue: Int
-    ): Int {
-        readSystemPropertyValue(persistPropertyKey)?.toIntOrNull()?.let { return it }
-        readSystemPropertyValue(propertyKey)?.toIntOrNull()?.let { return it }
-        readSettingsGlobalValue(settingsKey)?.toIntOrNull()?.let { return it }
-        return prefs(context).getInt(prefsKey, defaultValue)
-    }
-
-    private fun readSyncedString(
-        context: Context,
-        persistPropertyKey: String,
-        propertyKey: String,
-        settingsKey: String,
-        prefsKey: String,
-        defaultValue: String
-    ): String {
-        readSystemPropertyValue(persistPropertyKey)?.let { return it }
-        readSystemPropertyValue(propertyKey)?.let { return it }
-        readSettingsGlobalValue(settingsKey)?.let { return it }
-        return prefs(context).getString(prefsKey, defaultValue) ?: defaultValue
-    }
-
     private fun setSyncedBooleanPreference(
         context: Context,
         prefsKey: String,
@@ -4243,7 +3669,7 @@ object LspConfig {
         propertyKeys: List<String>,
         settingsGlobalKey: String
     ) {
-        prefs(context).edit().putBoolean(prefsKey, enabled).commit()
+        if (!prefs(context).edit().putBoolean(prefsKey, enabled).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
             value = if (enabled) "1" else "0",
@@ -4252,59 +3678,12 @@ object LspConfig {
         )
     }
 
-    private fun readSystemPropertyValue(propertyKey: String): String? {
-        return readTimedString(systemPropertyReadCache, propertyKey) {
-            runCatching {
-                (systemPropertiesGetMethod?.invoke(null, propertyKey, "") as? String)
-                    ?.trim()
-                    ?.takeIf { it.isNotEmpty() }
-            }.getOrNull()
-        }
-    }
-
-    private fun readFlagFile(filePath: String): Boolean? {
-        return runCatching {
-            val file = File(filePath)
-            if (!file.exists()) return@runCatching null
-            when (file.readText().trim()) {
-                "1", "true", "on", "enabled" -> true
-                "0", "false", "off", "disabled" -> false
-                else -> null
-            }
-        }.getOrNull()
-    }
-
     private fun readTextFileValue(filePath: String): String? {
         return runCatching {
             val file = File(filePath)
             if (!file.exists()) return@runCatching null
             file.readText().trim().takeIf { it.isNotEmpty() }
         }.getOrNull()
-    }
-
-    private fun readSettingsGlobalToggle(settingsKey: String): Boolean? {
-        return parseToggleValue(readSettingsGlobalValue(settingsKey))
-    }
-
-    private fun readSettingsGlobalValue(settingsKey: String): String? {
-        return readTimedString(settingsGlobalReadCache, settingsKey) {
-            readSettingsGlobalViaFramework(settingsKey)
-                ?: readSettingsGlobalViaXml(settingsKey)
-        }
-    }
-
-    private inline fun readTimedString(
-        cache: ConcurrentHashMap<String, TimedStringValue>,
-        key: String,
-        reader: () -> String?,
-    ): String? {
-        val now = System.nanoTime()
-        cache[key]?.let { cached ->
-            if (now - cached.readAtNanos < XPOSED_READ_CACHE_NANOS) return cached.value
-        }
-        return reader().also { value ->
-            cache[key] = TimedStringValue(value = value, readAtNanos = now)
-        }
     }
 
     private fun getStringSet(context: Context, key: String): Set<String> {
@@ -4344,83 +3723,21 @@ object LspConfig {
         }.getOrDefault(defaultValue)
     }
 
-    /**
-     * Newly introduced switches may already have a synchronized property value while an older
-     * API-102 preference snapshot does not contain their key yet. In that upgrade window the
-     * mirror is authoritative; otherwise the missing snapshot entry would incorrectly look like
-     * the default value until the user toggles the row twice.
-     */
-    private fun readXposedBooleanPreferringMirrors(
+    private fun readXposedBooleanWithFallback(
         persistPropertyKey: String,
         propertyKey: String,
         settingsKey: String,
         prefsKey: String,
         defaultValue: Boolean,
     ): Boolean {
+        HookConfigSnapshot.boolean(prefsKey, defaultValue)?.let { return it }
         readSystemPropertyToggle(persistPropertyKey)?.let { return it }
         readSystemPropertyToggle(propertyKey)?.let { return it }
         readSettingsGlobalToggle(settingsKey)?.let { return it }
-        HookConfigSnapshot.boolean(prefsKey, defaultValue)?.let { return it }
         return runCatching {
             val prefs = xposedPreferences
             prefs.getBoolean(prefsKey, defaultValue)
         }.getOrDefault(defaultValue)
-    }
-
-    private fun readSettingsGlobalViaFramework(settingsKey: String): String? {
-        return runCatching {
-            val activityThreadClass = Class.forName("android.app.ActivityThread")
-            val currentThread = activityThreadClass
-                .getMethod("currentActivityThread")
-                .invoke(null)
-                ?: return@runCatching null
-            val systemContext = activityThreadClass
-                .getMethod("getSystemContext")
-                .invoke(currentThread)
-                ?: return@runCatching null
-
-            val contentResolver = systemContext.javaClass
-                .getMethod("getContentResolver")
-                .invoke(systemContext)
-                ?: return@runCatching null
-
-            val settingsGlobalClass = Class.forName("android.provider.Settings\$Global")
-            val getStringMethod = settingsGlobalClass.getMethod(
-                "getString",
-                Class.forName("android.content.ContentResolver"),
-                String::class.java
-            )
-            getStringMethod.invoke(null, contentResolver, settingsKey) as? String
-        }.getOrNull()
-    }
-
-    private fun readSettingsGlobalViaXml(settingsKey: String): String? {
-        return runCatching {
-            val file = File("/data/system/users/0/settings_global.xml")
-            if (!file.exists()) return@runCatching null
-            val text = file.readText()
-            val escaped = Regex.escape(settingsKey)
-            val directOrder = Regex("<setting[^>]*name=\"$escaped\"[^>]*value=\"([^\"]*)\"[^>]*/?>")
-                .find(text)
-                ?.groupValues
-                ?.getOrNull(1)
-            if (directOrder != null) return@runCatching directOrder
-
-            val reversedOrder = Regex("<setting[^>]*value=\"([^\"]*)\"[^>]*name=\"$escaped\"[^>]*/?>")
-                .find(text)
-                ?.groupValues
-                ?.getOrNull(1)
-            reversedOrder
-        }.getOrNull()
-    }
-
-    private fun parseToggleValue(raw: String?): Boolean? {
-        val value = raw?.trim()?.lowercase() ?: return null
-        return when (value) {
-            "1", "true", "on", "enabled" -> true
-            "0", "false", "off", "disabled" -> false
-            else -> null
-        }
     }
 
     private fun Int.sanitizeAssistantPowerMode(): Int {
@@ -4484,7 +3801,7 @@ object LspConfig {
                 return@runCatching
             }
             executeSyncCommands("LSP sync toggle:$settingsGlobalKey", directCommands)
-        }
+        }.onFailure { ConfigSyncStatus.failed(settingsGlobalKey) }
     }
 
     private fun syncScalarState(
@@ -4510,59 +3827,24 @@ object LspConfig {
                 return@runCatching
             }
             executeSyncCommands("LSP sync scalar:$settingsGlobalKey", directCommands)
-        }
+        }.onFailure { ConfigSyncStatus.failed(settingsGlobalKey) }
     }
 
+    @Synchronized
     private fun executeSyncCommands(tag: String, commands: List<String>): Boolean {
         if (commands.isEmpty()) return true
-        val directResult = ShellLogger.exec("$tag direct", *commands.toTypedArray())
-        if (directResult.isSuccess) return true
-
-        // libsu normally gives us a root shell. Only pay for a nested su process when that direct
-        // execution actually failed, instead of running every write twice.
-        val joinedCommand = commands.joinToString("; ")
-        return ShellLogger.exec("$tag su", "su -c ${shellQuote(joinedCommand)}").isSuccess
+        val script = "(set -e;\n" + commands.joinToString("\n") + "\n)"
+        val success = runCatching {
+            ShellLogger.exec(tag, script).isSuccess ||
+                ShellLogger.exec("$tag su", "su -c ${shellQuote(script)}").isSuccess
+        }.getOrDefault(false)
+        LspPreferenceStore.invalidateMirrors()
+        if (!success) ConfigSyncStatus.failed(tag)
+        return success
     }
 
     private fun shellQuote(value: String): String {
         return "'" + value.replace("'", "'\"'\"'") + "'"
     }
 
-    private fun prefs(context: Context): SharedPreferences {
-        val storageContext = prefsContext(context)
-        return storageContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    }
-
-    private fun prefsContext(context: Context): Context {
-        val deviceContext = context.createDeviceProtectedStorageContext()
-        runCatching {
-            val devicePrefsFile = File(
-                "/data/user_de/0/${context.packageName}/shared_prefs",
-                "$PREFS_NAME.xml"
-            )
-            if (!devicePrefsFile.exists()) {
-                deviceContext.moveSharedPreferencesFrom(context, PREFS_NAME)
-            }
-        }
-        return deviceContext
-    }
-
-    private fun makePrefsReadableForXposed(context: Context) {
-        runCatching {
-            val userPrefsDir = File(context.applicationInfo.dataDir, "shared_prefs")
-            val userPrefsFile = File(userPrefsDir, "$PREFS_NAME.xml")
-            if (userPrefsFile.exists()) {
-                userPrefsDir.setReadable(true, false)
-                userPrefsFile.setReadable(true, false)
-            }
-        }
-        runCatching {
-            val devicePrefsDir = File("/data/user_de/0/${context.packageName}/shared_prefs")
-            val devicePrefsFile = File(devicePrefsDir, "$PREFS_NAME.xml")
-            if (devicePrefsFile.exists()) {
-                devicePrefsDir.setReadable(true, false)
-                devicePrefsFile.setReadable(true, false)
-            }
-        }
-    }
 }

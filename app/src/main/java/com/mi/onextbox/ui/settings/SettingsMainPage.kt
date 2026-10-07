@@ -160,7 +160,6 @@ import java.util.Locale
 
 private const val COOLAPK_PROFILE_URL = "https://www.coolapk.com/u/29184225"
 private const val GITHUB_PROFILE_URL = "https://github.com/MiToverG422"
-private const val CODEX_PROFILE_URL = "https://github.com/codex"
 private const val SUQI8_PROFILE_URL = "https://github.com/suqi8"
 private const val COLORLARIS_PROFILE_URL = "https://github.com/Colorlaris"
 private const val GITHUB_REPOSITORY_URL = "https://github.com/MiToverG422/ONextBox"
@@ -169,7 +168,6 @@ private const val SOFTWARE_UPDATE_CHECK_DELAY_MS = 2_000L
 private val SoftwareUpdateContentHorizontalPadding = 16.dp
 private val SoftwareUpdateVersionInfoExtraHorizontalPadding = 20.dp
 private const val MITOVERG_AVATAR_URL = "https://github.com/MiToverG422.png?size=160"
-private const val CODEX_AVATAR_URL = "https://github.com/codex.png?size=160"
 private const val COLORLARIS_AVATAR_URL = "https://github.com/Colorlaris.png?size=160"
 private const val COUI_REPOSITORY_URL = "https://github.com/suqi8/coui"
 private const val MIUIX_REPOSITORY_URL = "https://github.com/compose-miuix-ui/miuix"
@@ -192,7 +190,6 @@ private const val ESPRESSO_URL = "https://developer.android.com/training/testing
 @DrawableRes
 private fun fallbackAvatarRes(avatarUrl: String): Int = when (avatarUrl) {
     MITOVERG_AVATAR_URL -> R.drawable.avatar_mitoverg
-    CODEX_AVATAR_URL -> R.drawable.avatar_codex
     COLORLARIS_AVATAR_URL -> R.drawable.avatar_colorlaris
     else -> R.drawable.ic_github
 }
@@ -293,7 +290,6 @@ private object GitHubAvatarCache {
 suspend fun prefetchAboutAuthorAvatars(context: Context) {
     val appContext = context.applicationContext
     GitHubAvatarCache.load(appContext, MITOVERG_AVATAR_URL)
-    GitHubAvatarCache.load(appContext, CODEX_AVATAR_URL)
 }
 
 @Composable
@@ -1629,16 +1625,6 @@ private fun AboutAuthorGroup(
         )
         SettingsDivider()
         SettingsCardRow(
-            title = stringResource(R.string.about_codex_author_title),
-            summary = stringResource(R.string.about_codex_author_summary),
-            showArrow = true,
-            hasDividerAbove = true,
-            hasDividerBelow = true,
-            onClick = { openUrl(context, CODEX_PROFILE_URL) },
-            leadingContent = { GitHubAuthorAvatar(CODEX_AVATAR_URL) },
-        )
-        SettingsDivider()
-        SettingsCardRow(
             title = stringResource(R.string.about_contributors_title),
             summary = "",
             showArrow = true,
@@ -1961,9 +1947,7 @@ private fun AboutLinkGroup(
                 onClick = { openUrl(context, item.url) },
                 leadingContent = item.leadingContent,
             )
-            if (index < items.lastIndex) {
-                SettingsDivider()
-            }
+            if (index < items.lastIndex) SettingsDivider()
         }
     }
 }
@@ -2080,6 +2064,8 @@ fun AppSettingsPage(
     onBlurEffectEnabledChange: (Boolean) -> Unit,
     featurePageNewStyleEnabled: Boolean,
     onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
+    progressiveCardAnimationEnabled: Boolean,
+    onProgressiveCardAnimationEnabledChange: (Boolean) -> Unit,
     featurePageVideoHidden: Boolean,
     onFeaturePageVideoHiddenChange: (Boolean) -> Unit,
     appLanguageTag: String,
@@ -2158,9 +2144,15 @@ fun AppSettingsPage(
                 onSuccess = {
                     Toast.makeText(
                         context,
-                        resources.getString(R.string.config_import_success),
+                        resources.getString(
+                            if (it.systemStateSynced) R.string.config_import_success
+                            else R.string.config_import_partial_success,
+                        ),
                         Toast.LENGTH_SHORT,
                     ).show()
+                    context.findActivity()?.let { activity ->
+                        activity.startActivity(Intent.makeRestartActivityTask(activity.componentName))
+                    }
                 },
                 onFailure = { error ->
                     Toast.makeText(
@@ -2344,6 +2336,15 @@ fun AppSettingsPage(
             hasDividerAbove = true,
             hasDividerBelow = true,
             enabled = featurePageVideoAvailable,
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = stringResource(R.string.setting_progressive_card_animation),
+            summary = stringResource(R.string.setting_progressive_card_animation_summary),
+            checked = progressiveCardAnimationEnabled,
+            onCheckedChange = onProgressiveCardAnimationEnabledChange,
+            hasDividerAbove = true,
+            hasDividerBelow = true,
         )
         SettingsDivider()
         SettingsToggleRow(

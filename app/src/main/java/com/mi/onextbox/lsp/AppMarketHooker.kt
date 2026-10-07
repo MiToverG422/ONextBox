@@ -299,11 +299,7 @@ internal object AppMarketHooker {
         }
     }
 
-    /**
-     * C17's search home submits the server DTO list straight through its dedicated presenter and
-     * no longer consistently visits the common processData method above. Filter at the final
-     * adapter boundary so cached and network responses behave identically.
-     */
+/** Search-home filtering at the final adapter, covering cached and network results. */
     private fun installSearchHomeRecommendationHook(classLoader: ClassLoader) {
         val presenterClass = XposedHelpers.findClassIfExists(
             SEARCH_HOME_ADAPTER_PRESENTER_CLASS,
@@ -389,11 +385,7 @@ internal object AppMarketHooker {
         }
     }
 
-    /**
-     * The initial C17 search response can be dispatched before a base presenter is attached.
-     * Intercept all three native search response relays so the same DTO is clean before it is
-     * split into result child pages or submitted from cache.
-     */
+/** Search response filtering before DTOs reach child pages or cached adapters. */
     private fun installSearchResultResponseHooks(classLoader: ClassLoader) {
         val responseClass = XposedHelpers.findClassIfExists(PAGING_RESPONSE_CLASS, classLoader)
             ?: run {
@@ -796,12 +788,7 @@ internal object AppMarketHooker {
         }
     }
 
-    /**
-     * The C17 build can inline both small static worker methods before the module is attached.
-     * Its rejection Activity is still entered through the Android lifecycle, which cannot be
-     * inlined into the app. Convert that specific rejection back into the SDK's own success
-     * callback so App Market continues through its normal region persistence/restart pipeline.
-     */
+/** Region-rejection Activity handler that resumes the SDK success callback. */
     private fun installRejectedSwitchActivityFallback(
         classLoader: ClassLoader,
         checkerClass: Class<*>,

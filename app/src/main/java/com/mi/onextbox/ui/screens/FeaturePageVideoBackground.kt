@@ -27,13 +27,7 @@ import com.mi.onextbox.R
 private const val FeatureBackgroundFadeMillis = 550
 private const val FeatureBackgroundSourceFrameRate = 30f
 
-/**
- * Playback that belongs to one visit of the top-level Features page.
- *
- * Keep this state above any child-page navigation so disposing and recreating the landing-page
- * composable resumes the same one-shot video instead of replaying it. Call [restart] only when a
- * new top-level-page generation should run the entrance background again.
- */
+/** Features background playback state, retained across child-page navigation, [restart] starts a new visit. */
 @Stable
 class FeatureBackgroundPlaybackState {
     private var restartGeneration by mutableIntStateOf(0)
@@ -104,15 +98,7 @@ internal data class FeatureBackgroundPlaybackSnapshot(
     }
 }
 
-/**
- * Plays the one-shot background for the new-style Features landing page.
- *
- * The view stays transparent until MediaPlayer reports that a real video frame reached the
- * TextureView. A recreated view restores [playbackState] before it is revealed, which avoids both
- * a black surface flash and an unwanted replay after returning from a child page. MediaPlayer is
- * deliberately kept in its completed state so the decoded final frame remains attached while the
- * landing page stays composed.
- */
+/** One-shot Features background, revealed after the first frame and retained at its final frame. */
 @Composable
 internal fun FeaturePageVideoBackground(
     playbackState: FeatureBackgroundPlaybackState,

@@ -191,7 +191,7 @@ jobs:
             "-PONEXTBOX_CI_SIGN_RELEASE_WITH_DEBUG=${SIGN_RELEASE_WITH_DEBUG}"
           )
 
-          ./gradlew "${TASKS[@]}" "${GRADLE_ARGS[@]}" --no-daemon
+          ./gradlew :app:testDebugUnitTest :app:lintDebug "${TASKS[@]}" "${GRADLE_ARGS[@]}" --no-daemon
 
       - name: Remove temporary signing material
         if: always()

@@ -20,11 +20,11 @@ import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/** Restored version-specific Google Messages hooks; incompatible targets are left untouched. */
+/** Google Messages feature hooks. */
 internal object GoogleMessagesHooker {
     private const val TAG = "ONextBox-GoogleMessages"
     private val hookedLoaders = ConcurrentHashMap.newKeySet<Int>()
-    private val initializedLoaders = ConcurrentHashMap.newKeySet<Int>()
+    private val geminiLoaders = ConcurrentHashMap.newKeySet<Int>()
     private val copyReceivers = ConcurrentHashMap.newKeySet<Class<*>>()
     private val codeAfterCue = Regex(
         "(?:验证码|校验码|动态码|登录码|驗證碼|校驗碼|動態碼|登入碼|verification\\s*code|security\\s*code|passcode|otp|code)" +
@@ -52,17 +52,16 @@ internal object GoogleMessagesHooker {
         }.onFailure { HookLog.w(TAG, "Failed to defer hooks until application attachment", it) }
     }
 
+    @Synchronized
     private fun installAppHooks(loader: ClassLoader) {
         val loaderId = System.identityHashCode(loader)
-        if (loaderId in initializedLoaders) return
-        // JADX calls the unnamed DEX package "defpackage"; its runtime binary names have no prefix.
-        if (ModernReflect.findClassIfExists("dbat", loader) == null) {
-            HookLog.w(TAG, "Google Messages app classes not yet available")
-            return
+        val receiver = ModernReflect.findClassIfExists(GoogleMessagesOtpAction.RECEIVER, loader)
+        if (receiver != null && receiver !in copyReceivers) {
+            installCopyOtpReceiverHook(loader)
         }
-        if (!initializedLoaders.add(loaderId)) return
-        installCopyOtpReceiverHook(loader)
-        installGeminiHook(loader)
+        if (loaderId !in geminiLoaders && ModernReflect.findClassIfExists("dbat", loader) != null) {
+            if (installGeminiHook(loader)) geminiLoaders.add(loaderId)
+        }
     }
 
     private fun installCopyOtpReceiverHook(loader: ClassLoader) {
@@ -110,8 +109,8 @@ internal object GoogleMessagesHooker {
         }.onFailure { HookLog.w(TAG, "Failed to hook module OTP copy receiver", it) }
     }
 
-    private fun installGeminiHook(loader: ClassLoader) {
-        hookMethod(loader, "dbat", "e") { param ->
+    private fun installGeminiHook(loader: ClassLoader): Boolean {
+        return hookMethod(loader, "dbat", "e") { param ->
             if (!GoogleMessagesConfig.isEnabledInHook(GoogleMessagesConfig.Switch.Gemini)) return@hookMethod
             if (param.result != false) return@hookMethod
             val flagName = runCatching {
@@ -194,19 +193,20 @@ internal object GoogleMessagesHooker {
         methodName: String,
         before: ((ModernMethodHook.MethodHookParam) -> Unit)? = null,
         after: (ModernMethodHook.MethodHookParam) -> Unit,
-    ) {
+    ): Boolean {
         val type = ModernReflect.findClassIfExists(className, loader)
         if (type == null) {
             HookLog.w(TAG, "$className unavailable")
-            return
+            return false
         }
-        runCatching {
+        return runCatching {
             val handles = ModernHookBridge.hookAllMethods(type, methodName, object : ModernMethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) { before?.invoke(param) }
                 override fun afterHookedMethod(param: MethodHookParam) = after(param)
             })
             check(handles.isNotEmpty()) { "$className#$methodName unavailable" }
             HookLog.i(TAG, "$className#$methodName hooked")
-        }.onFailure { HookLog.w(TAG, "Failed to hook $className#$methodName", it) }
+            true
+        }.onFailure { HookLog.w(TAG, "Failed to hook $className#$methodName", it) }.getOrDefault(false)
     }
 }

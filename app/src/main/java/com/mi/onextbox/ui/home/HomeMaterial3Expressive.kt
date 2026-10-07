@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.R
+import com.mi.onextbox.ui.common.lspStatusText
 
 private data class HomeDetail(
     val title: String,
@@ -52,11 +53,7 @@ internal fun Material3ExpressiveHomeInfoCard(
         ),
         HomeDetail(
             stringResource(R.string.home_status_lsp),
-            when {
-                !versionInfo.lsposedModuleEnabled -> stringResource(R.string.lsp_status_module_disabled)
-                versionInfo.lsposedReady -> versionInfo.lsposed ?: unknown
-                else -> stringResource(R.string.lsp_status_missing_scope)
-            },
+            lspStatusText(versionInfo.lsposedStatus, versionInfo.lsposed, showChecking = false),
         ),
         HomeDetail(stringResource(R.string.home_info_region), region),
         HomeDetail(

@@ -56,14 +56,17 @@ import com.mi.onextbox.ui.common.ColorOsSearchSurface
 import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
 import com.mi.onextbox.ui.settings.SettingsCardRow
-import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
+import com.mi.onextbox.ui.settings.SettingsListGroup
 import com.mi.onextbox.ui.settings.SettingsSection
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
-internal fun FeatureSearchBar(state: TextFieldState) {
+internal fun FeatureSearchBar(
+    state: TextFieldState,
+    hint: String = stringResource(R.string.feature_search_hint),
+) {
     val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
     val foreground = if (material) MaterialTheme.colorScheme.onSurface else COUITheme.colorScheme.onSurface
     val hintColor = if (material) MaterialTheme.colorScheme.onSurfaceVariant else COUITheme.colorScheme.onSurface.copy(alpha = .55f)
@@ -72,7 +75,6 @@ internal fun FeatureSearchBar(state: TextFieldState) {
     val keyboard = LocalSoftwareKeyboardController.current
     val inputFocus = remember { FocusRequester() }
     val capsuleInteraction = remember { MutableInteractionSource() }
-    val hint = stringResource(R.string.feature_search_hint)
     var focused by remember { mutableStateOf(false) }
     val imeVisible = WindowInsets.isImeVisible
     val empty = state.text.isEmpty()
@@ -83,56 +85,55 @@ internal fun FeatureSearchBar(state: TextFieldState) {
         platformStyle = PlatformTextStyle(includeFontPadding = false),
     )
 
-    // ColorOS 17 Settings uses a 40dp capsule and a 36dp leading-icon slot.
+    // Search capsule content.
     val searchContent: @Composable BoxScope.() -> Unit = {
-    Row(
-        modifier = Modifier.fillMaxSize().then(if (material) Modifier else Modifier.clickable(
-            interactionSource = capsuleInteraction,
-            indication = null,
+        Row(
+            modifier = Modifier.fillMaxSize().then(if (material) Modifier else Modifier.clickable(
+                interactionSource = capsuleInteraction,
+                indication = null,
+            ) {
+                // Avoid restarting the input session on repeated taps.
+                if (!focused) inputFocus.requestFocus()
+                else if (!imeVisible) keyboard?.show()
+            }),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // A new focus starts BasicTextField's own input session. Don't also show
-            // the IME on every tap (especially the second tap of a double-click).
-            if (!focused) inputFocus.requestFocus()
-            else if (!imeVisible) keyboard?.show()
-        }),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Spacer(Modifier.width(if (material) 16.dp else 4.dp))
-        androidx.compose.foundation.layout.Box(
-            Modifier.size(if (material) 28.dp else 36.dp), contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Rounded.Search, contentDescription = null, tint = hintColor, modifier = Modifier.size(22.dp))
-        }
-        Spacer(Modifier.width(4.dp))
-        BasicTextField(
-            state = state,
-            modifier = Modifier.weight(1f).focusRequester(inputFocus).onFocusChanged {
-                focused = it.isFocused
-            },
-            lineLimits = TextFieldLineLimits.SingleLine,
-            textStyle = inputStyle,
-            cursorBrush = SolidColor(accent),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            onKeyboardAction = { keyboard?.hide() },
-            decorator = { field ->
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
-                    // Keep the placeholder and empty editor on the same font metrics/baseline.
-                    if (empty) Text(hint, style = inputStyle.copy(color = hintColor), maxLines = 1)
-                    field()
-                }
-            },
-        )
-        if (!empty) {
-            IconButton(onClick = { state.clearText() }, modifier = Modifier.size(if (material) 48.dp else 40.dp)) {
-                Icon(Icons.Rounded.Close, stringResource(R.string.feature_search_clear), tint = hintColor, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(if (material) 16.dp else 4.dp))
+            Box(
+                Modifier.size(if (material) 28.dp else 36.dp), contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.Search, contentDescription = null, tint = hintColor, modifier = Modifier.size(22.dp))
             }
-        } else Spacer(Modifier.width(16.dp))
-    }
+            Spacer(Modifier.width(4.dp))
+            BasicTextField(
+                state = state,
+                modifier = Modifier.weight(1f).focusRequester(inputFocus).onFocusChanged {
+                    focused = it.isFocused
+                },
+                lineLimits = TextFieldLineLimits.SingleLine,
+                textStyle = inputStyle,
+                cursorBrush = SolidColor(accent),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                onKeyboardAction = { keyboard?.hide() },
+                decorator = { field ->
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                        // Share the placeholder and editor baseline.
+                        if (empty) Text(hint, style = inputStyle.copy(color = hintColor), maxLines = 1)
+                        field()
+                    }
+                },
+            )
+            if (!empty) {
+                IconButton(onClick = { state.clearText() }, modifier = Modifier.size(if (material) 48.dp else 40.dp)) {
+                    Icon(Icons.Rounded.Close, stringResource(R.string.feature_search_clear), tint = hintColor, modifier = Modifier.size(20.dp))
+                }
+            } else Spacer(Modifier.width(16.dp))
+        }
     }
     val surfaceModifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
         .height(if (material) 56.dp else 40.dp)
     if (material) Box(surfaceModifier.background(background, RoundedCornerShape(50)), content = searchContent)
-    else ColorOsSearchSurface(surfaceModifier, background, focused, searchContent)
+    else ColorOsSearchSurface(surfaceModifier, background, focused, editorEmpty = empty, content = searchContent)
 }
 
 @Composable
@@ -150,20 +151,25 @@ internal fun FeatureSearchResults(query: String, onOpen: (FeaturePageMode) -> Un
         }.filter { it.second > 0 }.sortedByDescending { it.second }.map { it.first }
     }
     SettingsSection(stringResource(R.string.feature_search_results, results.size))
-    SettingsGroup {
-        if (results.isEmpty()) {
+    if (results.isEmpty()) {
+        SettingsGroup {
             SettingsCardRow(
                 title = stringResource(R.string.feature_search_empty),
                 summary = stringResource(R.string.feature_search_empty_summary),
             )
-        } else results.forEachIndexed { index, entry ->
-            if (index > 0) SettingsDivider()
+        }
+    } else {
+        SettingsListGroup(results, key = { it.title }) { index, entry ->
             Material3ExpressiveSegmentPosition(index, results.size) {
                 SettingsCardRow(
                     title = stringResource(entry.title),
                     summary = featurePageTitle(entry.page),
                     showArrow = true,
-                    onClick = { focus.clearFocus(); keyboard?.hide(); onOpen(entry.page) },
+                    onClick = {
+                        focus.clearFocus()
+                        keyboard?.hide()
+                        onOpen(entry.page)
+                    },
                     hasDividerAbove = index > 0,
                     hasDividerBelow = index < results.lastIndex,
                 )

@@ -1,5 +1,6 @@
 package com.mi.onextbox.ui.common
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.Canvas
@@ -117,6 +118,8 @@ internal fun addOplusSmoothRoundRect(
  * ColorOS 17 RoundFrameLayout's material layer: Oplus blur is installed as this View's
  * background and the exact NEW_G2 ShadowEdge shader is drawn above it, before Compose children.
  */
+// High-API effects are guarded at creation and have a plain fallback.
+@SuppressLint("NewApi")
 internal class ColorOsPopupMaterialView(
     context: Context,
     private val darkTheme: Boolean,
@@ -128,7 +131,7 @@ internal class ColorOsPopupMaterialView(
     private var transitionScale = 1f
     private var blurCornerUpdater: ((Float) -> Unit)? = null
     private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        blendMode = BlendMode.SRC_OVER
+        if (android.os.Build.VERSION.SDK_INT >= 29) blendMode = BlendMode.SRC_OVER
     }
     private val edgeShader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         runCatching { RuntimeShader(ColorOs17ShadowEdgeShader) }.getOrNull()

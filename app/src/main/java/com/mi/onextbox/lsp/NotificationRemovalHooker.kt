@@ -1,4 +1,5 @@
 package com.mi.onextbox.lsp
+import android.annotation.SuppressLint
 
 import android.app.Notification
 import android.app.NotificationManager
@@ -71,6 +72,7 @@ internal object NotificationRemovalHooker {
         }.onFailure { HookLog.w(TAG, "System notification filter unavailable", it) }
     }
 
+    @SuppressLint("SoonBlockedPrivateApi") // Framework access runs inside the Hook host.
     fun hookSystemUi(loader: ClassLoader) {
         if (!installed.add("systemui@${System.identityHashCode(loader)}")) return
         // Blocking only the posting call keeps cancellation and actual mode changes intact.

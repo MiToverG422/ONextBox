@@ -1,4 +1,5 @@
 package com.mi.onextbox.lsp
+import android.os.Build
 
 import android.content.Context
 import android.graphics.Rect
@@ -15,11 +16,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import com.mi.onextbox.lsp.compat.ModernReflect as Reflect
 
-/**
- * Plays the SELECTED OEM assets/renderer in an owned, non-touchable window
- * No generated frames, no onFpTouch/HBM calls, no changes to the native drawable's callback
- * Options are copied because the OEM constructor mutates their density/scale values
- */
+/** Native fingerprint animation, isolated from authentication. */
 internal class NativeFingerprintFeedback {
     private val main = Handler(Looper.getMainLooper())
     private var layer: ImageView? = null
@@ -180,7 +177,7 @@ internal class NativeFingerprintFeedback {
         ).apply {
             gravity = Gravity.TOP or Gravity.LEFT
             setTitle("ONextBoxFaceTapFeedback")
-            setFitInsetsTypes(0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) setFitInsetsTypes(0)
         }
         // The visual-only System UI layer must not cause untrusted-overlay touch blocking on desktop
         val trustedFlag = Reflect.getStaticIntField(WindowManager.LayoutParams::class.java, "PRIVATE_FLAG_TRUSTED_OVERLAY")

@@ -6,13 +6,17 @@ import android.net.Uri
 import com.mi.onextbox.BuildConfig
 import com.mi.onextbox.lsp.GoogleMessagesConfig
 import com.mi.onextbox.lsp.LspConfig
+import com.mi.onextbox.lsp.LspPreferenceStore
+import com.mi.onextbox.lsp.launcherSearchBarModeValue
 import com.mi.onextbox.refresh.RefreshRatePreferences
 import com.mi.onextbox.refresh.RefreshRateControllerClient
+import com.mi.onextbox.touch.TouchSamplingController
 import com.mi.onextbox.touch.TouchSamplingPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -24,14 +28,7 @@ object ConfigBackup {
 
     private const val APP_PREFS_NAME = "onextbox_prefs"
     private const val LSP_PREFS_NAME = "lsp_features"
-    private const val SETTINGS_C15_ABOUT_LAYOUT_PREF_KEY = "settings_c15_about_layout"
-    private const val SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM_PREF_KEY = "settings_skip_special_permission_risk_confirm"
-    private const val SETTINGS_RESTORE_APP_OPEN_BUTTON_PREF_KEY = "settings_restore_app_open_button"
-    private const val SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS_PREF_KEY =
-        "settings_restore_domestic_auxiliary_functions"
-    private const val SETTINGS_UNLOCK_REFRESH_RATE_PREF_KEY = "settings_unlock_refresh_rate"
-    private const val SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE_PREF_KEY =
-        "settings_force_global_extreme_refresh_rate"
+    private const val MAX_BACKUP_BYTES = 1_048_576
     private const val TYPE_BOOLEAN = "boolean"
     private const val TYPE_INT = "int"
     private const val TYPE_LONG = "long"
@@ -43,6 +40,8 @@ object ConfigBackup {
         APP_PREFS_NAME, LSP_PREFS_NAME,
         RefreshRatePreferences.PREFS_NAME, TouchSamplingPreferences.PREFS_NAME,
     )
+
+    data class ImportResult(val systemStateSynced: Boolean)
 
     data class ResetResult(
         val systemStateReset: Boolean,
@@ -60,11 +59,19 @@ object ConfigBackup {
         } ?: error("Cannot open output file")
     }
 
-    fun importFromUri(context: Context, uri: Uri) {
+    fun importFromUri(context: Context, uri: Uri): ImportResult {
         val jsonText = context.contentResolver.openInputStream(uri)?.use { input ->
-            input.bufferedReader(StandardCharsets.UTF_8).readText()
+            val bytes = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                require(bytes.size() + count <= MAX_BACKUP_BYTES) { "Config file is too large" }
+                bytes.write(buffer, 0, count)
+            }
+            bytes.toString(StandardCharsets.UTF_8.name())
         } ?: error("Cannot open input file")
-        importFromJson(context, jsonText)
+        return importFromJson(context, jsonText)
     }
 
     fun exportToJson(context: Context): String {
@@ -84,46 +91,45 @@ object ConfigBackup {
             .toString(2)
     }
 
-    fun importFromJson(context: Context, jsonText: String) {
+    fun importFromJson(context: Context, jsonText: String): ImportResult {
+        require(jsonText.toByteArray(StandardCharsets.UTF_8).size <= MAX_BACKUP_BYTES) {
+            "Config file is too large"
+        }
         val root = JSONObject(jsonText)
-        val version = root.optInt("version", -1)
-        require(version == BACKUP_VERSION) { "Unsupported config version: $version" }
-
+        require(root.get("version") == BACKUP_VERSION) { "Unsupported config version" }
+        val packageName = root.optString("packageName")
+        require(packageName == context.packageName || packageName == "com.mi.fluidbox") {
+            "Config belongs to another app"
+        }
         val prefsRoot = root.getJSONObject("preferences")
-        supportedPrefs.forEach { prefsName ->
-            if (prefsRoot.has(prefsName)) {
-                restorePrefsFromJson(prefs(context, prefsName), prefsRoot.getJSONObject(prefsName))
+        val groups = supportedPrefs.filter { prefsRoot.has(it) }.associateWith { name ->
+            val values = decodePreferences(prefsRoot.getJSONObject(name))
+            if (name == LSP_PREFS_NAME) {
+                values.mapValues { (key, value) ->
+                    if (key == "launcher_taskbar_search_box" && value is Boolean) {
+                        launcherSearchBarModeValue(value)
+                    } else value
+                }
+            } else values
+        }
+        require(groups.isNotEmpty()) { "Config contains no supported preferences" }
+        val stores = groups.keys.associateWith { name -> sharedPreferenceStore(prefs(context, name)) }
+        for ((name, values) in groups) {
+            val existing = stores.getValue(name).read()
+            for ((key, value) in values) {
+                val previous = existing[key] ?: continue
+                require(preferenceTypeMatches(previous, value)) { "Preference type changed: $key" }
             }
         }
-        if (prefsRoot.has(LSP_PREFS_NAME)) {
-            // Do not revive removed features when importing an older configuration.
+        restorePreferences(groups, stores)
+
+        val synced = if (LSP_PREFS_NAME in groups) {
             GoogleMessagesConfig.removeRetiredPreferences(prefs(context, LSP_PREFS_NAME))
-            LspConfig.syncPermissionFeatures(context)
-            LspConfig.syncSmallWindowFeatures(context)
-            LspConfig.syncKeyguardFeatures(context)
-            // Restore the cross-process mirror as well as the exported preference value.
-            val enabled = prefs(context, LSP_PREFS_NAME)
-                .getBoolean(SETTINGS_C15_ABOUT_LAYOUT_PREF_KEY, false)
-            LspConfig.setSettingsC15AboutLayoutEnabled(context, enabled)
-            val skipSpecialPermissionRiskConfirm = prefs(context, LSP_PREFS_NAME)
-                .getBoolean(SETTINGS_SKIP_SPECIAL_PERMISSION_RISK_CONFIRM_PREF_KEY, false)
-            LspConfig.setSettingsSkipSpecialPermissionRiskConfirmEnabled(context, skipSpecialPermissionRiskConfirm)
-            val restoreAppOpenButton = prefs(context, LSP_PREFS_NAME)
-                .getBoolean(SETTINGS_RESTORE_APP_OPEN_BUTTON_PREF_KEY, false)
-            LspConfig.setSettingsRestoreAppOpenButtonEnabled(context, restoreAppOpenButton)
-            val restoreDomesticAuxiliaryFunctions = prefs(context, LSP_PREFS_NAME)
-                .getBoolean(SETTINGS_RESTORE_DOMESTIC_AUXILIARY_FUNCTIONS_PREF_KEY, false)
-            LspConfig.setSettingsRestoreDomesticAuxiliaryFunctionsEnabled(context, restoreDomesticAuxiliaryFunctions)
-            val unlockRefreshRate = prefs(context, LSP_PREFS_NAME)
-                .getBoolean(SETTINGS_UNLOCK_REFRESH_RATE_PREF_KEY, false)
-            LspConfig.setSettingsRefreshRateUnlocked(context, unlockRefreshRate)
-            val forceGlobalExtremeRefreshRate = prefs(context, LSP_PREFS_NAME)
-                .getBoolean(SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE_PREF_KEY, false)
-            LspConfig.setSettingsForceGlobalExtremeRefreshRateEnabled(
-                context,
-                forceGlobalExtremeRefreshRate,
-            )
+            LspConfig.syncTogglesForBoot(context)
+        } else {
+            true
         }
+        return ImportResult(systemStateSynced = synced)
     }
 
     suspend fun resetToDefaults(context: Context): ResetResult = withContext(Dispatchers.IO) {
@@ -142,6 +148,9 @@ object ConfigBackup {
         require(prefs(appContext, RefreshRatePreferences.PREFS_NAME).edit().clear().commit()) {
             "Failed to clear refresh rate preferences"
         }
+        val touchStateReset = runCatching {
+            TouchSamplingController.resetConfiguration()
+        }.getOrDefault(false)
         require(prefs(appContext, TouchSamplingPreferences.PREFS_NAME).edit().clear().commit()) {
             "Failed to clear touch sampling preferences"
         }
@@ -159,6 +168,7 @@ object ConfigBackup {
         ResetResult(
             systemStateReset = lspStateReset &&
                 refreshRateStateReset &&
+                touchStateReset &&
                 permissionMonitorReset &&
                 launcherLayoutReset &&
                 assistantScreenReset,
@@ -167,8 +177,7 @@ object ConfigBackup {
 
     private fun prefs(context: Context, name: String): SharedPreferences {
         return if (name == LSP_PREFS_NAME) {
-            context.createDeviceProtectedStorageContext()
-                .getSharedPreferences(name, Context.MODE_PRIVATE)
+            LspPreferenceStore.prefs(context)
         } else {
             context.getSharedPreferences(name, Context.MODE_PRIVATE)
         }
@@ -196,31 +205,74 @@ object ConfigBackup {
         }
     }
 
-    private fun restorePrefsFromJson(prefs: SharedPreferences, json: JSONObject) {
-        val editor = prefs.edit().clear()
-        val keys = json.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            val item = json.optJSONObject(key) ?: continue
-            when (item.optString("type")) {
-                TYPE_BOOLEAN -> editor.putBoolean(key, item.getBoolean("value"))
-                TYPE_INT -> editor.putInt(key, item.getInt("value"))
-                TYPE_LONG -> editor.putLong(key, item.getLong("value"))
-                TYPE_FLOAT -> editor.putFloat(key, item.getDouble("value").toFloat())
-                TYPE_STRING -> editor.putString(key, item.optString("value", ""))
-                TYPE_STRING_SET -> {
-                    val values = item.optJSONArray("value") ?: JSONArray()
-                    editor.putStringSet(
-                        key,
+    private fun decodePreferences(json: JSONObject): Map<String, Any> {
+        require(json.length() <= 1024) { "Too many preferences" }
+        return buildMap {
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                require(key.isNotBlank() && key.length <= 256) { "Invalid preference key" }
+                val item = json.getJSONObject(key)
+                val value = item.get("value")
+                val decoded: Any = when (item.getString("type")) {
+                    TYPE_BOOLEAN -> value.also { require(it is Boolean) { "Invalid boolean: $key" } }
+                    TYPE_INT -> integerValue(value, key).also {
+                        require(it in Int.MIN_VALUE..Int.MAX_VALUE) { "Integer out of range: $key" }
+                    }.toInt()
+                    TYPE_LONG -> integerValue(value, key)
+                    TYPE_FLOAT -> {
+                        require(value is Number && value.toDouble().isFinite()) { "Invalid float: $key" }
+                        value.toFloat().also { require(it.isFinite()) { "Float out of range: $key" } }
+                    }
+                    TYPE_STRING -> value.also { require(it is String) { "Invalid string: $key" } }
+                    TYPE_STRING_SET -> {
+                        require(value is JSONArray && value.length() <= 4096) { "Invalid string set: $key" }
                         buildSet {
-                            for (index in 0 until values.length()) {
-                                values.optString(index).takeIf { it.isNotBlank() }?.let(::add)
+                            for (index in 0 until value.length()) {
+                                val entry = value.get(index)
+                                require(entry is String) { "Invalid string set entry: $key" }
+                                add(entry)
                             }
                         }
-                    )
+                    }
+                    else -> error("Unsupported preference type: $key")
                 }
+                put(key, decoded)
             }
         }
-        require(editor.commit()) { "Failed to write preferences" }
+    }
+
+    private fun integerValue(value: Any, key: String): Long {
+        require(value is Int || value is Long) { "Invalid integer: $key" }
+        return (value as Number).toLong()
+    }
+
+    private fun preferenceTypeMatches(previous: Any, value: Any): Boolean = when (previous) {
+        is Boolean -> value is Boolean
+        is Int -> value is Int
+        is Long -> value is Long
+        is Float -> value is Float
+        is String -> value is String
+        is Set<*> -> value is Set<*>
+        else -> false
+    }
+
+    private fun sharedPreferenceStore(preferences: SharedPreferences) = object : PreferenceStore {
+        override fun read(): Map<String, *> = preferences.all
+        override fun write(values: Map<String, *>): Boolean {
+            val editor = preferences.edit().clear()
+            values.forEach { (key, value) ->
+                when (value) {
+                    is Boolean -> editor.putBoolean(key, value)
+                    is Int -> editor.putInt(key, value)
+                    is Long -> editor.putLong(key, value)
+                    is Float -> editor.putFloat(key, value)
+                    is String -> editor.putString(key, value)
+                    is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+                    else -> error("Unsupported preference value: $key")
+                }
+            }
+            return editor.commit()
+        }
     }
 }

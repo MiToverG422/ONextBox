@@ -1,8 +1,12 @@
 package com.mi.onextbox.ui.common
 
 import android.content.Context
+import com.mi.onextbox.lsp.LsposedScopeRequester
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
@@ -25,6 +29,16 @@ data class RootAccessInfo(
     val managerVersion: String? = null,
     val detail: String? = null
 )
+
+/** This process has not finished its initial Root check yet. */
+internal object RootStartupCheck {
+    private val pending = MutableStateFlow(true)
+    val states: StateFlow<Boolean> = pending.asStateFlow()
+
+    fun complete() {
+        pending.value = false
+    }
+}
 
 suspend fun queryRootAccess(context: Context? = null): RootAccessInfo = withContext(Dispatchers.IO) {
     AppLogStore.i("RootAccess", "Start checking root access")
@@ -67,7 +81,14 @@ suspend fun queryRootAccess(context: Context? = null): RootAccessInfo = withCont
         )
     }
 
-    context?.applicationContext?.let { cacheRootAccessInfo(it, info) }
+    try {
+        context?.applicationContext?.let { cacheRootAccessInfo(it, info) }
+        LsposedScopeRequester.onRootAccessChanged()
+        if (context != null) LsposedScopeRequester.snapshot(context)
+    } finally {
+        RootStartupCheck.complete()
+        LsposedScopeRequester.onRootStartupCompleted()
+    }
     info
 }
 

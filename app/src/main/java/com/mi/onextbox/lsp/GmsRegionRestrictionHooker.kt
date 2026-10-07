@@ -7,13 +7,7 @@ import com.mi.onextbox.lsp.compat.ModernReflect
 import java.lang.reflect.Array as ReflectArray
 import java.lang.reflect.Method
 
-/**
- * LSP equivalent of removing the CN-GMS feature declarations from system permission XML files.
- *
- * The original Magisk module removes these feature entries before system_server reads them. We
- * cannot replace mounted partitions here, so only expose the equivalent PackageManager view:
- * callers see neither CN-GMS feature once the option was enabled before system_server started.
- */
+/** PackageManager view of CN-GMS feature declarations, without modifying system partitions. */
 internal object GmsRegionRestrictionHooker {
     private const val TAG = "ONextBox-GmsRegion"
     private const val CLASS_SYSTEM_CONFIG = "com.android.server.SystemConfig"

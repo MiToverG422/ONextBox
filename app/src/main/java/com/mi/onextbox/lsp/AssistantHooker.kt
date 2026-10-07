@@ -160,12 +160,7 @@ object AssistantHooker {
         }
     }
 
-    /**
-     * ColorOS 17 moved gesture-bar Circle to Search into the launcher's
-     * OplusCuiInputConsumer. The consumer already sends the correct native
-     * invocation types (8/1000); it only takes the Breeno branch on domestic
-     * builds because this launcher-local feature gate is false.
-     */
+    /** Launcher gesture-bar assistant routing. */
     private fun hookLauncher(classLoader: ClassLoader) {
         if (!LspConfig.isAssistantNativeCircleEnabledXposed()) return
         hookContextualSearchSystemFeature(LAUNCHER_PACKAGE, classLoader)
@@ -199,11 +194,7 @@ object AssistantHooker {
         hookLauncherNativeCircleEntry(classLoader)
     }
 
-    /**
-     * International SystemUI reports the selected assistant as available through OverviewProxy.
-     * The domestic build can report false even with a valid Assistant Role, which prevents the
-     * stock AssistantInputConsumer from being created before invocation_type=1 is ever sent.
-     */
+    /** Assistant availability reporting. */
     private fun hookLauncherAssistantAvailability(classLoader: ClassLoader) {
         val serviceClass = XposedHelpers.findClassIfExists(
             "com.android.quickstep.TouchInteractionService",
@@ -240,13 +231,7 @@ object AssistantHooker {
             }
     }
 
-    /**
-     * Some C17 domestic launcher builds resolve the lazy feature value before our package-ready
-     * callback and keep the Breeno branch in the compiled companion entry. Intercept that final
-     * entry as a compatibility fallback and execute the same SystemUiProxy.startAssistant route
-     * used by the international branch. Gesture recognition and its press animation stay owned
-     * by OplusCuiInputConsumer; only the destination selected after recognition is replaced.
-     */
+    /** Fallback assistant routing after gesture recognition. */
     private fun hookLauncherNativeCircleEntry(classLoader: ClassLoader) {
         val companionClass = XposedHelpers.findClassIfExists(
             "com.android.quickstep.inputconsumers.OplusCuiInputConsumer\$Companion",
@@ -348,13 +333,7 @@ object AssistantHooker {
         return field.get(null)
     }
 
-    /**
-     * ColorOS 17's navigation settings no longer infer this UI from the selected assistant.
-     * It removes the whole Circle to Search category unless its process can see the Google
-     * contextual-search system feature. The stock domestic Breeno feature is cached in this
-     * process as well, so mirror the narrowly-scoped ROM XML changes here instead of changing
-     * Settings' global CN/EXP identity.
-     */
+    /** Contextual-search settings visibility. */
     private fun hookSettings(classLoader: ClassLoader) {
         val nativePowerEnabled = LspConfig.isAssistantNativePowerEnabledXposed()
         val nativeCircleEnabled = LspConfig.isAssistantNativeCircleEnabledXposed()
@@ -531,11 +510,7 @@ object AssistantHooker {
         }
     }
 
-    /**
-     * Runtime equivalent of the two ROM XML edits used by ColorOS.EU. These hooks only replace
-     * the exact assistant feature keys; they deliberately do not turn the whole CN SystemUI into
-     * an EXP build.
-     */
+    /** Contextual-search permission and feature gates. */
     private fun hookSystemUiExperimentalRoutes(classLoader: ClassLoader) {
         val nativePowerEnabled = LspConfig.isAssistantNativePowerEnabledXposed()
         val nativeCircleEnabled = LspConfig.isAssistantNativeCircleEnabledXposed()
@@ -627,11 +602,7 @@ object AssistantHooker {
         }
     }
 
-    /**
-     * ShutdownFeatureOption stores the Oplus feature result in a Kotlin Lazy inside SystemUI.
-     * Removing the ROM XML makes this false from process start; hook the public accessor too so
-     * a value cached before package-ready cannot keep the domestic power-button route alive.
-     */
+/** SystemUI assistant feature accessor, overriding cached domestic-route results. */
     private fun hookSystemUiBreenoAssistantFeature(classLoader: ClassLoader) {
         val featureClass = XposedHelpers.findClassIfExists(
             "com.oplusos.systemui.common.feature.ShutdownFeatureOption",
@@ -658,11 +629,7 @@ object AssistantHooker {
         }
     }
 
-    /**
-     * C17's AssistManager rejects every normal assistant request on a domestic build before it
-     * reaches the selected Google assistant. Scope the EXP-region result to the exact native
-     * invocation currently being handled, rather than changing SystemUI's region globally.
-     */
+/** Assistant invocation region gate, scoped to the current request rather than global SystemUI state. */
     private fun hookNativeAssistantSystemUiGate(classLoader: ClassLoader) {
         val assistManagerClass = XposedHelpers.findClassIfExists(
             "com.android.systemui.assist.AssistManager",
@@ -758,12 +725,7 @@ object AssistantHooker {
         }
     }
 
-    /**
-     * The C17 domestic SystemUI ships an empty OplusCircleToSearchManagerEx implementation,
-     * whereas the international path consumes invocation types 8/1000 here and forwards them
-     * to Android 17's contextual-search service. Restore only that missing interception layer;
-     * ordinary assistant invocations (including power-button type 6) keep the stock route.
-     */
+/** Contextual-search interceptor for invocation types 8/1000, other assistant requests keep their normal route. */
     private fun hookSystemUiCircleToSearchInterceptor(classLoader: ClassLoader) {
         val managerClass = XposedHelpers.findClassIfExists(
             "com.android.systemui.navigationbar.otherbusiness.circlesearch." +
@@ -1276,12 +1238,7 @@ object AssistantHooker {
         }
     }
 
-    /**
-     * C17 keeps both destinations in PhoneWindowManagerExtImpl.startSpeech(): the domestic
-     * feature value starts Breeno directly, while the international value calls the framework's
-     * native type-6 assist route. Correct only the cached routing state immediately before that
-     * stock decision and let C17 retain its own haptic, deduplication and launch bundle.
-     */
+    /** Power-key assistant routing. */
     private fun hookNativePowerLongPress(packageName: String, classLoader: ClassLoader) {
         val cls = XposedHelpers.findClassIfExists(
             "com.android.server.policy.PhoneWindowManagerExtImpl",
@@ -1373,10 +1330,7 @@ object AssistantHooker {
         }
     }
 
-    /**
-     * C17 international uses Assistant Role as the source of truth, then writes both secure
-     * components. VIMS observes voice_interaction_service and owns the third, live binding layer.
-     */
+    /** Assistant-role and voice-service synchronization. */
     private fun hookVoiceInteractionServiceRepair(
         packageName: String,
         classLoader: ClassLoader,
@@ -1725,12 +1679,7 @@ object AssistantHooker {
         }
     }
 
-    /**
-     * Re-selecting an Assistant Role on international C17 does more than rewrite its two secure
-     * component strings: VIMS tears down and recreates the active implementation, which also
-     * republishes assistant availability to SystemUI and the launcher. The domestic power-menu
-     * switch never touches the Role, so perform that same live refresh only on the off -> on edge.
-     */
+    /** Refresh the active assistant binding. */
     private fun refreshLiveAssistantBinding(context: Context, userId: Int) {
         val handler = Handler(Looper.getMainLooper())
         handler.post {
@@ -2051,11 +2000,7 @@ object AssistantHooker {
         }
     }
 
-    /**
-     * Power-key hooks run on a critical system_server policy thread. All binding, retries and
-     * shell fallbacks must happen away from that callback so a slow Google service cannot stall
-     * input dispatch or system policy handling.
-     */
+    /** Keep service binding off the system input thread. */
     private fun launchDefaultAssistantAsync(context: Context?) {
         if (!assistantLaunchInProgress.compareAndSet(false, true)) return
         val safeContext = context?.applicationContext ?: context

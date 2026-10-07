@@ -265,8 +265,7 @@ fun SettingsGroup(
 }
 
 internal object SettingsTokens {
-    // C17 support_preference_text_content_padding_(top|bottom) and the card's
-    // 32dp absolute title inset (16dp card margin + 16dp row inset).
+    // Settings row padding inside a card.
     val RowInsideMargin: PaddingValues
         @Composable get() = PaddingValues(
             horizontal = if (LocalColorOsDialogContent.current) 0.dp else 16.dp,
@@ -274,10 +273,9 @@ internal object SettingsTokens {
         )
     // Press highlight inset around dividers.
     val DividerVerticalPadding = 6.dp
-    // C17 coui_list_divider_height.
+    // Settings divider thickness.
     val DividerThickness = 0.33.dp
-    // C17 coui_preference_divider_default_horizontal_padding is 32dp from
-    // the screen edge, leaving 16dp inside a card that already has a 16dp margin.
+    // Divider inset from the card edge.
     val DividerCardInset = 16.dp
     // Horizontal overflow for custom pressed-row highlight backgrounds.
     val RowHighlightHorizontalOverflow = 16.dp
@@ -608,11 +606,7 @@ internal fun SettingsPopupArrow(
     }
 }
 
-/**
- * C17 coui_line_arrow in its native 24dp widget cell. The platform morphs the
- * 16x24dp down/up glyph over 350ms; scaling through its centre reproduces that
- * line-collapse transition while keeping the two endpoint shapes pixel-identical.
- */
+/** Animated expand arrow for settings rows. */
 @Composable
 internal fun SettingsExpandArrow(
     expanded: Boolean,

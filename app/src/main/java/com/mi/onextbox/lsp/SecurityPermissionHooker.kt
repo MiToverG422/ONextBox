@@ -1,4 +1,5 @@
 package com.mi.onextbox.lsp
+import android.os.Build
 
 import android.app.Activity
 import android.app.AppOpsManager
@@ -153,7 +154,12 @@ internal object SecurityPermissionHooker {
             @Suppress("DEPRECATION")
             val uid = context.packageManager.getApplicationInfo(packageName, 0).uid
             val op = XposedHelpers.getStaticIntField(AppOpsManager::class.java, "OP_ACCESS_RESTRICTED_SETTINGS")
-            val mode = appOps.unsafeCheckOpNoThrow("android:access_restricted_settings", uid, packageName)
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow("android:access_restricted_settings", uid, packageName)
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow("android:access_restricted_settings", uid, packageName)
+            }
             if (mode == AppOpsManager.MODE_ALLOWED || mode == AppOpsManager.MODE_DEFAULT) return
             XposedHelpers.callMethod(appOps, "setMode", op, uid, packageName, AppOpsManager.MODE_ALLOWED)
         }

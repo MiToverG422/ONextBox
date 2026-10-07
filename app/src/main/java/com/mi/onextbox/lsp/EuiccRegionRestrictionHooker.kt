@@ -20,18 +20,7 @@ import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * ColorOS 17 eSIM compatibility hooks.
- *
- * DownloadChecker.c(String) performs the complete check. Its first step, d(String), contains the
- * network/location/server-region gate; c(String) then keeps enforcing the profile-count limit and
- * the device/eSIM binding result. Hooking d instead of c preserves those later safeguards by
- * default; the separate profile-limit option only overrides q(), leaving binding untouched.
- *
- * The C17 CN LPA also receives the server's confirmation-code request but its ViewModel only logs
- * the callback. AgentService consequently waits forever on a CountDownLatch. The companion hook
- * restores that missing UI and writes the user's response back to the existing OEM transaction.
- */
+/** eSIM region and confirmation-code hooks, preserving device binding and the separate profile-count policy. */
 internal object EuiccRegionRestrictionHooker {
     private const val TAG = "ONextBox-Euicc"
     private const val DOWNLOAD_CHECKER_CLASS = "com.oplus.euicc.DownloadChecker"
@@ -549,7 +538,7 @@ internal object EuiccRegionRestrictionHooker {
         return ConfirmationInput(wrapLikeC17InputLayout(activity, editText), editText)
     }
 
-    /** Matches coui_single_edit_bottom_alert_dialog_layout.xml from the C17 eSIM app. */
+    /** eSIM confirmation-code dialog layout. */
     private fun wrapLikeC17InputLayout(activity: Activity, inputView: View): View {
         val density = activity.resources.displayMetrics.density
         val layoutParams = FrameLayout.LayoutParams(

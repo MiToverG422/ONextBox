@@ -56,7 +56,6 @@ object FrameworkHooker {
         var totalHooks = 0
         when (packageName) {
             PACKAGE_SYSTEM -> {
-                LspRuntimeStatus.markSystemScopeActive()
                 val featureState = readFrameworkFeatureState()
                 nativeNotificationBubblesEnabledAtStart = featureState.nativeNotificationBubbles
 
@@ -103,11 +102,7 @@ object FrameworkHooker {
         return totalHooks > 0
     }
 
-    /**
-     * Package loading happens in critical processes such as system_server. Keep each feature's
-     * installation independent so a vendor-specific mismatch in one hook cannot prevent later
-     * hook groups from being registered.
-     */
+/** Isolated feature installation, one incompatible Hook cannot block the remaining groups. */
     private inline fun installHookGroup(name: String, block: () -> Int): Int {
         return runCatching(block)
             .onFailure { error ->

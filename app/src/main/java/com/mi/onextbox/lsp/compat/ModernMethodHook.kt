@@ -2,12 +2,7 @@ package com.mi.onextbox.lsp.compat
 
 import java.lang.reflect.Executable
 
-/**
- * Small before/after callback model used by ONextBox hook code.
- *
- * This is deliberately limited to the behavior used by this module. It is not a
- * reimplementation of a legacy Xposed API and has no dependency on legacy classes.
- */
+/** Modern Hook before/after callbacks, without legacy Xposed dependencies. */
 internal abstract class ModernMethodHook {
     open fun beforeHookedMethod(param: MethodHookParam) = Unit
 

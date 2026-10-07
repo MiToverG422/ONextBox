@@ -47,29 +47,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * Selects which half of an OPlus side-by-side colour/matte movie is shown.
- *
- * [PremultipliedForeground] reproduces BootReg's important compositing rule: the left half is RGB,
- * the red channel of the right half is alpha, nearly opaque pixels are forced to alpha 1, and all
- * other RGB values are premultiplied before they reach Android's Surface compositor.
- */
+/** Colour/matte output modes, using the right-half red channel as alpha and premultiplied RGB. */
 internal enum class BootregMatteOutput {
     PremultipliedForeground,
     OpaqueColor,
     AlphaMask,
 }
 
-/**
- * Plays one of BootReg's RGB+matte videos through a GLES 3 renderer.
- *
- * The decoder writes into an external-OES [SurfaceTexture]. GLES samples the two horizontal halves
- * in the same frame and renders into a non-opaque [TextureView]. Using TextureView rather than
- * GLSurfaceView keeps this surface in normal Android/Compose ordering, so regular Compose content
- * can be placed both before and after this composable without SurfaceView z-order surprises.
- *
- * This is intentionally separate from [BootregVideoPlayer], which is for ordinary full-frame MP4s.
- */
+/** GLES player for side-by-side colour/matte videos, kept in normal Compose layer order. */
 @Composable
 internal fun BootregMatteVideoPlayer(
     @RawRes videoResId: Int,
@@ -143,14 +128,7 @@ internal fun BootregMatteVideoPlayer(
     )
 }
 
-/**
- * C17's native depth-video composition: one decoder, an opaque normal layer below [content], and
- * the premultiplied matte layer above it. Both TextureViews are rendered from the same
- * `updateTexImage()` call, so the layers cannot drift apart as two MediaPlayers can.
- *
- * [fadeInDurationMillis] should be 600 for GuidePage's little-cloth sequence and 0 for the
- * CompletePage sequence. The player keeps the final decoded frame until this composable leaves.
- */
+/** Shared-decoder video layers below and above [content], with configurable fade-in and a retained final frame. */
 @Composable
 internal fun BootregMatteVideoSandwich(
     @RawRes videoResId: Int,

@@ -28,13 +28,7 @@ import com.mi.onextbox.ui.onboarding.OnboardingScreen
 import com.mi.onextbox.ui.settings.UpdateChannelPreference
 import com.mi.onextbox.ui.settings.UpdateNotificationScheduler
 
-/**
- * A dedicated translucent first-run surface.
- *
- * ColorOS BootReg finishes above an already prepared Launcher task. Keeping onboarding in its own
- * translucent window lets the completion drawable replace page pixels with transparency and reveal
- * the real wallpaper/Launcher instead of faking that transition with ONextBox's home screen.
- */
+/** Onboarding activity with a prepared destination for its exit transition. */
 class OnboardingActivity : ComponentActivity() {
     private companion object {
         const val APP_PREFS_NAME = "onextbox_prefs"
@@ -142,11 +136,7 @@ class OnboardingActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * The launcher activity that originally opened onboarding is deliberately finished, so merely
-     * removing this translucent activity would expose the system launcher. Re-enter MainActivity
-     * after the completion surface has fully dissolved, then remove only onboarding from the task.
-     */
+/** Returns to MainActivity after the onboarding completion surface fades out. */
     private fun openMainAndFinish() {
         startActivity(
             Intent(this, MainActivity::class.java).apply {
@@ -160,12 +150,7 @@ class OnboardingActivity : ComponentActivity() {
         overridePendingTransition(0, 0)
     }
 
-    /**
-     * Re-localizes the Compose tree without recreating this Activity. A recreation used to tear
-     * down the active pointer stream and could restore a stale draft page while the user was still
-     * selecting a language. Keeping the same composition leaves the setup flow on Language and
-     * makes repeated taps deterministic.
-     */
+/** Updates onboarding language without recreating the Activity or losing the current gesture. */
     private fun createOnboardingContext(languageTag: String): Context {
         val locales = if (languageTag.isBlank()) {
             Resources.getSystem().configuration.locales

@@ -1,15 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
--->
+<?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Activation and policy consent must be completed on each newly provisioned device. -->
+    <!-- Device authorization and runtime diagnostics stay on this device. -->
     <exclude domain="sharedpref" path="onextbox_activation.xml" />
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="sharedpref" path="root_status_cache.xml" />
+    <exclude domain="sharedpref" path="lsp_home_display_cache.xml" />
+    <exclude domain="device_sharedpref" path="push_monitor.xml" />
+    <exclude domain="device_sharedpref" path="lsposed_status_cache.xml" />
+    <exclude domain="file" path="logs/" />
 </full-backup-content>

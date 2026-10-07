@@ -10,11 +10,6 @@
 <string name="tab_home">Home</string>
     <string name="tab_features">Features</string>
     <string name="tab_tools">Tools</string>
-    <string name="feature_group_system_apps">System and native apps</string>
-    <string name="feature_group_app_enhancements">App enhancements</string>
-    <string name="feature_category_mobile_network_summary">SIM, carrier, and privacy options</string>
-    <string name="feature_category_esim_summary">eSIM download and diagnostics</string>
-    <string name="feature_category_app_market_summary">Region and recommendation options</string>
 
     <string name="tab_settings">Settings</string>
 
@@ -41,7 +36,6 @@
     <string name="setting_dynamic_color_on_summary">Use colors from the system wallpaper</string>
     <string name="setting_dynamic_color_off_summary">Use a custom theme color</string>
     <string name="setting_theme_palette">Theme color</string>
-    <string name="settings_section_interaction">Interaction</string>
     <string name="setting_material_floating_bottom_bar">Floating bottom bar</string>
     <string name="setting_material_floating_bottom_bar_summary">Use a floating bottom navigation bar</string>
     <string name="setting_material_haptics">Haptic feedback</string>
@@ -78,6 +72,8 @@
 
 <string name="setting_blur_effect">Enable Blur Effect</string>
 <string name="setting_feature_page_new_style">New Features page style</string>
+    <string name="setting_progressive_card_animation">Progressive card animation</string>
+    <string name="setting_progressive_card_animation_summary">Cards enter progressively while scrolling, only in the classic Features layout and OPPO Push Monitor</string>
     <string name="setting_feature_page_hide_background_video">Hide Features page background video</string>
     <string name="setting_feature_page_hide_background_video_summary">In non-Monet dark themes, replaces the background video with the colorful animated background</string>
     <string name="setting_pop_follows_swipe_edge">Pop Follows Swipe Edge</string>
@@ -109,10 +105,6 @@
     <string name="config_clear_failed">Failed to clear configuration: %1$s</string>
     <string name="about_author_info_title">MiToverG</string>
     <string name="about_author_info_summary">Author</string>
-    <string name="about_author_coolapk_title">Coolapk profile</string>
-    <string name="about_author_coolapk_summary">MiToverG422 on Coolapk</string>
-    <string name="about_author_github_profile_title">GitHub profile</string>
-    <string name="about_author_github_profile_summary">MiToverG422 on GitHub</string>
     <string name="about_github_title">GitHub repository</string>
     <string name="about_github_summary">View source code, releases, issues, and development progress</string>
     <string name="about_telegram_title">Telegram channel</string>
@@ -190,7 +182,6 @@
     <string name="feature_settings_restore_smart_lock_title">Restore Smart Lock</string>
     <string name="feature_settings_restore_smart_lock_summary">Restore the missing Smart Lock card under Fingerprint, face &amp; password in global Settings</string>
     <string name="feature_android_system_title">Android System</string>
-    <string name="feature_category_android_system_summary">Android framework and Google service features</string>
     <string name="feature_group_google_services">Google services</string>
     <string name="feature_settings_gms_region_bypass_title">Remove CN GMS restrictions (experimental)</string>
     <string name="feature_settings_gms_region_bypass_summary">Hide the CN-GMS system feature flags. Experimental; requires a system restart</string>
@@ -256,7 +247,6 @@
     <string name="feature_esim_diag_result_binding">Device binding failed</string>
     <string name="feature_group_athena">Athena</string>
     <string name="feature_group_athena_policy">Background scheduling and policies</string>
-    <string name="feature_category_athena_summary">Background management policy and performance controls</string>
     <string name="feature_athena_c17_swipe_up_protection_title">C17 swipe-away background protection</string>
     <string name="feature_athena_c17_swipe_up_protection_summary">Use Global-style background protection for apps running a VPN or foreground service when clearing Recents. Only supports Athena 7.0 and requires a system restart</string>
     <string name="feature_group_settings_hidden_features">Region-related</string>
@@ -273,12 +263,7 @@
     <string name="feature_recent_task_radius_summary">Customize recent task card size, Requires a launcher restart</string>
     <string name="feature_aod_enhance_title">AOD</string>
     <string name="feature_aod_enhance_toggle_title">Custom AOD brightness</string>
-    <string name="feature_aod_enhance_summary">Enable AOD enhancements (brightness, panoramic all-day support, and single-click wake adjustment), Requires a system restart</string>
 
-<string name="feature_category_desktop_summary">Launcher and minus-one-page tools</string>
-    <string name="feature_category_system_ui_summary">SystemUI-related visual and behavior tweaks</string>
-    <string name="feature_category_settings_summary">System settings visibility and developer option tweaks</string>
-    <string name="feature_category_aod_summary">Always-on display brightness and behavior settings</string>
 
 <string name="feature_slider_current_dp">Current value: %1$ddp</string>
 
@@ -312,17 +297,13 @@
     <string name="event_default_option">Default</string>
 
 
-<string name="lsp_status_missing_scope">Missing scopes</string>
+<string name="lsp_status_missing_scope">Recommended scopes missing</string>
 
-<string name="action_refresh">Refresh</string>
 
 
 <string name="feature_assistant_title">Smart assistant</string>
-    <string name="feature_assistant_summary">Power key, gesture bar, and Hey Google smart assistant features</string>
     <string name="feature_assistant_power_title">Global custom voice assistant</string>
     <string name="feature_assistant_power_summary">Replace Xiaobu on power-key long press with the system default digital assistant on ColorOS CN, Requires a system restart</string>
-    <string name="feature_assistant_native_power_title">Global custom voice assistant (Experimental)</string>
-    <string name="feature_assistant_native_power_summary">Use the global ColorOS feature route: expose Google Assistant support and disable the Breeno-specific branch. Set a default digital assistant first; requires a system restart</string>
     <string name="feature_assistant_native_combined_title">International smart assistant (Experimental)</string>
     <string name="feature_assistant_native_combined_summary">Enable a custom digital assistant and gesture-bar Circle to Search through the native international ColorOS route; requires a system restart</string>
     <string name="feature_assistant_international_power_chord_title">International power-menu shortcut (Experimental)</string>
@@ -333,8 +314,6 @@
     <string name="feature_assistant_gesture_summary">Replace Xiaobu screen recognition on gesture-bar long press with Google Circle to Search on ColorOS 16 CN, Requires a system restart</string>
     <string name="feature_assistant_gesture_c17_title">Gesture bar long press (ColorOS 17)</string>
     <string name="feature_assistant_gesture_c17_summary">Use the ColorOS 17 API to replace gesture-bar long press with Google Circle to Search on ColorOS 17 CN, Requires a system restart</string>
-    <string name="feature_assistant_native_circle_title">Gesture bar long press replacement (Experimental)</string>
-    <string name="feature_assistant_native_circle_summary">Use the global ColorOS Contextual Search feature and Google app route instead of directly intercepting long presses; requires a system restart</string>
     <string name="feature_assistant_ok_google_compatibility_title">Force-enable Hey Google wake-up</string>
     <string name="feature_assistant_ok_google_compatibility_summary">Enable Hey Google voice wake-up for Google Assistant; requires a system restart</string>
     <string name="feature_assistant_default_settings_title">Open default digital assistant settings</string>
@@ -347,8 +326,6 @@
 
 
 
-<string name="about_codex_author_summary">Development assistance</string>
-    <string name="about_codex_author_title">Codex</string>
     <string name="about_contributor_colorlaris_summary">GitHub@Colorlaris\nCoolapk@Colorlaris</string>
     <string name="about_contributor_colorlaris_title">Colorlaris</string>
     <string name="about_contributors_title">Contributors</string>
@@ -416,6 +393,13 @@
 
 
     <string name="lsp_status_module_disabled">Module is not enabled in LSPosed</string>
+    <string name="lsp_status_checking">Checking…</string>
+    <string name="lsp_status_unknown">Unable to confirm module status</string>
+    <string name="lsp_status_waiting_connection">Enabled, waiting for framework connection</string>
+    <string name="lsp_status_waiting_restart">Enabled, restart the system</string>
+    <string name="lsp_status_api_unsupported">Incompatible framework API</string>
+    <string name="lsp_status_ready">Ready</string>
+    <string name="lsp_status_enabled">Enabled</string>
     <string name="setting_auto_silent_update">Automatic silent updates</string>
     <string name="setting_auto_silent_update_summary">Automatically checks and downloads the latest version in the background, then silently installs it when possible</string>
     <string name="setting_update_notifications">New version notifications</string>
@@ -480,7 +464,6 @@
     <string name="onboarding_welcome_second">ONextBox 17\nA new experience</string>
     <string name="onboarding_get_started">Get started</string>
     <string name="onboarding_language_title">Select language</string>
-    <string name="onboarding_language_continue">Next</string>
     <string name="onboarding_language_summary">Choose the language used during setup and in ONextBox.</string>
     <string name="onboarding_appearance_title">Interface and theme</string>
     <string name="onboarding_appearance_summary">Choose the interface style and theme for ONextBox.</string>
@@ -556,26 +539,22 @@
     <string name="onboarding_runtime_ready">Ready</string>
     <string name="onboarding_runtime_waiting">Pending</string>
     <string name="onboarding_complete_title">Everything is ready</string>
-    <string name="onboarding_complete_summary">Activation complete. Your settings and modules are ready.</string>
     <string name="onboarding_enter_app">Enter ONextBox</string>
     <string name="onboarding_save_failed">Activation state could not be saved. Please try again.</string>
     <string name="feature_wallpapers_title">Wallpapers &amp; personalization</string>
-    <string name="feature_wallpapers_summary">Show the built-in OnePlus red 1 option</string>
     <string name="feature_wallpapers_clock_group">More</string>
     <string name="feature_wallpapers_red_one_entry_title">Show OnePlus red 1 entry</string>
     <string name="feature_wallpapers_red_one_entry_summary">Enable the official red “1” option on non-OnePlus devices, bypass model checks, and fix clock display.</string>
     <string name="feature_touch_rate_title">Touch sampling rate</string>
-    <string name="feature_touch_rate_entry_summary">Read and select touch modes provided by this device</string>
     <string name="feature_touch_rate_tip_title">Tip</string>
-    <string name="feature_touch_rate_device_notice">Only tested on X9U (OPPO Find X9 Ultra). Other models have not yet been adapted; compatibility is not guaranteed.</string>
+    <string name="feature_touch_rate_device_notice">Automatically detects touch interfaces and OEM configuration, only X9U (OPPO Find X9 Ultra) has been verified on a real device, unrecognized interfaces remain read-only</string>
     <string name="feature_touch_rate_loading">Reading touch driver…</string>
-    <string name="feature_touch_rate_unavailable">The OPlus touch mode interface is unavailable, or Root access was not granted</string>
-    <string name="feature_touch_rate_root_required">Grant ONextBox Root access in your Root manager, then tap Refresh. Enabling the LSPosed module alone does not grant Root access.</string>
-    <string name="feature_touch_rate_node_unsupported">The touch service reports no indexed report-rate support, and the current mode could not be read. This does not mean the touchscreen itself is unsupported.</string>
-    <string name="feature_touch_rate_hal_failed">The touch service could not be accessed or its reply could not be decoded. Tap Refresh to retry and share the diagnostic below if it persists.</string>
-    <string name="feature_touch_rate_read_failed">The interface is present, but its current mode could not be read. Changes are disabled until a successful read.</string>
-    <string name="feature_touch_rate_read_only">Current data is readable, but indexed writes are not confirmed as supported. Display only; mode changes are disabled.</string>
-    <string name="feature_touch_rate_no_config">Touch service is available, but no OEM rate labels could be read</string>
+    <string name="feature_touch_rate_root_required">Grant ONextBox Root access in your Root manager, then tap Refresh, enabling the LSPosed module alone does not grant Root access</string>
+    <string name="feature_touch_rate_node_unsupported">The indexed report-rate interface is not confirmed as supported, this does not mean the touchscreen itself is unsupported</string>
+    <string name="feature_touch_rate_hal_failed">The touch interface could not be accessed or its reply could not be decoded, tap Refresh and share the diagnostics if it persists</string>
+    <string name="feature_touch_rate_read_failed">The interface is present, but its current mode could not be read, changes remain disabled</string>
+    <string name="feature_touch_rate_read_only">This interface or configuration has not been verified for writes, diagnostic data is available, mode changes are disabled</string>
+    <string name="feature_touch_rate_no_config">No verified report-rate mode table was found in the OEM configuration</string>
     <string name="feature_touch_rate_no_distinct_presets">No OEM mode has a chip value different from the default</string>
     <string name="feature_touch_rate_status_group">Current status</string>
     <string name="feature_touch_rate_current">Requested mode</string>
@@ -583,7 +562,7 @@
     <string name="feature_touch_rate_unknown">Unavailable</string>
     <string name="feature_touch_rate_range">Selectable OEM label range</string>
     <string name="feature_touch_rate_range_value">%1$d–%2$d Hz</string>
-    <string name="feature_touch_rate_driver_note">Listed rates come from OEM configuration, not measured touch sampling. Modes with the default chip value, including Ist modes, are hidden; Game touch override only maintains the requested mode.</string>
+    <string name="feature_touch_rate_driver_note">Frequency labels come from OEM configuration, not measurements, unlabeled modes show their driver number, modes matching the default chip value are hidden, override only maintains the requested mode</string>
     <string name="feature_touch_rate_presets_group">System configured modes</string>
     <string name="feature_touch_rate_preset_summary">Driver mode %1$d · chip value %2$d</string>
     <string name="feature_touch_rate_same_chip_as_default">same chip value as default</string>
@@ -602,7 +581,6 @@
     <string name="feature_touch_rate_override_off">Game touch override disabled</string>
     <string name="feature_touch_rate_auto_start">Apply on boot</string>
     <string name="tab_refresh_rate">Refresh rate</string>
-    <string name="feature_group_refresh_rate">Refresh rate</string>
     <string name="refresh_rate_auto_start">Apply on boot</string>
     <string name="refresh_rate_show_refresh_rate">Show refresh frequency</string>
     <string name="refresh_rate_restore_default">Restore default refresh rate</string>
@@ -611,13 +589,9 @@
     <string name="refresh_rate_apply_failed">Apply failed</string>
     <string name="refresh_rate_no_modes">No supported refresh rates were found</string>
     <string name="refresh_rate_selected">Selected</string>
-    <string name="refresh_rate_table_id">ID</string>
-    <string name="refresh_rate_table_resolution">Resolution</string>
     <string name="refresh_rate_table_refresh_rate">Refresh rate</string>
     <string name="refresh_rate_resolution_format">%1$d x %2$d</string>
-    <string name="feature_refresh_rate_entry_summary">Read and select the display modes provided by your device</string>
     <string name="feature_permission_manager_title">Permission Manager</string>
-    <string name="feature_permission_manager_summary">App-start dialogs and permission restrictions</string>
     <string name="feature_permission_start_group">App launching</string>
     <string name="feature_permission_old_dialog_title">Use the old app-start dialog</string>
     <string name="feature_permission_old_dialog_summary">Use the system’s previous app-start confirmation dialog</string>
@@ -676,7 +650,6 @@
     <string name="installer_follow_current">Following installer: %1$s</string>
     <string name="installer_save_error">Could not save installer settings</string>
     <string name="installer_no_choices">No compatible apps found</string>
-    <string name="installer_loading">Loading…</string>
     <string name="feature_system_ui_status_bar_entry_summary">Network display, icon order and indicators</string>
     <string name="feature_system_ui_notification_center_entry_summary">Notification style and status bar notification hiding</string>
     <string name="feature_system_ui_control_center_entry_summary">Edit, settings and more buttons, carrier display</string>
@@ -711,7 +684,7 @@
     <string name="small_window_landscape_ratio">Preserve landscape screen aspect ratio</string>
     <string name="small_window_landscape_ratio_summary">Use the screen aspect ratio for supported landscape small windows, retain native restrictions for non-resizable apps, tablets and unsupported ratios, reopen existing windows to apply</string>
     <string name="small_window_larger_size">Increase maximum small-window size</string>
-    <string name="small_window_larger_size_summary">Increase the native maximum width by up to 15%, stay within screen width and vertical safe space, keep default and minimum sizes unchanged</string>
+    <string name="small_window_larger_size_summary" formatted="false">Increase the native maximum width by up to 15%, stay within screen width and vertical safe space, keep default and minimum sizes unchanged</string>
     <string name="small_window_compact_caption">Compact small-window top controls</string>
     <string name="small_window_compact_caption_summary">Reduce top margins and compatible fixed-height containers, keep room for buttons and update touch regions, split-screen top bars stay unchanged</string>
     <string name="small_window_unlimited_count">Remove multi-window count limit</string>
@@ -732,4 +705,43 @@
     <string name="keyguard_aod_screenshot_summary">Use power + volume down on the always-on display, requires a system restart</string>
     <string name="keyguard_screen_off_recording_title">Lock screen recording</string>
     <string name="keyguard_screen_off_recording_summary">Allow system recording while locked and keep recording with the screen off, requires a system restart</string>
+    <string name="config_sync_failed">Settings could not be fully applied, check Root permission and available storage, then retry</string>
+    <string name="config_import_partial_success">Configuration imported, but some system settings were not synchronized</string>
+    <string name="feature_touch_rate_mode_name">Mode %1$d</string>
+    <string name="feature_touch_rate_apply_mode_success">Requested mode %1$d</string>
+    <string name="feature_touch_rate_unlabeled_note">Other modes have no frequency label and use their driver number</string>
+    <string name="feature_touch_rate_modes_without_labels">%1$d configured modes, no frequency labels</string>
+    <string name="feature_touch_rate_backend">Touch interface</string>
+    <string name="feature_touch_rate_config_source">Configuration source</string>
+    <string name="feature_touch_rate_diagnostics_group">Compatibility diagnostics</string>
+    <string name="feature_touch_rate_diagnostics_notice">Sanitized interface report</string>
+    <string name="feature_touch_rate_copy_diagnostics">Copy diagnostics</string>
+    <string name="feature_touch_rate_diagnostics_copied">Diagnostics copied</string>
+    <string name="feature_touch_rate_diagnostics_unavailable">No diagnostic report yet, tap Refresh</string>
+    <string name="feature_touch_rate_config_ambiguous">Multiple panel configurations were found, the active panel could not be identified, changes are disabled</string>
+    <string name="feature_touch_rate_backend_unknown">Touch-related interfaces were found, but no verified write backend is available, diagnostic data only</string>
+    <string name="feature_touch_rate_backend_changed">The saved mode belongs to another interface or configuration, select a mode again before enabling</string>
+    <string name="feature_system_messages_title">OPPO Push Monitor</string>
+    <string name="push_monitor_refresh">Refresh</string>
+    <string name="push_monitor_loading">Refreshing registration status</string>
+    <string name="push_monitor_no_mcs">MCS is not installed</string>
+    <string name="push_monitor_unavailable">No new snapshot, check the MCS scope and restart the system</string>
+    <string name="push_monitor_incomplete">Partial snapshot, unavailable registration states are shown as unknown</string>
+    <string name="push_monitor_privacy">Registration does not mean connected, recent pushes only include MCS notification submissions after the module loads, no content or credentials are read, records stay on this device</string>
+    <string name="push_monitor_search">Search apps or package names</string>
+    <string name="push_monitor_all">All</string>
+    <string name="push_monitor_registered">Registered</string>
+    <string name="push_monitor_unregistered">Unregistered</string>
+    <string name="push_monitor_unknown">Registration unknown</string>
+    <string name="push_monitor_system_service">System service</string>
+    <string name="push_monitor_last_push">Recent push · %1$s</string>
+    <string name="push_monitor_no_record">No record</string>
+    <string name="push_monitor_empty">No matching apps</string>
+    <string name="push_monitor_read_failed">Could not read, tap Refresh to retry</string>
+    <string name="lsp_missing_scopes_summary">Enable these installed apps in LSPosed for the related features, you can keep using the app</string>
+    <string name="lsp_scope_system_title">System framework</string>
+    <string name="lsp_missing_scopes_more">%1$d more scopes</string>
+    <string name="feature_file_manager_title">File Manager</string>
+    <string name="feature_file_manager_hide_secure_access_tip_title">Hide secure access notice</string>
+    <string name="feature_file_manager_hide_secure_access_tip_summary">Hide the secure access notice in the file picker</string>
 </resources>
