@@ -210,4 +210,14 @@ Providing official releases for free is the project's distribution policy, not a
 
 If ONextBox helps you, consider leaving a ⭐ or sharing thoughtful, clear feedback to help it improve.
 
+### ⭐ Star History
+
+<a href="https://www.star-history.com/?repos=MiToverG422%2FONextBox&amp;type=date&amp;legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=MiToverG422/ONextBox&amp;type=date&amp;theme=dark&amp;legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=MiToverG422/ONextBox&amp;type=date&amp;legend=top-left" />
+    <img alt="ONextBox Star History" src="https://api.star-history.com/chart?repos=MiToverG422/ONextBox&amp;type=date&amp;legend=top-left" width="720" />
+  </picture>
+</a>
+
 </div>

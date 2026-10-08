@@ -211,4 +211,14 @@ ONextBox 项目代码依据 **GNU GPL v3** 发布，完整条款见 [LICENSE](LI
 
 如果 ONextBox 对你有帮助，欢迎留下一颗 ⭐，或用一份认真、清晰的反馈帮助它变得更好。
 
+### ⭐ Star 增长趋势
+
+<a href="https://www.star-history.com/?repos=MiToverG422%2FONextBox&amp;type=date&amp;legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=MiToverG422/ONextBox&amp;type=date&amp;theme=dark&amp;legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=MiToverG422/ONextBox&amp;type=date&amp;legend=top-left" />
+    <img alt="ONextBox Star 增长趋势" src="https://api.star-history.com/chart?repos=MiToverG422/ONextBox&amp;type=date&amp;legend=top-left" width="720" />
+  </picture>
+</a>
+
 </div>

@@ -210,4 +210,14 @@ ONextBox 專案程式碼依據 **GNU GPL v3** 發布，完整條款見 [LICENSE]
 
 如果 ONextBox 對你有幫助，歡迎留下一顆 ⭐，或用一份認真、清楚的回報幫助它變得更好。
 
+### ⭐ Star 成長趨勢
+
+<a href="https://www.star-history.com/?repos=MiToverG422%2FONextBox&amp;type=date&amp;legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=MiToverG422/ONextBox&amp;type=date&amp;theme=dark&amp;legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=MiToverG422/ONextBox&amp;type=date&amp;legend=top-left" />
+    <img alt="ONextBox Star 成長趨勢" src="https://api.star-history.com/chart?repos=MiToverG422/ONextBox&amp;type=date&amp;legend=top-left" width="720" />
+  </picture>
+</a>
+
 </div>
