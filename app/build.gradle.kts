@@ -60,7 +60,7 @@ android {
 
     defaultConfig {
         applicationId = "com.mi.onextbox"
-        minSdk = 28
+        minSdk = 35
         targetSdk = 36
         versionCode = androidVersionCode
         versionName = ciVersionName
