@@ -11,7 +11,7 @@ import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Restores the CN branches of SpecialFeatureFragment (辅助功能), not AccessibilitySettings. */
+/** Restores the CN branches of SpecialFeatureFragment (auxiliary features), not AccessibilitySettings. */
 internal object SettingsDomesticAuxiliaryHooker {
     private const val TAG = "ONextBox-AuxiliarySettings"
     private const val FRAGMENT = "com.oplus.settings.feature.spfunction.SpecialFeatureFragment"

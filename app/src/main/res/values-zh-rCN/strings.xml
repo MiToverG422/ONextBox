@@ -203,19 +203,19 @@
     <string name="feature_launcher_layout_unlock_summary">解除桌面布局限制</string>
     <string name="feature_launcher_hide_widget_labels_title">小组件无字</string>
     <string name="feature_launcher_hide_widget_labels_summary">隐藏桌面小组件和卡片下方的名称</string>
-    <string name="feature_recent_task_radius_title">后台任务圆角</string>
-    <string name="feature_recent_task_radius_summary">自定义最近任务卡片大小，需要重启系统桌面</string>
+    <string name="feature_recent_task_radius_title">最近任务卡片圆角</string>
+    <string name="feature_recent_task_radius_label">圆角大小</string>
     <string name="feature_aod_enhance_title">息屏显示</string>
 
 
 <string name="feature_slider_current_dp">当前值：%1$ddp</string>
 
 
-<string name="feature_aod_dark_brightness_current">熄屏前暗光环境AOD亮度：%1$d</string>
+<string name="feature_aod_dark_brightness_label">熄屏前暗光环境AOD亮度</string>
 
-<string name="feature_aod_bright_brightness_current">熄屏前亮光环境AOD亮度：%1$d</string>
+<string name="feature_aod_bright_brightness_label">熄屏前亮光环境AOD亮度</string>
 
-<string name="feature_aod_multiplier_current">熄屏时AOD自动亮度倍率：%1$s</string>
+<string name="feature_aod_multiplier_label">熄屏时AOD自动亮度倍率</string>
 
 
 <string name="feature_aod_panoramic_title">全天全景 AOD 支持</string>
@@ -301,6 +301,10 @@
     <string name="feature_group_notification_center">通知</string>
     <string name="feature_international_notification_style_title">国际版通知分类样式</string>
     <string name="feature_international_notification_style_summary">启用国际版的置顶与静音通知分类样式</string>
+    <string name="feature_fluid_cloud_title">流体云</string>
+    <string name="feature_fluid_cloud_entry_summary">功能扩展</string>
+    <string name="feature_fluid_cloud_battery_title">保留图标外电量</string>
+    <string name="feature_fluid_cloud_battery_summary">流体云显示时保留图标外的电量百分比</string>
     <string name="feature_group_control_center">控制中心</string>
     <string name="feature_hide_qs_edit_title">隐藏编辑开关</string>
     <string name="feature_hide_qs_edit_summary">隐藏控制中心右上角菜单里的编辑入口</string>
@@ -328,6 +332,8 @@
 
 
     <string name="about_contributor_colorlaris_summary">GitHub@Colorlaris\n酷安@Colorlaris</string>
+    <string name="about_contributor_rove24_title">Rove24</string>
+    <string name="about_contributor_rove24_summary">GitHub@Rove24\n酷安@Rove24</string>
     <string name="about_contributor_colorlaris_title">Colorlaris</string>
     <string name="about_contributors_title">贡献人员</string>
     <string name="about_description">一个 COUI 风格的 OPlus 系统自定义工具箱</string>
@@ -370,6 +376,8 @@
     <string name="about_reference_xposed_api_title">libxposed API</string>
     <string name="about_reference_luckytool_summary">luckyzyx · GPL-3.0</string>
     <string name="about_reference_luckytool_title">LuckyTool</string>
+    <string name="about_reference_inxlocker_title">InxLocker</string>
+    <string name="about_reference_inxlocker_summary">Chimioo · GPL-3.0</string>
     <string name="about_references_open_source_section">开源项目</string>
     <string name="about_references_title">协议与引用内容</string>
     <string name="about_references_summary">查看协议、声明与项目引用</string>
@@ -457,7 +465,7 @@
     <string name="feature_mobile_network_hide_high_data_sim_card_summary">从移动网络页面隐藏大流量卡服务</string>
     <string name="feature_mobile_network_hide_smart_cloud_acceleration_title">隐藏智慧云加速入口</string>
     <string name="feature_mobile_network_hide_smart_cloud_acceleration_summary">从移动网络页面隐藏智慧云加速</string>
-    <!-- 首次激活 -->
+    <!-- Initial activation -->
     <string name="onboarding_welcome_first">你好\nHello.</string>
     <string name="onboarding_welcome_second">ONextBox 17\n已焕然一新</string>
     <string name="onboarding_get_started">开始使用</string>
@@ -742,4 +750,57 @@
     <string name="feature_file_manager_title">文件管理器</string>
     <string name="feature_file_manager_hide_secure_access_tip_title">隐藏安全访问提示</string>
     <string name="feature_file_manager_hide_secure_access_tip_summary">隐藏文件选择页的安全访问提示</string>
+    <string name="feature_launcher_search_compatibility_title">折叠屏 / Pad 搜索框修复</string>
+    <string name="feature_launcher_search_compatibility_summary">修复折叠屏切屏、Pad 横竖屏切换后搜索框消失的问题</string>
+    <string name="feature_file_manager_native_picker_title">使用原生文件选择器</string>
+    <string name="feature_file_manager_native_picker_summary">使用原生文件选择器，需要重启系统</string>
+    <string name="feature_file_manager_ui_group">界面优化</string>
+    <string name="feature_file_manager_picker_group">文件选择</string>
+    <string name="feature_group_navigation_bar">导航栏</string>
+    <string name="feature_immersive_navigation_title">沉浸式小横条</string>
+    <string name="feature_immersive_navigation_summary">缩小底部占位并调整横条样式，仅在手势导航下生效</string>
+    <string name="feature_system_ui_navigation_bar_entry_summary">沉浸式横条与小横条自定义</string>
+    <string name="feature_navigation_handle_length_title">自定义小横条</string>
+    <string name="feature_navigation_handle_auto_hide_title">小横条自动隐藏</string>
+    <string name="feature_navigation_handle_auto_hide_summary">闲置时淡化小横条，触碰后恢复</string>
+    <string name="feature_navigation_handle_length_label">小横条长度</string>
+    <string name="feature_navigation_handle_opacity_label">小横条透明度</string>
+    <string name="feature_slider_current_default">当前值：系统默认</string>
+    <string name="feature_slider_current_value">当前值：%1$s</string>
+    <string name="feature_slider_reset">恢复系统默认</string>
+    <string name="feature_navigation_handle_current_opacity">当前值：%1$d%%</string>
+    <string name="feature_navigation_handle_opacity_reset">恢复默认透明度</string>
+    <string name="feature_navigation_handle_length_reset">恢复默认长度</string>
+    <string name="feature_group_settings_interface">设置界面</string>
+    <string name="feature_settings_title_collapsed_title">设置标题栏收起</string>
+    <string name="feature_settings_title_collapsed_summary">打开系统设置时默认收起大标题</string>
+    <string name="feature_quick_app_services_title">快应用服务</string>
+    <string name="feature_group_express_service">快递服务</string>
+    <string name="feature_express_no_mini_program_title">快递不跳小程序</string>
+    <string name="feature_express_no_mini_program_summary">在快应用内直接查询快递，避免跳转其他小程序</string>
+    <string name="launcher_group_pages">桌面页面</string>
+    <string name="launcher_rightmost_categories">仿 IOS 资源库（实验性）</string>
+    <string name="launcher_rightmost_categories_summary">在桌面最后一页继续左滑进入资源库，支持标准模式和抽屉模式，此功能目前尚未完善</string>
+    <string name="launcher_group_badges">图标角标</string>
+    <string name="launcher_group_folder">文件夹</string>
+    <string name="launcher_group_dock">Dock 栏</string>
+    <string name="launcher_recent_memory">解锁最近任务内存显示</string>
+    <string name="launcher_recent_memory_summary">在最近任务中显示可用内存与总内存</string>
+    <string name="launcher_old_clear_button">旧版最近任务清除按钮</string>
+    <string name="launcher_old_clear_button_summary">使用旧版圆形清除按钮</string>
+    <string name="launcher_hide_clear_button">隐藏最近任务清除按钮</string>
+    <string name="launcher_hide_shortcut_badge">隐藏应用快捷方式角标</string>
+    <string name="launcher_hide_shortcut_badge_summary">隐藏快捷方式图标上的应用角标</string>
+    <string name="launcher_hide_work_badge">隐藏应用工作空间角标</string>
+    <string name="launcher_hide_work_badge_summary">隐藏工作空间应用图标上的公文包角标</string>
+    <string name="launcher_hide_clone_badge">隐藏应用分身角标</string>
+    <string name="launcher_hide_clone_badge_summary">隐藏分身应用图标上的角标</string>
+    <string name="launcher_hide_update_dot">隐藏 App 安装/更新圆点</string>
+    <string name="launcher_hide_update_dot_summary">隐藏新安装或更新应用名称旁的圆点</string>
+    <string name="launcher_unlimited_folder_input">移除文件夹输入限制</string>
+    <string name="launcher_unlimited_folder_input_summary">移除文件夹名称的输入长度限制</string>
+    <string name="launcher_dock">启用桌面 Dock 栏</string>
+    <string name="launcher_dock_summary">显示桌面底部 Dock 栏的背景</string>
+    <string name="launcher_dock_blur">桌面 Dock 栏模糊</string>
+    <string name="launcher_dock_blur_summary">使用系统背景模糊</string>
 </resources>

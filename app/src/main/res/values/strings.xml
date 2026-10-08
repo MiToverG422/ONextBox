@@ -136,6 +136,10 @@
     <string name="feature_group_notification_center">Notifications</string>
     <string name="feature_international_notification_style_title">Global notification classification</string>
     <string name="feature_international_notification_style_summary">Use global notification sections, including pinned and silent notifications</string>
+    <string name="feature_fluid_cloud_title">Fluid Cloud</string>
+    <string name="feature_fluid_cloud_entry_summary">Feature extensions</string>
+    <string name="feature_fluid_cloud_battery_title">Keep battery percentage outside icon</string>
+    <string name="feature_fluid_cloud_battery_summary">Keep the percentage outside the battery icon while Fluid Cloud is shown</string>
     <string name="feature_group_control_center">Control Center</string>
     <string name="feature_hide_qs_edit_title">Hide edit switch</string>
     <string name="feature_hide_qs_edit_summary">Hide the edit switch entry in the Control Center top-right menu</string>
@@ -259,8 +263,8 @@
     <string name="feature_launcher_layout_unlock_summary">Unlock launcher layout editing restrictions</string>
     <string name="feature_launcher_hide_widget_labels_title">Hide widget labels</string>
     <string name="feature_launcher_hide_widget_labels_summary">Hide names below home-screen widgets and cards</string>
-    <string name="feature_recent_task_radius_title">Recent task view radius</string>
-    <string name="feature_recent_task_radius_summary">Customize recent task card size, Requires a launcher restart</string>
+    <string name="feature_recent_task_radius_title">Recent task card corner radius</string>
+    <string name="feature_recent_task_radius_label">Corner radius</string>
     <string name="feature_aod_enhance_title">AOD</string>
     <string name="feature_aod_enhance_toggle_title">Custom AOD brightness</string>
 
@@ -279,11 +283,11 @@
     <string name="feature_restart_all_scope_confirm_title">Restart all scopes?</string>
     <string name="feature_restart_system_option">Also restart the system</string>
 
-<string name="feature_aod_dark_brightness_current">AOD brightness before screen off (dark ambient): %1$d</string>
+<string name="feature_aod_dark_brightness_label">AOD brightness before screen off (dark ambient)</string>
 
-<string name="feature_aod_bright_brightness_current">AOD brightness before screen off (bright ambient): %1$d</string>
+<string name="feature_aod_bright_brightness_label">AOD brightness before screen off (bright ambient)</string>
 
-<string name="feature_aod_multiplier_current">AOD auto brightness multiplier while running: %1$s</string>
+<string name="feature_aod_multiplier_label">AOD auto brightness multiplier while running</string>
 
 
 <string name="feature_aod_panoramic_title">All-day panoramic AOD support</string>
@@ -327,6 +331,8 @@
 
 
     <string name="about_contributor_colorlaris_summary">GitHub@Colorlaris\nCoolapk@Colorlaris</string>
+    <string name="about_contributor_rove24_title">Rove24</string>
+    <string name="about_contributor_rove24_summary">GitHub@Rove24\nCoolapk@Rove24</string>
     <string name="about_contributor_colorlaris_title">Colorlaris</string>
     <string name="about_contributors_title">Contributors</string>
     <string name="about_description">A COUI-style toolbox for OPlus system customization</string>
@@ -369,6 +375,8 @@
     <string name="about_reference_xposed_api_title">libxposed API</string>
     <string name="about_reference_luckytool_summary">luckyzyx · GPL-3.0</string>
     <string name="about_reference_luckytool_title">LuckyTool</string>
+    <string name="about_reference_inxlocker_title">InxLocker</string>
+    <string name="about_reference_inxlocker_summary">Chimioo · GPL-3.0</string>
     <string name="about_references_open_source_section">Open-source projects</string>
     <string name="about_references_title">Agreements and references</string>
     <string name="about_references_summary">Review agreements, notices, and project references</string>
@@ -744,4 +752,57 @@
     <string name="feature_file_manager_title">File Manager</string>
     <string name="feature_file_manager_hide_secure_access_tip_title">Hide secure access notice</string>
     <string name="feature_file_manager_hide_secure_access_tip_summary">Hide the secure access notice in the file picker</string>
+    <string name="feature_launcher_search_compatibility_title">Foldable / Pad search-box fix</string>
+    <string name="feature_launcher_search_compatibility_summary">Restore the search box after switching foldable screens or rotating a Pad</string>
+    <string name="feature_file_manager_native_picker_title">Use native file picker</string>
+    <string name="feature_file_manager_native_picker_summary">Use the native file picker, requires a system restart</string>
+    <string name="feature_file_manager_ui_group">Interface tweaks</string>
+    <string name="feature_file_manager_picker_group">File selection</string>
+    <string name="feature_group_navigation_bar">Navigation bar</string>
+    <string name="feature_immersive_navigation_title">Immersive gesture bar</string>
+    <string name="feature_immersive_navigation_summary">Reduce bottom spacing and adjust the gesture bar, gesture navigation only</string>
+    <string name="feature_system_ui_navigation_bar_entry_summary">Immersive and custom gesture bar</string>
+    <string name="feature_navigation_handle_length_title">Custom gesture bar</string>
+    <string name="feature_navigation_handle_auto_hide_title">Auto-hide gesture bar</string>
+    <string name="feature_navigation_handle_auto_hide_summary">Dim the gesture bar when idle and restore it on touch</string>
+    <string name="feature_navigation_handle_length_label">Gesture bar length</string>
+    <string name="feature_navigation_handle_opacity_label">Gesture bar opacity</string>
+    <string name="feature_slider_current_default">Current value: System default</string>
+    <string name="feature_slider_current_value">Current value: %1$s</string>
+    <string name="feature_slider_reset">Restore system default</string>
+    <string name="feature_navigation_handle_current_opacity">Current value: %1$d%%</string>
+    <string name="feature_navigation_handle_opacity_reset">Restore default opacity</string>
+    <string name="feature_navigation_handle_length_reset">Restore default length</string>
+    <string name="feature_group_settings_interface">Settings interface</string>
+    <string name="feature_settings_title_collapsed_title">Collapse Settings title bar</string>
+    <string name="feature_settings_title_collapsed_summary">Open system Settings with the large title collapsed</string>
+    <string name="feature_quick_app_services_title">Quick App Services</string>
+    <string name="feature_group_express_service">Express delivery</string>
+    <string name="feature_express_no_mini_program_title">Keep parcel tracking in Quick Apps</string>
+    <string name="feature_express_no_mini_program_summary">Query parcels within Quick Apps instead of opening external mini programs</string>
+    <string name="launcher_group_pages">Home screen pages</string>
+    <string name="launcher_rightmost_categories">iOS-style App Library (experimental)</string>
+    <string name="launcher_rightmost_categories_summary">Swipe left past the last home screen page to open the App Library. Supports standard and drawer modes. This feature is not yet complete</string>
+    <string name="launcher_group_badges">Icon badges</string>
+    <string name="launcher_group_folder">Folders</string>
+    <string name="launcher_group_dock">Dock</string>
+    <string name="launcher_recent_memory">Unlock recent-task memory display</string>
+    <string name="launcher_recent_memory_summary">Show available and total memory in recent tasks</string>
+    <string name="launcher_old_clear_button">Old recent-task clear button</string>
+    <string name="launcher_old_clear_button_summary">Use the round clear button</string>
+    <string name="launcher_hide_clear_button">Hide recent-task clear button</string>
+    <string name="launcher_hide_shortcut_badge">Hide shortcut badges</string>
+    <string name="launcher_hide_shortcut_badge_summary">Hide the app badge on shortcut icons</string>
+    <string name="launcher_hide_work_badge">Hide work-profile badges</string>
+    <string name="launcher_hide_work_badge_summary">Hide the briefcase badge on work-profile apps</string>
+    <string name="launcher_hide_clone_badge">Hide cloned-app badges</string>
+    <string name="launcher_hide_clone_badge_summary">Hide the badge on cloned app icons</string>
+    <string name="launcher_hide_update_dot">Hide app install/update dots</string>
+    <string name="launcher_hide_update_dot_summary">Hide the dot beside newly installed or updated app names</string>
+    <string name="launcher_unlimited_folder_input">Remove folder input limits</string>
+    <string name="launcher_unlimited_folder_input_summary">Remove folder-name length limits</string>
+    <string name="launcher_dock">Enable desktop Dock</string>
+    <string name="launcher_dock_summary">Show the background behind desktop Dock icons</string>
+    <string name="launcher_dock_blur">Desktop Dock blur</string>
+    <string name="launcher_dock_blur_summary">Use system background blur</string>
 </resources>

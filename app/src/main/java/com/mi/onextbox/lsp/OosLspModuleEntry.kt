@@ -36,12 +36,16 @@ class OosLspModuleEntry : XposedModule() {
     ) {
         ModernHookRuntime.attach(this)
         val loader = param.classLoader
+        if (LspConfig.isImmersiveNavigationEnabledXposed()) {
+            ImmersiveNavigationHooker.hook()
+        }
         FrameworkHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader)
         PermissionSystemHooker.hook(loader)
         NotificationRemovalHooker.hookSystemServer(loader)
         SmallWindowHooker.hookSystemServer(loader)
         KeyguardCaptureHooker.hookSystemServer(loader)
         InstallerRedirectHooker.hook(loader)
+        NativeFilePickerHooker.hook(loader)
         SettingsGlobalExtremeRefreshRateHooker.hook(classLoader = loader)
         AssistantHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader)
         GmsRegionRestrictionHooker.hook(classLoader = loader)
@@ -65,8 +69,10 @@ class OosLspModuleEntry : XposedModule() {
 
         when (packageName) {
             PACKAGE_SYSTEM_UI -> {
+                ImmersiveNavigationHooker.hook(classLoader)
                 AssistantHooker.hook(packageName, classLoader)
                 SystemUiHooker.hook(packageName, classLoader)
+                FluidCloudBatteryHooker.hook(classLoader)
                 SystemUiRedOneHooker.hook(classLoader)
                 NotificationRemovalHooker.hookSystemUi(classLoader)
                 SmallWindowHooker.hookSystemUi(classLoader)
@@ -80,12 +86,15 @@ class OosLspModuleEntry : XposedModule() {
                     packageName = packageName,
                     classLoader = classLoader,
                 )
+                SettingsTitleCollapseHooker.hook(classLoader)
             }
 
             PACKAGE_LAUNCHER -> {
                 FrameworkHooker.hook(packageName, classLoader)
                 AssistantHooker.hook(packageName, classLoader)
                 LauncherHooker.hook(classLoader)
+                LauncherFeaturesHooker.hook(classLoader)
+                ExpressCardHooker.hook(packageName, classLoader)
                 SystemUiRedOneHooker.hookLauncherClock()
             }
 
@@ -116,6 +125,7 @@ class OosLspModuleEntry : XposedModule() {
             "com.heytap.mcs" -> OppoPushMonitorHooker.hook(classLoader)
             "com.oplus.screenshot" -> AodScreenshotHooker.hook(classLoader)
             "com.oplus.screenrecorder" -> KeyguardCaptureHooker.hookRecorder(classLoader)
+            ExpressCardRules.PLATFORM, ExpressCardRules.ASSISTANT -> ExpressCardHooker.hook(packageName, classLoader)
         }
 
     }

@@ -27,6 +27,209 @@ object LspConfig {
     private const val MODULE_PACKAGE = "com.mi.onextbox"
     private const val PREFS_NAME = "lsp_features"
 
+    private const val KEY_SETTINGS_TITLE_COLLAPSED = "settings_title_collapsed"
+    private const val PROP_SETTINGS_TITLE_COLLAPSED = "oost.$KEY_SETTINGS_TITLE_COLLAPSED"
+    private const val PERSIST_PROP_SETTINGS_TITLE_COLLAPSED = "persist.sys.$PROP_SETTINGS_TITLE_COLLAPSED"
+    private const val SETTINGS_TITLE_COLLAPSED = "oost_$KEY_SETTINGS_TITLE_COLLAPSED"
+
+    fun isSettingsTitleCollapsedEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_SETTINGS_TITLE_COLLAPSED, false)
+
+    fun setSettingsTitleCollapsedEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context, KEY_SETTINGS_TITLE_COLLAPSED, enabled,
+            listOf(PERSIST_PROP_SETTINGS_TITLE_COLLAPSED, PROP_SETTINGS_TITLE_COLLAPSED), SETTINGS_TITLE_COLLAPSED,
+        )
+    }
+
+    fun isSettingsTitleCollapsedEnabledXposed(): Boolean = readXposedBoolean(
+        PERSIST_PROP_SETTINGS_TITLE_COLLAPSED, PROP_SETTINGS_TITLE_COLLAPSED,
+        SETTINGS_TITLE_COLLAPSED, KEY_SETTINGS_TITLE_COLLAPSED, false,
+    )
+
+    private const val KEY_FLUID_CLOUD_BATTERY = "systemui_fluid_cloud_battery"
+    private const val PROP_FLUID_CLOUD_BATTERY = "oost.$KEY_FLUID_CLOUD_BATTERY"
+    private const val PERSIST_PROP_FLUID_CLOUD_BATTERY = "persist.sys.$PROP_FLUID_CLOUD_BATTERY"
+    private const val SETTINGS_FLUID_CLOUD_BATTERY = "oost_$KEY_FLUID_CLOUD_BATTERY"
+
+    fun isFluidCloudBatteryEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_FLUID_CLOUD_BATTERY, false)
+
+    fun setFluidCloudBatteryEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context, KEY_FLUID_CLOUD_BATTERY, enabled,
+            listOf(PERSIST_PROP_FLUID_CLOUD_BATTERY, PROP_FLUID_CLOUD_BATTERY), SETTINGS_FLUID_CLOUD_BATTERY,
+        )
+    }
+
+    fun isFluidCloudBatteryEnabledXposed(): Boolean = readXposedBoolean(
+        PERSIST_PROP_FLUID_CLOUD_BATTERY, PROP_FLUID_CLOUD_BATTERY,
+        SETTINGS_FLUID_CLOUD_BATTERY, KEY_FLUID_CLOUD_BATTERY, false,
+    )
+
+    private const val KEY_EXPRESS_NO_MINI_PROGRAM = "express_no_mini_program"
+    private const val PROP_EXPRESS_NO_MINI_PROGRAM = "oost.$KEY_EXPRESS_NO_MINI_PROGRAM"
+    private const val PERSIST_PROP_EXPRESS_NO_MINI_PROGRAM = "persist.sys.$PROP_EXPRESS_NO_MINI_PROGRAM"
+    private const val SETTINGS_EXPRESS_NO_MINI_PROGRAM = "oost_$KEY_EXPRESS_NO_MINI_PROGRAM"
+
+    fun isExpressNoMiniProgramEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_EXPRESS_NO_MINI_PROGRAM, false)
+
+    fun setExpressNoMiniProgramEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context, KEY_EXPRESS_NO_MINI_PROGRAM, enabled,
+            listOf(PERSIST_PROP_EXPRESS_NO_MINI_PROGRAM, PROP_EXPRESS_NO_MINI_PROGRAM), SETTINGS_EXPRESS_NO_MINI_PROGRAM,
+        )
+    }
+
+    fun isExpressNoMiniProgramEnabledXposed(): Boolean = readXposedBoolean(
+        PERSIST_PROP_EXPRESS_NO_MINI_PROGRAM, PROP_EXPRESS_NO_MINI_PROGRAM,
+        SETTINGS_EXPRESS_NO_MINI_PROGRAM, KEY_EXPRESS_NO_MINI_PROGRAM, false,
+    )
+
+    private const val KEY_IMMERSIVE_NAVIGATION = "immersive_navigation"
+    private const val PROP_IMMERSIVE_NAVIGATION = "oost.$KEY_IMMERSIVE_NAVIGATION"
+    private const val PERSIST_PROP_IMMERSIVE_NAVIGATION = "persist.sys.$PROP_IMMERSIVE_NAVIGATION"
+    private const val SETTINGS_IMMERSIVE_NAVIGATION = "oost_$KEY_IMMERSIVE_NAVIGATION"
+
+    fun isImmersiveNavigationEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_IMMERSIVE_NAVIGATION, false)
+
+    fun setImmersiveNavigationEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_IMMERSIVE_NAVIGATION,
+            enabled = enabled,
+            propertyKeys = listOf(PERSIST_PROP_IMMERSIVE_NAVIGATION, PROP_IMMERSIVE_NAVIGATION),
+            settingsGlobalKey = SETTINGS_IMMERSIVE_NAVIGATION,
+        )
+    }
+
+    fun isImmersiveNavigationEnabledXposed(): Boolean = ImmersiveNavigationRules.isHandleOptionActive(
+        customHandleEnabled = isNavigationHandleCustomLengthEnabledXposed(),
+        optionEnabled = readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_IMMERSIVE_NAVIGATION,
+            propertyKey = PROP_IMMERSIVE_NAVIGATION,
+            settingsKey = SETTINGS_IMMERSIVE_NAVIGATION,
+            prefsKey = KEY_IMMERSIVE_NAVIGATION,
+            defaultValue = false,
+        ),
+    )
+
+    private const val KEY_NAVIGATION_HANDLE_CUSTOM_LENGTH = "navigation_handle_custom_length"
+    private const val PROP_NAVIGATION_HANDLE_CUSTOM_LENGTH = "oost.$KEY_NAVIGATION_HANDLE_CUSTOM_LENGTH"
+    private const val PERSIST_PROP_NAVIGATION_HANDLE_CUSTOM_LENGTH = "persist.sys.$PROP_NAVIGATION_HANDLE_CUSTOM_LENGTH"
+    private const val SETTINGS_NAVIGATION_HANDLE_CUSTOM_LENGTH = "oost_$KEY_NAVIGATION_HANDLE_CUSTOM_LENGTH"
+    private const val KEY_NAVIGATION_HANDLE_LENGTH_DP = "navigation_handle_length_dp"
+    private const val PROP_NAVIGATION_HANDLE_LENGTH_DP = "oost.$KEY_NAVIGATION_HANDLE_LENGTH_DP"
+    private const val PERSIST_PROP_NAVIGATION_HANDLE_LENGTH_DP = "persist.sys.$PROP_NAVIGATION_HANDLE_LENGTH_DP"
+    private const val SETTINGS_NAVIGATION_HANDLE_LENGTH_DP = "oost_$KEY_NAVIGATION_HANDLE_LENGTH_DP"
+    private const val KEY_NAVIGATION_HANDLE_OPACITY = "navigation_handle_opacity"
+    private const val PROP_NAVIGATION_HANDLE_OPACITY = "oost.$KEY_NAVIGATION_HANDLE_OPACITY"
+    private const val PERSIST_PROP_NAVIGATION_HANDLE_OPACITY = "persist.sys.$PROP_NAVIGATION_HANDLE_OPACITY"
+    private const val SETTINGS_NAVIGATION_HANDLE_OPACITY = "oost_$KEY_NAVIGATION_HANDLE_OPACITY"
+    private const val KEY_NAVIGATION_HANDLE_AUTO_HIDE = "navigation_handle_auto_hide"
+    private const val PROP_NAVIGATION_HANDLE_AUTO_HIDE = "oost.$KEY_NAVIGATION_HANDLE_AUTO_HIDE"
+    private const val PERSIST_PROP_NAVIGATION_HANDLE_AUTO_HIDE = "persist.sys.$PROP_NAVIGATION_HANDLE_AUTO_HIDE"
+    private const val SETTINGS_NAVIGATION_HANDLE_AUTO_HIDE = "oost_$KEY_NAVIGATION_HANDLE_AUTO_HIDE"
+
+    fun isNavigationHandleAutoHideEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_NAVIGATION_HANDLE_AUTO_HIDE, false)
+
+    fun setNavigationHandleAutoHideEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_NAVIGATION_HANDLE_AUTO_HIDE,
+            enabled = enabled,
+            propertyKeys = listOf(PERSIST_PROP_NAVIGATION_HANDLE_AUTO_HIDE, PROP_NAVIGATION_HANDLE_AUTO_HIDE),
+            settingsGlobalKey = SETTINGS_NAVIGATION_HANDLE_AUTO_HIDE,
+        )
+    }
+
+    fun isNavigationHandleAutoHideEnabledXposed(): Boolean = ImmersiveNavigationRules.isHandleOptionActive(
+        customHandleEnabled = isNavigationHandleCustomLengthEnabledXposed(),
+        optionEnabled = readXposedBoolean(
+            persistPropertyKey = PERSIST_PROP_NAVIGATION_HANDLE_AUTO_HIDE,
+            propertyKey = PROP_NAVIGATION_HANDLE_AUTO_HIDE,
+            settingsKey = SETTINGS_NAVIGATION_HANDLE_AUTO_HIDE,
+            prefsKey = KEY_NAVIGATION_HANDLE_AUTO_HIDE,
+            defaultValue = false,
+        ),
+    )
+
+    fun isNavigationHandleCustomLengthEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_NAVIGATION_HANDLE_CUSTOM_LENGTH, false)
+
+    fun setNavigationHandleCustomLengthEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_NAVIGATION_HANDLE_CUSTOM_LENGTH,
+            enabled = enabled,
+            propertyKeys = listOf(PERSIST_PROP_NAVIGATION_HANDLE_CUSTOM_LENGTH, PROP_NAVIGATION_HANDLE_CUSTOM_LENGTH),
+            settingsGlobalKey = SETTINGS_NAVIGATION_HANDLE_CUSTOM_LENGTH,
+        )
+    }
+
+    fun isNavigationHandleCustomLengthEnabledXposed(): Boolean = readXposedBoolean(
+        persistPropertyKey = PERSIST_PROP_NAVIGATION_HANDLE_CUSTOM_LENGTH,
+        propertyKey = PROP_NAVIGATION_HANDLE_CUSTOM_LENGTH,
+        settingsKey = SETTINGS_NAVIGATION_HANDLE_CUSTOM_LENGTH,
+        prefsKey = KEY_NAVIGATION_HANDLE_CUSTOM_LENGTH,
+        defaultValue = false,
+    )
+
+    fun getNavigationHandleLengthDp(context: Context): Int = ImmersiveNavigationRules.normalizeLengthPreference(
+        LspPreferenceStore.readInt(context, KEY_NAVIGATION_HANDLE_LENGTH_DP, ImmersiveNavigationRules.SYSTEM_DEFAULT),
+    )
+
+    fun setNavigationHandleLengthDp(context: Context, valueDp: Int) {
+        val lengthDp = ImmersiveNavigationRules.normalizeLengthPreference(valueDp)
+        if (!prefs(context).edit().putInt(KEY_NAVIGATION_HANDLE_LENGTH_DP, lengthDp).commitOrReport()) return
+        syncReadableState(context)
+        syncScalarState(
+            value = lengthDp.toString(),
+            propertyKeys = listOf(PERSIST_PROP_NAVIGATION_HANDLE_LENGTH_DP, PROP_NAVIGATION_HANDLE_LENGTH_DP),
+            settingsGlobalKey = SETTINGS_NAVIGATION_HANDLE_LENGTH_DP,
+        )
+    }
+
+    fun getNavigationHandleLengthDpXposed(): Int {
+        val value = HookConfigSnapshot.int(KEY_NAVIGATION_HANDLE_LENGTH_DP, ImmersiveNavigationRules.SYSTEM_DEFAULT)
+            ?: readSystemPropertyValue(PERSIST_PROP_NAVIGATION_HANDLE_LENGTH_DP)?.toIntOrNull()
+            ?: readSystemPropertyValue(PROP_NAVIGATION_HANDLE_LENGTH_DP)?.toIntOrNull()
+            ?: readSettingsGlobalValue(SETTINGS_NAVIGATION_HANDLE_LENGTH_DP)?.toIntOrNull()
+            ?: runCatching {
+                xposedPreferences.getInt(KEY_NAVIGATION_HANDLE_LENGTH_DP, ImmersiveNavigationRules.SYSTEM_DEFAULT)
+            }.getOrDefault(ImmersiveNavigationRules.SYSTEM_DEFAULT)
+        return ImmersiveNavigationRules.normalizeLengthPreference(value)
+    }
+
+    fun getNavigationHandleOpacity(context: Context): Int = ImmersiveNavigationRules.normalizeOpacity(
+        LspPreferenceStore.readInt(context, KEY_NAVIGATION_HANDLE_OPACITY, ImmersiveNavigationRules.SYSTEM_DEFAULT),
+    )
+
+    fun setNavigationHandleOpacity(context: Context, value: Int) {
+        val opacity = ImmersiveNavigationRules.normalizeOpacity(value)
+        if (!prefs(context).edit().putInt(KEY_NAVIGATION_HANDLE_OPACITY, opacity).commitOrReport()) return
+        syncReadableState(context)
+        syncScalarState(
+            value = opacity.toString(),
+            propertyKeys = listOf(PERSIST_PROP_NAVIGATION_HANDLE_OPACITY, PROP_NAVIGATION_HANDLE_OPACITY),
+            settingsGlobalKey = SETTINGS_NAVIGATION_HANDLE_OPACITY,
+        )
+    }
+
+    fun getNavigationHandleOpacityXposed(): Int {
+        val value = HookConfigSnapshot.int(KEY_NAVIGATION_HANDLE_OPACITY, ImmersiveNavigationRules.SYSTEM_DEFAULT)
+            ?: readSystemPropertyValue(PERSIST_PROP_NAVIGATION_HANDLE_OPACITY)?.toIntOrNull()
+            ?: readSystemPropertyValue(PROP_NAVIGATION_HANDLE_OPACITY)?.toIntOrNull()
+            ?: readSettingsGlobalValue(SETTINGS_NAVIGATION_HANDLE_OPACITY)?.toIntOrNull()
+            ?: runCatching {
+                xposedPreferences.getInt(KEY_NAVIGATION_HANDLE_OPACITY, ImmersiveNavigationRules.SYSTEM_DEFAULT)
+            }.getOrDefault(ImmersiveNavigationRules.SYSTEM_DEFAULT)
+        return ImmersiveNavigationRules.normalizeOpacity(value)
+    }
+
     private const val KEY_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP = "file_manager_hide_secure_access_tip"
     private const val PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP =
         "oost.$KEY_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP"
@@ -56,6 +259,32 @@ object LspConfig {
         propertyKey = PROP_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
         settingsKey = SETTINGS_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
         prefsKey = KEY_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
+        defaultValue = false,
+    )
+
+    private const val KEY_FILE_MANAGER_NATIVE_PICKER = "file_manager_native_picker"
+    private const val PROP_FILE_MANAGER_NATIVE_PICKER = "oost.$KEY_FILE_MANAGER_NATIVE_PICKER"
+    private const val PERSIST_PROP_FILE_MANAGER_NATIVE_PICKER = "persist.sys.$PROP_FILE_MANAGER_NATIVE_PICKER"
+    private const val SETTINGS_FILE_MANAGER_NATIVE_PICKER = "oost_$KEY_FILE_MANAGER_NATIVE_PICKER"
+
+    fun isFileManagerNativePickerEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_FILE_MANAGER_NATIVE_PICKER, false)
+
+    fun setFileManagerNativePickerEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_FILE_MANAGER_NATIVE_PICKER,
+            enabled = enabled,
+            propertyKeys = listOf(PERSIST_PROP_FILE_MANAGER_NATIVE_PICKER, PROP_FILE_MANAGER_NATIVE_PICKER),
+            settingsGlobalKey = SETTINGS_FILE_MANAGER_NATIVE_PICKER,
+        )
+    }
+
+    fun isFileManagerNativePickerEnabledXposed(): Boolean = readXposedBoolean(
+        persistPropertyKey = PERSIST_PROP_FILE_MANAGER_NATIVE_PICKER,
+        propertyKey = PROP_FILE_MANAGER_NATIVE_PICKER,
+        settingsKey = SETTINGS_FILE_MANAGER_NATIVE_PICKER,
+        prefsKey = KEY_FILE_MANAGER_NATIVE_PICKER,
         defaultValue = false,
     )
 
@@ -101,6 +330,44 @@ object LspConfig {
     fun syncSmallWindowFeatures(context: Context) {
         SmallWindowFeature.entries.forEach { feature ->
             setSmallWindowFeatureEnabled(context, feature, prefs(context).getBoolean(feature.key, false))
+        }
+    }
+
+    enum class LauncherFeature(val key: String) {
+        RightmostCategories("launcher_rightmost_categories"),
+        RecentMemory("launcher_recent_memory"),
+        OldClearButton("launcher_old_clear_button"),
+        HideClearButton("launcher_hide_clear_button"),
+        HideShortcutBadge("launcher_hide_shortcut_badge"),
+        HideWorkBadge("launcher_hide_work_badge"),
+        HideCloneBadge("launcher_hide_clone_badge"),
+        HideUpdateDot("launcher_hide_update_dot"),
+        UnlimitedFolderInput("launcher_unlimited_folder_input"),
+        Dock("launcher_dock"),
+        DockBlur("launcher_dock_blur");
+
+        val propertyKey: String get() = "oost.$key"
+        val persistPropertyKey: String get() = "persist.sys.oost.$key"
+        val settingsKey: String get() = "oost_$key"
+    }
+
+    fun isLauncherFeatureEnabled(context: Context, feature: LauncherFeature): Boolean =
+        LspPreferenceStore.readBoolean(context, feature.key, false)
+
+    fun setLauncherFeatureEnabled(context: Context, feature: LauncherFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context, feature.key, enabled,
+            listOf(feature.persistPropertyKey, feature.propertyKey), feature.settingsKey,
+        )
+    }
+
+    fun isLauncherFeatureEnabledXposed(feature: LauncherFeature): Boolean = readXposedBoolean(
+        feature.persistPropertyKey, feature.propertyKey, feature.settingsKey, feature.key, false,
+    )
+
+    fun syncLauncherFeatures(context: Context) {
+        LauncherFeature.entries.forEach { feature ->
+            setLauncherFeatureEnabled(context, feature, prefs(context).getBoolean(feature.key, false))
         }
     }
 
@@ -366,6 +633,7 @@ object LspConfig {
     private const val KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "ok_google_hotword_compatibility_enabled"
     private const val KEY_LAUNCHER_HIDE_WIDGET_LABELS = "launcher_hide_widget_labels"
     private const val KEY_LAUNCHER_SEARCH_BAR_MODE = "launcher_taskbar_search_box"
+    private const val KEY_LAUNCHER_SEARCH_COMPATIBILITY = "launcher_search_compatibility"
     private const val FLAG_FILE_PATH_NATIVE_NOTIFY_ICON = "/data/local/oost_native_notify_icon.flag"
     private const val FLAG_FILE_PATH_EXTREME_REFRESH_165 = "/data/local/oost_extreme_refresh_165.flag"
     private const val FLAG_FILE_PATH_RECENT_TASK_RADIUS = "/data/local/oost_recent_task_radius.flag"
@@ -469,6 +737,7 @@ object LspConfig {
     private const val PROP_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "oost.ok_google_hotword_compatibility"
     private const val PROP_KEY_LAUNCHER_HIDE_WIDGET_LABELS = "oost.launcher_hide_widget_labels"
     private const val PROP_KEY_LAUNCHER_SEARCH_BAR_MODE = "oost.launcher_taskbar_search_box"
+    private const val PROP_KEY_LAUNCHER_SEARCH_COMPATIBILITY = "oost.launcher_search_compatibility"
     private const val PERSIST_PROP_KEY_NATIVE_NOTIFY_ICON = "persist.sys.oost.native_notify_icon"
     private const val PERSIST_PROP_KEY_EXTREME_REFRESH_165 = "persist.sys.oost.extreme_refresh_165"
     private const val PERSIST_PROP_KEY_RECENT_TASK_RADIUS = "persist.sys.oost.recent_task_radius"
@@ -573,6 +842,8 @@ object LspConfig {
         "persist.sys.oost.launcher_hide_widget_labels"
     private const val PERSIST_PROP_KEY_LAUNCHER_SEARCH_BAR_MODE =
         "persist.sys.oost.launcher_taskbar_search_box"
+    private const val PERSIST_PROP_KEY_LAUNCHER_SEARCH_COMPATIBILITY =
+        "persist.sys.oost.launcher_search_compatibility"
     private const val SETTINGS_KEY_NATIVE_NOTIFY_ICON = "oost_native_notify_icon"
     private const val SETTINGS_KEY_EXTREME_REFRESH_165 = "oost_extreme_refresh_165"
     private const val SETTINGS_KEY_RECENT_TASK_RADIUS = "oost_recent_task_radius"
@@ -669,11 +940,12 @@ object LspConfig {
     private const val SETTINGS_KEY_OK_GOOGLE_HOTWORD_COMPATIBILITY = "oost_ok_google_hotword_compatibility"
     private const val SETTINGS_KEY_LAUNCHER_HIDE_WIDGET_LABELS = "oost_launcher_hide_widget_labels"
     private const val SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE = "oost_launcher_taskbar_search_box"
+    private const val SETTINGS_KEY_LAUNCHER_SEARCH_COMPATIBILITY = "oost_launcher_search_compatibility"
 
-    private const val DEFAULT_RECENT_TASK_RADIUS_DP = 26
-    private const val DEFAULT_AOD_INIT_DARK_BRIGHTNESS = 80
-    private const val DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS = 160
-    private const val DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER = 1.6f
+    private const val DEFAULT_RECENT_TASK_RADIUS_DP = FeatureSliderRules.SYSTEM_DEFAULT
+    private const val DEFAULT_AOD_INIT_DARK_BRIGHTNESS = FeatureSliderRules.SYSTEM_DEFAULT
+    private const val DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS = FeatureSliderRules.SYSTEM_DEFAULT
+    private const val DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER = FeatureSliderRules.SYSTEM_DEFAULT_MULTIPLIER
     private const val DEFAULT_AOD_PANORAMIC_SUPPORT = true
     private const val DEFAULT_AOD_SETTINGS_SWITCH = true
     private const val DEFAULT_AOD_SINGLE_CLICK_BLOCK = true
@@ -778,23 +1050,23 @@ object LspConfig {
             ),
             extremeRefresh165Enabled = prefs.getBoolean(KEY_EXTREME_REFRESH_165, false),
             recentTaskRadiusEnabled = prefs.getBoolean(KEY_RECENT_TASK_RADIUS, false),
-            recentTaskRadiusDp = prefs.getInt(
+            recentTaskRadiusDp = FeatureSliderRules.normalizeRadius(prefs.getInt(
                 KEY_RECENT_TASK_RADIUS_DP,
                 DEFAULT_RECENT_TASK_RADIUS_DP
-            ).coerceIn(0, 260),
+            )),
             aodEnhanceEnabled = prefs.getBoolean(KEY_AOD_ENHANCE, false),
-            aodInitDarkBrightness = prefs.getInt(
+            aodInitDarkBrightness = FeatureSliderRules.normalizeBrightness(prefs.getInt(
                 KEY_AOD_INIT_DARK_BRIGHTNESS,
                 DEFAULT_AOD_INIT_DARK_BRIGHTNESS
-            ).coerceIn(0, 255),
-            aodInitBrightBrightness = prefs.getInt(
+            )),
+            aodInitBrightBrightness = FeatureSliderRules.normalizeBrightness(prefs.getInt(
                 KEY_AOD_INIT_BRIGHT_BRIGHTNESS,
                 DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS
-            ).coerceIn(0, 255),
-            aodRunningBrightnessMultiplier = prefs.getFloat(
+            )),
+            aodRunningBrightnessMultiplier = FeatureSliderRules.normalizeMultiplier(prefs.getFloat(
                 KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
                 DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
-            ).coerceIn(1.0f, 3.0f),
+            )),
             aodPanoramicSupportEnabled = prefs.getBoolean(
                 KEY_AOD_PANORAMIC_SUPPORT,
                 DEFAULT_AOD_PANORAMIC_SUPPORT
@@ -1093,13 +1365,13 @@ object LspConfig {
     }
 
     fun getRecentTaskRadiusDp(context: Context): Int {
-        return prefs(context)
-            .getInt(KEY_RECENT_TASK_RADIUS_DP, DEFAULT_RECENT_TASK_RADIUS_DP)
-            .coerceIn(0, 260)
+        return FeatureSliderRules.normalizeRadius(
+            prefs(context).getInt(KEY_RECENT_TASK_RADIUS_DP, DEFAULT_RECENT_TASK_RADIUS_DP),
+        )
     }
 
     fun setRecentTaskRadiusDp(context: Context, value: Int) {
-        val normalized = value.coerceIn(0, 260)
+        val normalized = FeatureSliderRules.normalizeRadius(value)
         if (!prefs(context).edit().putInt(KEY_RECENT_TASK_RADIUS_DP, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
@@ -1113,13 +1385,13 @@ object LspConfig {
     }
 
     fun getAodInitDarkBrightness(context: Context): Int {
-        return prefs(context)
-            .getInt(KEY_AOD_INIT_DARK_BRIGHTNESS, DEFAULT_AOD_INIT_DARK_BRIGHTNESS)
-            .coerceIn(0, 255)
+        return FeatureSliderRules.normalizeBrightness(
+            prefs(context).getInt(KEY_AOD_INIT_DARK_BRIGHTNESS, DEFAULT_AOD_INIT_DARK_BRIGHTNESS),
+        )
     }
 
     fun setAodInitDarkBrightness(context: Context, value: Int) {
-        val normalized = value.coerceIn(0, 255)
+        val normalized = FeatureSliderRules.normalizeBrightness(value)
         if (!prefs(context).edit().putInt(KEY_AOD_INIT_DARK_BRIGHTNESS, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
@@ -1133,13 +1405,13 @@ object LspConfig {
     }
 
     fun getAodInitBrightBrightness(context: Context): Int {
-        return prefs(context)
-            .getInt(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS)
-            .coerceIn(0, 255)
+        return FeatureSliderRules.normalizeBrightness(
+            prefs(context).getInt(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS),
+        )
     }
 
     fun setAodInitBrightBrightness(context: Context, value: Int) {
-        val normalized = value.coerceIn(0, 255)
+        val normalized = FeatureSliderRules.normalizeBrightness(value)
         if (!prefs(context).edit().putInt(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
@@ -1153,16 +1425,16 @@ object LspConfig {
     }
 
     fun getAodRunningBrightnessMultiplier(context: Context): Float {
-        return prefs(context)
-            .getFloat(
+        return FeatureSliderRules.normalizeMultiplier(
+            prefs(context).getFloat(
                 KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
                 DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
-            )
-            .coerceIn(1.0f, 3.0f)
+            ),
+        )
     }
 
     fun setAodRunningBrightnessMultiplier(context: Context, value: Float) {
-        val normalized = value.coerceIn(1.0f, 3.0f)
+        val normalized = FeatureSliderRules.normalizeMultiplier(value)
         if (!prefs(context).edit().putFloat(KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER, normalized).commitOrReport()) return
         syncReadableState(context)
         syncScalarState(
@@ -2118,6 +2390,22 @@ object LspConfig {
         )
     }
 
+    fun isLauncherSearchCompatibilityEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_LAUNCHER_SEARCH_COMPATIBILITY, false)
+
+    fun setLauncherSearchCompatibilityEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+            enabled = enabled,
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+                PROP_KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+        )
+    }
+
     fun resetToDefaults(context: Context): Boolean {
         require(prefs(context).edit().clear().commit()) {
             "Failed to clear $PREFS_NAME"
@@ -2126,7 +2414,16 @@ object LspConfig {
         val batchedCommands = mutableListOf<String>()
         syncCommandBatch.set(batchedCommands)
         try {
+            setImmersiveNavigationEnabled(context, false)
+            setNavigationHandleCustomLengthEnabled(context, false)
+            setNavigationHandleLengthDp(context, ImmersiveNavigationRules.SYSTEM_DEFAULT)
+            setNavigationHandleOpacity(context, ImmersiveNavigationRules.SYSTEM_DEFAULT)
+            setNavigationHandleAutoHideEnabled(context, false)
+            setSettingsTitleCollapsedEnabled(context, false)
+            setExpressNoMiniProgramEnabled(context, false)
+            setFluidCloudBatteryEnabled(context, false)
             SmallWindowFeature.entries.forEach { setSmallWindowFeatureEnabled(context, it, false) }
+            LauncherFeature.entries.forEach { setLauncherFeatureEnabled(context, it, false) }
             KeyguardFeature.entries.forEach { setKeyguardFeatureEnabled(context, it, false) }
             PermissionFeature.entries.forEach { setPermissionFeatureEnabled(context, it, false) }
             NotificationRemovalFeature.entries.forEach { setNotificationRemovalEnabled(context, it, false) }
@@ -2266,6 +2563,7 @@ object LspConfig {
                 DEFAULT_APP_MARKET_HIDE_DETAIL_RECOMMENDATIONS,
             )
             setFileManagerHideSecureAccessTipEnabled(context, false)
+            setFileManagerNativePickerEnabled(context, false)
             setAthenaC17SwipeUpProtectionEnabled(
                 context,
                 DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION,
@@ -2273,6 +2571,7 @@ object LspConfig {
             setOkGoogleHotwordCompatibilityEnabled(context, DEFAULT_OK_GOOGLE_HOTWORD_COMPATIBILITY)
             setLauncherHideWidgetLabelsEnabled(context, DEFAULT_LAUNCHER_HIDE_WIDGET_LABELS)
             setLauncherSearchBarMode(context, DEFAULT_LAUNCHER_SEARCH_BAR_MODE)
+            setLauncherSearchCompatibilityEnabled(context, false)
         } finally {
             syncCommandBatch.remove()
         }
@@ -2364,16 +2663,59 @@ object LspConfig {
         val appMarketHideDetailRecommendations =
             isAppMarketHideDetailRecommendationsEnabled(context)
         val fileManagerHideSecureAccessTip = isFileManagerHideSecureAccessTipEnabled(context)
+        val fileManagerNativePicker = isFileManagerNativePickerEnabled(context)
         val athenaC17SwipeUpProtection = isAthenaC17SwipeUpProtectionEnabled(context)
         val okGoogleHotwordCompatibility = isOkGoogleHotwordCompatibilityEnabled(context)
         val launcherHideWidgetLabels = isLauncherHideWidgetLabelsEnabled(context)
         val launcherSearchBarMode = getLauncherSearchBarMode(context)
+        val launcherSearchCompatibility = isLauncherSearchCompatibilityEnabled(context)
         syncReadableState(context)
         val batchedCommands = mutableListOf<String>()
         syncCommandBatch.set(batchedCommands)
         try {
+        syncScalarState(
+            value = if (isImmersiveNavigationEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_IMMERSIVE_NAVIGATION, PROP_IMMERSIVE_NAVIGATION),
+            settingsGlobalKey = SETTINGS_IMMERSIVE_NAVIGATION,
+        )
+        syncScalarState(
+            value = if (isNavigationHandleCustomLengthEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_NAVIGATION_HANDLE_CUSTOM_LENGTH, PROP_NAVIGATION_HANDLE_CUSTOM_LENGTH),
+            settingsGlobalKey = SETTINGS_NAVIGATION_HANDLE_CUSTOM_LENGTH,
+        )
+        syncScalarState(
+            value = getNavigationHandleLengthDp(context).toString(),
+            propertyKeys = listOf(PERSIST_PROP_NAVIGATION_HANDLE_LENGTH_DP, PROP_NAVIGATION_HANDLE_LENGTH_DP),
+            settingsGlobalKey = SETTINGS_NAVIGATION_HANDLE_LENGTH_DP,
+        )
+        syncScalarState(
+            value = getNavigationHandleOpacity(context).toString(),
+            propertyKeys = listOf(PERSIST_PROP_NAVIGATION_HANDLE_OPACITY, PROP_NAVIGATION_HANDLE_OPACITY),
+            settingsGlobalKey = SETTINGS_NAVIGATION_HANDLE_OPACITY,
+        )
+        syncScalarState(
+            value = if (isNavigationHandleAutoHideEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_NAVIGATION_HANDLE_AUTO_HIDE, PROP_NAVIGATION_HANDLE_AUTO_HIDE),
+            settingsGlobalKey = SETTINGS_NAVIGATION_HANDLE_AUTO_HIDE,
+        )
         syncPermissionFeatures(context)
+        syncScalarState(
+            value = if (isSettingsTitleCollapsedEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_SETTINGS_TITLE_COLLAPSED, PROP_SETTINGS_TITLE_COLLAPSED),
+            settingsGlobalKey = SETTINGS_TITLE_COLLAPSED,
+        )
+        syncScalarState(
+            value = if (isExpressNoMiniProgramEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_EXPRESS_NO_MINI_PROGRAM, PROP_EXPRESS_NO_MINI_PROGRAM),
+            settingsGlobalKey = SETTINGS_EXPRESS_NO_MINI_PROGRAM,
+        )
         syncSmallWindowFeatures(context)
+        syncLauncherFeatures(context)
+        syncScalarState(
+            value = if (isFluidCloudBatteryEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_FLUID_CLOUD_BATTERY, PROP_FLUID_CLOUD_BATTERY),
+            settingsGlobalKey = SETTINGS_FLUID_CLOUD_BATTERY,
+        )
         syncKeyguardFeatures(context)
         syncNotificationRemovalFeatures(context)
         syncInstallerFeatures(context)
@@ -2887,6 +3229,11 @@ object LspConfig {
             settingsGlobalKey = SETTINGS_FILE_MANAGER_HIDE_SECURE_ACCESS_TIP,
         )
         syncScalarState(
+            value = if (fileManagerNativePicker) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_FILE_MANAGER_NATIVE_PICKER, PROP_FILE_MANAGER_NATIVE_PICKER),
+            settingsGlobalKey = SETTINGS_FILE_MANAGER_NATIVE_PICKER,
+        )
+        syncScalarState(
             value = if (athenaC17SwipeUpProtection) "1" else "0",
             propertyKeys = listOf(
                 PERSIST_PROP_KEY_ATHENA_C17_SWIPE_UP_PROTECTION,
@@ -2917,6 +3264,14 @@ object LspConfig {
                 PROP_KEY_LAUNCHER_SEARCH_BAR_MODE,
             ),
             settingsGlobalKey = SETTINGS_KEY_LAUNCHER_SEARCH_BAR_MODE,
+        )
+        syncScalarState(
+            value = if (launcherSearchCompatibility) "1" else "0",
+            propertyKeys = listOf(
+                PERSIST_PROP_KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+                PROP_KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+            ),
+            settingsGlobalKey = SETTINGS_KEY_LAUNCHER_SEARCH_COMPATIBILITY,
         )
         } finally {
             syncCommandBatch.remove()
@@ -3062,58 +3417,58 @@ object LspConfig {
 
     fun getRecentTaskRadiusDpXposed(): Float {
         HookConfigSnapshot.int(KEY_RECENT_TASK_RADIUS_DP, DEFAULT_RECENT_TASK_RADIUS_DP)?.let {
-            return it.toFloat().coerceIn(0f, 260f)
+            return FeatureSliderRules.normalizeRadius(it.toFloat())
         }
-        readSystemPropertyValue(PERSIST_PROP_KEY_RECENT_TASK_RADIUS_DP)?.toFloatOrNull()?.let { return it.coerceIn(0f, 260f) }
-        readSystemPropertyValue(PROP_KEY_RECENT_TASK_RADIUS_DP)?.toFloatOrNull()?.let { return it.coerceIn(0f, 260f) }
-        readSettingsGlobalValue(SETTINGS_KEY_RECENT_TASK_RADIUS_DP)?.toFloatOrNull()?.let { return it.coerceIn(0f, 260f) }
-        return runCatching {
+        readSystemPropertyValue(PERSIST_PROP_KEY_RECENT_TASK_RADIUS_DP)?.toFloatOrNull()?.let { return FeatureSliderRules.normalizeRadius(it) }
+        readSystemPropertyValue(PROP_KEY_RECENT_TASK_RADIUS_DP)?.toFloatOrNull()?.let { return FeatureSliderRules.normalizeRadius(it) }
+        readSettingsGlobalValue(SETTINGS_KEY_RECENT_TASK_RADIUS_DP)?.toFloatOrNull()?.let { return FeatureSliderRules.normalizeRadius(it) }
+        return FeatureSliderRules.normalizeRadius(runCatching {
             val prefs = xposedPreferences
             prefs.getInt(KEY_RECENT_TASK_RADIUS_DP, DEFAULT_RECENT_TASK_RADIUS_DP).toFloat()
-        }.getOrDefault(DEFAULT_RECENT_TASK_RADIUS_DP.toFloat()).coerceIn(0f, 260f)
+        }.getOrDefault(DEFAULT_RECENT_TASK_RADIUS_DP.toFloat()))
     }
 
     fun getAodInitDarkBrightnessXposed(): Int {
         HookConfigSnapshot.int(KEY_AOD_INIT_DARK_BRIGHTNESS, DEFAULT_AOD_INIT_DARK_BRIGHTNESS)?.let {
-            return it.coerceIn(0, 255)
+            return FeatureSliderRules.normalizeBrightness(it)
         }
-        readSystemPropertyValue(PERSIST_PROP_KEY_AOD_INIT_DARK_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
-        readSystemPropertyValue(PROP_KEY_AOD_INIT_DARK_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
-        readSettingsGlobalValue(SETTINGS_KEY_AOD_INIT_DARK_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
-        return runCatching {
+        readSystemPropertyValue(PERSIST_PROP_KEY_AOD_INIT_DARK_BRIGHTNESS)?.toIntOrNull()?.let { return FeatureSliderRules.normalizeBrightness(it) }
+        readSystemPropertyValue(PROP_KEY_AOD_INIT_DARK_BRIGHTNESS)?.toIntOrNull()?.let { return FeatureSliderRules.normalizeBrightness(it) }
+        readSettingsGlobalValue(SETTINGS_KEY_AOD_INIT_DARK_BRIGHTNESS)?.toIntOrNull()?.let { return FeatureSliderRules.normalizeBrightness(it) }
+        return FeatureSliderRules.normalizeBrightness(runCatching {
             val prefs = xposedPreferences
             prefs.getInt(KEY_AOD_INIT_DARK_BRIGHTNESS, DEFAULT_AOD_INIT_DARK_BRIGHTNESS)
-        }.getOrDefault(DEFAULT_AOD_INIT_DARK_BRIGHTNESS).coerceIn(0, 255)
+        }.getOrDefault(DEFAULT_AOD_INIT_DARK_BRIGHTNESS))
     }
 
     fun getAodInitBrightBrightnessXposed(): Int {
         HookConfigSnapshot.int(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS)?.let {
-            return it.coerceIn(0, 255)
+            return FeatureSliderRules.normalizeBrightness(it)
         }
-        readSystemPropertyValue(PERSIST_PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
-        readSystemPropertyValue(PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
-        readSettingsGlobalValue(SETTINGS_KEY_AOD_INIT_BRIGHT_BRIGHTNESS)?.toIntOrNull()?.let { return it.coerceIn(0, 255) }
-        return runCatching {
+        readSystemPropertyValue(PERSIST_PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS)?.toIntOrNull()?.let { return FeatureSliderRules.normalizeBrightness(it) }
+        readSystemPropertyValue(PROP_KEY_AOD_INIT_BRIGHT_BRIGHTNESS)?.toIntOrNull()?.let { return FeatureSliderRules.normalizeBrightness(it) }
+        readSettingsGlobalValue(SETTINGS_KEY_AOD_INIT_BRIGHT_BRIGHTNESS)?.toIntOrNull()?.let { return FeatureSliderRules.normalizeBrightness(it) }
+        return FeatureSliderRules.normalizeBrightness(runCatching {
             val prefs = xposedPreferences
             prefs.getInt(KEY_AOD_INIT_BRIGHT_BRIGHTNESS, DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS)
-        }.getOrDefault(DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS).coerceIn(0, 255)
+        }.getOrDefault(DEFAULT_AOD_INIT_BRIGHT_BRIGHTNESS))
     }
 
     fun getAodRunningBrightnessMultiplierXposed(): Float {
         HookConfigSnapshot.float(
             KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
             DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
-        )?.let { return it.coerceIn(1.0f, 3.0f) }
-        readSystemPropertyValue(PERSIST_PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)?.toFloatOrNull()?.let { return it.coerceIn(1.0f, 3.0f) }
-        readSystemPropertyValue(PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)?.toFloatOrNull()?.let { return it.coerceIn(1.0f, 3.0f) }
-        readSettingsGlobalValue(SETTINGS_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)?.toFloatOrNull()?.let { return it.coerceIn(1.0f, 3.0f) }
-        return runCatching {
+        )?.let { return FeatureSliderRules.normalizeMultiplier(it) }
+        readSystemPropertyValue(PERSIST_PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)?.toFloatOrNull()?.let { return FeatureSliderRules.normalizeMultiplier(it) }
+        readSystemPropertyValue(PROP_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)?.toFloatOrNull()?.let { return FeatureSliderRules.normalizeMultiplier(it) }
+        readSettingsGlobalValue(SETTINGS_KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER)?.toFloatOrNull()?.let { return FeatureSliderRules.normalizeMultiplier(it) }
+        return FeatureSliderRules.normalizeMultiplier(runCatching {
             val prefs = xposedPreferences
             prefs.getFloat(
                 KEY_AOD_RUNNING_BRIGHTNESS_MULTIPLIER,
                 DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER
             )
-        }.getOrDefault(DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER).coerceIn(1.0f, 3.0f)
+        }.getOrDefault(DEFAULT_AOD_RUNNING_BRIGHTNESS_MULTIPLIER))
     }
 
     fun isAodPanoramicSupportEnabledXposed(): Boolean {
@@ -3662,6 +4017,14 @@ object LspConfig {
         }.getOrDefault(DEFAULT_LAUNCHER_SEARCH_BAR_MODE).sanitizeLauncherSearchBarMode()
     }
 
+    fun isLauncherSearchCompatibilityEnabledXposed(): Boolean = readXposedBoolean(
+        persistPropertyKey = PERSIST_PROP_KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+        propertyKey = PROP_KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+        settingsKey = SETTINGS_KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+        prefsKey = KEY_LAUNCHER_SEARCH_COMPATIBILITY,
+        defaultValue = false,
+    )
+
     private fun setSyncedBooleanPreference(
         context: Context,
         prefsKey: String,
@@ -3782,7 +4145,7 @@ object LspConfig {
             else -> null
         }
         runCatching {
-            val directCommands = propertyKeys.map { key -> "setprop $key $value" } +
+            val directCommands = propertyKeys.map { key -> "setprop $key ${shellQuote(value)}" } +
                 listOf(
                     "settings put global $settingsGlobalKey $value",
                     "echo $value > $flagFilePath",

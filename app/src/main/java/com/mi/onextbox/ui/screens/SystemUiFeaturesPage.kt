@@ -200,7 +200,10 @@ internal fun SystemUiFeaturesPage(
                         }
                     },
                     hasDividerAbove = true,
+                    hasDividerBelow = true,
                 )
+                SettingsDivider()
+                FluidCloudBatterySettingsRow(hasDividerAbove = true)
             }
         }
         FeaturePageMode.SystemUiNotificationCenter -> {

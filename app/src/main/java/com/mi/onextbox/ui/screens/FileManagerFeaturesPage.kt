@@ -15,6 +15,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.ui.settings.SettingsGroup
+import com.mi.onextbox.ui.settings.SettingsSection
 import com.mi.onextbox.ui.settings.SettingsToggleRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -31,15 +32,20 @@ internal fun FileManagerFeaturesPage() {
     var hideSecureAccessTip by remember(context) {
         mutableStateOf(LspConfig.isFileManagerHideSecureAccessTipEnabled(context))
     }
+    var nativePicker by remember(context) {
+        mutableStateOf(LspConfig.isFileManagerNativePickerEnabled(context))
+    }
     DisposableEffect(context, owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 hideSecureAccessTip = LspConfig.isFileManagerHideSecureAccessTipEnabled(context)
+                nativePicker = LspConfig.isFileManagerNativePickerEnabled(context)
             }
         }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
+    SettingsSection(title = stringResource(R.string.feature_file_manager_ui_group))
     SettingsGroup {
         SettingsToggleRow(
             title = stringResource(R.string.feature_file_manager_hide_secure_access_tip_title),
@@ -51,6 +57,24 @@ internal fun FileManagerFeaturesPage() {
                     writeLock.withLock {
                         withContext(Dispatchers.IO) {
                             LspConfig.setFileManagerHideSecureAccessTipEnabled(context, checked)
+                        }
+                    }
+                }
+            },
+        )
+    }
+    SettingsSection(title = stringResource(R.string.feature_file_manager_picker_group))
+    SettingsGroup {
+        SettingsToggleRow(
+            title = stringResource(R.string.feature_file_manager_native_picker_title),
+            summary = stringResource(R.string.feature_file_manager_native_picker_summary),
+            checked = nativePicker,
+            onCheckedChange = { checked ->
+                nativePicker = checked
+                scope.launch {
+                    writeLock.withLock {
+                        withContext(Dispatchers.IO) {
+                            LspConfig.setFileManagerNativePickerEnabled(context, checked)
                         }
                     }
                 }

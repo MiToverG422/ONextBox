@@ -59,9 +59,11 @@ internal object SystemUiAodHooker {
                             // replace the panel-controlled brightness. Treating it as a dark
                             // ambient value breaks the panoramic transition.
                             brightness < BRIGHTNESS_MIN -> originalResult
-                            brightness < INIT_DARK_THRESHOLD ->
-                                LspConfig.getAodInitDarkBrightnessXposed()
-                            else -> LspConfig.getAodInitBrightBrightnessXposed()
+                            else -> FeatureSliderRules.initBrightness(
+                                brightness,
+                                if (brightness < INIT_DARK_THRESHOLD) LspConfig.getAodInitDarkBrightnessXposed()
+                                else LspConfig.getAodInitBrightBrightnessXposed(),
+                            )
                         }
                     }
                 },
@@ -102,6 +104,7 @@ internal object SystemUiAodHooker {
                             chain.proceed()
                         } else {
                             val multiplier = LspConfig.getAodRunningBrightnessMultiplierXposed()
+                            if (multiplier == FeatureSliderRules.SYSTEM_DEFAULT_MULTIPLIER) return@Hooker chain.proceed()
                             val args = brightnessArgs.get()!!
                             args[0] = originalNit * multiplier
                             args[1] = (originalBrightness * multiplier)

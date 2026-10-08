@@ -5,14 +5,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspStatus
+import com.mi.onextbox.lsp.LsposedScopeRequester
 
 internal fun homeLspDisplayStatus(
-    status: LspStatus,
-    reason: String,
+    snapshot: LsposedScopeRequester.StatusSnapshot,
     rootStartupPending: Boolean,
-): LspStatus = if (
-    status == LspStatus.UNKNOWN && reason == "root_shell_unavailable" && rootStartupPending
-) LspStatus.CHECKING else status
+): LspStatus = when {
+    snapshot.status == LspStatus.UNKNOWN &&
+        snapshot.reason == "root_shell_unavailable" && rootStartupPending -> LspStatus.CHECKING
+    // Keep the home status ready for stale loaded processes; retain the actual detection result.
+    snapshot.status == LspStatus.WAITING_RESTART && snapshot.reason == "target_stale" &&
+        snapshot.moduleEnabled && snapshot.serviceConnected &&
+        !snapshot.verifiedScopes.isNullOrEmpty() && snapshot.missingScopes.isEmpty() -> LspStatus.READY
+    else -> snapshot.status
+}
 
 @StringRes
 internal fun lspStatusTextResource(status: LspStatus): Int = when (status) {

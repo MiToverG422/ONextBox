@@ -32,11 +32,7 @@ object FrameworkHooker {
     private const val PACKAGE_LAUNCHER = "com.android.launcher"
     private const val PACKAGE_OPLUS_AOD = "com.oplus.aod"
 
-    private val recentTaskDimenNames = listOf(
-        "recent_task_view_radius",
-        "task_view_radius_20",
-        "task_view_radius_22"
-    )
+    private val recentTaskDimenNames = FeatureSliderRules.recentRadiusResourceNames
     @Volatile
     private var cachedRecentTaskDimenIds: Set<Int> = emptySet()
 
@@ -191,6 +187,7 @@ object FrameworkHooker {
                     val matchedIds = resolveRecentTaskDimenIds(resources)
                     if (matchedIds.isEmpty() || requestId !in matchedIds) return@Hooker originalResult
                     val recentTaskRadiusDp = LspConfig.getRecentTaskRadiusDpXposed()
+                    if (recentTaskRadiusDp == FeatureSliderRules.SYSTEM_DEFAULT.toFloat()) return@Hooker originalResult
 
                     TypedValue.applyDimension(
                         TypedValue.COMPLEX_UNIT_DIP,

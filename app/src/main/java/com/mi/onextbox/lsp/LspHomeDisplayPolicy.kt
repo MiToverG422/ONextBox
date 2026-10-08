@@ -1,6 +1,7 @@
 package com.mi.onextbox.lsp
 
 import com.mi.onextbox.ui.common.LspHomeDisplay
+import com.mi.onextbox.ui.common.homeLspDisplayStatus
 
 /** Completed results for homepage display, not activation evidence. */
 internal fun lspHomeDisplayForCache(
@@ -13,7 +14,7 @@ internal fun lspHomeDisplayForCache(
     ) return null
     if (snapshot.status == LspStatus.READY && !snapshot.isReady) return null
     return LspHomeDisplay(
-        status = snapshot.status,
+        status = homeLspDisplayStatus(snapshot, rootStartupPending),
         frameworkVersionText = snapshot.frameworkVersionText,
         missingScopes = snapshot.missingScopes.toSet(),
     )

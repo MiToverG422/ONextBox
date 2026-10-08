@@ -162,6 +162,7 @@ private const val COOLAPK_PROFILE_URL = "https://www.coolapk.com/u/29184225"
 private const val GITHUB_PROFILE_URL = "https://github.com/MiToverG422"
 private const val SUQI8_PROFILE_URL = "https://github.com/suqi8"
 private const val COLORLARIS_PROFILE_URL = "https://github.com/Colorlaris"
+private const val ROVE24_PROFILE_URL = "https://github.com/Rove24"
 private const val GITHUB_REPOSITORY_URL = "https://github.com/MiToverG422/ONextBox"
 private const val TELEGRAM_CHANNEL_URL = "https://t.me/ONextBox"
 private const val SOFTWARE_UPDATE_CHECK_DELAY_MS = 2_000L
@@ -169,11 +170,13 @@ private val SoftwareUpdateContentHorizontalPadding = 16.dp
 private val SoftwareUpdateVersionInfoExtraHorizontalPadding = 20.dp
 private const val MITOVERG_AVATAR_URL = "https://github.com/MiToverG422.png?size=160"
 private const val COLORLARIS_AVATAR_URL = "https://github.com/Colorlaris.png?size=160"
+private const val ROVE24_AVATAR_URL = "https://github.com/Rove24.png?size=160"
 private const val COUI_REPOSITORY_URL = "https://github.com/suqi8/coui"
 private const val MIUIX_REPOSITORY_URL = "https://github.com/compose-miuix-ui/miuix"
 private const val OSHIN_REPOSITORY_URL = "https://github.com/suqi8/OShin"
 private const val LIBSU_REPOSITORY_URL = "https://github.com/topjohnwu/libsu"
 private const val LUCKYTOOL_REPOSITORY_URL = "https://github.com/luckyzyx/LuckyTool"
+private const val INXLOCKER_REPOSITORY_URL = "https://github.com/Chimioo/InxLocker"
 private const val HIDDEN_API_BYPASS_REPOSITORY_URL = "https://github.com/LSPosed/AndroidHiddenApiBypass"
 private const val JETPACK_COMPOSE_URL = "https://developer.android.com/jetpack/compose"
 private const val ANDROIDX_URL = "https://developer.android.com/jetpack/androidx"
@@ -1674,6 +1677,12 @@ fun AboutContributorsPage() {
             url = COLORLARIS_PROFILE_URL,
             leadingContent = { GitHubAuthorAvatar(COLORLARIS_AVATAR_URL) },
         ),
+        AboutLinkItem(
+            titleRes = R.string.about_contributor_rove24_title,
+            summaryRes = R.string.about_contributor_rove24_summary,
+            url = ROVE24_PROFILE_URL,
+            leadingContent = { GitHubAuthorAvatar(ROVE24_AVATAR_URL) },
+        ),
     )
     AboutLinkGroup(items = items)
 }
@@ -1717,6 +1726,11 @@ fun AboutReferencesPage() {
             titleRes = R.string.about_reference_luckytool_title,
             summaryRes = R.string.about_reference_luckytool_summary,
             url = LUCKYTOOL_REPOSITORY_URL,
+        ),
+        AboutLinkItem(
+            titleRes = R.string.about_reference_inxlocker_title,
+            summaryRes = R.string.about_reference_inxlocker_summary,
+            url = INXLOCKER_REPOSITORY_URL,
         ),
     )
     val libraries = listOf(

@@ -1,5 +1,6 @@
 package com.mi.onextbox.lsp
 
+import com.mi.onextbox.ui.common.LspHomeDisplayCodec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -75,5 +76,42 @@ class LspHomeDisplayPolicyTest {
         assertFalse(live.isReady)
         assertFalse(live.canContinue)
         assertNull(lspHomeDisplayForCache(live.copy(status = LspStatus.READY), false))
+    }
+
+    @Test
+    fun loadedOldTargetCachesReadyDisplayAndVersionForTheNextColdStart() {
+        val live = LsposedScopeRequester.StatusSnapshot(
+            moduleState = LspModuleState.ENABLED,
+            status = LspStatus.WAITING_RESTART,
+            serviceConnected = true,
+            frameworkVersionText = "LSPosed 2.2.0-it (7899) / API 102",
+            verifiedScopes = setOf("system", "com.android.systemui"),
+            reason = "target_stale",
+        )
+        val display = lspHomeDisplayForCache(live, false)!!
+        assertEquals(LspStatus.READY, display.status)
+        assertEquals(live.frameworkVersionText, display.frameworkVersionText)
+        val restored = LspHomeDisplayCodec.decode(
+            LspHomeDisplayCodec.SCHEMA_VERSION, display.status.name,
+            display.frameworkVersionText, display.missingScopes,
+        )
+        assertEquals(display, restored)
+        assertEquals(LspStatus.WAITING_RESTART, live.status)
+        assertFalse(live.isReady)
+        assertNull(lspHomeDisplayForCache(live.copy(isRefreshing = true), false))
+    }
+
+    @Test
+    fun genuineRestartRequirementsRemainInTheCache() {
+        listOf("targets_not_loaded", "system_not_loaded", "systemui_not_loaded").forEach { reason ->
+            val snapshot = LsposedScopeRequester.StatusSnapshot(
+                moduleState = LspModuleState.ENABLED,
+                status = LspStatus.WAITING_RESTART,
+                serviceConnected = true,
+                verifiedScopes = setOf("system", "com.android.systemui"),
+                reason = reason,
+            )
+            assertEquals(LspStatus.WAITING_RESTART, lspHomeDisplayForCache(snapshot, false)?.status)
+        }
     }
 }

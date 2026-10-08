@@ -112,7 +112,15 @@ internal fun LspMissingScopesNotice(
                 MissingScopeText(stringResource(R.string.lsp_missing_scopes_more, scopes.size - 3), 13.sp)
             }
             if (material) {
-                androidx.compose.material3.TextButton(onClick = onOpen, enabled = !opening) {
+                androidx.compose.material3.TextButton(
+                    onClick = onOpen,
+                    enabled = !opening,
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        disabledContentColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = .38f),
+                    ),
+                ) {
                     androidx.compose.material3.Text(stringResource(R.string.onboarding_open_lsposed))
                 }
             } else {

@@ -26,6 +26,60 @@ class FeatureSearchTest {
         assertTrue(entries.any { it.page == FeaturePageMode.TouchSampling })
         assertTrue(entries.any { it.page == FeaturePageMode.SystemUiSmallWindow })
     }
+    @Test fun brightnessAndRadiusSlidersAreSearchable() {
+        for (title in listOf(
+            com.mi.onextbox.R.string.feature_aod_dark_brightness_label,
+            com.mi.onextbox.R.string.feature_aod_bright_brightness_label,
+            com.mi.onextbox.R.string.feature_aod_multiplier_label,
+        )) {
+            assertTrue(FeatureSearchIndex.entries.any {
+                it.page == FeaturePageMode.Aod && it.title == title
+            })
+        }
+        assertTrue(FeatureSearchIndex.entries.any {
+            it.page == FeaturePageMode.Desktop && it.title == com.mi.onextbox.R.string.feature_recent_task_radius_label
+        })
+    }
+    @Test fun recentTaskCardRadiusHasNoDescription() {
+        val entry = FeatureSearchIndex.entries.single {
+            it.page == FeaturePageMode.Desktop && it.title == com.mi.onextbox.R.string.feature_recent_task_radius_title
+        }
+        assertEquals(0, entry.description)
+    }
+    @Test fun bundledSettingsAndExpressFeaturesAreSearchable() {
+        assertTrue(FeatureSearchIndex.entries.any {
+            it.page == FeaturePageMode.Settings && it.title == com.mi.onextbox.R.string.feature_settings_title_collapsed_title
+        })
+        assertTrue(FeatureSearchIndex.entries.any {
+            it.page == FeaturePageMode.QuickAppServices && it.title == com.mi.onextbox.R.string.feature_express_no_mini_program_title
+        })
+    }
+    @Test fun expressServiceHasItsOwnTopLevelPage() {
+        assertFalse(FeaturePageMode.QuickAppServices.isNestedPage)
+        for (title in listOf(
+            com.mi.onextbox.R.string.feature_quick_app_services_title,
+            com.mi.onextbox.R.string.feature_group_express_service,
+            com.mi.onextbox.R.string.feature_express_no_mini_program_title,
+        )) {
+            val destinations = FeatureSearchIndex.entries.filter { it.title == title }
+            assertEquals(1, destinations.size)
+            assertEquals(FeaturePageMode.QuickAppServices, destinations.single().page)
+        }
+    }
+    @Test fun fluidCloudPageRemainsSearchableWithoutAnyControls() {
+        assertTrue(FeaturePageMode.SystemUiFluidCloud.isNestedPage)
+        val destinations = FeatureSearchIndex.entries.filter { it.page == FeaturePageMode.SystemUiFluidCloud }
+        assertEquals(1, destinations.size)
+        assertEquals(com.mi.onextbox.R.string.feature_fluid_cloud_title, destinations.single().title)
+    }
+    @Test fun fluidCloudBatteryIsSearchableOnlyUnderStatusBar() {
+        val destinations = FeatureSearchIndex.entries.filter {
+            it.title == com.mi.onextbox.R.string.feature_fluid_cloud_battery_title
+        }
+        assertEquals(1, destinations.size)
+        assertEquals(FeaturePageMode.SystemUiStatusBar, destinations.single().page)
+        assertEquals(com.mi.onextbox.R.string.feature_fluid_cloud_battery_summary, destinations.single().description)
+    }
     @Test fun faceTapControlsAreSearchableOnlyUnderLockScreen() {
         assertTrue(FeatureSearchIndex.entries.any {
             it.page == FeaturePageMode.SystemUiLockScreen && it.title == com.mi.onextbox.R.string.keyguard_face_tap_title
@@ -42,6 +96,27 @@ class FeatureSearchTest {
                     it.title == com.mi.onextbox.R.string.keyguard_face_tap_animation_title)
         })
     }
+    @Test fun immersiveNavigationHasItsOwnDestination() {
+        assertTrue(FeaturePageMode.SystemUiNavigationBar.isNestedPage)
+        assertTrue(FeatureSearchIndex.entries.any {
+            it.page == FeaturePageMode.SystemUiNavigationBar &&
+                it.title == com.mi.onextbox.R.string.feature_immersive_navigation_title &&
+                it.description == com.mi.onextbox.R.string.feature_immersive_navigation_summary
+        })
+        assertTrue(FeatureSearchIndex.entries.any {
+            it.page == FeaturePageMode.SystemUiNavigationBar &&
+                it.title == com.mi.onextbox.R.string.feature_navigation_handle_length_title &&
+                it.description == 0
+        })
+        for (title in listOf(
+            com.mi.onextbox.R.string.feature_navigation_handle_length_label,
+            com.mi.onextbox.R.string.feature_navigation_handle_opacity_label,
+        )) {
+            assertTrue(FeatureSearchIndex.entries.any {
+                it.page == FeaturePageMode.SystemUiNavigationBar && it.title == title
+            })
+        }
+    }
     @Test fun captureControlsHaveTheirOwnDestinations() {
         assertTrue(FeatureSearchIndex.entries.any {
             it.page == FeaturePageMode.Screenshot && it.title == com.mi.onextbox.R.string.keyguard_aod_screenshot_title
@@ -53,6 +128,13 @@ class FeatureSearchTest {
             it.page == FeaturePageMode.SystemUiLockScreen &&
                 (it.title == com.mi.onextbox.R.string.keyguard_aod_screenshot_title ||
                     it.title == com.mi.onextbox.R.string.keyguard_screen_off_recording_title)
+        })
+    }
+    @Test fun autoHideHandleIsSearchableUnderNavigationBar() {
+        assertTrue(FeatureSearchIndex.entries.any {
+            it.page == FeaturePageMode.SystemUiNavigationBar &&
+                it.title == com.mi.onextbox.R.string.feature_navigation_handle_auto_hide_title &&
+                it.description == com.mi.onextbox.R.string.feature_navigation_handle_auto_hide_summary
         })
     }
     @Test fun everySmallWindowControlIsSearchable() {

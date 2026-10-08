@@ -1,13 +1,9 @@
 package com.mi.onextbox.ui.screens
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
-import com.mi.onextbox.ui.common.rememberColorOsHapticTick
+import com.mi.onextbox.lsp.FeatureSliderRules
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsSection
@@ -41,31 +37,51 @@ internal fun AodFeaturesPage(
             hasDividerBelow = true,
         )
         SettingsDivider()
-        AodIntSliderRow(
-            title = stringResource(R.string.feature_aod_dark_brightness_current, aodInitDarkBrightness),
-            value = aodInitDarkBrightness,
-            onValueChange = onAodInitDarkBrightnessChange,
+        FeatureSliderRow(
+            heading = stringResource(R.string.feature_aod_dark_brightness_label),
+            currentValue = if (aodInitDarkBrightness == FeatureSliderRules.SYSTEM_DEFAULT) {
+                stringResource(R.string.feature_slider_current_default)
+            } else stringResource(R.string.feature_slider_current_value, aodInitDarkBrightness.toString()),
+            value = if (aodInitDarkBrightness == FeatureSliderRules.SYSTEM_DEFAULT) {
+                FeatureSliderRules.DARK_BRIGHTNESS_PREVIEW.toFloat()
+            } else aodInitDarkBrightness.toFloat(),
+            valueRange = 0f..255f,
+            steps = 254,
+            onValueChange = { onAodInitDarkBrightnessChange(it.roundToInt()) },
+            onReset = { onAodInitDarkBrightnessChange(FeatureSliderRules.SYSTEM_DEFAULT) },
             enabled = aodEnhanceEnabled,
             hasDividerAbove = true,
             hasDividerBelow = true,
         )
         SettingsDivider()
-        AodIntSliderRow(
-            title = stringResource(R.string.feature_aod_bright_brightness_current, aodInitBrightBrightness),
-            value = aodInitBrightBrightness,
-            onValueChange = onAodInitBrightBrightnessChange,
+        FeatureSliderRow(
+            heading = stringResource(R.string.feature_aod_bright_brightness_label),
+            currentValue = if (aodInitBrightBrightness == FeatureSliderRules.SYSTEM_DEFAULT) {
+                stringResource(R.string.feature_slider_current_default)
+            } else stringResource(R.string.feature_slider_current_value, aodInitBrightBrightness.toString()),
+            value = if (aodInitBrightBrightness == FeatureSliderRules.SYSTEM_DEFAULT) {
+                FeatureSliderRules.BRIGHT_BRIGHTNESS_PREVIEW.toFloat()
+            } else aodInitBrightBrightness.toFloat(),
+            valueRange = 0f..255f,
+            steps = 254,
+            onValueChange = { onAodInitBrightBrightnessChange(it.roundToInt()) },
+            onReset = { onAodInitBrightBrightnessChange(FeatureSliderRules.SYSTEM_DEFAULT) },
             enabled = aodEnhanceEnabled,
             hasDividerAbove = true,
             hasDividerBelow = true,
         )
         SettingsDivider()
-        AodFloatSliderRow(
-            title = stringResource(
-                R.string.feature_aod_multiplier_current,
-                formatAodMultiplier(aodRunningBrightnessMultiplier),
-            ),
-            value = aodRunningBrightnessMultiplier,
-            onValueChange = onAodRunningBrightnessMultiplierChange,
+        FeatureSliderRow(
+            heading = stringResource(R.string.feature_aod_multiplier_label),
+            currentValue = if (FeatureSliderRules.normalizeMultiplier(aodRunningBrightnessMultiplier) == FeatureSliderRules.SYSTEM_DEFAULT_MULTIPLIER) {
+                stringResource(R.string.feature_slider_current_default)
+            } else stringResource(R.string.feature_slider_current_value, formatAodMultiplier(aodRunningBrightnessMultiplier)),
+            value = if (aodRunningBrightnessMultiplier == FeatureSliderRules.SYSTEM_DEFAULT_MULTIPLIER) 1f
+                else aodRunningBrightnessMultiplier,
+            valueRange = 1f..3f,
+            steps = 19,
+            onValueChange = { onAodRunningBrightnessMultiplierChange(FeatureSliderRules.multiplierFromSlider(it)) },
+            onReset = { onAodRunningBrightnessMultiplierChange(FeatureSliderRules.SYSTEM_DEFAULT_MULTIPLIER) },
             enabled = aodEnhanceEnabled,
             hasDividerAbove = true,
         )
@@ -95,72 +111,6 @@ internal fun AodFeaturesPage(
             checked = aodSingleClickBlockEnabled,
             onCheckedChange = onAodSingleClickBlockEnabledChange,
             hasDividerAbove = true,
-        )
-    }
-}
-
-@Composable
-internal fun AodIntSliderRow(
-    title: String,
-    value: Int,
-    onValueChange: (Int) -> Unit,
-    enabled: Boolean = true,
-    hasDividerAbove: Boolean = false,
-    hasDividerBelow: Boolean = false,
-) {
-    val hapticTick = rememberColorOsHapticTick()
-    ColorOsSettingsSliderRow(
-        title = title,
-        enabled = enabled,
-        hasDividerAbove = hasDividerAbove,
-        hasDividerBelow = hasDividerBelow,
-    ) {
-        FeatureSettingsSlider(
-            value = value.toFloat(),
-            onValueChange = { next ->
-                val nextValue = next.roundToInt().coerceIn(0, 255)
-                if (enabled && nextValue != value) {
-                    hapticTick()
-                    onValueChange(nextValue)
-                }
-            },
-            enabled = enabled,
-            valueRange = 0f..255f,
-            steps = 254,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-@Composable
-internal fun AodFloatSliderRow(
-    title: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    enabled: Boolean = true,
-    hasDividerAbove: Boolean = false,
-    hasDividerBelow: Boolean = false,
-) {
-    val hapticTick = rememberColorOsHapticTick()
-    ColorOsSettingsSliderRow(
-        title = title,
-        enabled = enabled,
-        hasDividerAbove = hasDividerAbove,
-        hasDividerBelow = hasDividerBelow,
-    ) {
-        FeatureSettingsSlider(
-            value = value,
-            onValueChange = { next ->
-                val nextValue = (next * 10f).roundToInt().div(10f).coerceIn(1.0f, 3.0f)
-                if (enabled && nextValue != value) {
-                    hapticTick()
-                    onValueChange(nextValue)
-                }
-            },
-            enabled = enabled,
-            valueRange = 1.0f..3.0f,
-            steps = 19,
-            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

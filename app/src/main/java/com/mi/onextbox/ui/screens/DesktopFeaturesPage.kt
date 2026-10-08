@@ -1,19 +1,21 @@
 package com.mi.onextbox.ui.screens
 
-import androidx.compose.foundation.layout.fillMaxWidth
+import android.annotation.SuppressLint
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
+import com.mi.onextbox.lsp.FeatureSliderRules
 import com.mi.onextbox.ui.common.AssistantScreenOption
-import com.mi.onextbox.ui.common.rememberColorOsHapticTick
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsSection
@@ -43,6 +45,9 @@ internal fun DesktopFeaturesPage(
     var launcherSearchBarMode by rememberSaveable {
         mutableStateOf(LspConfig.getLauncherSearchBarMode(context))
     }
+    var launcherSearchCompatibility by rememberSaveable {
+        mutableStateOf(LspConfig.isLauncherSearchCompatibilityEnabled(context))
+    }
 
     SettingsSection(title = stringResource(R.string.feature_group_minus_one))
     SettingsGroup {
@@ -71,6 +76,25 @@ internal fun DesktopFeaturesPage(
                 }
             },
             hasDividerAbove = false,
+            hasDividerBelow = true,
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = stringResource(R.string.feature_launcher_search_compatibility_title),
+            summary = stringResource(R.string.feature_launcher_search_compatibility_summary),
+            checked = launcherSearchCompatibility,
+            enabled = launcherSearchBarMode != LspConfig.LAUNCHER_SEARCH_BAR_MODE_OFF,
+            onCheckedChange = { enabled ->
+                if (launcherSearchBarMode != LspConfig.LAUNCHER_SEARCH_BAR_MODE_OFF) {
+                    launcherSearchCompatibility = enabled
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            LspConfig.setLauncherSearchCompatibilityEnabled(context, enabled)
+                        }
+                    }
+                }
+            },
+            hasDividerAbove = true,
             hasDividerBelow = false,
         )
     }
@@ -103,18 +127,30 @@ internal fun DesktopFeaturesPage(
         )
     }
 
+    SettingsSection(title = stringResource(R.string.launcher_group_pages))
+    SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.pages) }
+
     SettingsSection(title = stringResource(R.string.feature_group_recent_tasks))
     SettingsGroup {
+        LauncherFeatureRows(LauncherFeatureItems.recent, hasDividerBelow = true)
         RecentTaskRadiusRow(
             title = stringResource(R.string.feature_recent_task_radius_title),
-            summary = stringResource(R.string.feature_recent_task_radius_summary),
             checked = recentTaskRadiusEnabled,
             onCheckedChange = onRecentTaskRadiusEnabledChange,
             valueDp = recentTaskRadiusDp,
             onValueDpChange = onRecentTaskRadiusDpChange,
-            hasDividerAbove = false,
+            hasDividerAbove = true,
         )
     }
+
+    SettingsSection(title = stringResource(R.string.launcher_group_badges))
+    SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.badges) }
+
+    SettingsSection(title = stringResource(R.string.launcher_group_folder))
+    SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.folder) }
+
+    SettingsSection(title = stringResource(R.string.launcher_group_dock))
+    SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.dock) }
 }
 
 @Composable
@@ -209,42 +245,52 @@ internal fun <T> OptionDropdownRow(
 @Composable
 internal fun RecentTaskRadiusRow(
     title: String,
-    summary: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     valueDp: Int,
     onValueDpChange: (Int) -> Unit,
     hasDividerAbove: Boolean,
 ) {
-    val hapticTick = rememberColorOsHapticTick()
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val defaultRadiusDp = remember(context, configuration) { systemRecentTaskRadiusDp(context) }
+    val radiusPreference = FeatureSliderRules.normalizeRadius(valueDp)
+    val displayedRadius = if (radiusPreference == FeatureSliderRules.SYSTEM_DEFAULT) {
+        defaultRadiusDp ?: FeatureSliderRules.RECENT_RADIUS_PREVIEW_DP
+    } else valueDp
     SettingsToggleRow(
         title = title,
-        summary = summary,
+        summary = "",
         checked = checked,
         onCheckedChange = onCheckedChange,
         hasDividerAbove = hasDividerAbove,
         hasDividerBelow = true,
     )
     SettingsDivider()
-    ColorOsSettingsSliderRow(
-        title = stringResource(R.string.feature_slider_current_dp, valueDp),
+    FeatureSliderRow(
+        heading = stringResource(R.string.feature_recent_task_radius_label),
+        currentValue = if (radiusPreference == FeatureSliderRules.SYSTEM_DEFAULT) {
+            stringResource(R.string.feature_slider_current_default)
+        } else stringResource(R.string.feature_slider_current_dp, valueDp),
+        value = displayedRadius.toFloat(),
+        valueRange = 0f..260f,
+        steps = 259,
         enabled = checked,
+        onValueChange = { onValueDpChange(FeatureSliderRules.radiusFromSlider(it.roundToInt(), defaultRadiusDp)) },
+        onReset = { onValueDpChange(FeatureSliderRules.SYSTEM_DEFAULT) },
         hasDividerAbove = true,
         hasDividerBelow = false,
-    ) {
-        FeatureSettingsSlider(
-            value = valueDp.toFloat(),
-            onValueChange = { next ->
-                val nextValue = next.roundToInt().coerceIn(0, 260)
-                if (checked && nextValue != valueDp) {
-                    hapticTick()
-                    onValueDpChange(nextValue)
-                }
-            },
-            enabled = checked,
-            valueRange = 0f..260f,
-            steps = 259,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
+    )
 }
+
+@SuppressLint("DiscouragedApi")
+private fun systemRecentTaskRadiusDp(context: Context): Int? = runCatching {
+    val resources = context.packageManager.getResourcesForApplication("com.android.launcher")
+    val density = resources.displayMetrics.density
+    if (density <= 0f) return@runCatching null
+    FeatureSliderRules.recentRadiusResourceNames.firstNotNullOfOrNull { name ->
+        val id = resources.getIdentifier(name, "dimen", "com.android.launcher")
+        if (id == 0) null
+        else (resources.getDimension(id) / density).takeIf { it.isFinite() && it >= 0f }?.roundToInt()
+    }
+}.getOrNull()

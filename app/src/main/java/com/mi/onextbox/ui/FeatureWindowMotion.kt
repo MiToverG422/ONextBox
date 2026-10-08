@@ -7,7 +7,10 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -28,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -406,10 +410,8 @@ internal fun C17FeatureWindowLayer(
     } else {
         session.origin
     }
-    val sourceLeft = (sourceOrigin.left - viewportBounds.left)
-        .coerceIn(0f, viewportBounds.width)
-    val sourceTop = (sourceOrigin.top - viewportBounds.top)
-        .coerceIn(0f, viewportBounds.height)
+    val sourceLeft = sourceOrigin.left - viewportBounds.left
+    val sourceTop = sourceOrigin.top - viewportBounds.top
     val sourceWidth = sourceOrigin.width.coerceIn(1f, viewportBounds.width)
     val sourceHeight = sourceOrigin.height.coerceIn(1f, viewportBounds.height)
     val sourceCenterX = sourceLeft + sourceWidth / 2f
@@ -592,6 +594,7 @@ internal fun C17ClosingFeatureWindowLayer(
     animation: FeatureLaunchAnimation,
     viewportBounds: Rect,
     workspaceScale: Float,
+    gridPosition: Offset?,
     onFinished: suspend (FeatureLaunchAnimation) -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -616,11 +619,8 @@ internal fun C17ClosingFeatureWindowLayer(
         direction = FeatureLaunchDirection.Closing,
         motion = animation.motion,
         predictiveBackMotion = animation.predictiveBackMotion,
-        // C17 stores an immutable icon target per record, then applies the
-        // launcher's live workspace delta in the same surface transaction.
-        // Following the current workspace scale prevents an old parallel leash
-        // from ending at stale 0.9x coordinates while Main is restoring to 1x.
-        returnOrigin = animation.returnOrigin?.toReturnOrigin(
+        // Keep the return target aligned with the moving grid.
+        returnOrigin = animation.returnOrigin?.atGridPosition(gridPosition)?.toReturnOrigin(
             workspaceScale = workspaceScale,
             viewportBounds = viewportBounds,
         ),
@@ -633,6 +633,8 @@ internal fun C17ClosingFeatureWindowLayer(
 internal fun FeatureLaunchQueueHitLayer(
     origins: Map<FeaturePageMode, FeatureLaunchOrigin>,
     viewportBounds: Rect,
+    gridPosition: Offset?,
+    scrollState: ScrollState,
     onPressStart: (FeaturePageMode) -> Long,
     onPressEnd: (FeaturePageMode, Long) -> Unit,
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?, Long) -> Unit,
@@ -644,7 +646,8 @@ internal fun FeatureLaunchQueueHitLayer(
     val latestOnPressEnd by rememberUpdatedState(onPressEnd)
     val latestOnOpen by rememberUpdatedState(onOpen)
     Box(modifier = modifier.fillMaxSize()) {
-        origins.forEach { (mode, origin) ->
+        origins.forEach { (mode, cachedOrigin) ->
+            val origin = cachedOrigin.atGridPosition(gridPosition)
             val latestOrigin by rememberUpdatedState(origin)
             val restingHitWidth = origin.hitWidth.coerceAtLeast(origin.restingWidth)
             val restingHitHeight = origin.hitHeight.coerceAtLeast(origin.restingHeight)
@@ -660,10 +663,12 @@ internal fun FeatureLaunchQueueHitLayer(
                         width = with(density) { restingHitWidth.toDp() },
                         height = with(density) { restingHitHeight.toDp() },
                     )
-                    // Keep the canonical View hit rectangle fixed for the whole
-                    // gesture. Moving/shrinking this node with the workspace can
-                    // put an unchanged finger outside it between DOWN and UP,
-                    // which makes detectTapGestures cancel rapid taps.
+                    .scrollable(
+                        state = scrollState,
+                        orientation = Orientation.Vertical,
+                        reverseDirection = true,
+                    )
+                    // Hit targets follow scrolling, not workspace press scaling.
                     .pointerInput(mode) {
                         detectTapGestures(
                             onPress = {

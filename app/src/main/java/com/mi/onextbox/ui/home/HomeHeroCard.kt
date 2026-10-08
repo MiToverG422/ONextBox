@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -192,6 +193,9 @@ private fun Material3ExpressiveHomeHeroCard(
                 androidx.compose.material3.Icon(
                     imageVector = if (successful) com.mi.onextbox.ui.common.AppIcons.Check else com.mi.onextbox.ui.common.AppIcons.InfoFilled,
                     contentDescription = null,
+                    modifier = Modifier.rotate(
+                        if (rootGranted && lsposedStatus == LspStatus.MISSING_SCOPE) 180f else 0f,
+                    ),
                 )
             },
             colors = androidx.compose.material3.ListItemDefaults.colors(

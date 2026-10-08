@@ -69,8 +69,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.SolidColor
@@ -162,10 +164,12 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     SystemUiNative(true),
     SystemUiDynamicColor(true),
     SystemUiStatusBar(true),
+    SystemUiFluidCloud(true),
     SystemUiNotificationCenter(true),
     SystemUiControlCenter(true),
     SystemUiSmallWindow(true),
     SystemUiLockScreen(true),
+    SystemUiNavigationBar(true),
     NotificationRemoval(true),
     MobileNetwork,
     AndroidSystem,
@@ -173,6 +177,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Esim,
     EsimDiagnostics(true),
     AppMarket,
+    QuickAppServices,
     FileManager,
     GoogleMessages,
     SystemMessages,
@@ -203,6 +208,8 @@ data class FeatureLaunchOrigin(
     val hitWidth: Float = width,
     val hitHeight: Float = height,
     val pressScale: Float = 1f,
+    val gridLeft: Float = 0f,
+    val gridTop: Float = 0f,
 )
 
 @Composable
@@ -214,6 +221,8 @@ fun FeatureMainRoute(
     hiddenSourceModes: Set<FeaturePageMode> = emptySet(),
     externalIconScales: Map<FeaturePageMode, () -> Float> = emptyMap(),
     scrollResetKey: Int? = null,
+    externalScrollState: ScrollState? = null,
+    onGridPositionChanged: (Offset) -> Unit = {},
     onLaunchOriginChanged: (FeaturePageMode, FeatureLaunchOrigin) -> Unit = { _, _ -> },
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
 ) {
@@ -231,6 +240,7 @@ fun FeatureMainRoute(
         blurBackdrop = blurBackdrop,
         bottomContentPadding = subPageBottomExtension,
         scrollResetKey = scrollResetKey,
+        externalScrollState = externalScrollState,
         // Keep the scroll modifier/focus tree stable when the editor first receives IME focus.
         contentScrollable = true,
         scrollEntranceEnabled = !newStyleEnabled,
@@ -257,6 +267,7 @@ fun FeatureMainRoute(
                 newStyleEnabled = newStyleEnabled,
                 hiddenSourceModes = hiddenSourceModes,
                 externalIconScales = externalIconScales,
+                onGridPositionChanged = onGridPositionChanged,
                 onLaunchOriginChanged = onLaunchOriginChanged,
                 onOpen = onOpen,
             )
@@ -500,10 +511,12 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.SystemUiNative -> stringResource(R.string.feature_group_native)
     FeaturePageMode.SystemUiDynamicColor -> stringResource(R.string.feature_group_dynamic_color)
     FeaturePageMode.SystemUiStatusBar -> stringResource(R.string.feature_group_beautify)
+    FeaturePageMode.SystemUiFluidCloud -> stringResource(R.string.feature_fluid_cloud_title)
     FeaturePageMode.SystemUiNotificationCenter -> stringResource(R.string.feature_group_notification_center)
     FeaturePageMode.SystemUiControlCenter -> stringResource(R.string.feature_group_control_center)
     FeaturePageMode.SystemUiSmallWindow -> stringResource(R.string.small_window_title)
     FeaturePageMode.SystemUiLockScreen -> stringResource(R.string.keyguard_page_title)
+    FeaturePageMode.SystemUiNavigationBar -> stringResource(R.string.feature_group_navigation_bar)
     FeaturePageMode.NotificationRemoval -> stringResource(R.string.notification_removal_title)
     FeaturePageMode.MobileNetwork -> stringResource(R.string.feature_mobile_network_title)
     FeaturePageMode.AndroidSystem -> stringResource(R.string.feature_android_system_title)
@@ -511,6 +524,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Esim -> stringResource(R.string.feature_esim_title)
     FeaturePageMode.EsimDiagnostics -> stringResource(R.string.feature_group_esim_diagnostics)
     FeaturePageMode.AppMarket -> stringResource(R.string.feature_app_market_title)
+    FeaturePageMode.QuickAppServices -> stringResource(R.string.feature_quick_app_services_title)
     FeaturePageMode.FileManager -> stringResource(R.string.feature_file_manager_title)
     FeaturePageMode.GoogleMessages -> stringResource(R.string.feature_google_messages_title)
     FeaturePageMode.SystemMessages -> stringResource(R.string.feature_system_messages_title)
@@ -528,14 +542,18 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
 }
 
 private fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (mode) {
-    FeaturePageMode.Desktop -> listOf("com.android.launcher", "com.oplus.launcher", "com.coloros.launcher")
+    FeaturePageMode.Desktop -> listOf(
+        "com.android.launcher", "com.oplus.launcher", "com.coloros.launcher",
+    )
     FeaturePageMode.SystemUi,
     FeaturePageMode.SystemUiNative,
     FeaturePageMode.SystemUiDynamicColor,
     FeaturePageMode.SystemUiStatusBar,
+    FeaturePageMode.SystemUiFluidCloud,
     FeaturePageMode.SystemUiNotificationCenter,
     FeaturePageMode.SystemUiControlCenter -> listOf("com.android.systemui")
     FeaturePageMode.SystemUiLockScreen -> listOf("com.android.systemui")
+    FeaturePageMode.SystemUiNavigationBar -> listOf("android", "system", "com.android.systemui")
     FeaturePageMode.Screenshot -> listOf("android", "system", "com.oplus.screenshot")
     FeaturePageMode.ScreenRecording -> listOf("android", "system", "com.android.systemui", "com.oplus.screenrecorder")
     FeaturePageMode.NotificationRemoval -> listOf("android", "system", "com.android.systemui")
@@ -544,7 +562,10 @@ private fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (
     FeaturePageMode.Installer -> listOf("android", "system")
     FeaturePageMode.Esim -> listOf("com.oplus.euicc")
     FeaturePageMode.AppMarket -> listOf("com.heytap.market")
-    FeaturePageMode.FileManager -> listOf("com.coloros.filemanager")
+    FeaturePageMode.QuickAppServices -> listOf(
+        "com.nearme.instant.platform", "com.android.launcher", "com.coloros.assistantscreen",
+    )
+    FeaturePageMode.FileManager -> listOf("android", "system", "com.coloros.filemanager")
     FeaturePageMode.GoogleMessages -> listOf("com.google.android.apps.messaging")
     FeaturePageMode.Athena -> listOf("android", "system", "com.oplus.athena")
     FeaturePageMode.Settings,
@@ -688,6 +709,7 @@ private fun FeatureMainPage(
     newStyleEnabled: Boolean,
     hiddenSourceModes: Set<FeaturePageMode>,
     externalIconScales: Map<FeaturePageMode, () -> Float>,
+    onGridPositionChanged: (Offset) -> Unit,
     onLaunchOriginChanged: (FeaturePageMode, FeatureLaunchOrigin) -> Unit,
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
 ) {
@@ -704,11 +726,9 @@ private fun FeatureMainPage(
                 entries = entries,
                 hiddenSourceModes = hiddenSourceModes,
                 externalIconScales = externalIconScales,
+                onGridPositionChanged = onGridPositionChanged,
                 onLaunchOriginChanged = { mode, origin ->
-                    // Cache only the untransformed launcher geometry. During a
-                    // feature transition the whole workspace is scaled/blurred;
-                    // reporting those temporary bounds would move the close
-                    // endpoint and make the floating icon snap mid-rebound.
+                    // Keep icon bounds unscaled, track grid movement separately.
                     if (hiddenSourceModes.isEmpty()) {
                         onLaunchOriginChanged(mode, origin)
                     }
@@ -879,6 +899,13 @@ private fun featureMainEntries(): List<FeatureMainEntry> = buildList {
         )
         add(
             FeatureMainEntry(
+                titleRes = R.string.feature_quick_app_services_title,
+                iconPackages = listOf("com.nearme.instant.platform"),
+                pageMode = FeaturePageMode.QuickAppServices,
+            )
+        )
+        add(
+            FeatureMainEntry(
                 titleRes = R.string.feature_google_messages_title,
                 iconPackages = listOf("com.google.android.apps.messaging"),
                 pageMode = FeaturePageMode.GoogleMessages,
@@ -917,13 +944,17 @@ private fun FeatureLauncherGrid(
     entries: List<FeatureMainEntry>,
     hiddenSourceModes: Set<FeaturePageMode>,
     externalIconScales: Map<FeaturePageMode, () -> Float>,
+    onGridPositionChanged: (Offset) -> Unit,
     onLaunchOriginChanged: (FeaturePageMode, FeatureLaunchOrigin) -> Unit,
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
 ) {
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .onGloballyPositioned { coordinates ->
+                onGridPositionChanged(coordinates.localToWindow(Offset.Zero))
+            },
     ) {
         val columnCount = (maxWidth / 82.dp).toInt().coerceIn(2, 4)
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -981,25 +1012,13 @@ private fun FeatureLauncherItem(
         modifier = modifier
             .height(104.dp)
             .onGloballyPositioned { coordinates ->
-                val bounds = coordinates.boundsInWindow()
+                val bounds = coordinates.featureUnclippedBoundsInWindow()
                 launchPivotX = bounds.center.x
                 launchPivotY = bounds.center.y
                 hitLeft = bounds.left
                 hitTop = bounds.top
                 hitWidth = bounds.width
                 hitHeight = bounds.height
-                if (pressScale.value >= 0.999f && externallyPressedScale() >= 0.999f) {
-                    launchOrigin?.let { origin ->
-                        val measured = origin.copy(
-                            hitLeft = bounds.left,
-                            hitTop = bounds.top,
-                            hitWidth = bounds.width,
-                            hitHeight = bounds.height,
-                        )
-                        if (measured != origin) launchOrigin = measured
-                        onLaunchOriginChanged(entry.pageMode, measured)
-                    }
-                }
             }
             .graphicsLayer {
                 val resolvedScale = minOf(externallyPressedScale(), pressScale.value)
@@ -1048,7 +1067,7 @@ private fun FeatureLauncherItem(
         Box(
             modifier = Modifier
                 .onGloballyPositioned { coordinates ->
-                    val bounds = coordinates.boundsInWindow()
+                    val bounds = coordinates.featureUnclippedBoundsInWindow()
                     val iconInsetPx = with(density) { 4.dp.toPx() }
                     val measured = FeatureLaunchOrigin(
                         left = bounds.left + iconInsetPx,
@@ -1103,6 +1122,11 @@ private fun FeatureLauncherItem(
         )
     }
 }
+
+private fun LayoutCoordinates.featureUnclippedBoundsInWindow(): Rect = Rect(
+    localToWindow(Offset.Zero),
+    localToWindow(Offset(size.width.toFloat(), size.height.toFloat())),
+)
 
 private data class FeatureMainEntry(
     @param:StringRes val titleRes: Int,
@@ -1220,8 +1244,10 @@ private fun FeatureSubPage(
         )
         FeaturePageMode.NotificationRemoval -> NotificationRemovalPage()
         FeaturePageMode.SystemUi -> SystemUiCategoriesPage(onOpenSubPage)
+        FeaturePageMode.SystemUiFluidCloud -> Unit
         FeaturePageMode.SystemUiSmallWindow -> SmallWindowFeaturesPage()
         FeaturePageMode.SystemUiLockScreen -> KeyguardInteractionSettings()
+        FeaturePageMode.SystemUiNavigationBar -> NavigationBarFeaturesPage()
         FeaturePageMode.Screenshot -> CaptureFeaturesPage(LspConfig.KeyguardFeature.AodScreenshot)
         FeaturePageMode.ScreenRecording -> CaptureFeaturesPage(LspConfig.KeyguardFeature.ScreenOffRecording)
         FeaturePageMode.SystemUiNative,
@@ -1268,6 +1294,7 @@ private fun FeatureSubPage(
         FeaturePageMode.Esim -> EsimFeaturesPage(onOpenSubPage = onOpenSubPage)
         FeaturePageMode.EsimDiagnostics -> EsimDiagnosticsPage()
         FeaturePageMode.AppMarket -> AppMarketFeaturesPage()
+        FeaturePageMode.QuickAppServices -> QuickAppServicesFeaturesPage()
         FeaturePageMode.FileManager -> FileManagerFeaturesPage()
         FeaturePageMode.GoogleMessages -> GoogleMessagesFeaturesPage()
         FeaturePageMode.SystemMessages -> PushMonitorPage(pushMonitorRefresh)

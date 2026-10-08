@@ -29,9 +29,19 @@ internal fun SystemUiCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
                 R.string.keyguard_page_entry_summary,
             ),
             FeatureCategoryLink(
+                FeaturePageMode.SystemUiNavigationBar,
+                R.string.feature_group_navigation_bar,
+                R.string.feature_system_ui_navigation_bar_entry_summary,
+            ),
+            FeatureCategoryLink(
                 FeaturePageMode.SystemUiStatusBar,
                 R.string.feature_group_beautify,
                 R.string.feature_system_ui_status_bar_entry_summary,
+            ),
+            FeatureCategoryLink(
+                FeaturePageMode.SystemUiFluidCloud,
+                R.string.feature_fluid_cloud_title,
+                R.string.feature_fluid_cloud_entry_summary,
             ),
             FeatureCategoryLink(
                 FeaturePageMode.SystemUiNotificationCenter,

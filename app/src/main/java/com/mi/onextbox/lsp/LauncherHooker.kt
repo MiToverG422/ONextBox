@@ -18,6 +18,9 @@ object LauncherHooker {
     private const val GROUP_CARD_VIEW_CLASS =
         "com.android.launcher3.card.groupcard.GroupCardView"
     private const val BUBBLE_TEXT_VIEW_CLASS = "com.android.launcher3.BubbleTextView"
+    private const val OPLUS_BUBBLE_TEXT_VIEW_CLASS = "com.android.launcher3.OplusBubbleTextView"
+    private const val APP_WIDGET_HOST_VIEW_CLASS = "com.android.launcher3.widget.LauncherAppWidgetHostView"
+    private const val CUSTOM_APP_WIDGET_HOST_VIEW_CLASS = "com.android.launcher3.widget.CustomLauncherAppWidgetHostView"
     private const val BOTTOM_SEARCH_INJECTOR_CLASS = "com.android.launcher.bottomsearch.j"
     private const val BOTTOM_SEARCH_MANAGER_CLASS = "com.android.launcher.bottomsearch.i"
     private const val BOTTOM_SEARCH_IMPL_CLASS = "com.android.launcher.bottomsearch.e"
@@ -37,6 +40,7 @@ object LauncherHooker {
 
     private val installedHookKeys = ConcurrentHashMap.newKeySet<String>()
     private val guardedCardLabels = Collections.synchronizedMap(WeakHashMap<View, Boolean>())
+    private val titleOwnerClasses = ConcurrentHashMap<Class<*>, Boolean>()
 
     fun hook(classLoader: ClassLoader?) {
         val hideWidgetLabels = LspConfig.isLauncherHideWidgetLabelsEnabledXposed()
@@ -117,7 +121,15 @@ object LauncherHooker {
                 methodName = "setTextAlpha",
                 argument = 0f,
             )
-            hookCount += hookCardLabelTextMethods(classLoader)
+            hookCount += hookNativeWidgetLabels(classLoader)
+            hookCount += hookWidgetLabelMethods(
+                classLoader, BUBBLE_TEXT_VIEW_CLASS,
+                listOf("setTextVisibility" to false, "setTextAlpha" to 0f),
+            )
+            hookCount += hookWidgetLabelMethods(
+                classLoader, OPLUS_BUBBLE_TEXT_VIEW_CLASS,
+                listOf("setVisibility" to View.GONE, "setAlpha" to 0f, "setAlphaInner" to 0f),
+            )
 
             HookLog.i(TAG, "Widget label hook installed: $hookCount methods")
         }
@@ -234,6 +246,13 @@ object LauncherHooker {
             hookCount += hookInternationalSwitchRefresh(
                 classLoader = classLoader,
                 implementationField = implementationField,
+            )
+        }
+        if (LspConfig.isLauncherSearchCompatibilityEnabledXposed()) {
+            hookCount += LauncherSearchDeviceCompat.install(
+                classLoader,
+                selectedImplementationClass,
+                implementationField,
             )
         }
         HookLog.i(TAG, "C17 search-bar entry mode $mode installed: $hookCount methods")
@@ -505,17 +524,45 @@ object LauncherHooker {
         return handles.size
     }
 
-    private fun hookCardLabelTextMethods(classLoader: ClassLoader?): Int {
-        val labelClass = XposedHelpers.findClassIfExists(BUBBLE_TEXT_VIEW_CLASS, classLoader)
+    private fun hookNativeWidgetLabels(classLoader: ClassLoader?): Int {
+        var count = hookCardClass(
+            className = APP_WIDGET_HOST_VIEW_CLASS,
+            classLoader = classLoader,
+            methodNames = listOf("onAttachedToWindow", "setAppWidget", "endDrag"),
+        )
+        for ((methodName, argument) in listOf(
+            "hideOrShowItemTitle" to true,
+            "setSelfTitleVisible" to false,
+            "setTitleVisible" to false,
+        )) {
+            count += hookCardArgumentMethod(APP_WIDGET_HOST_VIEW_CLASS, classLoader, methodName, argument)
+        }
+        count += hookCardArgumentMethod(
+            LauncherWidgetLabelRules.BASE_WIDGET_HOST, classLoader, "titleFadeIn", 0f,
+        )
+        count += hookCardArgumentMethod(
+            CUSTOM_APP_WIDGET_HOST_VIEW_CLASS, classLoader, "notifyTextVisible", false,
+        )
+        count += hookCardClass(
+            className = CUSTOM_APP_WIDGET_HOST_VIEW_CLASS,
+            classLoader = classLoader,
+            methodNames = listOf("updateTitleText"),
+        )
+        return count
+    }
+
+    private fun hookWidgetLabelMethods(
+        classLoader: ClassLoader?,
+        className: String,
+        methods: List<Pair<String, Any>>,
+    ): Int {
+        val labelClass = XposedHelpers.findClassIfExists(className, classLoader)
             ?: run {
-                HookLog.w(TAG, "Widget label target missing: $BUBBLE_TEXT_VIEW_CLASS")
+                HookLog.w(TAG, "Widget label target missing: $className")
                 return 0
             }
-        return listOf(
-            "setTextVisibility" to false,
-            "setTextAlpha" to 0f,
-        ).sumOf { (methodName, hiddenValue) ->
-            val key = "$BUBBLE_TEXT_VIEW_CLASS#$methodName#cardLabelOnly"
+        return methods.sumOf { (methodName, hiddenValue) ->
+            val key = "$className#$methodName#widgetLabelOnly"
             if (!installedHookKeys.add(key)) return@sumOf 0
             val handles = runCatching {
                 XposedBridge.hookAllMethods(
@@ -557,9 +604,14 @@ object LauncherHooker {
     }
 
     private fun isCardLabel(label: View): Boolean {
+        if (guardedCardLabels.containsKey(label)) return true
         var ancestor = label.parent
         while (ancestor is View) {
-            if (ancestor.javaClass.name.startsWith("com.android.launcher3.card.")) {
+            val isTitleOwner = titleOwnerClasses.computeIfAbsent(ancestor.javaClass) { targetClass ->
+                val classNames = generateSequence<Class<*>>(targetClass) { it.superclass }.map { it.name }
+                LauncherWidgetLabelRules.isTitleOwner(classNames)
+            }
+            if (isTitleOwner) {
                 val ownsLabel = sequenceOf("getLauncherCardName", "getSelfTitle").any { methodName ->
                     runCatching {
                         XposedHelpers.callMethod(ancestor, methodName) === label
@@ -573,16 +625,15 @@ object LauncherHooker {
     }
 
     private fun keepCardLabelHidden(label: View) {
-        label.visibility = View.GONE
-        label.alpha = 0f
+        if (label.visibility != View.GONE) label.visibility = View.GONE
+        if (label.alpha != 0f) label.alpha = 0f
 
         val needsGuard = synchronized(guardedCardLabels) {
             guardedCardLabels.put(label, true) == null
         }
         if (!needsGuard) return
 
-        // Card titles can be restored after a drag/edit transition without going through the
-        // initial binding callbacks. Re-apply the hidden state whenever launcher lays it out.
+        // Keep widget titles hidden after dragging or editing.
         label.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
             if (view.visibility != View.GONE) view.visibility = View.GONE
             if (view.alpha != 0f) view.alpha = 0f

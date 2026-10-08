@@ -58,10 +58,10 @@ internal object AppMarketHooker {
     private const val VIEW_LAYER_WRAP_DTO_CLASS =
         "com.heytap.cdo.card.domain.dto.ViewLayerWrapDto"
     private val SEARCH_HOME_RECOMMENDATION_CODES = setOf(
-        40118, // 人气搜索 / SearchHotRankCard
-        40119, // 精品推荐 / HorizontalSmallIconAppCard
-        100004, // 热门 App 合集 / SearchHotInstallRecycleCard
-        100203, // 大家都在搜 / SearchAllLookingForCard
+        40118, // Popular searches / SearchHotRankCard
+        40119, // Featured apps / HorizontalSmallIconAppCard
+        100004, // Popular app collections / SearchHotInstallRecycleCard
+        100203, // Trending searches / SearchAllLookingForCard
     )
     private val SEARCH_RESULT_RECOMMENDATION_CODES = SEARCH_HOME_RECOMMENDATION_CODES + setOf(
         531, // SearchRecommendCard

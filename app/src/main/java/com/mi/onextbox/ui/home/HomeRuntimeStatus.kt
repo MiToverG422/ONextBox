@@ -62,16 +62,16 @@ fun rememberHomeVersionInfo(rootGranted: Boolean, refreshKey: Int = 0): HomeVers
             readCachedRootAccessInfo(context)?.managerVersion
         }
     }
+    val displayStatus = cachedDisplay?.status ?: homeLspDisplayStatus(
+        snapshot = lsposedSnapshot,
+        rootStartupPending = rootStartupPending,
+    )
     return HomeVersionInfo(
         rootManager = rootManager,
         lsposed = cachedDisplay?.frameworkVersionText ?: lsposedSnapshot.frameworkVersionText,
         lsposedModuleEnabled = lsposedSnapshot.moduleEnabled,
-        lsposedReady = cachedDisplay?.let { it.status == LspStatus.READY } ?: lsposedSnapshot.isReady,
-        lsposedStatus = cachedDisplay?.status ?: homeLspDisplayStatus(
-            status = lsposedSnapshot.status,
-            reason = lsposedSnapshot.reason,
-            rootStartupPending = rootStartupPending,
-        ),
+        lsposedReady = displayStatus == LspStatus.READY,
+        lsposedStatus = displayStatus,
         missingScopes = cachedDisplay?.missingScopes ?: lsposedSnapshot.missingScopes,
     )
 }

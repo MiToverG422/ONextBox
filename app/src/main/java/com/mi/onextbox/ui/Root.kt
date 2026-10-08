@@ -331,6 +331,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureSystemUiStatusBar : RootRoute
 
     @Serializable
+    data object FeatureSystemUiFluidCloud : RootRoute
+
+    @Serializable
     data object FeatureSystemUiNotificationCenter : RootRoute
 
     @Serializable
@@ -341,6 +344,9 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureSystemUiLockScreen : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiNavigationBar : RootRoute
 
     @Serializable
     data object FeatureNotificationRemoval : RootRoute
@@ -362,6 +368,9 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureAppMarket : RootRoute
+
+    @Serializable
+    data object FeatureQuickAppServices : RootRoute
 
     @Serializable
     data object FeatureFileManager : RootRoute
@@ -462,10 +471,12 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.SystemUiNative -> RootRoute.FeatureSystemUiNative
     FeaturePageMode.SystemUiDynamicColor -> RootRoute.FeatureSystemUiDynamicColor
     FeaturePageMode.SystemUiStatusBar -> RootRoute.FeatureSystemUiStatusBar
+    FeaturePageMode.SystemUiFluidCloud -> RootRoute.FeatureSystemUiFluidCloud
     FeaturePageMode.SystemUiNotificationCenter -> RootRoute.FeatureSystemUiNotificationCenter
     FeaturePageMode.SystemUiControlCenter -> RootRoute.FeatureSystemUiControlCenter
     FeaturePageMode.SystemUiSmallWindow -> RootRoute.FeatureSystemUiSmallWindow
     FeaturePageMode.SystemUiLockScreen -> RootRoute.FeatureSystemUiLockScreen
+    FeaturePageMode.SystemUiNavigationBar -> RootRoute.FeatureSystemUiNavigationBar
     FeaturePageMode.NotificationRemoval -> RootRoute.FeatureNotificationRemoval
     FeaturePageMode.MobileNetwork -> RootRoute.FeatureMobileNetwork
     FeaturePageMode.AndroidSystem -> RootRoute.FeatureAndroidSystem
@@ -473,6 +484,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Esim -> RootRoute.FeatureEsim
     FeaturePageMode.EsimDiagnostics -> RootRoute.FeatureEsimDiagnostics
     FeaturePageMode.AppMarket -> RootRoute.FeatureAppMarket
+    FeaturePageMode.QuickAppServices -> RootRoute.FeatureQuickAppServices
     FeaturePageMode.FileManager -> RootRoute.FeatureFileManager
     FeaturePageMode.GoogleMessages -> RootRoute.FeatureGoogleMessages
     FeaturePageMode.SystemMessages -> RootRoute.FeatureSystemMessages
@@ -952,10 +964,12 @@ fun Root(
                     subclass(RootRoute.FeatureSystemUiNative::class)
                     subclass(RootRoute.FeatureSystemUiDynamicColor::class)
                     subclass(RootRoute.FeatureSystemUiStatusBar::class)
+                    subclass(RootRoute.FeatureSystemUiFluidCloud::class)
                     subclass(RootRoute.FeatureSystemUiNotificationCenter::class)
                     subclass(RootRoute.FeatureSystemUiControlCenter::class)
                     subclass(RootRoute.FeatureSystemUiSmallWindow::class)
                     subclass(RootRoute.FeatureSystemUiLockScreen::class)
+                    subclass(RootRoute.FeatureSystemUiNavigationBar::class)
                     subclass(RootRoute.FeatureNotificationRemoval::class)
                     subclass(RootRoute.FeatureMobileNetwork::class)
                     subclass(RootRoute.FeatureAndroidSystem::class)
@@ -963,6 +977,7 @@ fun Root(
                     subclass(RootRoute.FeatureEsim::class)
                     subclass(RootRoute.FeatureEsimDiagnostics::class)
                     subclass(RootRoute.FeatureAppMarket::class)
+                    subclass(RootRoute.FeatureQuickAppServices::class)
                     subclass(RootRoute.FeatureFileManager::class)
                     subclass(RootRoute.FeatureGoogleMessages::class)
                     subclass(RootRoute.FeatureSystemMessages::class)
@@ -1027,6 +1042,8 @@ fun Root(
         var nextFeatureQueuePressToken by remember { mutableStateOf(0L) }
         var featureRouteReadySession by remember { mutableStateOf<FeatureLaunchSession?>(null) }
         val featureLauncherOrigins = remember { mutableStateMapOf<FeaturePageMode, FeatureLaunchOrigin>() }
+        var featureLauncherGridPosition by remember { mutableStateOf<Offset?>(null) }
+        val featureLauncherScrollState = rememberScrollState()
         var suppressRootTransition by remember { mutableStateOf(false) }
         val movableFeatureEntries = remember {
             FeaturePageMode.entries.associateWith { mode ->
@@ -2096,30 +2113,54 @@ fun Root(
                                             newStyleEnabled = ui.appUiStyle == AppUiStyle.ColorOs &&
                                                 ui.featurePageNewStyleEnabled,
                                             scrollResetKey = mainPagerState.scrollResetGeneration,
+                                            externalScrollState = if (
+                                                ui.appUiStyle == AppUiStyle.ColorOs && ui.featurePageNewStyleEnabled
+                                            ) featureLauncherScrollState else null,
+                                            onGridPositionChanged = { position ->
+                                                val transformActive = featureLaunchAnimation != null ||
+                                                    featurePredictiveBackMotion != null
+                                                val workspaceScale = if (transformActive) {
+                                                    val progress = featurePredictiveBackMotion?.c17WindowScale()
+                                                        ?: featureWorkspaceScaleProgress.value
+                                                    lerpFloat(1f, C17_SOURCE_SCALE, progress.coerceIn(0f, 1f))
+                                                } else {
+                                                    1f
+                                                }
+                                                featureLauncherGridPosition = unscaledFeatureGridPosition(
+                                                    position, rootViewportBounds, workspaceScale,
+                                                )
+                                            },
                                             hiddenSourceModes = ui.hiddenFeatureSourceModes,
                                             externalIconScales = ui.featureExternalIconScales,
                                             onLaunchOriginChanged = { mode, origin ->
-                                                // boundsInWindow includes the
-                                                // workspace graphics transform.
-                                                // Freeze canonical 1x source
-                                                // bounds while C17 is scaling
-                                                // the workspace; otherwise a
-                                                // parallel tap applies 0.9x a
-                                                // second time and closes toward
-                                                // the wrong icon position.
+                                                // Cache icon bounds without the workspace transform.
                                                 if (
                                                     featureLaunchAnimation == null &&
                                                     outgoingFeatureAnimations.isEmpty() &&
-                                                    featureLauncherOrigins[mode] != origin
+                                                    rootViewportBounds.width > 0f
                                                 ) {
-                                                    featureLauncherOrigins[mode] = origin
+                                                    val gridPosition = featureLauncherGridPosition ?: Offset.Zero
+                                                    val measured = origin.copy(
+                                                        gridLeft = gridPosition.x,
+                                                        gridTop = gridPosition.y,
+                                                    )
+                                                    if (featureLauncherOrigins[mode] != measured) {
+                                                        featureLauncherOrigins[mode] = measured
+                                                    }
                                                 }
                                             },
                                             onOpen = { mode, origin ->
                                                 if (ui.appUiStyle == AppUiStyle.Material3Expressive) {
                                                     actions.openFeatureSubPage(mode)
                                                 } else {
-                                                    actions.openFeatureSubPageFromMain(mode, origin)
+                                                    val gridPosition = featureLauncherGridPosition ?: Offset.Zero
+                                                    actions.openFeatureSubPageFromMain(
+                                                        mode,
+                                                        origin?.copy(
+                                                            gridLeft = gridPosition.x,
+                                                            gridTop = gridPosition.y,
+                                                        ),
+                                                    )
                                                 }
                                             },
                                         )
@@ -2177,6 +2218,9 @@ fun Root(
             entry<RootRoute.FeatureSystemUiStatusBar> {
                 featureEntryContent(FeaturePageMode.SystemUiStatusBar)
             }
+            entry<RootRoute.FeatureSystemUiFluidCloud> {
+                featureEntryContent(FeaturePageMode.SystemUiFluidCloud)
+            }
             entry<RootRoute.FeatureSystemUiNotificationCenter> {
                 featureEntryContent(FeaturePageMode.SystemUiNotificationCenter)
             }
@@ -2188,6 +2232,9 @@ fun Root(
             }
             entry<RootRoute.FeatureSystemUiLockScreen> {
                 featureEntryContent(FeaturePageMode.SystemUiLockScreen)
+            }
+            entry<RootRoute.FeatureSystemUiNavigationBar> {
+                featureEntryContent(FeaturePageMode.SystemUiNavigationBar)
             }
             entry<RootRoute.FeatureNotificationRemoval> {
                 featureEntryContent(FeaturePageMode.NotificationRemoval)
@@ -2209,6 +2256,9 @@ fun Root(
             }
             entry<RootRoute.FeatureAppMarket> {
                 featureEntryContent(FeaturePageMode.AppMarket)
+            }
+            entry<RootRoute.FeatureQuickAppServices> {
+                featureEntryContent(FeaturePageMode.QuickAppServices)
             }
             entry<RootRoute.FeatureFileManager> {
                 featureEntryContent(FeaturePageMode.FileManager)
@@ -2403,6 +2453,7 @@ fun Root(
                             animation = outgoingAnimation,
                             viewportBounds = rootViewportBounds,
                             workspaceScale = workspaceVisualScale,
+                            gridPosition = featureLauncherGridPosition,
                             onFinished = onFinished@{ finished ->
                                 if (outgoingFeatureAnimations.none { it === finished }) {
                                     return@onFinished
@@ -2427,10 +2478,12 @@ fun Root(
                         motion = activeAnimation?.motion,
                         predictiveBackMotion = activeAnimation?.predictiveBackMotion
                             ?: handFollowMotion,
-                        returnOrigin = activeAnimation?.returnOrigin?.toReturnOrigin(
-                            workspaceScale = workspaceVisualScale,
-                            viewportBounds = rootViewportBounds,
-                        ),
+                        returnOrigin = activeAnimation?.returnOrigin
+                            ?.atGridPosition(featureLauncherGridPosition)
+                            ?.toReturnOrigin(
+                                workspaceScale = workspaceVisualScale,
+                                viewportBounds = rootViewportBounds,
+                            ),
                         viewportBounds = rootViewportBounds,
                     ) {
                         movableFeatureEntries
@@ -2446,6 +2499,8 @@ fun Root(
                     FeatureLaunchQueueHitLayer(
                         origins = featureLauncherOrigins,
                         viewportBounds = rootViewportBounds,
+                        gridPosition = featureLauncherGridPosition,
+                        scrollState = featureLauncherScrollState,
                         onPressStart = { mode ->
                             // Monotonic ownership prevents a completed old leash
                             // from mistaking a newer press for its own token.

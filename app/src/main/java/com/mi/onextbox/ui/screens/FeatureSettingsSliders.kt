@@ -12,12 +12,20 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider as MaterialSlider
 import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,20 +34,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.ColorOs17SettingsSlider
 import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.LocalAppUiStyle
+import com.mi.onextbox.ui.common.rememberColorOsHapticTick
 import com.mi.onextbox.ui.settings.Material3ExpressiveAnimatedSegmentPosition
 import com.mi.onextbox.ui.settings.Material3ExpressiveInferredSegmentPosition
 import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentContentCard
 import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
+import com.mi.onextbox.ui.settings.SettingsRowTextContent
 import com.mi.onextbox.ui.settings.settingsInteractiveRowHighlight
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlin.math.roundToInt
+import kotlin.math.abs
 
 @Composable
 internal fun FeatureSettingsSlider(
@@ -49,6 +62,7 @@ internal fun FeatureSettingsSlider(
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int,
     modifier: Modifier = Modifier,
+    onValueChangeFinished: (() -> Unit)? = null,
 ) {
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         MaterialSlider(
@@ -58,6 +72,7 @@ internal fun FeatureSettingsSlider(
             valueRange = valueRange,
             steps = steps,
             modifier = modifier,
+            onValueChangeFinished = onValueChangeFinished,
         )
     } else {
         ColorOs17SettingsSlider(
@@ -67,8 +82,75 @@ internal fun FeatureSettingsSlider(
             valueRange = valueRange,
             steps = steps,
             modifier = modifier,
+            onValueChangeFinished = onValueChangeFinished,
         )
     }
+}
+
+@Composable
+internal fun FeatureSliderRow(
+    heading: String,
+    currentValue: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    enabled: Boolean,
+    onValueChange: (Float) -> Unit,
+    onReset: () -> Unit,
+    hasDividerAbove: Boolean = true,
+    hasDividerBelow: Boolean = false,
+    onValueChangeFinished: (() -> Unit)? = null,
+    resetDescription: String = stringResource(R.string.feature_slider_reset),
+) {
+    val hapticTick = rememberColorOsHapticTick()
+    ColorOsSettingsSliderRow(
+        heading = heading,
+        title = currentValue,
+        enabled = enabled,
+        hasDividerAbove = hasDividerAbove,
+        hasDividerBelow = hasDividerBelow,
+        titleAction = {
+            val tint = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                COUITheme.colorScheme.onSurfaceVariantActions
+            }
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                IconButton(onClick = onReset, enabled = enabled, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Rounded.Restore,
+                        contentDescription = resetDescription,
+                        tint = if (enabled) tint else tint.copy(alpha = 0.38f),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        },
+    ) {
+        FeatureSettingsSlider(
+            value = value.coerceIn(valueRange),
+            onValueChange = { next ->
+                val snapped = snapFeatureSliderValue(next, valueRange, steps)
+                if (enabled && abs(snapped - value) > 0.0001f) {
+                    hapticTick()
+                    onValueChange(snapped)
+                }
+            },
+            onValueChangeFinished = onValueChangeFinished,
+            enabled = enabled,
+            valueRange = valueRange,
+            steps = steps,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+internal fun snapFeatureSliderValue(value: Float, range: ClosedFloatingPointRange<Float>, steps: Int): Float {
+    val bounded = value.coerceIn(range)
+    if (steps <= 0 || range.endInclusive <= range.start) return bounded
+    val intervals = steps + 1
+    val index = ((bounded - range.start) / (range.endInclusive - range.start) * intervals).roundToInt()
+    return (range.start + (range.endInclusive - range.start) * index / intervals).coerceIn(range)
 }
 
 @Composable
@@ -77,6 +159,8 @@ internal fun ColorOsSettingsSliderRow(
     enabled: Boolean,
     hasDividerAbove: Boolean,
     hasDividerBelow: Boolean,
+    heading: String? = null,
+    titleAction: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
@@ -87,12 +171,23 @@ internal fun ColorOsSettingsSliderRow(
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                 ) {
-                    MaterialText(
-                        text = title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (enabled) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    )
+                    if (heading != null) {
+                        SettingsRowTextContent(
+                            title = heading,
+                            summary = null,
+                            enabled = enabled,
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        MaterialText(
+                            text = title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (enabled) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        titleAction?.invoke()
+                    }
                     content()
                 }
             }
@@ -114,19 +209,28 @@ internal fun ColorOsSettingsSliderRow(
                 hasDividerAbove = hasDividerAbove,
                 hasDividerBelow = hasDividerBelow,
             )
-            // Slider title inset inside a settings card.
+            // Slider title padding inside the card.
             .padding(horizontal = 16.dp),
     ) {
-        Text(
-            text = title,
-            style = COUITheme.textStyles.title3,
-            color = COUITheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Medium,
-            fontSize = 15.sp,
-            modifier = Modifier
-                .padding(top = 10.dp)
-                .graphicsLayer { alpha = titleAlpha },
-        )
+        if (heading != null) {
+            Column(Modifier.padding(top = 10.dp)) {
+                SettingsRowTextContent(title = heading, summary = null, enabled = enabled)
+            }
+        }
+        Row(
+            modifier = Modifier.padding(top = if (heading == null) 10.dp else 0.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = COUITheme.textStyles.title3,
+                color = COUITheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                modifier = Modifier.weight(1f, fill = false).graphicsLayer { alpha = titleAlpha },
+            )
+            titleAction?.invoke()
+        }
         content()
     }
 }

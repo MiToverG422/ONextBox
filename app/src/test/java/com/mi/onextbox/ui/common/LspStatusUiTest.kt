@@ -1,7 +1,9 @@
 package com.mi.onextbox.ui.common
 
 import com.mi.onextbox.R
+import com.mi.onextbox.lsp.LspModuleState
 import com.mi.onextbox.lsp.LspStatus
+import com.mi.onextbox.lsp.LsposedScopeRequester.StatusSnapshot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -13,14 +15,18 @@ class LspStatusUiTest {
     fun homepageWaitsForRootStartupInsteadOfShowingTemporaryUnknown() {
         assertEquals(
             LspStatus.CHECKING,
-            homeLspDisplayStatus(LspStatus.UNKNOWN, "root_shell_unavailable", true),
+            homeLspDisplayStatus(
+                StatusSnapshot(status = LspStatus.UNKNOWN, reason = "root_shell_unavailable"), true,
+            ),
         )
     }
 
     @Test
     fun homepageKeepsActualUnknownReasonsDuringRootStartup() {
         listOf("db_unreadable", "scopes_unavailable", "", "checking").forEach { reason ->
-            assertEquals(LspStatus.UNKNOWN, homeLspDisplayStatus(LspStatus.UNKNOWN, reason, true))
+            assertEquals(LspStatus.UNKNOWN, homeLspDisplayStatus(
+                StatusSnapshot(status = LspStatus.UNKNOWN, reason = reason), true,
+            ))
         }
     }
 
@@ -28,22 +34,81 @@ class LspStatusUiTest {
     fun homepageShowsRootShellUnknownAfterStartupCompletes() {
         assertEquals(
             LspStatus.UNKNOWN,
-            homeLspDisplayStatus(LspStatus.UNKNOWN, "root_shell_unavailable", false),
+            homeLspDisplayStatus(
+                StatusSnapshot(status = LspStatus.UNKNOWN, reason = "root_shell_unavailable"), false,
+            ),
         )
     }
 
     @Test
     fun homepageDoesNotHideVerifiedOrOtherPendingStatesDuringRootStartup() {
         LspStatus.entries.filter { it != LspStatus.UNKNOWN }.forEach { status ->
-            assertEquals(status, homeLspDisplayStatus(status, "root_shell_unavailable", true))
+            assertEquals(status, homeLspDisplayStatus(
+                StatusSnapshot(status = status, reason = "root_shell_unavailable"), true,
+            ))
         }
     }
 
     @Test
     fun homepageTemporaryRootUnknownUsesExistingCheckingPlaceholder() {
-        val displayStatus = homeLspDisplayStatus(LspStatus.UNKNOWN, "root_shell_unavailable", true)
+        val displayStatus = homeLspDisplayStatus(
+            StatusSnapshot(status = LspStatus.UNKNOWN, reason = "root_shell_unavailable"), true,
+        )
         assertEquals("—", formatLspStatusText(displayStatus, "Checking", showChecking = false))
     }
+
+    @Test
+    fun homepageShowsFrameworkVersionForLoadedOldTargetsWithoutChangingLiveStatus() {
+        val live = staleSnapshot()
+        val displayStatus = homeLspDisplayStatus(live, false)
+        assertEquals(LspStatus.READY, displayStatus)
+        assertEquals("LSPosed 2.2.0-it (7899) / API 102", formatLspStatusText(
+            displayStatus, "Ready", live.frameworkVersionText,
+        ))
+        assertEquals(LspStatus.WAITING_RESTART, live.status)
+        assertFalse(live.isReady)
+    }
+
+    @Test
+    fun homepageDoesNotHideTargetsThatHaveNeverLoaded() {
+        listOf("targets_not_loaded", "system_not_loaded", "systemui_not_loaded", "")
+            .forEach { reason ->
+                assertEquals(LspStatus.WAITING_RESTART, homeLspDisplayStatus(
+                    staleSnapshot().copy(reason = reason), false,
+                ))
+            }
+    }
+
+    @Test
+    fun staleTargetDisplayRequiresEnabledModuleConnectedFrameworkAndCompleteScopes() {
+        val stale = staleSnapshot()
+        listOf(
+            stale.copy(moduleState = LspModuleState.UNKNOWN),
+            stale.copy(moduleState = LspModuleState.DISABLED),
+            stale.copy(serviceConnected = false),
+            stale.copy(verifiedScopes = null),
+            stale.copy(verifiedScopes = emptySet()),
+            stale.copy(missingScopes = setOf("com.android.systemui")),
+        ).forEach { snapshot ->
+            assertEquals(LspStatus.WAITING_RESTART, homeLspDisplayStatus(snapshot, false))
+        }
+    }
+
+    @Test
+    fun homepageKeepsDisabledMissingScopeAndOtherStatesEvenWithAStaleReason() {
+        LspStatus.entries.filter { it != LspStatus.WAITING_RESTART }.forEach { status ->
+            assertEquals(status, homeLspDisplayStatus(staleSnapshot().copy(status = status), false))
+        }
+    }
+
+    private fun staleSnapshot() = StatusSnapshot(
+        moduleState = LspModuleState.ENABLED,
+        status = LspStatus.WAITING_RESTART,
+        serviceConnected = true,
+        frameworkVersionText = "LSPosed 2.2.0-it (7899) / API 102",
+        verifiedScopes = setOf("system", "com.android.systemui"),
+        reason = "target_stale",
+    )
 
     @Test
     fun unknownAndPendingStatesDoNotSayDisabled() {
