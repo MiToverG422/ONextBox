@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.RenderEffect
 import android.graphics.Shader
+import android.os.Build
 import android.view.View
 import com.mi.onextbox.lsp.compat.ModernReflect
 
@@ -41,6 +42,7 @@ internal class LauncherCategoryTopBlur(context: Context) : View(context) {
     }
 
     private fun applyEffect() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
         if (disabled || width <= 0 || height <= 0 ||
             appliedStart == fadeStart && appliedWidth == width && appliedHeight == height
         ) return

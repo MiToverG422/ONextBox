@@ -2,13 +2,15 @@ package com.mi.onextbox.lsp
 
 import android.app.Activity
 import android.graphics.Rect
+import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
-import android.view.WindowInsets
 import android.widget.RelativeLayout
 import android.widget.FrameLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.mi.onextbox.lsp.compat.ModernReflect
 import java.lang.reflect.Modifier
 import org.json.JSONArray
@@ -66,11 +68,11 @@ internal class LauncherCategoryPanel(
     private val layoutListener = ViewTreeObserver.OnPreDrawListener {
         if (active) runCatching {
             clampVerticalTransforms()
-            val insets = apps.rootWindowInsets
+            val insets = ViewCompat.getRootWindowInsets(apps)
             if (layoutDirty || apps.width != lastWidth || apps.height != lastHeight ||
-                (insets?.getInsets(WindowInsets.Type.statusBars())?.top ?: -1) != lastStatus ||
-                (insets?.getInsets(WindowInsets.Type.navigationBars())?.bottom ?: 0) != lastNavigation ||
-                (insets?.getInsets(WindowInsets.Type.ime())?.bottom ?: 0) != lastIme
+                (insets?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: -1) != lastStatus ||
+                (insets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0) != lastNavigation ||
+                (insets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom ?: 0) != lastIme
             ) applyLayout()
         }.onFailure { HookLog.w("LauncherCategoryPage", "Category layout unavailable", it) }
         true
@@ -144,10 +146,14 @@ internal class LauncherCategoryPanel(
         layoutDirty = true
         navigationColor = activity.window.navigationBarColor
         navigationDividerColor = activity.window.navigationBarDividerColor
-        navigationContrast = activity.window.isNavigationBarContrastEnforced
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            navigationContrast = activity.window.isNavigationBarContrastEnforced
+        }
         activity.window.navigationBarColor = android.graphics.Color.TRANSPARENT
         activity.window.navigationBarDividerColor = android.graphics.Color.TRANSPARENT
-        activity.window.isNavigationBarContrastEnforced = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            activity.window.isNavigationBarContrastEnforced = false
+        }
         ModernReflect.setObjectField(activity, "mAppsView", apps)
         ModernReflect.setObjectField(activity, "mAllAppsController", controller)
         drawerListeners.forEach { listeners().remove(it) }
@@ -165,7 +171,9 @@ internal class LauncherCategoryPanel(
         active = false
         activity.window.navigationBarColor = navigationColor
         activity.window.navigationBarDividerColor = navigationDividerColor
-        activity.window.isNavigationBarContrastEnforced = navigationContrast
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            activity.window.isNavigationBarContrastEnforced = navigationContrast
+        }
         panelListeners.forEach { listeners().remove(it) }
         drawerListeners.forEach { if (listeners().none { listener -> listener === it }) listeners().add(it) }
         apps.visibility = View.INVISIBLE
@@ -211,7 +219,9 @@ internal class LauncherCategoryPanel(
             ModernReflect.callMethod(background, "cancelFolderCloseSearchRelatedAnimAndResetToClosedState")
             ModernReflect.setObjectField(background, "mBlur", 0f)
         }
-        view("apps_view_translate")?.setRenderEffect(null)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            view("apps_view_translate")?.setRenderEffect(null)
+        }
         verticalParents.forEach { it.alpha = 1f }
         val categories = ModernReflect.callMethod(apps, "getCategoryRecyclerView") as? ViewGroup
         if (categories != null) for (index in 0 until categories.childCount) {
@@ -292,12 +302,12 @@ internal class LauncherCategoryPanel(
         layingOut = true
         try {
             applyFullLayout()
-            val insets = apps.rootWindowInsets
+            val insets = ViewCompat.getRootWindowInsets(apps)
             lastWidth = apps.width
             lastHeight = apps.height
-            lastStatus = insets?.getInsets(WindowInsets.Type.statusBars())?.top ?: -1
-            lastNavigation = insets?.getInsets(WindowInsets.Type.navigationBars())?.bottom ?: 0
-            lastIme = insets?.getInsets(WindowInsets.Type.ime())?.bottom ?: 0
+            lastStatus = insets?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: -1
+            lastNavigation = insets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
+            lastIme = insets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom ?: 0
             layoutDirty = false
         } finally { layingOut = false }
     }
@@ -357,10 +367,10 @@ internal class LauncherCategoryPanel(
             search.layoutParams = params
             ModernReflect.callMethod(search, "resetColorFilter", false)
         }
-        val insets = apps.rootWindowInsets
-        val status = insets?.getInsets(WindowInsets.Type.statusBars())?.top ?: (ModernReflect.getObjectField(apps, "mInsets") as Rect).top
-        val navigation = insets?.getInsets(WindowInsets.Type.navigationBars())?.bottom ?: 0
-        val ime = insets?.getInsets(WindowInsets.Type.ime())?.bottom ?: 0
+        val insets = ViewCompat.getRootWindowInsets(apps)
+        val status = insets?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: (ModernReflect.getObjectField(apps, "mInsets") as Rect).top
+        val navigation = insets?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
+        val ime = insets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom ?: 0
         val rootTop = windowTop(apps)
         val rowHeight = maxOf(
             dimension("all_apps_search_content_height"),

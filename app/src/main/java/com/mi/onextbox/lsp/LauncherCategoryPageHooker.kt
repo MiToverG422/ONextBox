@@ -17,7 +17,8 @@ import android.view.VelocityTracker
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
-import android.view.WindowInsets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.mi.onextbox.lsp.LauncherCategoryPageRules.Direction
 import com.mi.onextbox.lsp.LspConfig.LauncherFeature
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
@@ -873,7 +874,7 @@ internal object LauncherCategoryPageHooker {
             val location = IntArray(2)
             apps.getLocationOnScreen(location)
             val bottom = location[1] + apps.height
-            val inset = apps.rootWindowInsets?.getInsets(WindowInsets.Type.navigationBars())?.bottom ?: 0
+            val inset = ViewCompat.getRootWindowInsets(apps)?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom ?: 0
             val region = maxOf(inset, (48f * apps.resources.displayMetrics.density).toInt())
             return event.rawY >= bottom - region && event.rawY <= bottom
         }
