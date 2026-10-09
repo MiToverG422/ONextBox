@@ -15,6 +15,7 @@ ONextBox 是一款基於 Root 與 Modern Xposed 的 ColorOS 系統最佳化與�
 ![Modern Xposed](https://img.shields.io/badge/Modern_Xposed-API_102-6B8EAD?style=flat-square)
 ![Architecture](https://img.shields.io/badge/ABI-arm64--v8a-738B80?style=flat-square)
 [![License](https://img.shields.io/badge/License-GPL--3.0-877598?style=flat-square)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/MiToverG422/ONextBox/total?style=flat-square&label=Downloads&color=738B80)](https://github.com/MiToverG422/ONextBox/releases)
 
 **[📥 下載](https://github.com/MiToverG422/ONextBox/releases) · [🐛 問題回報](https://github.com/MiToverG422/ONextBox/issues) · [💬 Telegram](https://t.me/ONextBox)**
 
