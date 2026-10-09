@@ -309,7 +309,7 @@
     <string name="feature_assistant_power_title">Global custom voice assistant</string>
     <string name="feature_assistant_power_summary">Replace Xiaobu on power-key long press with the system default digital assistant on ColorOS CN, Requires a system restart</string>
     <string name="feature_assistant_native_combined_title">International smart assistant (Experimental)</string>
-    <string name="feature_assistant_native_combined_summary">Enable a custom digital assistant and gesture-bar Circle to Search through the native international ColorOS route; requires a system restart</string>
+    <string name="feature_assistant_native_combined_summary">Enable a custom digital assistant and gesture-bar Circle to Search through the native international ColorOS route, plus Lens Talk/Create on supported Google versions; requires a system restart</string>
     <string name="feature_assistant_international_power_chord_title">International power-menu shortcut (Experimental)</string>
     <string name="feature_assistant_international_power_chord_summary">When enabled, press Power and Volume Up once together to open the power menu; when disabled, retain the CN long-hold behavior. Requires a system restart</string>
 

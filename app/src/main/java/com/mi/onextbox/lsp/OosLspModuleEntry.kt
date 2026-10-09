@@ -120,7 +120,10 @@ class OosLspModuleEntry : XposedModule() {
             "com.android.permissioncontroller", "com.google.android.permissioncontroller" ->
                 PermissionUiStyleHooker.hookPermissionController(classLoader)
 
-            PACKAGE_GOOGLE_APP -> OkGoogleHotwordCompatibilityHooker.hookGoogleApp(classLoader)
+            PACKAGE_GOOGLE_APP -> {
+                OkGoogleHotwordCompatibilityHooker.hookGoogleApp(classLoader)
+                GoogleLensAiHooker.hookGoogleApp(classLoader)
+            }
             PACKAGE_GOOGLE_MESSAGES -> GoogleMessagesHooker.hook(classLoader)
             "com.heytap.mcs" -> OppoPushMonitorHooker.hook(classLoader)
             "com.oplus.screenshot" -> AodScreenshotHooker.hook(classLoader)

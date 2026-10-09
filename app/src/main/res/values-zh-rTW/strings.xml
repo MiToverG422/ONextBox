@@ -274,7 +274,7 @@
     <string name="feature_assistant_power_title">國際版自訂語音助理</string>
     <string name="feature_assistant_power_summary">攔截長按電源鍵喚醒小布助理，改為呼叫系統預設數碼助理，僅限 ColorOS CN 使用，需要重新啟動系統</string>
     <string name="feature_assistant_native_combined_title">國際版智慧助理（實驗性）</string>
-    <string name="feature_assistant_native_combined_summary">依 ColorOS 國際版原生路由啟用自訂數碼助理與手勢條長按即圈即搜，需要重新啟動系統</string>
+    <string name="feature_assistant_native_combined_summary">依 ColorOS 國際版原生路由啟用自訂數碼助理與手勢條長按即圈即搜，並在支援的 Google 版本啟用智慧鏡頭說話／建立，需要重新啟動系統</string>
     <string name="feature_assistant_international_power_chord_title">國際版關機組合鍵（實驗性）</string>
     <string name="feature_assistant_international_power_chord_summary">開啟後同時按一下電源鍵和音量增加鍵開啟關機選單；關閉後保留國行長按方式，需要重新啟動系統</string>
     <string name="feature_assistant_gesture_title">手勢條長按替換（ColorOS 16）</string>
