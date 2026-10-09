@@ -191,7 +191,9 @@ object AssistantHooker {
             installedHooks.remove(key)
             log("Failed to enable the ColorOS 17 launcher Circle to Search route", it)
         }
-        hookLauncherNativeCircleEntry(classLoader)
+        if (!HiddenNavCircleHooker.hookLauncher(classLoader)) {
+            hookLauncherNativeCircleEntry(classLoader)
+        }
     }
 
     /** Assistant availability reporting. */
@@ -342,6 +344,7 @@ object AssistantHooker {
         if (nativeCircleEnabled) {
             hookContextualSearchSystemFeature(SETTINGS_PACKAGE, classLoader)
             hookSettingsCircleToSearchFeature(classLoader)
+            HiddenNavCircleHooker.hookSettings(classLoader)
         }
         hookNativeAssistantFeatureRoute(SETTINGS_PACKAGE, classLoader)
         hookSettingsBreenoSpeechFeature(classLoader)
