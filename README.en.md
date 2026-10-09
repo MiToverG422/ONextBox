@@ -67,7 +67,7 @@ Feedback with reproduction steps, as well as code, translation, and design contr
 | 🌍 Device & regional differences | Users of different devices and regional builds are welcome to try the app and share feedback. Support depends on the device's system version, in-app guidance, and actual testing |
 | 🔑 Permissions | A working Root environment is required; hooking features also require a framework supporting **Modern Xposed API 102** |
 | 🧱 CPU architecture | Current builds target **arm64-v8a** |
-| 📦 Minimum installation version | `minSdk 28` (Android 9) is only the minimum Android version for installing the APK, not a guarantee of feature support |
+| 📦 Minimum installation version | `minSdk 35` (Android 15) is only the minimum Android version for installing the APK, not a guarantee of feature support |
 
 The primary device currently used for testing is the **OPPO Find X9 Ultra**. Results on a single device do not guarantee compatibility with other devices or OTA versions.
 
