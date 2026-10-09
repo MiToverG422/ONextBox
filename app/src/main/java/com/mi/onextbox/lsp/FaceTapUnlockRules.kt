@@ -2,7 +2,7 @@ package com.mi.onextbox.lsp
 
 /** No cached face result alone can authorize a dismiss request. All live gates must agree. */
 internal object FaceTapUnlockRules {
-    const val HOLD_TO_ENTER_MS = 600L
+    const val HOLD_TO_ENTER_MS = 120L
     data class State(
         val sessionUser: Int?,
         val currentUser: Int,

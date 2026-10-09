@@ -120,13 +120,25 @@ class FaceTapUnlockRulesTest {
         assertFalse(tap.finish(100f, 200f, 2999L, 0, true))
     }
 
-    @Test fun holdEntersAt600MillisecondsWithoutWaitingForReleaseAndOnlyOnce() {
+    @Test fun pressEntersAt120MillisecondsWithoutWaitingForReleaseAndOnlyOnce() {
         val tap = FaceTapUnlockRules.Tap(8f)
         tap.begin(100f, 200f, 1000L, 0)
-        assertFalse(tap.finishHold(1599L, 0, true))
-        assertTrue(tap.finishHold(1600L, 0, true))
-        assertFalse(tap.finishHold(1700L, 0, true))
-        assertFalse(tap.finish(100f, 200f, 1800L, 0, true))
+        assertFalse(tap.finishHold(1099L, 0, true))
+        assertFalse(tap.finishHold(1119L, 0, true))
+        assertTrue(tap.finishHold(1120L, 0, true))
+        assertFalse(tap.finishHold(1200L, 0, true))
+        assertFalse(tap.finish(100f, 200f, 1300L, 0, true))
+    }
+
+    @Test fun duplicateWindowDownCannotExtendOrRearmTheShortPress() {
+        val tap = FaceTapUnlockRules.Tap(8f)
+        tap.begin(100f, 200f, 1000L, 0, fingerArea)
+        assertTrue(tap.matchesPress(1000L))
+        assertTrue(tap.finishHold(1120L, 0, true))
+        assertTrue(tap.matchesPress(1000L))
+        assertFalse(tap.validForFeedback)
+        assertFalse(tap.finishHold(1240L, 0, true))
+        assertFalse(tap.finish(100f, 200f, 1300L, 0, true))
     }
 
     @Test fun holdCannotEnterAfterMovementCancellationUserChangeOrRevocation() {

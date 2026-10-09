@@ -21,6 +21,7 @@ internal object LauncherFeaturesHooker {
     private const val TAG = "LauncherFeatures"
 
     fun hook(classLoader: ClassLoader) {
+        LauncherRecentInteractionHooker.hook(classLoader)
         if (enabled(LauncherFeature.RightmostCategories)) LauncherCategoryPageHooker.hook(classLoader)
         if (enabled(LauncherFeature.RecentMemory)) install("memory") { hookMemory(classLoader) }
         if (enabled(LauncherFeature.OldClearButton) || enabled(LauncherFeature.HideClearButton)) {

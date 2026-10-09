@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
@@ -128,7 +129,10 @@ internal fun BootregMatteVideoPlayer(
     )
 }
 
-/** Shared-decoder video layers below and above [content], with configurable fade-in and a retained final frame. */
+/**
+ * Shared-decoder video layers below and above [content], with configurable fade-in and a retained final frame.
+ * [layerModifier] sizes the top-centered video strip independently of the full content area.
+ */
 @Composable
 internal fun BootregMatteVideoSandwich(
     @RawRes videoResId: Int,
@@ -138,6 +142,7 @@ internal fun BootregMatteVideoSandwich(
     autoPlay: Boolean = true,
     layersVisible: Boolean = true,
     fadeInDurationMillis: Int = 0,
+    layerModifier: Modifier = Modifier.fillMaxSize(),
     onFirstFrame: () -> Unit = {},
     onCompleted: () -> Unit = {},
     onError: (Throwable) -> Unit = {},
@@ -212,14 +217,16 @@ internal fun BootregMatteVideoSandwich(
         AndroidView(
             factory = { controller.normalView },
             modifier = Modifier
-                .fillMaxSize()
+                .align(Alignment.TopCenter)
+                .then(layerModifier)
                 .alpha(layerAlpha),
         )
         content()
         AndroidView(
             factory = { controller.foregroundView },
             modifier = Modifier
-                .fillMaxSize()
+                .align(Alignment.TopCenter)
+                .then(layerModifier)
                 .alpha(layerAlpha),
         )
     }
@@ -377,6 +384,7 @@ private class BootregMatteSceneController(
     }
 
     fun setPlaybackAllowed(allowed: Boolean) {
+        if (playbackAllowed == allowed) return
         playbackAllowed = allowed
         val currentPlayer = player ?: return
         if (!prepared || completed) return

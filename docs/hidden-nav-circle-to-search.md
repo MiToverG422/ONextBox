@@ -1,10 +1,13 @@
 # Hidden gesture handle Circle to Search
 
 The existing international assistant / native Circle to Search option also enables
-the hidden-handle native launcher path on the inspected OnePlus 15 CN build
-`PLK110_17.0.0.105(CN01)` (launcher 17.3.12, version code 170030012).
-Other builds retain the existing compatibility route. All reflected signatures
-are checked before installing the hooks; partial installation is rolled back.
+the hidden-handle native launcher path on compatible implementations. There are
+no system-build or launcher-version allowlists. The original implementation was
+tested on OnePlus 15 CN build `PLK110_17.0.0.105(CN01)` (launcher 17.3.12, version
+code 170030012). Other builds are attempted when the target classes and method
+signatures match; incompatible launchers retain the existing compatibility route.
+Reflected targets are checked before installing the hooks, and partial
+installation is rolled back. Obfuscated names still need updating if they change.
 
 The launcher capability predicates allow the native controller to run only when
 its live observers report gesture navigation, a hidden handle, and Circle to

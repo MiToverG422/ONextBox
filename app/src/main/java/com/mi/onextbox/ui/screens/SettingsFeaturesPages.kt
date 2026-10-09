@@ -59,6 +59,11 @@ internal fun SettingsFeaturesPage(
     extremeRefresh165Enabled: Boolean,
     onExtremeRefresh165EnabledChange: (Boolean) -> Unit,
 ) {
+    if (mode == FeaturePageMode.Settings) {
+        SettingsCategoriesPage(onOpenSubPage)
+        return
+    }
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var settingsInternationalEnabled by rememberSaveable {
@@ -66,6 +71,9 @@ internal fun SettingsFeaturesPage(
     }
     var settingsTitleCollapsed by rememberSaveable {
         mutableStateOf(LspConfig.isSettingsTitleCollapsedEnabled(context))
+    }
+    var settingsAppInfoCard by rememberSaveable {
+        mutableStateOf(LspConfig.isSettingsAppInfoCardEnabled(context))
     }
     var settingsForceAppAutoStartEnabled by rememberSaveable {
         mutableStateOf(LspConfig.isSettingsForceAppAutoStartEnabled(context))
@@ -98,9 +106,7 @@ internal fun SettingsFeaturesPage(
         mutableStateOf(LspConfig.isSettingsRestoreSmartLockEnabled(context))
     }
 
-    if (mode == FeaturePageMode.Settings) {
-        SettingsRegionCategoryEntry(onOpenSubPage)
-
+    if (mode == FeaturePageMode.SettingsAppearance) {
         SettingsSection(title = stringResource(R.string.feature_group_settings_interface))
         SettingsGroup {
             SettingsToggleRow(
@@ -115,7 +121,9 @@ internal fun SettingsFeaturesPage(
                 },
             )
         }
+    }
 
+    if (mode == FeaturePageMode.SettingsPermissions) {
         SettingsSection(title = stringResource(R.string.feature_group_developer_options))
         SettingsGroup {
             SettingsToggleRow(
@@ -125,9 +133,24 @@ internal fun SettingsFeaturesPage(
                 onCheckedChange = onPermissionMonitorVisibleChange,
             )
         }
+    }
 
+    if (mode == FeaturePageMode.SettingsApps) {
         SettingsSection(title = stringResource(R.string.feature_group_app_management))
         SettingsGroup {
+            SettingsToggleRow(
+                title = stringResource(R.string.feature_settings_app_info_card_title),
+                summary = stringResource(R.string.feature_settings_app_info_card_summary),
+                checked = settingsAppInfoCard,
+                onCheckedChange = { enabled ->
+                    settingsAppInfoCard = enabled
+                    scope.launch {
+                        withContext(Dispatchers.IO) { LspConfig.setSettingsAppInfoCardEnabled(context, enabled) }
+                    }
+                },
+                hasDividerBelow = true,
+            )
+            SettingsDivider()
             SettingsToggleRow(
                 title = stringResource(R.string.feature_settings_restore_app_open_button_title),
                 summary = stringResource(R.string.feature_settings_restore_app_open_button_summary),
@@ -140,9 +163,12 @@ internal fun SettingsFeaturesPage(
                         }
                     }
                 },
+                hasDividerAbove = true,
             )
         }
+    }
 
+    if (mode == FeaturePageMode.SettingsPermissions) {
         SettingsSection(title = stringResource(R.string.feature_group_special_permissions))
         SettingsGroup {
             SettingsToggleRow(
@@ -159,7 +185,9 @@ internal fun SettingsFeaturesPage(
                 },
             )
         }
+    }
 
+    if (mode == FeaturePageMode.SettingsAboutDevice) {
         SettingsSection(title = stringResource(R.string.feature_group_about_device))
         SettingsGroup {
             SettingsToggleRow(
@@ -176,7 +204,9 @@ internal fun SettingsFeaturesPage(
                 },
             )
         }
+    }
 
+    if (mode == FeaturePageMode.SettingsAppearance) {
         SettingsSection(title = stringResource(R.string.feature_group_screen_refresh_rate))
         SettingsGroup {
             Material3ExpressiveSegmentPosition(index = 0, count = 3) {
@@ -224,7 +254,9 @@ internal fun SettingsFeaturesPage(
                 )
             }
         }
-    } else {
+    }
+
+    if (mode == FeaturePageMode.SettingsRegion) {
         SettingsGroup {
             SettingsToggleRow(
                 title = stringResource(R.string.feature_settings_force_google_title),

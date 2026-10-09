@@ -33,8 +33,10 @@ internal object LauncherFeatureItems {
         LauncherFeatureItem(LauncherFeature.RightmostCategories, R.string.launcher_rightmost_categories, R.string.launcher_rightmost_categories_summary),
     )
     val recent = listOf(
-        LauncherFeatureItem(LauncherFeature.RecentMemory, R.string.launcher_recent_memory, R.string.launcher_recent_memory_summary),
-        LauncherFeatureItem(LauncherFeature.OldClearButton, R.string.launcher_old_clear_button, R.string.launcher_old_clear_button_summary),
+        LauncherFeatureItem(LauncherFeature.RecentMemory, R.string.launcher_recent_memory),
+        LauncherFeatureItem(LauncherFeature.DisablePreviousTaskAutoFocus, R.string.launcher_disable_previous_task_auto_focus),
+        LauncherFeatureItem(LauncherFeature.RecentIconAppDetails, R.string.launcher_recent_icon_app_details),
+        LauncherFeatureItem(LauncherFeature.OldClearButton, R.string.launcher_old_clear_button),
         LauncherFeatureItem(LauncherFeature.HideClearButton, R.string.launcher_hide_clear_button),
     )
     val badges = listOf(

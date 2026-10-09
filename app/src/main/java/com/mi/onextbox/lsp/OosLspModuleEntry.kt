@@ -40,6 +40,9 @@ class OosLspModuleEntry : XposedModule() {
             ImmersiveNavigationHooker.hook()
         }
         FrameworkHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader)
+        StatusBarScrollToTopHooker.hookSystemServer(loader)
+        BatteryOptimizationHooker.hookSystemServer(loader)
+        SystemRootDetectionHooker.hookSystemServer(loader)
         PermissionSystemHooker.hook(loader)
         NotificationRemovalHooker.hookSystemServer(loader)
         SmallWindowHooker.hookSystemServer(loader)
@@ -67,12 +70,18 @@ class OosLspModuleEntry : XposedModule() {
         val dispatchKey = "$packageName@${System.identityHashCode(classLoader)}"
         if (!dispatchedPackages.add(dispatchKey)) return
 
+        InstallerRedirectHooker.hookApp()
+
         when (packageName) {
             PACKAGE_SYSTEM_UI -> {
                 ImmersiveNavigationHooker.hook(classLoader)
                 AssistantHooker.hook(packageName, classLoader)
                 SystemUiHooker.hook(packageName, classLoader)
+                DisconnectedBluetoothIconHooker.hook(classLoader)
+                StatusBarScrollToTopHooker.hookSystemUi(classLoader)
                 FluidCloudBatteryHooker.hook(classLoader)
+                FluidCloudMaterialHooker.hook(classLoader)
+                PermanentClockSecondsHooker.hookSystemUi(classLoader)
                 SystemUiRedOneHooker.hook(classLoader)
                 NotificationRemovalHooker.hookSystemUi(classLoader)
                 SmallWindowHooker.hookSystemUi(classLoader)
@@ -87,6 +96,8 @@ class OosLspModuleEntry : XposedModule() {
                     classLoader = classLoader,
                 )
                 SettingsTitleCollapseHooker.hook(classLoader)
+                SettingsAppInfoCardHooker.hook(classLoader)
+                PermanentClockSecondsHooker.hookSettings(classLoader)
             }
 
             PACKAGE_LAUNCHER -> {
@@ -112,6 +123,12 @@ class OosLspModuleEntry : XposedModule() {
             PACKAGE_PHONE -> MobileNetworkHooker.hook(classLoader)
 
             PACKAGE_APP_MARKET -> AppMarketHooker.hook(classLoader)
+            TrafficManagementRules.PACKAGE_NAME ->
+                TrafficManagementHooker.hook(classLoader, param.applicationInfo.sourceDir)
+            "com.oplus.battery" -> {
+                BatteryCycleCountHooker.hook(classLoader)
+                BatteryOptimizationHooker.hookBattery(classLoader, param.applicationInfo.sourceDir)
+            }
 
             FileManagerCardRules.PACKAGE_NAME -> FileManagerHooker.hook(classLoader)
 

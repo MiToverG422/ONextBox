@@ -25,6 +25,7 @@ couiNavigation3 = "1.0.0"
 libsu = "6.0.0"
 hiddenApiBypass = "4.3"
 dynamicAnimation = "1.1.0"
+dexkit = "2.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -62,6 +63,7 @@ libsu-core = { module = "com.github.topjohnwu.libsu:core", version.ref = "libsu"
 libsu-service = { module = "com.github.topjohnwu.libsu:service", version.ref = "libsu" }
 hidden-api-bypass = { module = "org.lsposed.hiddenapibypass:hiddenapibypass", version.ref = "hiddenApiBypass" }
 androidx-dynamicanimation = { module = "androidx.dynamicanimation:dynamicanimation", version.ref = "dynamicAnimation" }
+dexkit = { module = "org.luckypray:dexkit", version.ref = "dexkit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

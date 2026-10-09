@@ -1,6 +1,5 @@
 package com.mi.onextbox.lsp
 
-import android.os.Build
 import com.mi.onextbox.lsp.compat.ModernHookBridge
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import io.github.libxposed.api.XposedInterface
@@ -10,17 +9,11 @@ import java.lang.reflect.Modifier
 /** Preserve the inspected CN launcher touch/animation/dispatch path when its handle is hidden. */
 internal object HiddenNavCircleHooker {
     private const val TAG = "ONextBox-HiddenNavCircle"
-    private const val VERIFIED_BUILD = "PLK110_17.0.0.105(CN01)"
 
     fun hookLauncher(loader: ClassLoader): Boolean {
-        if (Build.DISPLAY != VERIFIED_BUILD || !LspConfig.isAssistantNativeCircleEnabledXposed()) return false
+        if (!LspConfig.isAssistantNativeCircleEnabledXposed()) return false
         val handles = mutableListOf<XposedInterface.HookHandle>()
         return runCatching {
-            val activityThread = Class.forName("android.app.ActivityThread")
-            val thread = activityThread.getMethod("currentActivityThread").invoke(null)
-            val context = activityThread.getMethod("getSystemContext").invoke(thread) as android.content.Context
-            val version = context.packageManager.getPackageInfo("com.android.launcher", 0).longVersionCode
-            check(version == 170030012L) { "Unverified launcher version: $version" }
             val features = target(loader, "com.android.common.config.FeatureOption")
             val controller = target(loader, "com.android.launcher3.circlesearch.OplusHideNavHandleController")
             val instance = target(loader, controller.name + "\$INSTANCE")
@@ -56,7 +49,7 @@ internal object HiddenNavCircleHooker {
     }
 
     fun hookSettings(loader: ClassLoader) {
-        if (Build.DISPLAY != VERIFIED_BUILD || !LspConfig.isAssistantNativeCircleEnabledXposed()) return
+        if (!LspConfig.isAssistantNativeCircleEnabledXposed()) return
         val handles = mutableListOf<XposedInterface.HookHandle>()
         runCatching {
             val feature = target(loader, "com.oplus.settings.utils.CustomizeFeatureUtils")

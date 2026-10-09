@@ -1,10 +1,10 @@
 package com.mi.onextbox.lsp
-import android.os.Build
 
 import android.content.Context
 import android.graphics.Rect
 import android.graphics.PixelFormat
 import android.graphics.drawable.AnimationDrawable
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -14,7 +14,9 @@ import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
+import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernReflect as Reflect
+import java.lang.ref.WeakReference
 
 /** Native fingerprint animation, isolated from authentication. */
 internal class NativeFingerprintFeedback {
@@ -29,10 +31,24 @@ internal class NativeFingerprintFeedback {
     private var committed = false
     private var lastDiagnostic: String? = null
     private val cleanup = Runnable { cancel() }
+    private data class Prepared(val native: AnimationDrawable, val drawable: AnimationDrawable, val context: Context)
+    private var prepared: Prepared? = null
+    private var preparedFor = WeakReference<AnimationDrawable>(null)
+    val isActive: Boolean get() = animation != null
+
+    fun prepare(mech: Any) {
+        runCatching {
+            val native = Reflect.getObjectField(mech, "pressedAnimDrawable") as? AnimationDrawable ?: return
+            if (native.isRunning || preparedFor.get() === native) return
+            discardPrepared()
+            preparedFor = WeakReference(native)
+            prepared = prepareAnimation(mech, native)
+        }.onFailure { diagnoseFailure("Prepare OEM fingerprint animation failed", it) }
+    }
 
     fun release(host: FrameLayout, bounds: Rect, mech: Any): Boolean = safely {
         cancel()
-        start(host, bounds, mech)
+        start(host, bounds, mech).also { if (!it) cancel() }
     }
 
     fun commitDelay(): Long = FaceTapFeedbackRules.commitDelay(SystemClock.uptimeMillis() - startedAt)
@@ -43,21 +59,23 @@ internal class NativeFingerprintFeedback {
         if (FaceTapFeedbackRules.cancelForHide(committed, hard = false)) cancel()
     }
 
+    fun clear() {
+        cancel()
+        discardPrepared()
+    }
+
+    private fun discardPrepared() {
+        prepared?.let { stopAnimation(it.drawable) }
+        prepared = null
+        preparedFor.clear()
+    }
+
     fun cancel() {
         main.removeCallbacks(cleanup)
         val old = animation
         animation = null
         committed = false
-        // Only stop our own renderer, never the shared HAL-driven VFX controller
-        if (old?.javaClass?.name == FaceTapFeedbackRules.HY_WATER) {
-            // This COE renderer is ours, never borrowed from the HAL-driven drawable
-            runCatching {
-                Reflect.getObjectField(old, "mCoeSysEffect")?.let {
-                    Reflect.callMethod(it, "stopAllAnim")
-                    Reflect.callMethod(it, "seekAnimToEnd", "animator1")
-                }
-            }
-        }
+        stopAnimation(old)
         val ownWater = waterRenderer
         val ownHandler = waterAnimHandler
         waterRenderer = null
@@ -69,7 +87,6 @@ internal class NativeFingerprintFeedback {
                 runCatching { Reflect.callMethod(ownWater, "releaseVfxSurface") }
             }
         }
-        runCatching { old?.stop() }
         layer?.let {
             it.setImageDrawable(null)
             (it.parent as? FrameLayout)?.removeView(it)
@@ -81,55 +98,89 @@ internal class NativeFingerprintFeedback {
         startedAt = 0L
     }
 
-    private fun start(host: FrameLayout, bounds: Rect, mech: Any): Boolean {
-        if (!host.isAttachedToWindow || !host.isShown || bounds.isEmpty) return false
-        val native = Reflect.getObjectField(mech, "pressedAnimDrawable") as? AnimationDrawable ?: return false
-        // Never share a live HAL-driven animation or take over its callback/window
-        if (native.isRunning) return false
+    private fun stopAnimation(drawable: AnimationDrawable?) {
+        if (drawable?.javaClass?.name == FaceTapFeedbackRules.HY_WATER) {
+            runCatching {
+                Reflect.getObjectField(drawable, "mCoeSysEffect")?.let {
+                    Reflect.callMethod(it, "stopAllAnim")
+                    Reflect.callMethod(it, "seekAnimToEnd", "animator1")
+                    Reflect.callMethod(it, "setSurfaceControl", null)
+                }
+            }
+        }
+        runCatching { drawable?.stop() }
+    }
+
+    private fun prepareAnimation(mech: Any, native: AnimationDrawable): Prepared? {
         val className = native.javaClass.name
-        val options = Reflect.callMethod(native, "getOptions") ?: return false
+        val options = Reflect.callMethod(native, "getOptions") ?: return null
         val frames = Reflect.callMethod(options, "getFrames") as Int
         val name = Reflect.callMethod(options, "getName") as? String
         if (!FaceTapFeedbackRules.supported(className, frames, name)) {
             diagnose("Selected fingerprint animation is none or unsupported, tap unlock retained")
-            return false
+            return null
         }
         if (className == FaceTapFeedbackRules.WATER &&
-            Reflect.getObjectField(Reflect.getObjectField(native, "mKeyguardVFXController") ?: return false, "mVFXEnable") != true) return false
+            Reflect.getObjectField(Reflect.getObjectField(native, "mKeyguardVFXController") ?: return null, "mVFXEnable") != true) return null
         val duration = Reflect.callMethod(options, "getDuration") as Int
-        val speed = FaceTapFeedbackRules.speedForDuration(duration) ?: return false
+        val speed = FaceTapFeedbackRules.speedForDuration(duration) ?: return null
         val scale = Reflect.callMethod(options, "getScaleRate") as Float
-        if (!scale.isFinite() || scale <= 0f) return false
+        if (!scale.isFinite() || scale <= 0f) return null
         val copiedOptions = Reflect.newInstance(options.javaClass, frames, speed, name,
             Reflect.getObjectField(options, "mIsReverse") as Boolean)
         Reflect.callMethod(copiedOptions, "setNecessaryScale", false)
         Reflect.callMethod(copiedOptions, "setScaleRate", scale)
         Reflect.callMethod(copiedOptions, "setOnlyOneFrame", Reflect.getObjectField(options, "mOnlyOneFrame") as Boolean)
         // Use the selected drawable's user/overlay context, not the module's resources
-        val decorator = Reflect.getObjectField(native, "mDecorator") ?: return false
-        val context = Reflect.getObjectField(decorator, "mContext") as? Context ?: return false
-        val nativeIcon = Reflect.getObjectField(mech, "fpIcon") as? ImageView ?: return false
-        if (nativeIcon.measuredWidth <= 0 || nativeIcon.measuredHeight <= 0 ||
-            !nativeIcon.scaleX.isFinite() || !nativeIcon.scaleY.isFinite() ||
-            nativeIcon.scaleX <= 0f || nativeIcon.scaleY <= 0f) return false
+        val decorator = Reflect.getObjectField(native, "mDecorator") ?: return null
+        val context = Reflect.getObjectField(decorator, "mContext") as? Context ?: return null
         // Water's subclass invokes the shared keyguard controller, use the same icon frames with
         // an independent instance of its OEM VFX engine so stock hide cannot cut off our tail
         val drawableClass = if (className == FaceTapFeedbackRules.WATER)
             Reflect.findClass(FaceTapFeedbackRules.BASE, mech.javaClass.classLoader) else native.javaClass
-        val fresh = Reflect.newInstance(drawableClass, context, copiedOptions) as? AnimationDrawable ?: return false
-        // Track before further reflection so any unsupported interface also cleans the decoder
-        animation = fresh
-        if (fresh.numberOfFrames <= 0) { cancel(); return false }
-        if (className == FaceTapFeedbackRules.HY_WATER) {
-            // C17 initializes the HY renderer in loadAnimDrawables, not in its constructor
-            val nativeRenderer = requireNotNull(Reflect.getObjectField(native, "mCoeSysEffect"))
-            val ownRenderer = Reflect.newInstance(nativeRenderer.javaClass, context)
-            Reflect.setObjectField(fresh, "mCoeSysEffect", ownRenderer)
-            Reflect.setObjectField(fresh, "mContext", context)
-            Reflect.setObjectField(fresh, "mCenter", FloatArray(2))
-            Reflect.callMethod(ownRenderer, "load", "WaterRippleAnimation.coz", false, false)
-            Reflect.callMethod(ownRenderer, "setDensity", context.resources.displayMetrics.density)
+        val types = arrayOf(Context::class.java, options.javaClass)
+        val hasOwnConstructor = drawableClass.declaredConstructors.any { it.parameterTypes.contentEquals(types) }
+        val fresh = if (FaceTapFeedbackRules.needsBaseConstructor(className, hasOwnConstructor)) {
+            val base = Reflect.findClass(FaceTapFeedbackRules.BASE, mech.javaClass.classLoader)
+            val constructor = base.getDeclaredConstructor(*types).apply { isAccessible = true }
+            ModernHookRuntime.requireModule().getInvoker(constructor)
+                .newInstanceSpecial(drawableClass, context, copiedOptions)
+        } else Reflect.newInstance(drawableClass, context, copiedOptions)
+        require(fresh is AnimationDrawable)
+        try {
+            if (fresh.numberOfFrames <= 0) { stopAnimation(fresh); return null }
+            if (className == FaceTapFeedbackRules.HY_WATER) {
+                val nativeRenderer = requireNotNull(Reflect.getObjectField(native, "mCoeSysEffect"))
+                val ownRenderer = Reflect.newInstance(nativeRenderer.javaClass, context)
+                Reflect.setObjectField(fresh, "mCoeSysEffect", ownRenderer)
+                Reflect.setObjectField(fresh, "mContext", context)
+                Reflect.setObjectField(fresh, "mCenter", FloatArray(2))
+                Reflect.callMethod(ownRenderer, "load", "WaterRippleAnimation.coz", false, false)
+                Reflect.callMethod(ownRenderer, "setDensity", context.resources.displayMetrics.density)
+            }
+            return Prepared(native, fresh, context)
+        } catch (error: Throwable) {
+            stopAnimation(fresh)
+            throw error
         }
+    }
+
+    private fun start(host: FrameLayout, bounds: Rect, mech: Any): Boolean {
+        if (!host.isAttachedToWindow || !host.isShown || bounds.isEmpty) return false
+        val native = Reflect.getObjectField(mech, "pressedAnimDrawable") as? AnimationDrawable ?: return false
+        if (native.isRunning) return false
+        prepare(mech)
+        val selection = prepared?.takeIf { it.native === native } ?: return false
+        val nativeIcon = Reflect.getObjectField(mech, "fpIcon") as? ImageView ?: return false
+        if (nativeIcon.measuredWidth <= 0 || nativeIcon.measuredHeight <= 0 ||
+            !nativeIcon.scaleX.isFinite() || !nativeIcon.scaleY.isFinite() ||
+            nativeIcon.scaleX <= 0f || nativeIcon.scaleY <= 0f) return false
+        val fresh = selection.drawable
+        val context = selection.context
+        val className = native.javaClass.name
+        prepared = null
+        preparedFor.clear()
+        animation = fresh
         if (className == FaceTapFeedbackRules.HY_WATER) {
             val center = Reflect.getObjectField(fresh, "mCenter") as FloatArray
             require(center.size == 2)
@@ -225,7 +276,7 @@ internal class NativeFingerprintFeedback {
                     main.postDelayed(cleanup, FaceTapFeedbackRules.cleanupDelay(totalDuration, nativeRipple))
                 }.onFailure {
                     runCatching { cancel() }
-                    diagnose("OEM animation surface unavailable (${it.javaClass.simpleName}), tap unlock retained")
+                    diagnoseFailure("OEM animation surface unavailable, tap unlock retained", it)
                 }
                 return true
             }
@@ -239,7 +290,7 @@ internal class NativeFingerprintFeedback {
 
     private fun safely(action: () -> Boolean): Boolean = runCatching(action).getOrElse {
         runCatching { cancel() }
-        diagnose("OEM fingerprint animation unavailable (${it.javaClass.simpleName}), tap unlock retained")
+        diagnoseFailure("OEM fingerprint animation unavailable, tap unlock retained", it)
         false
     }
 
@@ -247,6 +298,14 @@ internal class NativeFingerprintFeedback {
         if (message != lastDiagnostic) {
             lastDiagnostic = message
             HookLog.i("ONextBox-FaceTap", message)
+        }
+    }
+
+    private fun diagnoseFailure(message: String, error: Throwable) {
+        val diagnostic = "$message: ${error.message}"
+        if (diagnostic != lastDiagnostic) {
+            lastDiagnostic = diagnostic
+            HookLog.w("ONextBox-FaceTap", message, error)
         }
     }
 }

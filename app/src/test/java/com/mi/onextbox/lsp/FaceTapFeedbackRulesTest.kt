@@ -32,6 +32,14 @@ class FaceTapFeedbackRulesTest {
         assertNull(FaceTapFeedbackRules.speedForDuration(16))
     }
 
+    @Test fun onlyConstructorEliminatedHyRippleUsesTheBaseConstructor() {
+        assertTrue(FaceTapFeedbackRules.needsBaseConstructor(FaceTapFeedbackRules.HY_WATER, false))
+        assertFalse(FaceTapFeedbackRules.needsBaseConstructor(FaceTapFeedbackRules.HY_WATER, true))
+        assertFalse(FaceTapFeedbackRules.needsBaseConstructor(FaceTapFeedbackRules.BASE, false))
+        assertFalse(FaceTapFeedbackRules.needsBaseConstructor(FaceTapFeedbackRules.WATER, false))
+        assertFalse(FaceTapFeedbackRules.needsBaseConstructor("future.unknown.OemDrawable", false))
+    }
+
     @Test fun queuedCommitRequiresLiveAuthenticationAndTheExactSession() {
         assertTrue(FaceTapFeedbackRules.mayCommit(0, 1000L, state, 1000L))
         assertFalse(FaceTapFeedbackRules.mayCommit(0, 1000L, null, 1000L))

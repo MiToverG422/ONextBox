@@ -22,7 +22,10 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 @Composable
-internal fun FluidCloudBatterySettingsRow(hasDividerAbove: Boolean = false) {
+internal fun FluidCloudBatterySettingsRow(
+    hasDividerAbove: Boolean = false,
+    hasDividerBelow: Boolean = false,
+) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -52,5 +55,6 @@ internal fun FluidCloudBatterySettingsRow(hasDividerAbove: Boolean = false) {
             }
         },
         hasDividerAbove = hasDividerAbove,
+        hasDividerBelow = hasDividerBelow,
     )
 }

@@ -13,6 +13,10 @@ internal object FaceTapFeedbackRules {
     fun supported(className: String, frames: Int, resourceName: String?): Boolean =
         frames > 0 && !resourceName.isNullOrBlank() && className in setOf(BASE, WATER, HY_WATER)
 
+    // C17 may remove HY's constructor and initialize it through the base constructor.
+    fun needsBaseConstructor(className: String, hasOwnConstructor: Boolean): Boolean =
+        className == HY_WATER && !hasOwnConstructor
+
     // Values from C17 OplusAnimationDrawable.Options, not guessed playback speeds
     fun speedForDuration(duration: Int): Int? = when (duration) {
         64 -> 0

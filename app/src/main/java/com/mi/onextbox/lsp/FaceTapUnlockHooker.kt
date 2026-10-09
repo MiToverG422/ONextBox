@@ -272,6 +272,8 @@ internal object FaceTapUnlockHooker {
         icon.imageTintList?.let(copy::setTintList)
         snapshot = IconSnapshot(copy, bounds, icon.display?.displayId ?: -1, metrics.widthPixels,
             metrics.heightPixels)
+        // Decode the first frame and prepare the owned renderer before an authorized press.
+        if (feedbackEnabled() && !feedback.isActive) feedback.prepare(source)
     }
 
     private fun schedule() {
@@ -299,6 +301,7 @@ internal object FaceTapUnlockHooker {
         }
         if (eligible && host != null && source != null) {
             if (snapshot == null) captureIcon(source)
+            if (feedbackEnabled() && !feedback.isActive) feedback.prepare(source)
             val saved = snapshot
             val metrics = host.resources.displayMetrics
             val native = Reflect.getObjectField(source, "fpIcon") as? ImageView
@@ -325,7 +328,7 @@ internal object FaceTapUnlockHooker {
             wake.cancelPlayback()
             removeButton()
         }
-        if (!feedbackEnabled()) feedback.cancel()
+        if (!feedbackEnabled()) feedback.clear()
         if (!enabled() || !ValueAnimator.areAnimatorsEnabled()) wake.clear()
         // Don't exhaust the ordinary grace polls at frame cadence while AOD is still exiting
         val handoffActive = wake.awaiting || wake.running
@@ -385,6 +388,7 @@ internal object FaceTapUnlockHooker {
                 if (event.pointerCount != 1 || touchObscured(event)) {
                     gesture.invalidate()
                     cancelHold()
+                    feedback.cancelUncommitted()
                 }
                 return true
             }
@@ -404,6 +408,9 @@ internal object FaceTapUnlockHooker {
             gesture.begin(event.rawX, event.rawY, event.downTime, state.currentUser, area)
             HookLog.d(TAG, "Authorized fingerprint-area press began")
             feedback.cancelUncommitted()
+            wake.clear()
+            button?.alpha = 1f
+            startFeedback()
             val expectedAt = authenticatedAt
             val expectedUser = state.currentUser
             val expectedPress = event.downTime
@@ -414,10 +421,11 @@ internal object FaceTapUnlockHooker {
                     val current = liveState()
                     if (FaceTapFeedbackRules.mayCommit(expectedUser, expectedAt, current, authenticatedAt) &&
                         gesture.finishHold(SystemClock.uptimeMillis(), current?.currentUser ?: -1, true)) {
-                        HookLog.d(TAG, "Authorized fingerprint hold committed at 600 ms")
+                        HookLog.d(TAG, "Authorized fingerprint press committed at ${FaceTapUnlockRules.HOLD_TO_ENTER_MS} ms")
                         requestDismiss(immediate = true)
                     } else {
                         gesture.invalidate()
+                        feedback.cancelUncommitted()
                         HookLog.d(TAG, "Fingerprint hold canceled, live state or contact no longer eligible")
                     }
                 }
@@ -456,6 +464,14 @@ internal object FaceTapUnlockHooker {
     private fun touchObscured(event: MotionEvent): Boolean =
         event.flags and (MotionEvent.FLAG_WINDOW_IS_OBSCURED or MotionEvent.FLAG_WINDOW_IS_PARTIALLY_OBSCURED) != 0
 
+    private fun startFeedback(): Boolean {
+        if (!feedbackEnabled()) return false
+        val host = panel.get() ?: return false
+        val saved = snapshot ?: return false
+        val source = mech.get() ?: return false
+        return feedback.release(host, saved.bounds, source)
+    }
+
     private fun requestDismiss(immediate: Boolean = false) {
         // Always re-read after the gesture/accessibility click, never use the display-time result.
         val state = liveState() ?: return
@@ -464,10 +480,9 @@ internal object FaceTapUnlockHooker {
         cancelHold()
         wake.clear()
         val expectedAt = authenticatedAt
-        val host = panel.get()
-        val saved = snapshot
-        val source = mech.get()
-        if (feedbackEnabled() && host != null && saved != null && source != null && feedback.release(host, saved.bounds, source)) {
+        // A touch already started the effect on DOWN; release must not restart its first frame.
+        // Accessibility clicks still get the same bounded feedback without a touch stream.
+        if (feedbackEnabled() && (feedback.isActive || startFeedback())) {
             if (immediate) {
                 commitDismiss(state.currentUser, expectedAt)
                 return
@@ -521,6 +536,7 @@ internal object FaceTapUnlockHooker {
         sessionUser = null
         onMain {
             cancelFeedbackAndDismiss()
+            feedback.clear()
             wake.clear()
             main.removeCallbacks(refresh)
             tap?.invalidate()
@@ -558,6 +574,7 @@ internal object FaceTapUnlockHooker {
                 sessionUser = null
                 main.post {
                     runCatching { cancelFeedbackAndDismiss() }
+                    runCatching { feedback.clear() }
                     runCatching { wake.clear() }
                     main.removeCallbacks(refresh)
                     tap?.invalidate()

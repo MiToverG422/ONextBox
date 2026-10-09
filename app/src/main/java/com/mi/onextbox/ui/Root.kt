@@ -8,9 +8,6 @@ import androidx.activity.BackEventCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -25,10 +22,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
-import androidx.navigation3.ui.NavDisplay
 import androidx.navigation3.ui.NavDisplayTransitionEffects
-import androidx.navigation3.ui.defaultPopTransitionSpec
-import androidx.navigation3.ui.defaultTransitionSpec
 import androidx.savedstate.serialization.SavedStateConfiguration
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -319,6 +313,18 @@ private sealed interface RootRoute : NavKey {
     data object FeatureDesktop : RootRoute
 
     @Serializable
+    data object FeatureDesktopLayout : RootRoute
+
+    @Serializable
+    data object FeatureDesktopIcons : RootRoute
+
+    @Serializable
+    data object FeatureDesktopRecent : RootRoute
+
+    @Serializable
+    data object FeatureDesktopPages : RootRoute
+
+    @Serializable
     data object FeatureSystemUi : RootRoute
 
     @Serializable
@@ -370,6 +376,12 @@ private sealed interface RootRoute : NavKey {
     data object FeatureAppMarket : RootRoute
 
     @Serializable
+    data object FeatureBattery : RootRoute
+
+    @Serializable
+    data object FeatureTrafficManagement : RootRoute
+
+    @Serializable
     data object FeatureQuickAppServices : RootRoute
 
     @Serializable
@@ -389,6 +401,18 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureSettingsRegion : RootRoute
+
+    @Serializable
+    data object FeatureSettingsAppearance : RootRoute
+
+    @Serializable
+    data object FeatureSettingsApps : RootRoute
+
+    @Serializable
+    data object FeatureSettingsPermissions : RootRoute
+
+    @Serializable
+    data object FeatureSettingsAboutDevice : RootRoute
 
     @Serializable
     data object FeatureSecurityPermission : RootRoute
@@ -439,34 +463,13 @@ private sealed interface RootRoute : NavKey {
     data object References : RootRoute
 }
 
-@Stable
-private class RootNavigator(
-    private val backStack: MutableList<NavKey>,
-) {
-    fun push(key: NavKey) {
-        backStack.add(key)
-    }
-
-    fun pop() {
-        if (backStack.size > 1) {
-            backStack.removeLastOrNull()
-        }
-    }
-
-    fun popUntil(predicate: (NavKey) -> Boolean) {
-        while (backStack.size > 1 && !predicate(backStack.last())) {
-            backStack.removeAt(backStack.lastIndex)
-        }
-    }
-
-    fun current(): NavKey? = backStack.lastOrNull()
-
-    fun backStackSize(): Int = backStack.size
-}
-
 private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Main -> null
     FeaturePageMode.Desktop -> RootRoute.FeatureDesktop
+    FeaturePageMode.DesktopLayout -> RootRoute.FeatureDesktopLayout
+    FeaturePageMode.DesktopIcons -> RootRoute.FeatureDesktopIcons
+    FeaturePageMode.DesktopRecent -> RootRoute.FeatureDesktopRecent
+    FeaturePageMode.DesktopPages -> RootRoute.FeatureDesktopPages
     FeaturePageMode.SystemUi -> RootRoute.FeatureSystemUi
     FeaturePageMode.SystemUiNative -> RootRoute.FeatureSystemUiNative
     FeaturePageMode.SystemUiDynamicColor -> RootRoute.FeatureSystemUiDynamicColor
@@ -484,6 +487,8 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Esim -> RootRoute.FeatureEsim
     FeaturePageMode.EsimDiagnostics -> RootRoute.FeatureEsimDiagnostics
     FeaturePageMode.AppMarket -> RootRoute.FeatureAppMarket
+    FeaturePageMode.Battery -> RootRoute.FeatureBattery
+    FeaturePageMode.TrafficManagement -> RootRoute.FeatureTrafficManagement
     FeaturePageMode.QuickAppServices -> RootRoute.FeatureQuickAppServices
     FeaturePageMode.FileManager -> RootRoute.FeatureFileManager
     FeaturePageMode.GoogleMessages -> RootRoute.FeatureGoogleMessages
@@ -491,6 +496,10 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Athena -> RootRoute.FeatureAthena
     FeaturePageMode.Settings -> RootRoute.FeatureSettings
     FeaturePageMode.SettingsRegion -> RootRoute.FeatureSettingsRegion
+    FeaturePageMode.SettingsAppearance -> RootRoute.FeatureSettingsAppearance
+    FeaturePageMode.SettingsApps -> RootRoute.FeatureSettingsApps
+    FeaturePageMode.SettingsPermissions -> RootRoute.FeatureSettingsPermissions
+    FeaturePageMode.SettingsAboutDevice -> RootRoute.FeatureSettingsAboutDevice
     FeaturePageMode.SecurityPermission -> RootRoute.FeatureSecurityPermission
     FeaturePageMode.TouchSampling -> RootRoute.FeatureTouchSampling
     FeaturePageMode.RefreshRate -> RootRoute.FeatureRefreshRate
@@ -960,6 +969,10 @@ fun Root(
                 polymorphic(NavKey::class) {
                     subclass(RootRoute.Main::class)
                     subclass(RootRoute.FeatureDesktop::class)
+                    subclass(RootRoute.FeatureDesktopLayout::class)
+                    subclass(RootRoute.FeatureDesktopIcons::class)
+                    subclass(RootRoute.FeatureDesktopRecent::class)
+                    subclass(RootRoute.FeatureDesktopPages::class)
                     subclass(RootRoute.FeatureSystemUi::class)
                     subclass(RootRoute.FeatureSystemUiNative::class)
                     subclass(RootRoute.FeatureSystemUiDynamicColor::class)
@@ -977,6 +990,8 @@ fun Root(
                     subclass(RootRoute.FeatureEsim::class)
                     subclass(RootRoute.FeatureEsimDiagnostics::class)
                     subclass(RootRoute.FeatureAppMarket::class)
+                    subclass(RootRoute.FeatureBattery::class)
+                    subclass(RootRoute.FeatureTrafficManagement::class)
                     subclass(RootRoute.FeatureQuickAppServices::class)
                     subclass(RootRoute.FeatureFileManager::class)
                     subclass(RootRoute.FeatureGoogleMessages::class)
@@ -984,6 +999,10 @@ fun Root(
                     subclass(RootRoute.FeatureAthena::class)
                     subclass(RootRoute.FeatureSettings::class)
                     subclass(RootRoute.FeatureSettingsRegion::class)
+                    subclass(RootRoute.FeatureSettingsAppearance::class)
+                    subclass(RootRoute.FeatureSettingsApps::class)
+                    subclass(RootRoute.FeatureSettingsPermissions::class)
+                    subclass(RootRoute.FeatureSettingsAboutDevice::class)
                     subclass(RootRoute.FeatureSecurityPermission::class)
                     subclass(RootRoute.FeatureTouchSampling::class)
                     subclass(RootRoute.FeatureRefreshRate::class)
@@ -1948,7 +1967,7 @@ fun Root(
             onAssistantNativeCircleEnabledChange = onAssistantNativeCircleEnabledChange,
             onBottomNavigationHeightChange = { bottomNavigationHeightPx = it },
             onHapticClick = hapticClick,
-            popRootRoute = ::popRootRoute,
+            popRootRoute = { popRootRoute() },
             popToMainRoute = ::popToMainRoute,
             openFeatureSubPage = ::openFeatureSubPage,
             openFeatureSubPageFromMain = { mode, origin ->
@@ -2206,6 +2225,18 @@ fun Root(
             entry<RootRoute.FeatureDesktop> {
                 featureEntryContent(FeaturePageMode.Desktop)
             }
+            entry<RootRoute.FeatureDesktopLayout> {
+                featureEntryContent(FeaturePageMode.DesktopLayout)
+            }
+            entry<RootRoute.FeatureDesktopIcons> {
+                featureEntryContent(FeaturePageMode.DesktopIcons)
+            }
+            entry<RootRoute.FeatureDesktopRecent> {
+                featureEntryContent(FeaturePageMode.DesktopRecent)
+            }
+            entry<RootRoute.FeatureDesktopPages> {
+                featureEntryContent(FeaturePageMode.DesktopPages)
+            }
             entry<RootRoute.FeatureSystemUi> {
                 featureEntryContent(FeaturePageMode.SystemUi)
             }
@@ -2257,6 +2288,12 @@ fun Root(
             entry<RootRoute.FeatureAppMarket> {
                 featureEntryContent(FeaturePageMode.AppMarket)
             }
+            entry<RootRoute.FeatureBattery> {
+                featureEntryContent(FeaturePageMode.Battery)
+            }
+            entry<RootRoute.FeatureTrafficManagement> {
+                featureEntryContent(FeaturePageMode.TrafficManagement)
+            }
             entry<RootRoute.FeatureQuickAppServices> {
                 featureEntryContent(FeaturePageMode.QuickAppServices)
             }
@@ -2277,6 +2314,18 @@ fun Root(
             }
             entry<RootRoute.FeatureSettingsRegion> {
                 featureEntryContent(FeaturePageMode.SettingsRegion)
+            }
+            entry<RootRoute.FeatureSettingsAppearance> {
+                featureEntryContent(FeaturePageMode.SettingsAppearance)
+            }
+            entry<RootRoute.FeatureSettingsApps> {
+                featureEntryContent(FeaturePageMode.SettingsApps)
+            }
+            entry<RootRoute.FeatureSettingsPermissions> {
+                featureEntryContent(FeaturePageMode.SettingsPermissions)
+            }
+            entry<RootRoute.FeatureSettingsAboutDevice> {
+                featureEntryContent(FeaturePageMode.SettingsAboutDevice)
             }
             entry<RootRoute.FeatureSecurityPermission> {
                 featureEntryContent(FeaturePageMode.SecurityPermission)
@@ -2327,6 +2376,7 @@ fun Root(
                 // while a nested page slides in or out.
                 enableCornerClip = appUiStyle == AppUiStyle.Material3Expressive,
                 dimAmount = 0.5f,
+                // Block only outgoing scenes; the incoming page can interrupt navigation.
                 blockInputDuringTransition = true,
                 popDirectionFollowsSwipeEdge = false,
             )
@@ -2401,7 +2451,7 @@ fun Root(
                                     .background(colors.surface),
                             )
                         }
-                        NavDisplay(
+                        RootNavDisplay(
                             entries = rootEntries,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -2416,17 +2466,8 @@ fun Root(
                                         Modifier
                                     },
                                 ),
-                            onBack = ::popRootRoute,
-                            transitionSpec = if (suppressRootTransition) {
-                                { instantRootContentTransform() }
-                            } else {
-                                defaultTransitionSpec()
-                            },
-                            popTransitionSpec = if (suppressRootTransition) {
-                                { instantRootContentTransform() }
-                            } else {
-                                defaultPopTransitionSpec()
-                            },
+                            onBack = { popRootRoute() },
+                            animate = !suppressRootTransition,
                             transitionEffects = rootTransitionEffects,
                         )
                         Box(

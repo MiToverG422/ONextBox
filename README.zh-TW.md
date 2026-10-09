@@ -186,6 +186,7 @@ chmod +x gradlew
 | [libxposed API](https://github.com/libxposed/api) | libxposed 貢獻者 · Apache-2.0 |
 | [libxposed service](https://github.com/libxposed/service) | libxposed 貢獻者 · Apache-2.0 |
 | [libsu](https://github.com/topjohnwu/libsu) | topjohnwu 及貢獻者 · Apache-2.0 |
+| [DexKit](https://github.com/LuckyPray/DexKit) | LuckyPray · LGPL-3.0 |
 | [AndroidHiddenApiBypass](https://github.com/LSPosed/AndroidHiddenApiBypass) | LSPosed 貢獻者 · Apache-2.0 |
 | [MaterialKolor](https://github.com/jordond/MaterialKolor) | jordond 及貢獻者 · MIT；Material Color Utilities 部分為 Apache-2.0 |
 | [Material Icons](https://developer.android.com/reference/kotlin/androidx/compose/material/icons/package-summary) | Google 及貢獻者 · Apache-2.0 |

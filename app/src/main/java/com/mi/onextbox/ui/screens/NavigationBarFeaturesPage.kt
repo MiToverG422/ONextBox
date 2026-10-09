@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -43,7 +44,9 @@ internal fun NavigationBarFeaturesPage() {
     var lengthDp by remember(context) { mutableStateOf(LspConfig.getNavigationHandleLengthDp(context)) }
     var opacity by remember(context) { mutableStateOf(LspConfig.getNavigationHandleOpacity(context)) }
     val configuration = LocalConfiguration.current
-    val defaultLengthDp = remember(context, configuration) { systemHandleLengthDp(context) }
+    val defaultLengthDp by produceState<Int?>(null, context, configuration) {
+        value = withContext(Dispatchers.IO) { systemHandleLengthDp(context) }
+    }
     val lengthPreference = ImmersiveNavigationRules.lengthPreferenceFromSlider(lengthDp, defaultLengthDp)
     val opacityPreference = ImmersiveNavigationRules.opacityPreferenceFromSlider(opacity)
     val displayedLength = if (lengthPreference == ImmersiveNavigationRules.SYSTEM_DEFAULT) {

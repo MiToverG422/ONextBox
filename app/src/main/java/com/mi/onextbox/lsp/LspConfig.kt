@@ -27,6 +27,26 @@ object LspConfig {
     private const val MODULE_PACKAGE = "com.mi.onextbox"
     private const val PREFS_NAME = "lsp_features"
 
+    private const val KEY_SYSTEM_ROOT_DETECTION = "system_root_detection_blocked"
+    private const val PROP_SYSTEM_ROOT_DETECTION = "oost.$KEY_SYSTEM_ROOT_DETECTION"
+    private const val PERSIST_PROP_SYSTEM_ROOT_DETECTION = "persist.sys.$PROP_SYSTEM_ROOT_DETECTION"
+    private const val SETTINGS_SYSTEM_ROOT_DETECTION = "oost_$KEY_SYSTEM_ROOT_DETECTION"
+
+    fun isSystemRootDetectionBlocked(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_SYSTEM_ROOT_DETECTION, false)
+
+    fun setSystemRootDetectionBlocked(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context, KEY_SYSTEM_ROOT_DETECTION, enabled,
+            listOf(PERSIST_PROP_SYSTEM_ROOT_DETECTION, PROP_SYSTEM_ROOT_DETECTION), SETTINGS_SYSTEM_ROOT_DETECTION,
+        )
+    }
+
+    fun isSystemRootDetectionBlockedXposed(): Boolean = readXposedBoolean(
+        PERSIST_PROP_SYSTEM_ROOT_DETECTION, PROP_SYSTEM_ROOT_DETECTION,
+        SETTINGS_SYSTEM_ROOT_DETECTION, KEY_SYSTEM_ROOT_DETECTION, false,
+    )
+
     private const val KEY_SETTINGS_TITLE_COLLAPSED = "settings_title_collapsed"
     private const val PROP_SETTINGS_TITLE_COLLAPSED = "oost.$KEY_SETTINGS_TITLE_COLLAPSED"
     private const val PERSIST_PROP_SETTINGS_TITLE_COLLAPSED = "persist.sys.$PROP_SETTINGS_TITLE_COLLAPSED"
@@ -47,6 +67,24 @@ object LspConfig {
         SETTINGS_TITLE_COLLAPSED, KEY_SETTINGS_TITLE_COLLAPSED, false,
     )
 
+    private const val KEY_SETTINGS_APP_INFO_CARD = "settings_app_info_card"
+    private const val PROP_SETTINGS_APP_INFO_CARD = "oost.$KEY_SETTINGS_APP_INFO_CARD"
+    private const val PERSIST_PROP_SETTINGS_APP_INFO_CARD = "persist.sys.$PROP_SETTINGS_APP_INFO_CARD"
+    private const val SETTINGS_APP_INFO_CARD = "oost_$KEY_SETTINGS_APP_INFO_CARD"
+
+    fun isSettingsAppInfoCardEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_SETTINGS_APP_INFO_CARD, false)
+
+    fun setSettingsAppInfoCardEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(context, KEY_SETTINGS_APP_INFO_CARD, enabled,
+            listOf(PERSIST_PROP_SETTINGS_APP_INFO_CARD, PROP_SETTINGS_APP_INFO_CARD), SETTINGS_APP_INFO_CARD)
+    }
+
+    fun isSettingsAppInfoCardEnabledXposed(): Boolean = readXposedBoolean(
+        PERSIST_PROP_SETTINGS_APP_INFO_CARD, PROP_SETTINGS_APP_INFO_CARD,
+        SETTINGS_APP_INFO_CARD, KEY_SETTINGS_APP_INFO_CARD, false,
+    )
+
     private const val KEY_FLUID_CLOUD_BATTERY = "systemui_fluid_cloud_battery"
     private const val PROP_FLUID_CLOUD_BATTERY = "oost.$KEY_FLUID_CLOUD_BATTERY"
     private const val PERSIST_PROP_FLUID_CLOUD_BATTERY = "persist.sys.$PROP_FLUID_CLOUD_BATTERY"
@@ -65,6 +103,138 @@ object LspConfig {
     fun isFluidCloudBatteryEnabledXposed(): Boolean = readXposedBoolean(
         PERSIST_PROP_FLUID_CLOUD_BATTERY, PROP_FLUID_CLOUD_BATTERY,
         SETTINGS_FLUID_CLOUD_BATTERY, KEY_FLUID_CLOUD_BATTERY, false,
+    )
+
+    private const val KEY_FLUID_CLOUD_MATERIAL = "systemui_fluid_cloud_unified_material"
+    private const val PROP_FLUID_CLOUD_MATERIAL = "oost.$KEY_FLUID_CLOUD_MATERIAL"
+    private const val PERSIST_PROP_FLUID_CLOUD_MATERIAL = "persist.sys.$PROP_FLUID_CLOUD_MATERIAL"
+    private const val SETTINGS_FLUID_CLOUD_MATERIAL = "oost_$KEY_FLUID_CLOUD_MATERIAL"
+
+    fun isFluidCloudMaterialEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_FLUID_CLOUD_MATERIAL, false)
+
+    fun setFluidCloudMaterialEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(context, KEY_FLUID_CLOUD_MATERIAL, enabled,
+            listOf(PERSIST_PROP_FLUID_CLOUD_MATERIAL, PROP_FLUID_CLOUD_MATERIAL), SETTINGS_FLUID_CLOUD_MATERIAL)
+    }
+
+    fun isFluidCloudMaterialEnabledXposed(): Boolean = readXposedBoolean(
+        PERSIST_PROP_FLUID_CLOUD_MATERIAL, PROP_FLUID_CLOUD_MATERIAL,
+        SETTINGS_FLUID_CLOUD_MATERIAL, KEY_FLUID_CLOUD_MATERIAL, false,
+    )
+
+    enum class TrafficFeature(val key: String) {
+        GoogleNetworkControl("traffic_google_network_control"),
+        OtaNetworkControl("traffic_ota_network_control"),
+        ShowPreinstalledApps("traffic_show_preinstalled_apps"),
+        BlockCloudNetworkRules("traffic_block_cloud_network_rules"),
+        ShowHiddenControls("traffic_show_hidden_controls"),
+        RoamingBackgroundMode("traffic_roaming_background_mode"),
+        RemoveDefaultLimit("traffic_remove_default_limit");
+
+        val propertyKey get() = "oost.$key"
+        val persistPropertyKey get() = "persist.sys.$propertyKey"
+        val settingsKey get() = "oost_$key"
+    }
+
+    fun isTrafficFeatureEnabled(context: Context, feature: TrafficFeature): Boolean =
+        LspPreferenceStore.readBoolean(context, feature.key, false)
+
+    fun setTrafficFeatureEnabled(context: Context, feature: TrafficFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(context, feature.key, enabled,
+            listOf(feature.persistPropertyKey, feature.propertyKey), feature.settingsKey)
+    }
+
+    fun isTrafficFeatureEnabledXposed(feature: TrafficFeature): Boolean = readXposedBoolean(
+        feature.persistPropertyKey, feature.propertyKey, feature.settingsKey, feature.key, false,
+    )
+
+    enum class BatteryFeature(val key: String) {
+        ShowCycleCount("show_battery_cycle_count"),
+        RemoveRestrictPlugin("remove_battery_restrict_plugin"),
+        RestoreDefaultWhitelist("restore_default_battery_optimization_whitelist");
+
+        val propertyKey get() = "oost.$key"
+        val persistPropertyKey get() = "persist.sys.$propertyKey"
+        val settingsKey get() = "oost_$key"
+    }
+
+    fun isBatteryFeatureEnabled(context: Context, feature: BatteryFeature): Boolean =
+        LspPreferenceStore.readBoolean(context, feature.key, false)
+
+    fun setBatteryFeatureEnabled(context: Context, feature: BatteryFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context, feature.key, enabled,
+            listOf(feature.persistPropertyKey, feature.propertyKey), feature.settingsKey,
+        )
+    }
+
+    fun isBatteryFeatureEnabledXposed(feature: BatteryFeature): Boolean = readXposedBoolean(
+        feature.persistPropertyKey, feature.propertyKey, feature.settingsKey, feature.key, false,
+    )
+
+    enum class StatusBarInteractionFeature(val key: String) {
+        DoubleTapToTop("systemui_double_tap_scroll_to_top"),
+        RemoveToTopWhitelist("systemui_scroll_to_top_whitelist_bypass");
+
+        val propertyKey get() = "oost.$key"
+        val persistPropertyKey get() = "persist.sys.$propertyKey"
+        val settingsKey get() = "oost_$key"
+    }
+
+    fun isStatusBarInteractionFeatureEnabled(context: Context, feature: StatusBarInteractionFeature): Boolean =
+        LspPreferenceStore.readBoolean(context, feature.key, false)
+
+    fun setStatusBarInteractionFeatureEnabled(context: Context, feature: StatusBarInteractionFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context, feature.key, enabled,
+            listOf(feature.persistPropertyKey, feature.propertyKey), feature.settingsKey,
+        )
+    }
+
+    fun isStatusBarInteractionFeatureEnabledXposed(feature: StatusBarInteractionFeature): Boolean = readXposedBoolean(
+        feature.persistPropertyKey, feature.propertyKey, feature.settingsKey, feature.key, false,
+    )
+
+    private const val KEY_HIDE_DISCONNECTED_BLUETOOTH = "systemui_hide_disconnected_bluetooth"
+    private const val PROP_HIDE_DISCONNECTED_BLUETOOTH = "oost.$KEY_HIDE_DISCONNECTED_BLUETOOTH"
+    private const val PERSIST_PROP_HIDE_DISCONNECTED_BLUETOOTH = "persist.sys.$PROP_HIDE_DISCONNECTED_BLUETOOTH"
+    private const val SETTINGS_HIDE_DISCONNECTED_BLUETOOTH = "oost_$KEY_HIDE_DISCONNECTED_BLUETOOTH"
+
+    fun isHideDisconnectedBluetoothEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_HIDE_DISCONNECTED_BLUETOOTH, false)
+
+    fun setHideDisconnectedBluetoothEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context, KEY_HIDE_DISCONNECTED_BLUETOOTH, enabled,
+            listOf(PERSIST_PROP_HIDE_DISCONNECTED_BLUETOOTH, PROP_HIDE_DISCONNECTED_BLUETOOTH),
+            SETTINGS_HIDE_DISCONNECTED_BLUETOOTH,
+        )
+    }
+
+    fun isHideDisconnectedBluetoothEnabledXposed(): Boolean = readXposedBoolean(
+        PERSIST_PROP_HIDE_DISCONNECTED_BLUETOOTH, PROP_HIDE_DISCONNECTED_BLUETOOTH,
+        SETTINGS_HIDE_DISCONNECTED_BLUETOOTH, KEY_HIDE_DISCONNECTED_BLUETOOTH, false,
+    )
+
+    private const val KEY_PERMANENT_CLOCK_SECONDS = "systemui_permanent_clock_seconds"
+    private const val PROP_PERMANENT_CLOCK_SECONDS = "oost.$KEY_PERMANENT_CLOCK_SECONDS"
+    private const val PERSIST_PROP_PERMANENT_CLOCK_SECONDS = "persist.sys.$PROP_PERMANENT_CLOCK_SECONDS"
+    private const val SETTINGS_PERMANENT_CLOCK_SECONDS = "oost_$KEY_PERMANENT_CLOCK_SECONDS"
+
+    fun isPermanentClockSecondsEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_PERMANENT_CLOCK_SECONDS, false)
+
+    fun setPermanentClockSecondsEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context, KEY_PERMANENT_CLOCK_SECONDS, enabled,
+            listOf(PERSIST_PROP_PERMANENT_CLOCK_SECONDS, PROP_PERMANENT_CLOCK_SECONDS), SETTINGS_PERMANENT_CLOCK_SECONDS,
+        )
+    }
+
+    fun isPermanentClockSecondsEnabledXposed(): Boolean = readXposedBoolean(
+        PERSIST_PROP_PERMANENT_CLOCK_SECONDS, PROP_PERMANENT_CLOCK_SECONDS,
+        SETTINGS_PERMANENT_CLOCK_SECONDS, KEY_PERMANENT_CLOCK_SECONDS, false,
     )
 
     private const val KEY_EXPRESS_NO_MINI_PROGRAM = "express_no_mini_program"
@@ -336,6 +506,8 @@ object LspConfig {
     enum class LauncherFeature(val key: String) {
         RightmostCategories("launcher_rightmost_categories"),
         RecentMemory("launcher_recent_memory"),
+        DisablePreviousTaskAutoFocus("launcher_disable_previous_task_auto_focus"),
+        RecentIconAppDetails("launcher_recent_icon_app_details"),
         OldClearButton("launcher_old_clear_button"),
         HideClearButton("launcher_hide_clear_button"),
         HideShortcutBadge("launcher_hide_shortcut_badge"),
@@ -496,13 +668,13 @@ object LspConfig {
         Enabled("installer_enabled"),
         Uninstall("installer_intercept_uninstall"),
         Session("installer_intercept_session_install"),
-        FixPermissions("installer_fix_permissions"),
-        FollowUninstall("installer_follow_uninstall", true);
+        InterceptSystem("installer_intercept_system", true),
+        RemoveDefaultAppPolicy("installer_remove_default_app_policy", true);
     }
 
     const val INSTALLER_PACKAGE = "installer_selected_package"
-    const val UNINSTALLER_PACKAGE = "installer_uninstaller_package"
-    private val installerTextKeys = setOf(INSTALLER_PACKAGE, UNINSTALLER_PACKAGE)
+    const val INSTALLER_SYSTEM_PACKAGE = "installer_system_package"
+    private val installerTextKeys = setOf(INSTALLER_PACKAGE, INSTALLER_SYSTEM_PACKAGE)
 
     fun isInstallerFeatureEnabled(context: Context, feature: InstallerFeature): Boolean =
         prefs(context).getBoolean(feature.key, feature.defaultValue)
@@ -528,21 +700,25 @@ object LspConfig {
         require(key in installerTextKeys && value.length <= 8192)
         require(InstallerRoutingPolicy.validPackage(value))
         val editor = prefs(context).edit().putString(key, value.trim())
-        if (key == UNINSTALLER_PACKAGE) editor.putBoolean(InstallerFeature.FollowUninstall.key, false)
         require(editor.commit())
         syncReadableState(context)
-        if (key == UNINSTALLER_PACKAGE) {
-            val flag = InstallerFeature.FollowUninstall.key
-            syncScalarState("0", listOf("persist.sys.oost.$flag", "oost.$flag"), "oost_$flag")
-        }
     }
 
     fun syncInstallerFeatures(context: Context) {
-        if (prefs(context).contains("installer_forced_components")) {
-            require(prefs(context).edit().remove("installer_forced_components").commit())
-            syncReadableState(context)
-        }
         InstallerFeature.entries.forEach { setInstallerFeatureEnabled(context, it, isInstallerFeatureEnabled(context, it)) }
+        runCatching {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(
+                android.net.Uri.parse("content://onextbox/choice.apk"), InstallerRoutingPolicy.APK_TYPE)
+            val systemPackage = context.packageManager.queryIntentActivities(intent,
+                android.content.pm.PackageManager.MATCH_ALL or android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                .firstOrNull {
+                    it.activityInfo.exported && it.activityInfo.enabled && it.activityInfo.applicationInfo.enabled &&
+                        it.activityInfo.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0
+                }?.activityInfo?.packageName.orEmpty()
+            if (installerText(context, INSTALLER_SYSTEM_PACKAGE) != systemPackage) {
+                setInstallerText(context, INSTALLER_SYSTEM_PACKAGE, systemPackage)
+            }
+        }.onFailure { HookLog.w("ONextBox-Installer", "System installer discovery failed", it) }
     }
 
     private const val KEY_NATIVE_NOTIFY_ICON = "native_notify_icon_enabled"
@@ -2420,8 +2596,16 @@ object LspConfig {
             setNavigationHandleOpacity(context, ImmersiveNavigationRules.SYSTEM_DEFAULT)
             setNavigationHandleAutoHideEnabled(context, false)
             setSettingsTitleCollapsedEnabled(context, false)
+            setSettingsAppInfoCardEnabled(context, false)
+            setSystemRootDetectionBlocked(context, false)
             setExpressNoMiniProgramEnabled(context, false)
             setFluidCloudBatteryEnabled(context, false)
+            setFluidCloudMaterialEnabled(context, false)
+            setHideDisconnectedBluetoothEnabled(context, false)
+            StatusBarInteractionFeature.entries.forEach { setStatusBarInteractionFeatureEnabled(context, it, false) }
+            BatteryFeature.entries.forEach { setBatteryFeatureEnabled(context, it, false) }
+            TrafficFeature.entries.forEach { setTrafficFeatureEnabled(context, it, false) }
+            setPermanentClockSecondsEnabled(context, false)
             SmallWindowFeature.entries.forEach { setSmallWindowFeatureEnabled(context, it, false) }
             LauncherFeature.entries.forEach { setLauncherFeatureEnabled(context, it, false) }
             KeyguardFeature.entries.forEach { setKeyguardFeatureEnabled(context, it, false) }
@@ -2700,9 +2884,19 @@ object LspConfig {
         )
         syncPermissionFeatures(context)
         syncScalarState(
+            value = if (isSystemRootDetectionBlocked(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_SYSTEM_ROOT_DETECTION, PROP_SYSTEM_ROOT_DETECTION),
+            settingsGlobalKey = SETTINGS_SYSTEM_ROOT_DETECTION,
+        )
+        syncScalarState(
             value = if (isSettingsTitleCollapsedEnabled(context)) "1" else "0",
             propertyKeys = listOf(PERSIST_PROP_SETTINGS_TITLE_COLLAPSED, PROP_SETTINGS_TITLE_COLLAPSED),
             settingsGlobalKey = SETTINGS_TITLE_COLLAPSED,
+        )
+        syncScalarState(
+            value = if (isSettingsAppInfoCardEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_SETTINGS_APP_INFO_CARD, PROP_SETTINGS_APP_INFO_CARD),
+            settingsGlobalKey = SETTINGS_APP_INFO_CARD,
         )
         syncScalarState(
             value = if (isExpressNoMiniProgramEnabled(context)) "1" else "0",
@@ -2716,7 +2910,43 @@ object LspConfig {
             propertyKeys = listOf(PERSIST_PROP_FLUID_CLOUD_BATTERY, PROP_FLUID_CLOUD_BATTERY),
             settingsGlobalKey = SETTINGS_FLUID_CLOUD_BATTERY,
         )
+        syncScalarState(
+            value = if (isFluidCloudMaterialEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_FLUID_CLOUD_MATERIAL, PROP_FLUID_CLOUD_MATERIAL),
+            settingsGlobalKey = SETTINGS_FLUID_CLOUD_MATERIAL,
+        )
+        syncScalarState(
+            value = if (isHideDisconnectedBluetoothEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_HIDE_DISCONNECTED_BLUETOOTH, PROP_HIDE_DISCONNECTED_BLUETOOTH),
+            settingsGlobalKey = SETTINGS_HIDE_DISCONNECTED_BLUETOOTH,
+        )
         syncKeyguardFeatures(context)
+        TrafficFeature.entries.forEach { feature ->
+            syncScalarState(
+                value = if (isTrafficFeatureEnabled(context, feature)) "1" else "0",
+                propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
+                settingsGlobalKey = feature.settingsKey,
+            )
+        }
+        BatteryFeature.entries.forEach { feature ->
+            syncScalarState(
+                value = if (isBatteryFeatureEnabled(context, feature)) "1" else "0",
+                propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
+                settingsGlobalKey = feature.settingsKey,
+            )
+        }
+        StatusBarInteractionFeature.entries.forEach { feature ->
+            syncScalarState(
+                value = if (isStatusBarInteractionFeatureEnabled(context, feature)) "1" else "0",
+                propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
+                settingsGlobalKey = feature.settingsKey,
+            )
+        }
+        syncScalarState(
+            value = if (isPermanentClockSecondsEnabled(context)) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_PERMANENT_CLOCK_SECONDS, PROP_PERMANENT_CLOCK_SECONDS),
+            settingsGlobalKey = SETTINGS_PERMANENT_CLOCK_SECONDS,
+        )
         syncNotificationRemovalFeatures(context)
         syncInstallerFeatures(context)
         syncFlagState(

@@ -108,7 +108,11 @@ android {
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasExternalReleaseSigning) {
+                signingConfigs.getByName("ciRelease")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -237,6 +241,7 @@ dependencies {
 
     // LSPosed ecosystem utility
     implementation(libs.hidden.api.bypass)
+    implementation(libs.dexkit)
     // Modern Xposed API is supplied by the framework in hooked processes.
     compileOnly(libs.libxposed.api)
     // Module-app communication for modern remote preferences.

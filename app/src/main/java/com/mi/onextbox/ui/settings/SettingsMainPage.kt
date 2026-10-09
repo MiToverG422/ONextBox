@@ -163,6 +163,7 @@ private const val GITHUB_PROFILE_URL = "https://github.com/MiToverG422"
 private const val SUQI8_PROFILE_URL = "https://github.com/suqi8"
 private const val COLORLARIS_PROFILE_URL = "https://github.com/Colorlaris"
 private const val ROVE24_PROFILE_URL = "https://github.com/Rove24"
+private const val ZOPULUS_PROFILE_URL = "https://github.com/zopulus"
 private const val GITHUB_REPOSITORY_URL = "https://github.com/MiToverG422/ONextBox"
 private const val TELEGRAM_CHANNEL_URL = "https://t.me/ONextBox"
 private const val SOFTWARE_UPDATE_CHECK_DELAY_MS = 2_000L
@@ -171,6 +172,7 @@ private val SoftwareUpdateVersionInfoExtraHorizontalPadding = 20.dp
 private const val MITOVERG_AVATAR_URL = "https://github.com/MiToverG422.png?size=160"
 private const val COLORLARIS_AVATAR_URL = "https://github.com/Colorlaris.png?size=160"
 private const val ROVE24_AVATAR_URL = "https://github.com/Rove24.png?size=160"
+private const val ZOPULUS_AVATAR_URL = "https://github.com/zopulus.png?size=160"
 private const val COUI_REPOSITORY_URL = "https://github.com/suqi8/coui"
 private const val MIUIX_REPOSITORY_URL = "https://github.com/compose-miuix-ui/miuix"
 private const val OSHIN_REPOSITORY_URL = "https://github.com/suqi8/OShin"
@@ -1683,6 +1685,12 @@ fun AboutContributorsPage() {
             url = ROVE24_PROFILE_URL,
             leadingContent = { GitHubAuthorAvatar(ROVE24_AVATAR_URL) },
         ),
+        AboutLinkItem(
+            titleRes = R.string.about_contributor_zopulus_title,
+            summaryRes = R.string.about_contributor_zopulus_summary,
+            url = ZOPULUS_PROFILE_URL,
+            leadingContent = { GitHubAuthorAvatar(ZOPULUS_AVATAR_URL) },
+        ),
     )
     AboutLinkGroup(items = items)
 }
@@ -1734,6 +1742,11 @@ fun AboutReferencesPage() {
         ),
     )
     val libraries = listOf(
+        AboutLinkItem(
+            titleRes = R.string.about_reference_dexkit_title,
+            summaryRes = R.string.about_reference_dexkit_summary,
+            url = "https://github.com/LuckyPray/DexKit",
+        ),
         AboutLinkItem(
             titleRes = R.string.about_reference_libsu_title,
             summaryRes = R.string.about_reference_libsu_summary,

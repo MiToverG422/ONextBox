@@ -108,15 +108,102 @@ class LauncherSearchRecoveryTest {
     }
 
     @Test
-    fun internationalSupportIncludesTabletsAndFoldedPhones() {
+    fun internationalSupportIncludesTabletsAndBothFoldableScreens() {
         for (foldScreen in listOf(false, true)) {
             for (tablet in listOf(false, true)) {
-                for (folded in listOf(false, true)) {
-                    val supported = LauncherSearchRecoveryRules.supportsInternationalDevice(foldScreen, tablet, folded)
-                    if (tablet || (foldScreen && folded)) assertTrue(supported) else assertFalse(supported)
+                val supported = LauncherSearchRecoveryRules.supportsInternationalDevice(foldScreen, tablet)
+                assertEquals(tablet || foldScreen, supported)
+            }
+        }
+    }
+
+    @Test
+    fun unfoldedColdStartDoesNotDependOnAnEarlierCoverLayout() {
+        assertTrue(LauncherSearchRecoveryRules.supportsInternationalDevice(foldScreen = true, tablet = false))
+        val state = LauncherSearchRecovery()
+        assertFalse(state.isStable(inner))
+        assertTrue(state.isStable(inner))
+        assertTrue(LauncherSearchPage(true, false, true, true).canRebind)
+    }
+
+    @Test
+    fun internationalLandscapeSupportsFoldablesWithoutUnlockingOtherModesOrPhones() {
+        for (foldScreen in listOf(false, true)) {
+            for (tablet in listOf(false, true)) {
+                for (landscape in listOf(false, true)) {
+                    for (drawerOrStandard in listOf(false, true)) {
+                        assertEquals(
+                            (foldScreen || tablet) && landscape && drawerOrStandard,
+                            LauncherSearchRecoveryRules.supportsInternationalLayout(
+                                foldScreen, tablet, landscape, drawerOrStandard,
+                            ),
+                        )
+                    }
                 }
             }
         }
+    }
+
+    @Test
+    fun pageRulesOnlyRebindOnResumedSettledHome() {
+        for (resumed in listOf(false, true)) {
+            for (transitioning in listOf(false, true)) {
+                for (normal in listOf(false, true)) {
+                    for (hotseatVisible in listOf(false, true)) {
+                        val page = LauncherSearchPage(resumed, transitioning, normal, hotseatVisible)
+                        assertEquals(resumed && !transitioning && normal, page.canRebind)
+                        assertEquals(!resumed || (!transitioning && !hotseatVisible), page.hideBoundView)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun drawerRoundTripUsesNativeAnimationThenSettledVisibility() {
+        val home = LauncherSearchPage(true, false, true, true)
+        val entering = home.copy(transitioning = true, normal = false, hotseatVisible = false)
+        val drawer = entering.copy(transitioning = false)
+        val returning = home.copy(transitioning = true)
+        assertTrue(home.canRebind)
+        assertFalse(home.hideBoundView)
+        assertFalse(entering.canRebind)
+        assertFalse(entering.hideBoundView)
+        assertFalse(drawer.canRebind)
+        assertTrue(drawer.hideBoundView)
+        assertFalse(returning.canRebind)
+        assertFalse(returning.hideBoundView)
+        assertTrue(home.canRebind)
+    }
+
+    @Test
+    fun delayedBindingCannotExposeSearchInDrawerOrPausedLauncher() {
+        val home = LauncherSearchPage(true, false, true, true)
+        for (page in listOf(
+            home.copy(normal = false, hotseatVisible = false),
+            home.copy(resumed = false),
+            home.copy(resumed = false, transitioning = true),
+        )) {
+            assertFalse(page.canRebind)
+            assertTrue(page.hideBoundView)
+        }
+    }
+
+    @Test
+    fun canceledDrawerTransitionCanRestoreHomeWithoutRecreatingDuringAnimation() {
+        val interrupted = LauncherSearchPage(true, true, false, false)
+        val reversing = interrupted.copy(normal = true, hotseatVisible = true)
+        assertFalse(interrupted.canRebind)
+        assertFalse(reversing.canRebind)
+        assertFalse(reversing.hideBoundView)
+        assertTrue(reversing.copy(transitioning = false).canRebind)
+    }
+
+    @Test
+    fun otherPagesMayKeepNativeHotseatVisibleWithoutCreatingNewSearch() {
+        val page = LauncherSearchPage(true, false, false, true)
+        assertFalse(page.canRebind)
+        assertFalse(page.hideBoundView)
     }
 
     @Test

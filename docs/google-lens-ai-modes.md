@@ -1,9 +1,13 @@
 # Google Lens Talk / Create compatibility
 
 The existing international assistant / native Circle to Search option also enables
-Lens Talk and Create eligibility for Google `17.65.17.ve.arm64`, version code
-`301818946`. Add Google to the module scope and restart its processes after
-changing the option. Other versions are skipped because these names are obfuscated.
+Lens Talk and Create eligibility on compatible Google implementations. There is
+no version-code allowlist: target classes, method signatures and caller checks
+determine whether the hooks can be installed. Add Google to the module scope and
+restart its processes after changing the option. The original implementation was
+tested with Google `17.65.17.ve.arm64`, version code `301818946`. Other versions
+can work when these interfaces match, but renamed obfuscated targets are not
+automatically discovered and incompatible implementations are skipped safely.
 This feature is independent of the Hey Google switch and the hidden-handle patch.
 
 Two pure eligibility predicates are intercepted: `ctwn.c()` for Create and

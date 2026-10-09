@@ -51,6 +51,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -711,6 +712,8 @@ private fun WelcomePage(onNext: () -> Unit) {
     var startupCompleted by remember { mutableStateOf(false) }
     var backgroundFirstFrame by remember { mutableStateOf(false) }
     var slideDownCompleted by remember { mutableStateOf(false) }
+    var welcomeTextTyping by remember { mutableStateOf(false) }
+    var welcomeDollFinished by remember { mutableStateOf(false) }
     var guideContentVisible by remember { mutableStateOf(false) }
     var leavingGuide by remember { mutableStateOf(false) }
     var shownTitle by remember { mutableStateOf("") }
@@ -750,6 +753,8 @@ private fun WelcomePage(onNext: () -> Unit) {
     }
     LaunchedEffect(slideDownCompleted, firstTitle, secondTitle) {
         if (!slideDownCompleted) return@LaunchedEffect
+        // C17 starts the depth strip with the typewriter, after the panel's downward bounce.
+        welcomeTextTyping = true
         val secondParts = secondTitle.split('\n', limit = 2)
         val secondLead = secondParts.first() + if (secondParts.size > 1) "\n" else ""
         val characterCount = (firstTitle.length + secondTitle.length).coerceAtLeast(1)
@@ -771,6 +776,8 @@ private fun WelcomePage(onNext: () -> Unit) {
             shownTitle += character
             delay(intervalMillis)
         }
+        // Hide the doll before the slide-up delay; video completion must not gate navigation.
+        welcomeTextTyping = false
         delay(100)
         coroutineScope {
             launch {
@@ -803,7 +810,18 @@ private fun WelcomePage(onNext: () -> Unit) {
         onNext()
     }
 
-    Box(
+    val welcomeDollVisible = welcomeTextTyping && !welcomeDollFinished && !leavingGuide
+    BootregMatteVideoSandwich(
+        videoResId = R.raw.c17_guide_little_cloth,
+        scaleMode = BootregVideoScaleMode.Stretch,
+        playCount = 1,
+        autoPlay = welcomeDollVisible,
+        layersVisible = welcomeDollVisible,
+        // The 2160x360 asset contains two 1080x360 halves: a native 360x120 dp strip.
+        // Keep it outside the translated/clipped panel so the foreground can cross its edge.
+        layerModifier = Modifier.requiredSize(width = 360.dp, height = 120.dp),
+        onCompleted = { welcomeDollFinished = true },
+        onError = { welcomeDollFinished = true },
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black),

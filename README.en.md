@@ -186,6 +186,7 @@ Special thanks to [LuckyTool](https://github.com/luckyzyx/LuckyTool) and [OShin]
 | [libxposed API](https://github.com/libxposed/api) | libxposed contributors · Apache-2.0 |
 | [libxposed service](https://github.com/libxposed/service) | libxposed contributors · Apache-2.0 |
 | [libsu](https://github.com/topjohnwu/libsu) | topjohnwu and contributors · Apache-2.0 |
+| [DexKit](https://github.com/LuckyPray/DexKit) | LuckyPray · LGPL-3.0 |
 | [AndroidHiddenApiBypass](https://github.com/LSPosed/AndroidHiddenApiBypass) | LSPosed contributors · Apache-2.0 |
 | [MaterialKolor](https://github.com/jordond/MaterialKolor) | jordond and contributors · MIT; Material Color Utilities portions are Apache-2.0 |
 | [Material Icons](https://developer.android.com/reference/kotlin/androidx/compose/material/icons/package-summary) | Google and contributors · Apache-2.0 |

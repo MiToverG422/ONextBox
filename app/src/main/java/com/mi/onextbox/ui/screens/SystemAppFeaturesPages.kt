@@ -35,6 +35,10 @@ internal fun AndroidSystemFeaturesPage(
             onCheckedChange = onGmsRegionRestrictionBypassEnabledChange,
         )
     }
+    SettingsSection(title = stringResource(R.string.feature_group_system_root))
+    SettingsGroup {
+        SystemRootDetectionSettingsRow()
+    }
     SettingsSection(title = stringResource(R.string.installer_group))
     SettingsGroup {
         SettingsCardRow(

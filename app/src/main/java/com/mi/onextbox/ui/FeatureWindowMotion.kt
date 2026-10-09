@@ -1,9 +1,6 @@
 package com.mi.onextbox.ui
 
 import androidx.activity.BackEventCompat
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -318,11 +315,6 @@ internal fun c17TaskSurfaceAlpha(
         FeatureLaunchDirection.Closing -> ((progress - 0.3f) / 0.3f).coerceIn(0f, 1f)
     }
 }
-
-internal fun instantRootContentTransform(): ContentTransform = ContentTransform(
-    targetContentEnter = EnterTransition.None,
-    initialContentExit = ExitTransition.None,
-)
 
 internal fun Modifier.c17LauncherSourceTransform(
     scaleProgress: Float,

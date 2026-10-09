@@ -1,5 +1,7 @@
 ONextBox is distributed under GPL-3.0.
 
+DexKit (LuckyPray) is provided under LGPL-3.0 and is used to locate methods in DEX files.
+
 Runtime components include AndroidX, Jetpack Compose, Kotlin and kotlinx libraries, COUI/Miuix, Kyant0 Capsule, AndroidLiquidGlass, libsu, HiddenApiBypass, libxposed, Material Color Utilities, and Poko under Apache-2.0.
 
 Android, ColorOS/OPlus software, Root managers, and LSPosed are compatibility targets or platforms and are not relicensed by ONextBox. Copyright notices and the full license text supplied by each project prevail over this summary. Source availability and attribution links remain accessible from the About page.

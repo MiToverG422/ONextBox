@@ -121,7 +121,7 @@ object ModernXposedPreferenceSync : XposedServiceHelper.OnServiceListener {
             .clear()
             .putBoolean(MODERN_PREFERENCES_READY_KEY, true)
         source.all.forEach { (key, value) -> putValue(editor, key, value) }
-        editor.apply()
+        check(editor.commit()) { "Framework preference commit failed" }
     }
 
     private fun putValue(editor: SharedPreferences.Editor, key: String, value: Any?) {
@@ -132,7 +132,7 @@ object ModernXposedPreferenceSync : XposedServiceHelper.OnServiceListener {
             is Long -> editor.putLong(key, value)
             is Float -> editor.putFloat(key, value)
             is String -> editor.putString(key, value)
-            is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+            is Set<*> -> editor.putStringSet(key, frameworkStringSet(value))
             else -> Log.w(TAG, "Unsupported preference type for $key: ${value.javaClass.name}")
         }
     }

@@ -40,8 +40,7 @@ internal object LauncherSearchRecoveryRules {
     fun supportsInternationalDevice(
         foldScreen: Boolean,
         tablet: Boolean,
-        folded: Boolean,
-    ): Boolean = tablet || (foldScreen && folded)
+    ): Boolean = tablet || foldScreen
 
     fun supportsTabletLayout(
         tablet: Boolean,
@@ -49,9 +48,29 @@ internal object LauncherSearchRecoveryRules {
         drawerOrStandard: Boolean,
     ): Boolean = tablet && landscape && drawerOrStandard
 
+    fun supportsInternationalLayout(
+        foldScreen: Boolean,
+        tablet: Boolean,
+        landscape: Boolean,
+        drawerOrStandard: Boolean,
+    ): Boolean = (foldScreen || tablet) && landscape && drawerOrStandard
+
     fun canRestore(
         nativeSwitchEnabled: Boolean,
         providerSupported: Boolean,
         layoutSupported: Boolean,
     ): Boolean = nativeSwitchEnabled && providerSupported && layoutSupported
+}
+
+/** Recovery must not create a new home widget in another page or mid-transition. */
+internal data class LauncherSearchPage(
+    val resumed: Boolean,
+    val transitioning: Boolean,
+    val normal: Boolean,
+    val hotseatVisible: Boolean,
+) {
+    val canRebind: Boolean get() = resumed && !transitioning && normal
+
+    // While transitioning, use the live hotseat properties instead of the target state's flags.
+    val hideBoundView: Boolean get() = !resumed || (!transitioning && !hotseatVisible)
 }

@@ -15,6 +15,19 @@ private data class FeatureCategoryLink(
 )
 
 @Composable
+internal fun DesktopCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
+    FeatureCategoryLinks(
+        entries = listOf(
+            FeatureCategoryLink(FeaturePageMode.DesktopLayout, R.string.desktop_category_layout, R.string.desktop_layout_entry_summary),
+            FeatureCategoryLink(FeaturePageMode.DesktopIcons, R.string.desktop_category_icons, R.string.desktop_icons_entry_summary),
+            FeatureCategoryLink(FeaturePageMode.DesktopRecent, R.string.feature_group_recent_tasks, R.string.desktop_recent_entry_summary),
+            FeatureCategoryLink(FeaturePageMode.DesktopPages, R.string.desktop_category_pages, R.string.desktop_pages_entry_summary),
+        ),
+        onOpen = onOpen,
+    )
+}
+
+@Composable
 internal fun SystemUiCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
     FeatureCategoryLinks(
         entries = listOf(
@@ -69,9 +82,29 @@ internal fun SystemUiCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
 }
 
 @Composable
-internal fun SettingsRegionCategoryEntry(onOpen: (FeaturePageMode) -> Unit) {
+internal fun SettingsCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
     FeatureCategoryLinks(
         entries = listOf(
+            FeatureCategoryLink(
+                FeaturePageMode.SettingsAppearance,
+                R.string.settings_category_interface_display,
+                R.string.settings_appearance_entry_summary,
+            ),
+            FeatureCategoryLink(
+                FeaturePageMode.SettingsApps,
+                R.string.feature_group_app_management,
+                R.string.settings_apps_entry_summary,
+            ),
+            FeatureCategoryLink(
+                FeaturePageMode.SettingsPermissions,
+                R.string.settings_category_permissions,
+                R.string.settings_permissions_entry_summary,
+            ),
+            FeatureCategoryLink(
+                FeaturePageMode.SettingsAboutDevice,
+                R.string.feature_group_about_device,
+                R.string.settings_about_device_entry_summary,
+            ),
             FeatureCategoryLink(
                 FeaturePageMode.SettingsRegion,
                 R.string.feature_group_settings_hidden_features,

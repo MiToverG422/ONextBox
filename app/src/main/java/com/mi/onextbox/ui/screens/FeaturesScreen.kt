@@ -160,6 +160,10 @@ import kotlin.math.roundToInt
 enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Main,
     Desktop,
+    DesktopLayout(true),
+    DesktopIcons(true),
+    DesktopRecent(true),
+    DesktopPages(true),
     SystemUi,
     SystemUiNative(true),
     SystemUiDynamicColor(true),
@@ -177,6 +181,8 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Esim,
     EsimDiagnostics(true),
     AppMarket,
+    Battery,
+    TrafficManagement,
     QuickAppServices,
     FileManager,
     GoogleMessages,
@@ -184,6 +190,10 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Athena,
     Settings,
     SettingsRegion(true),
+    SettingsAppearance(true),
+    SettingsApps(true),
+    SettingsPermissions(true),
+    SettingsAboutDevice(true),
     SecurityPermission,
     TouchSampling,
     RefreshRate,
@@ -507,6 +517,10 @@ private fun Modifier.extendPastBottom(extra: Dp): Modifier = layout { measurable
 internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Main -> stringResource(R.string.tab_features)
     FeaturePageMode.Desktop -> stringResource(R.string.section_system_desktop)
+    FeaturePageMode.DesktopLayout -> stringResource(R.string.desktop_category_layout)
+    FeaturePageMode.DesktopIcons -> stringResource(R.string.desktop_category_icons)
+    FeaturePageMode.DesktopRecent -> stringResource(R.string.feature_group_recent_tasks)
+    FeaturePageMode.DesktopPages -> stringResource(R.string.desktop_category_pages)
     FeaturePageMode.SystemUi -> stringResource(R.string.section_lsp)
     FeaturePageMode.SystemUiNative -> stringResource(R.string.feature_group_native)
     FeaturePageMode.SystemUiDynamicColor -> stringResource(R.string.feature_group_dynamic_color)
@@ -524,6 +538,8 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Esim -> stringResource(R.string.feature_esim_title)
     FeaturePageMode.EsimDiagnostics -> stringResource(R.string.feature_group_esim_diagnostics)
     FeaturePageMode.AppMarket -> stringResource(R.string.feature_app_market_title)
+    FeaturePageMode.Battery -> stringResource(R.string.battery_page_title)
+    FeaturePageMode.TrafficManagement -> stringResource(R.string.traffic_page_title)
     FeaturePageMode.QuickAppServices -> stringResource(R.string.feature_quick_app_services_title)
     FeaturePageMode.FileManager -> stringResource(R.string.feature_file_manager_title)
     FeaturePageMode.GoogleMessages -> stringResource(R.string.feature_google_messages_title)
@@ -531,6 +547,10 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Athena -> stringResource(R.string.feature_group_athena)
     FeaturePageMode.Settings -> stringResource(R.string.tab_settings)
     FeaturePageMode.SettingsRegion -> stringResource(R.string.feature_group_settings_hidden_features)
+    FeaturePageMode.SettingsAppearance -> stringResource(R.string.settings_category_interface_display)
+    FeaturePageMode.SettingsApps -> stringResource(R.string.feature_group_app_management)
+    FeaturePageMode.SettingsPermissions -> stringResource(R.string.settings_category_permissions)
+    FeaturePageMode.SettingsAboutDevice -> stringResource(R.string.feature_group_about_device)
     FeaturePageMode.SecurityPermission -> stringResource(R.string.feature_permission_manager_title)
     FeaturePageMode.TouchSampling -> stringResource(R.string.feature_touch_rate_title)
     FeaturePageMode.RefreshRate -> stringResource(R.string.tab_refresh_rate)
@@ -542,7 +562,11 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
 }
 
 private fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (mode) {
-    FeaturePageMode.Desktop -> listOf(
+    FeaturePageMode.Desktop,
+    FeaturePageMode.DesktopLayout,
+    FeaturePageMode.DesktopIcons,
+    FeaturePageMode.DesktopRecent,
+    FeaturePageMode.DesktopPages -> listOf(
         "com.android.launcher", "com.oplus.launcher", "com.coloros.launcher",
     )
     FeaturePageMode.SystemUi,
@@ -562,6 +586,8 @@ private fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (
     FeaturePageMode.Installer -> listOf("android", "system")
     FeaturePageMode.Esim -> listOf("com.oplus.euicc")
     FeaturePageMode.AppMarket -> listOf("com.heytap.market")
+    FeaturePageMode.Battery -> listOf("android", "system", "com.oplus.battery")
+    FeaturePageMode.TrafficManagement -> listOf("com.oplus.trafficmonitor")
     FeaturePageMode.QuickAppServices -> listOf(
         "com.nearme.instant.platform", "com.android.launcher", "com.coloros.assistantscreen",
     )
@@ -569,6 +595,10 @@ private fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (
     FeaturePageMode.GoogleMessages -> listOf("com.google.android.apps.messaging")
     FeaturePageMode.Athena -> listOf("android", "system", "com.oplus.athena")
     FeaturePageMode.Settings,
+    FeaturePageMode.SettingsAppearance,
+    FeaturePageMode.SettingsApps,
+    FeaturePageMode.SettingsPermissions,
+    FeaturePageMode.SettingsAboutDevice,
     FeaturePageMode.SettingsRegion -> listOf("com.android.settings")
     FeaturePageMode.SecurityPermission -> listOf(
         "com.oplus.securitypermission", "com.android.settings",
@@ -826,6 +856,20 @@ private fun featureMainEntries(): List<FeatureMainEntry> = buildList {
                 titleRes = R.string.feature_file_manager_title,
                 iconPackages = listOf("com.coloros.filemanager"),
                 pageMode = FeaturePageMode.FileManager,
+            )
+        )
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.battery_page_title,
+                iconPackages = listOf("com.oplus.battery"),
+                pageMode = FeaturePageMode.Battery,
+            )
+        )
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.traffic_page_title,
+                iconPackages = listOf("com.oplus.trafficmonitor"),
+                pageMode = FeaturePageMode.TrafficManagement,
             )
         )
         add(
@@ -1232,7 +1276,12 @@ private fun FeatureSubPage(
     pushMonitorRefresh: Int,
 ) {
     when (mode) {
-        FeaturePageMode.Desktop -> DesktopFeaturesPage(
+        FeaturePageMode.Desktop -> DesktopCategoriesPage(onOpenSubPage)
+        FeaturePageMode.DesktopLayout,
+        FeaturePageMode.DesktopIcons,
+        FeaturePageMode.DesktopRecent,
+        FeaturePageMode.DesktopPages -> DesktopFeaturesPage(
+            mode = mode,
             launcherLayoutUnlocked = launcherLayoutUnlocked,
             onLauncherLayoutUnlockedChange = onLauncherLayoutUnlockedChange,
             assistantScreenOption = assistantScreenOption,
@@ -1244,7 +1293,7 @@ private fun FeatureSubPage(
         )
         FeaturePageMode.NotificationRemoval -> NotificationRemovalPage()
         FeaturePageMode.SystemUi -> SystemUiCategoriesPage(onOpenSubPage)
-        FeaturePageMode.SystemUiFluidCloud -> Unit
+        FeaturePageMode.SystemUiFluidCloud -> FluidCloudFeaturesPage()
         FeaturePageMode.SystemUiSmallWindow -> SmallWindowFeaturesPage()
         FeaturePageMode.SystemUiLockScreen -> KeyguardInteractionSettings()
         FeaturePageMode.SystemUiNavigationBar -> NavigationBarFeaturesPage()
@@ -1294,12 +1343,18 @@ private fun FeatureSubPage(
         FeaturePageMode.Esim -> EsimFeaturesPage(onOpenSubPage = onOpenSubPage)
         FeaturePageMode.EsimDiagnostics -> EsimDiagnosticsPage()
         FeaturePageMode.AppMarket -> AppMarketFeaturesPage()
+        FeaturePageMode.Battery -> BatteryFeaturesPage()
+        FeaturePageMode.TrafficManagement -> TrafficManagementPage()
         FeaturePageMode.QuickAppServices -> QuickAppServicesFeaturesPage()
         FeaturePageMode.FileManager -> FileManagerFeaturesPage()
         FeaturePageMode.GoogleMessages -> GoogleMessagesFeaturesPage()
         FeaturePageMode.SystemMessages -> PushMonitorPage(pushMonitorRefresh)
         FeaturePageMode.Athena -> AthenaFeaturesPage()
         FeaturePageMode.Settings,
+        FeaturePageMode.SettingsAppearance,
+        FeaturePageMode.SettingsApps,
+        FeaturePageMode.SettingsPermissions,
+        FeaturePageMode.SettingsAboutDevice,
         FeaturePageMode.SettingsRegion -> SettingsFeaturesPage(
             mode = mode,
             onOpenSubPage = onOpenSubPage,

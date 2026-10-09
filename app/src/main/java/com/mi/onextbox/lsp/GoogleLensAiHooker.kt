@@ -1,29 +1,18 @@
 package com.mi.onextbox.lsp
 
-import android.content.Context
 import com.mi.onextbox.lsp.compat.ModernHookBridge
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import io.github.libxposed.api.XposedInterface
 import java.lang.reflect.Modifier
 
-/** Version-specific Lens eligibility; never rewrite Google's persisted feature flags. */
+/** Signature-checked Lens eligibility; never rewrite Google's persisted feature flags. */
 internal object GoogleLensAiHooker {
     private const val TAG = "ONextBox-LensAI"
-    private const val GOOGLE_PACKAGE = "com.google.android.googlequicksearchbox"
-    private const val VERIFIED_VERSION = 301818946L // 17.65.17.ve.arm64
 
     fun hookGoogleApp(loader: ClassLoader) {
         if (!LspConfig.isAssistantNativeCircleEnabledXposed()) return
         val handles = mutableListOf<XposedInterface.HookHandle>()
         runCatching {
-            val activityThread = Class.forName("android.app.ActivityThread")
-            val thread = activityThread.getMethod("currentActivityThread").invoke(null)
-            val context = activityThread.getMethod("getSystemContext").invoke(thread) as Context
-            val version = context.packageManager.getPackageInfo(GOOGLE_PACKAGE, 0).longVersionCode
-            if (version != VERIFIED_VERSION) {
-                HookLog.i(TAG, "Skipped unverified Google version: $version")
-                return
-            }
             val create = target(loader, "ctwn").getDeclaredMethod("c")
             val talk = target(loader, "dsky").getDeclaredMethod("f")
             listOf(create, talk).forEach { method ->
@@ -47,7 +36,7 @@ internal object GoogleLensAiHooker {
                 }
             }
             callers.forEach { ModernHookRuntime.requireModule().deoptimize(it) }
-            HookLog.i(TAG, "Lens Talk/Create eligibility enabled for Google 17.65.17")
+            HookLog.i(TAG, "Lens Talk/Create eligibility enabled after compatibility checks")
         }.onFailure { error ->
             handles.asReversed().forEach { runCatching { it.unhook() } }
             HookLog.w(TAG, "Skipped incompatible Lens implementation; eligibility hooks removed", error)

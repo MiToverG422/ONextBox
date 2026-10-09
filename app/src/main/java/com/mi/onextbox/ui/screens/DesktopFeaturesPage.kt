@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -28,6 +29,7 @@ import kotlin.math.roundToInt
 
 @Composable
 internal fun DesktopFeaturesPage(
+    mode: FeaturePageMode,
     launcherLayoutUnlocked: Boolean,
     onLauncherLayoutUnlockedChange: (Boolean) -> Unit,
     assistantScreenOption: AssistantScreenOption,
@@ -49,108 +51,119 @@ internal fun DesktopFeaturesPage(
         mutableStateOf(LspConfig.isLauncherSearchCompatibilityEnabled(context))
     }
 
-    SettingsSection(title = stringResource(R.string.feature_group_minus_one))
-    SettingsGroup {
-        AssistantScreenRow(
-            title = stringResource(R.string.event_page_tool_title),
-            summary = stringResource(R.string.event_page_tool_summary),
-            selectedOption = assistantScreenOption,
-            onOptionChange = onAssistantScreenOptionChange,
-            hasDividerAbove = false,
-            hasDividerBelow = false,
-        )
+    if (mode == FeaturePageMode.DesktopPages) {
+        SettingsSection(title = stringResource(R.string.feature_group_minus_one))
+        SettingsGroup {
+            AssistantScreenRow(
+                title = stringResource(R.string.event_page_tool_title),
+                summary = stringResource(R.string.event_page_tool_summary),
+                selectedOption = assistantScreenOption,
+                onOptionChange = onAssistantScreenOptionChange,
+                hasDividerAbove = false,
+                hasDividerBelow = false,
+            )
+        }
+
+        SettingsSection(title = stringResource(R.string.launcher_group_pages))
+        SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.pages) }
     }
 
-    SettingsSection(title = stringResource(R.string.feature_group_region))
-    SettingsGroup {
-        LauncherSearchBarModeRow(
-            title = stringResource(R.string.feature_launcher_taskbar_search_box_title),
-            summary = stringResource(R.string.feature_launcher_taskbar_search_box_summary),
-            selectedMode = launcherSearchBarMode,
-            onModeChange = { mode ->
-                launcherSearchBarMode = mode
-                scope.launch {
-                    withContext(Dispatchers.IO) {
-                        LspConfig.setLauncherSearchBarMode(context, mode)
-                    }
-                }
-            },
-            hasDividerAbove = false,
-            hasDividerBelow = true,
-        )
-        SettingsDivider()
-        SettingsToggleRow(
-            title = stringResource(R.string.feature_launcher_search_compatibility_title),
-            summary = stringResource(R.string.feature_launcher_search_compatibility_summary),
-            checked = launcherSearchCompatibility,
-            enabled = launcherSearchBarMode != LspConfig.LAUNCHER_SEARCH_BAR_MODE_OFF,
-            onCheckedChange = { enabled ->
-                if (launcherSearchBarMode != LspConfig.LAUNCHER_SEARCH_BAR_MODE_OFF) {
-                    launcherSearchCompatibility = enabled
+    if (mode == FeaturePageMode.DesktopLayout) {
+        SettingsSection(title = stringResource(R.string.feature_group_layout))
+        SettingsGroup {
+            SettingsToggleRow(
+                title = stringResource(R.string.feature_launcher_layout_unlock_title),
+                summary = stringResource(R.string.feature_launcher_layout_unlock_summary),
+                checked = launcherLayoutUnlocked,
+                onCheckedChange = onLauncherLayoutUnlockedChange,
+                hasDividerAbove = false,
+                hasDividerBelow = false,
+            )
+        }
+
+        SettingsSection(title = stringResource(R.string.launcher_group_widgets))
+        SettingsGroup {
+            SettingsToggleRow(
+                title = stringResource(R.string.feature_launcher_hide_widget_labels_title),
+                summary = stringResource(R.string.feature_launcher_hide_widget_labels_summary),
+                checked = hideWidgetLabelsEnabled,
+                onCheckedChange = { enabled ->
+                    hideWidgetLabelsEnabled = enabled
                     scope.launch {
                         withContext(Dispatchers.IO) {
-                            LspConfig.setLauncherSearchCompatibilityEnabled(context, enabled)
+                            LspConfig.setLauncherHideWidgetLabelsEnabled(context, enabled)
                         }
                     }
-                }
-            },
-            hasDividerAbove = true,
-            hasDividerBelow = false,
-        )
-    }
+                },
+                hasDividerAbove = false,
+                hasDividerBelow = false,
+            )
+        }
 
-    SettingsSection(title = stringResource(R.string.feature_group_layout))
-    SettingsGroup {
-        SettingsToggleRow(
-            title = stringResource(R.string.feature_launcher_layout_unlock_title),
-            summary = stringResource(R.string.feature_launcher_layout_unlock_summary),
-            checked = launcherLayoutUnlocked,
-            onCheckedChange = onLauncherLayoutUnlockedChange,
-            hasDividerAbove = false,
-            hasDividerBelow = true,
-        )
-        SettingsDivider()
-        SettingsToggleRow(
-            title = stringResource(R.string.feature_launcher_hide_widget_labels_title),
-            summary = stringResource(R.string.feature_launcher_hide_widget_labels_summary),
-            checked = hideWidgetLabelsEnabled,
-            onCheckedChange = { enabled ->
-                hideWidgetLabelsEnabled = enabled
-                scope.launch {
-                    withContext(Dispatchers.IO) {
-                        LspConfig.setLauncherHideWidgetLabelsEnabled(context, enabled)
+        SettingsSection(title = stringResource(R.string.desktop_category_search))
+        SettingsGroup {
+            LauncherSearchBarModeRow(
+                title = stringResource(R.string.feature_launcher_taskbar_search_box_title),
+                summary = stringResource(R.string.feature_launcher_taskbar_search_box_summary),
+                selectedMode = launcherSearchBarMode,
+                onModeChange = { mode ->
+                    launcherSearchBarMode = mode
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            LspConfig.setLauncherSearchBarMode(context, mode)
+                        }
                     }
-                }
-            },
-            hasDividerAbove = true,
-            hasDividerBelow = false,
-        )
+                },
+                hasDividerAbove = false,
+                hasDividerBelow = true,
+            )
+            SettingsDivider()
+            SettingsToggleRow(
+                title = stringResource(R.string.feature_launcher_search_compatibility_title),
+                summary = stringResource(R.string.feature_launcher_search_compatibility_summary),
+                checked = launcherSearchCompatibility,
+                enabled = launcherSearchBarMode != LspConfig.LAUNCHER_SEARCH_BAR_MODE_OFF,
+                onCheckedChange = { enabled ->
+                    if (launcherSearchBarMode != LspConfig.LAUNCHER_SEARCH_BAR_MODE_OFF) {
+                        launcherSearchCompatibility = enabled
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                LspConfig.setLauncherSearchCompatibilityEnabled(context, enabled)
+                            }
+                        }
+                    }
+                },
+                hasDividerAbove = true,
+                hasDividerBelow = false,
+            )
+        }
+
+        SettingsSection(title = stringResource(R.string.launcher_group_dock))
+        SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.dock) }
     }
 
-    SettingsSection(title = stringResource(R.string.launcher_group_pages))
-    SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.pages) }
+    if (mode == FeaturePageMode.DesktopRecent) {
+        SettingsGroup {
+            LauncherFeatureRows(LauncherFeatureItems.recent, hasDividerBelow = true)
+            RecentTaskRadiusRow(
+                title = stringResource(R.string.feature_recent_task_radius_title),
+                checked = recentTaskRadiusEnabled,
+                onCheckedChange = onRecentTaskRadiusEnabledChange,
+                valueDp = recentTaskRadiusDp,
+                onValueDpChange = onRecentTaskRadiusDpChange,
+                hasDividerAbove = true,
+            )
+        }
 
-    SettingsSection(title = stringResource(R.string.feature_group_recent_tasks))
-    SettingsGroup {
-        LauncherFeatureRows(LauncherFeatureItems.recent, hasDividerBelow = true)
-        RecentTaskRadiusRow(
-            title = stringResource(R.string.feature_recent_task_radius_title),
-            checked = recentTaskRadiusEnabled,
-            onCheckedChange = onRecentTaskRadiusEnabledChange,
-            valueDp = recentTaskRadiusDp,
-            onValueDpChange = onRecentTaskRadiusDpChange,
-            hasDividerAbove = true,
-        )
     }
+    if (mode == FeaturePageMode.DesktopIcons) {
+        SettingsSection(title = stringResource(R.string.launcher_group_badges))
+        SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.badges) }
 
-    SettingsSection(title = stringResource(R.string.launcher_group_badges))
-    SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.badges) }
+        SettingsSection(title = stringResource(R.string.launcher_group_folder))
+        SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.folder) }
 
-    SettingsSection(title = stringResource(R.string.launcher_group_folder))
-    SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.folder) }
-
-    SettingsSection(title = stringResource(R.string.launcher_group_dock))
-    SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.dock) }
+    }
 }
 
 @Composable
@@ -253,7 +266,9 @@ internal fun RecentTaskRadiusRow(
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val defaultRadiusDp = remember(context, configuration) { systemRecentTaskRadiusDp(context) }
+    val defaultRadiusDp by produceState<Int?>(null, context, configuration) {
+        value = withContext(Dispatchers.IO) { systemRecentTaskRadiusDp(context) }
+    }
     val radiusPreference = FeatureSliderRules.normalizeRadius(valueDp)
     val displayedRadius = if (radiusPreference == FeatureSliderRules.SYSTEM_DEFAULT) {
         defaultRadiusDp ?: FeatureSliderRules.RECENT_RADIUS_PREVIEW_DP

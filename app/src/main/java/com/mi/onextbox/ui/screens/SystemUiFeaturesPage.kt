@@ -14,6 +14,7 @@ import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
+import com.mi.onextbox.ui.settings.SettingsSection
 import com.mi.onextbox.ui.settings.SettingsToggleRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -153,6 +154,7 @@ internal fun SystemUiFeaturesPage(
             }
         }
         FeaturePageMode.SystemUiStatusBar -> {
+            SettingsSection(title = stringResource(R.string.status_bar_group_network))
             SettingsGroup {
                 SettingsToggleRow(
                     title = stringResource(R.string.feature_international_network_display_title),
@@ -203,7 +205,21 @@ internal fun SystemUiFeaturesPage(
                     hasDividerBelow = true,
                 )
                 SettingsDivider()
-                FluidCloudBatterySettingsRow(hasDividerAbove = true)
+                DisconnectedBluetoothIconSettingsRow(hasDividerAbove = true)
+            }
+
+            SettingsSection(title = stringResource(R.string.status_bar_group_battery))
+            SettingsGroup {
+                FluidCloudBatterySettingsRow()
+            }
+
+            SettingsSection(title = stringResource(R.string.status_bar_group_time))
+            SettingsGroup {
+                PermanentClockSecondsSettingsRow()
+            }
+            SettingsSection(title = stringResource(R.string.status_bar_group_interaction))
+            SettingsGroup {
+                StatusBarInteractionSettingsRows()
             }
         }
         FeaturePageMode.SystemUiNotificationCenter -> {
