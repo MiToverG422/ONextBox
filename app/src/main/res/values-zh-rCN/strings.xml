@@ -1239,6 +1239,8 @@
     <string name="game_assistant_realme_startup_summary">屏蔽真我机型进入游戏时播放的 GT 性能引擎全屏动画</string>
     <string name="game_assistant_unlimited_title">移除侧栏数量限制</string>
     <string name="game_assistant_unlimited_summary">移除游戏侧栏的应用快捷项与书签数量限制</string>
+    <string name="game_assistant_music_title">移除音乐卡片白名单</string>
+    <string name="game_assistant_music_summary">移除游戏侧边栏控制音乐卡片的白名单限制</string>
     <string name="game_assistant_root_title">屏蔽 Root 检测</string>
     <string name="game_assistant_root_summary">屏蔽游戏助手的本地 Root 判断与滤镜 Root 状态，不影响其他应用</string>
     <string name="game_assistant_developer_title">游戏助手开发者模式</string>

@@ -1177,6 +1177,8 @@
     <string name="game_assistant_realme_startup_summary">Пропускать полноэкранную анимацию realme GT Engine при запуске игры</string>
     <string name="game_assistant_unlimited_title">Убрать лимиты боковой панели</string>
     <string name="game_assistant_unlimited_summary">Убрать ограничения числа ярлыков приложений и закладок на игровой боковой панели</string>
+    <string name="game_assistant_music_title">Убрать белый список карточки музыки</string>
+    <string name="game_assistant_music_summary">Убрать белый список приложений, доступных карточке музыки в боковой панели игры</string>
     <string name="game_assistant_root_title">Блокировать проверку Root</string>
     <string name="game_assistant_root_summary">Блокировать локальные проверки Root и статус Root для фильтров игрового помощника, не затрагивая другие приложения</string>
     <string name="game_assistant_developer_title">Режим разработчика игрового помощника</string>

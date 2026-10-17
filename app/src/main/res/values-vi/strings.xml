@@ -1177,6 +1177,8 @@
     <string name="game_assistant_realme_startup_summary">Bỏ qua hoạt ảnh toàn màn hình của realme GT Engine khi vào trò chơi trên máy realme</string>
     <string name="game_assistant_unlimited_title">Bỏ giới hạn số mục thanh bên</string>
     <string name="game_assistant_unlimited_summary">Bỏ giới hạn số lối tắt ứng dụng và dấu trang trong thanh bên trò chơi</string>
+    <string name="game_assistant_music_title">Bỏ danh sách trắng thẻ nhạc</string>
+    <string name="game_assistant_music_summary">Bỏ danh sách trắng giới hạn các ứng dụng thẻ nhạc trong thanh bên trò chơi điều khiển được</string>
     <string name="game_assistant_root_title">Chặn phát hiện Root</string>
     <string name="game_assistant_root_summary">Chặn kiểm tra Root cục bộ và trạng thái Root của bộ lọc trong trợ lý trò chơi, không ảnh hưởng ứng dụng khác</string>
     <string name="game_assistant_developer_title">Chế độ nhà phát triển của trợ lý trò chơi</string>

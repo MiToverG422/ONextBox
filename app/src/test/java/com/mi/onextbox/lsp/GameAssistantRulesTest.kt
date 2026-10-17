@@ -15,6 +15,19 @@ class GameAssistantRulesTest {
             assertEquals(stock, GameAssistantRules.maxItems(false, stock))
         }
     }
+    @Test fun unlockedMusicMembershipMatchesAnyPackageButNeverAnEmptyOne() {
+        listOf("com.example.player", "com.tencent.tmgp.cod").forEach {
+            assertTrue(it, GameAssistantRules.musicMembership(true, it, false))
+            assertTrue(it, GameAssistantRules.musicMembership(true, it, true))
+        }
+        listOf(null, "").forEach {
+            assertFalse("$it", GameAssistantRules.musicMembership(true, it, true))
+        }
+        listOf(null, "", "com.example.player").forEach { candidate ->
+            assertTrue("$candidate", GameAssistantRules.musicMembership(false, candidate, true))
+            assertFalse("$candidate", GameAssistantRules.musicMembership(false, candidate, false))
+        }
+    }
     @Test fun onlyTheSevenAuditedBuiltInSkinPacksCanBeSelected() {
         assertEquals(8, GameAssistantRules.skins.distinct().size)
         assertEquals("", GameAssistantRules.skinName("default"))

@@ -11,11 +11,13 @@ import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.lang.reflect.Proxy
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Audited against Games 10.42.5. Unknown signatures retain stock behavior. */
 internal object GameAssistantHooker {
     private const val TAG = "ONextBox-GameAssistant"
+    private val musicPlayersOnly = ThreadLocal<Boolean>()
 
     fun hook(loader: ClassLoader, apkPath: String) {
         fun adapter(name: String, action: () -> Unit) = runCatching(action)
@@ -80,6 +82,7 @@ internal object GameAssistantHooker {
                     } }.single().getMethodInstance(loader)
                     replace(method, GameAssistantSettings.REALME_STARTUP_ANIMATION) { null }
                 }
+                adapter("Music whitelist") { musicWhitelist(loader, dex) }
                 adapter("Local Root probes") {
                     val owner = dex.findMethod { matcher {
                         usingStrings("/system/app/Superuser.apk")
@@ -221,4 +224,64 @@ internal object GameAssistantHooker {
         }
         ModernReflect.findClassIfExists("business.util.j0", loader)?.let { deoptimize(it.declaredMethods.toList()) }
     }
+
+    private fun musicWhitelist(loader: ClassLoader, dex: DexKitBridge) {
+        val resolver = dex.findMethod { matcher {
+            usingStrings("whitelistedPackages loaded size=")
+            returnType = "java.util.Set"
+            paramTypes()
+        } }.single()
+        val blacklisted = dex.findMethod { matcher {
+            usingStrings("media_controller_config_black")
+            returnType = "java.util.List"
+            paramTypes()
+        } }.single().getMethodInstance(loader)
+        val names = dex.findMethod { matcher {
+            usingStrings("media_controller_config")
+            returnType = "java.util.List"
+            paramTypes()
+        } }.map { it.getMethodInstance(loader) }.single { it != blacklisted }
+        val controllers = dex.findMethod { matcher {
+            usingStrings("getMediaAppsFromControllers begin sessionCount=")
+            returnType = "java.util.List"
+            paramTypes("java.util.Collection", "android.content.pm.PackageManager", "android.content.res.Resources")
+        } }.single().getMethodInstance(loader)
+        val getter = resolver.getMethodInstance(loader)
+        val whitelist = Set::class.java
+        require(getter.returnType == whitelist && !Modifier.isStatic(getter.modifiers) &&
+            names.returnType == List::class.java && Modifier.isStatic(names.modifiers) &&
+            names.declaringClass.simpleName == "MediaSessionHelper")
+        val cache = getter.declaringClass.declaredFields.single {
+            Modifier.isStatic(it.modifiers) && it.type == whitelist
+        }.apply { isAccessible = true }
+        fast(getter) { chain ->
+            val stock = chain.proceed() as? Set<*>
+            if (on(GameAssistantSettings.MUSIC)) stock?.let { matchAll(loader, it, whitelist) } else stock
+        }
+        fast(names) { chain ->
+            val stock = chain.proceed() as? List<*>
+            if (on(GameAssistantSettings.MUSIC) && musicPlayersOnly.get() == true) stock?.let { matchAll(loader, it, List::class.java) } else stock
+        }
+        fast(controllers) { chain ->
+            musicPlayersOnly.set(true)
+            try { chain.proceed() } finally { musicPlayersOnly.remove() }
+        }
+        deoptimize(resolver.callers.mapNotNull { runCatching { it.getMethodInstance(loader) }.getOrNull() })
+        HotReloadLifecycle.register("$TAG:music-whitelist-cache", detach = { cache.set(null, null) })
+    }
+
+    private fun matchAll(loader: ClassLoader, stock: Any, type: Class<*>): Any =
+        Proxy.newProxyInstance(stock.javaClass.classLoader ?: loader, arrayOf(type)) { _, called, args ->
+            when (called.name) {
+                "toString" -> "ONextBox music whitelist"
+                "contains" -> HotReloadLifecycle.withHook(
+                    fallback = { called.invoke(stock, *args!!) },
+                    action = { GameAssistantRules.musicMembership(
+                        on(GameAssistantSettings.MUSIC), args?.getOrNull(0) as? String,
+                        called.invoke(stock, *args!!) == true,
+                    ) },
+                )
+                else -> called.invoke(stock, *(args ?: emptyArray()))
+            }
+        }
 }

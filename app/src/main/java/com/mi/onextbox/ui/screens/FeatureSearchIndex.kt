@@ -35,6 +35,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_promotions_title, R.string.game_assistant_promotions_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_realme_startup_title, R.string.game_assistant_realme_startup_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_unlimited_title, R.string.game_assistant_unlimited_summary),
+        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_music_title, R.string.game_assistant_music_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_root_title, R.string.game_assistant_root_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_developer_title, R.string.game_assistant_developer_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_skins_title),

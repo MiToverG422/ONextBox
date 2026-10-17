@@ -1243,6 +1243,8 @@
     <string name="game_assistant_realme_startup_summary">Skip the full-screen realme GT performance engine animation played when a game starts</string>
     <string name="game_assistant_unlimited_title">Remove sidebar item limits</string>
     <string name="game_assistant_unlimited_summary">Remove limits on app shortcuts and bookmarks in the game sidebar</string>
+    <string name="game_assistant_music_title">Remove the music card whitelist</string>
+    <string name="game_assistant_music_summary">Remove the whitelist that limits which apps the game sidebar music card can control</string>
     <string name="game_assistant_root_title">Block Root detection</string>
     <string name="game_assistant_root_summary">Block local Root checks and the Root filter status in Game Assistant without affecting other apps</string>
     <string name="game_assistant_developer_title">Game Assistant developer mode</string>

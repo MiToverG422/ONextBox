@@ -1177,6 +1177,8 @@
     <string name="game_assistant_realme_startup_summary">realme 기기에서 게임 진입 시 재생되는 GT 성능 엔진 전체 화면 애니메이션을 건너뛰기</string>
     <string name="game_assistant_unlimited_title">사이드바 항목 수 제한 해제</string>
     <string name="game_assistant_unlimited_summary">게임 사이드바의 앱 바로가기 및 북마크 수 제한 해제</string>
+    <string name="game_assistant_music_title">음악 카드 화이트리스트 해제</string>
+    <string name="game_assistant_music_summary">게임 사이드바 음악 카드가 제어할 수 있는 앱을 제한하는 화이트리스트 해제</string>
     <string name="game_assistant_root_title">Root 감지 차단</string>
     <string name="game_assistant_root_summary">게임 도우미의 로컬 Root 검사와 필터 Root 상태를 차단하며 다른 앱에는 영향을 주지 않음</string>
     <string name="game_assistant_developer_title">게임 도우미 개발자 모드</string>

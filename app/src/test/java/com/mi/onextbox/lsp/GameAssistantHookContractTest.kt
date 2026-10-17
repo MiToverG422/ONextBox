@@ -7,8 +7,8 @@ import org.junit.Test
 
 class GameAssistantHookContractTest {
     private fun source(path: String) = listOf(File("src/$path"), File("app/src/$path")).first { it.isFile }.readText()
-    @Test fun allSixTogglesAreDiscoverableAndEditable() {
-        val resources = listOf("promotions", "realme_startup", "unlimited", "root", "developer", "skins")
+    @Test fun everyToggleIsDiscoverableAndEditable() {
+        val resources = listOf("promotions", "realme_startup", "unlimited", "music", "root", "developer", "skins")
         for (name in listOf("FeatureSearchIndex.kt", "EnabledFeatureCatalog.kt", "EnabledFeatureActions.kt")) {
             val content = source("main/java/com/mi/onextbox/ui/screens/$name")
             resources.forEach { assertTrue("$name/$it", content.contains("R.string.game_assistant_${it}_title")) }
@@ -79,6 +79,20 @@ class GameAssistantHookContractTest {
         assertTrue(cache.contains("if (field.getInt(null) != limit) field.setInt(null, limit)"))
         assertTrue(cache.contains("resolved.setInt(null, stock)"))
     }
+    @Test fun musicWhitelistReplacesMembershipOnlyAndFollowsTheTogglePerCall() {
+        val hook = source("main/java/com/mi/onextbox/lsp/GameAssistantHooker.kt")
+        val whitelist = hook.substringAfter("private fun musicWhitelist(")
+        assertTrue(whitelist.contains("usingStrings(\"whitelistedPackages loaded size=\")"))
+        assertTrue(whitelist.contains("usingStrings(\"media_controller_config\")"))
+        assertTrue(whitelist.contains("if (on(GameAssistantSettings.MUSIC)) stock?.let { matchAll(loader, it, whitelist) } else stock"))
+        assertTrue(whitelist.contains("if (on(GameAssistantSettings.MUSIC) && musicPlayersOnly.get() == true) stock?.let { matchAll(loader, it, List::class.java) } else stock"))
+        assertTrue(whitelist.contains("musicPlayersOnly.set(true)"))
+        assertTrue(whitelist.contains("finally { musicPlayersOnly.remove() }"))
+        assertTrue(whitelist.contains("detach = { cache.set(null, null) }"))
+        assertTrue(whitelist.contains("\"contains\" -> HotReloadLifecycle.withHook("))
+        assertTrue(whitelist.contains("GameAssistantRules.musicMembership("))
+        assertTrue(whitelist.contains("else -> called.invoke(stock, *(args ?: emptyArray()))"))
+    }
     @Test fun skinChildUsesTheSamePopupSelectorAsStyleAndLanguageInBothUis() {
         val page = source("main/java/com/mi/onextbox/ui/screens/GameAssistantFeaturesPage.kt")
         assertTrue(page.contains("FeatureAnimatedGroup(animateChanges = true)"))
@@ -110,7 +124,7 @@ class GameAssistantHookContractTest {
             val nodes = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file).getElementsByTagName("string")
             val strings = (0 until nodes.length).map { nodes.item(it) }
                 .filter { it.attributes.getNamedItem("name").nodeValue.startsWith("game_assistant_") }
-            assertEquals(locale, 23, strings.size)
+            assertEquals(locale, 25, strings.size)
             strings.forEach { assertTrue(locale, it.textContent.isNotBlank()); assertFalse(locale, it.textContent.endsWith(".") || it.textContent.endsWith("。")) }
         }
     }

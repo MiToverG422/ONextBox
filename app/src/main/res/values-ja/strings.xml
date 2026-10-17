@@ -1177,6 +1177,8 @@
     <string name="game_assistant_realme_startup_summary">realme 機種でゲーム開始時に再生される GT パフォーマンスエンジンの全画面アニメーションをスキップ</string>
     <string name="game_assistant_unlimited_title">サイドバーの項目数制限を解除</string>
     <string name="game_assistant_unlimited_summary">ゲームサイドバーのアプリショートカットとブックマークの数制限を解除</string>
+    <string name="game_assistant_music_title">音楽カードのホワイトリストを解除</string>
+    <string name="game_assistant_music_summary">ゲームサイドバーの音楽カードが操作できるアプリを絞るホワイトリストを解除</string>
     <string name="game_assistant_root_title">Root 検出をブロック</string>
     <string name="game_assistant_root_summary">ゲームアシスタントのローカル Root 判定とフィルターの Root 状態をブロックし、他のアプリには影響しません</string>
     <string name="game_assistant_developer_title">ゲームアシスタントの開発者モード</string>

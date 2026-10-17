@@ -62,6 +62,7 @@ internal fun GameAssistantFeaturesPage() {
         Triple(GameAssistantSettings.PROMOTIONS, R.string.game_assistant_promotions_title, R.string.game_assistant_promotions_summary),
         Triple(GameAssistantSettings.REALME_STARTUP_ANIMATION, R.string.game_assistant_realme_startup_title, R.string.game_assistant_realme_startup_summary),
         Triple(GameAssistantSettings.UNLIMITED, R.string.game_assistant_unlimited_title, R.string.game_assistant_unlimited_summary),
+        Triple(GameAssistantSettings.MUSIC, R.string.game_assistant_music_title, R.string.game_assistant_music_summary),
         Triple(GameAssistantSettings.BLOCK_ROOT, R.string.game_assistant_root_title, R.string.game_assistant_root_summary),
         Triple(GameAssistantSettings.DEVELOPER, R.string.game_assistant_developer_title, R.string.game_assistant_developer_summary),
         Triple(GameAssistantSettings.SKINS, R.string.game_assistant_skins_title, 0),

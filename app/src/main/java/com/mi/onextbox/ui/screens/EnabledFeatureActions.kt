@@ -84,6 +84,7 @@ internal class EnabledFeatureActions {
         R.string.game_assistant_promotions_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.PROMOTIONS, enabled) },
         R.string.game_assistant_realme_startup_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.REALME_STARTUP_ANIMATION, enabled) },
         R.string.game_assistant_unlimited_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.UNLIMITED, enabled) },
+        R.string.game_assistant_music_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.MUSIC, enabled) },
         R.string.game_assistant_root_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.BLOCK_ROOT, enabled) },
         R.string.game_assistant_developer_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.DEVELOPER, enabled) },
         R.string.game_assistant_skins_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.SKINS, enabled) },

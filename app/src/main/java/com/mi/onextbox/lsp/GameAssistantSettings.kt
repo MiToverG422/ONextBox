@@ -12,7 +12,8 @@ internal object GameAssistantSettings {
     const val DEVELOPER = "game_assistant_developer_mode"
     const val SKINS = "game_assistant_all_skins"
     const val SKIN = "game_assistant_skin"
-    val toggles = setOf(PROMOTIONS, REALME_STARTUP_ANIMATION, UNLIMITED, BLOCK_ROOT, DEVELOPER, SKINS)
+    const val MUSIC = "game_assistant_unlock_music_whitelist"
+    val toggles = setOf(PROMOTIONS, REALME_STARTUP_ANIMATION, UNLIMITED, BLOCK_ROOT, DEVELOPER, SKINS, MUSIC)
     val keys = toggles + SKIN
 
     fun enabled(context: Context, key: String): Boolean {

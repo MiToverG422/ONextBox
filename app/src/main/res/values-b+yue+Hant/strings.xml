@@ -1177,6 +1177,8 @@
     <string name="game_assistant_realme_startup_summary">屏蔽真我機型入遊戲時播放嘅 GT 性能引擎全螢幕動畫</string>
     <string name="game_assistant_unlimited_title">移除側欄數量限制</string>
     <string name="game_assistant_unlimited_summary">移除遊戲側欄嘅應用程式捷徑同書籤數量限制</string>
+    <string name="game_assistant_music_title">移除音樂卡片白名單</string>
+    <string name="game_assistant_music_summary">移除遊戲側欄控制音樂卡片嘅白名單限制</string>
     <string name="game_assistant_root_title">屏蔽 Root 檢測</string>
     <string name="game_assistant_root_summary">屏蔽遊戲助手嘅本機 Root 判斷同濾鏡 Root 狀態，唔影響其他應用程式</string>
     <string name="game_assistant_developer_title">遊戲助手開發者模式</string>
