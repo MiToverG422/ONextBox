@@ -264,13 +264,15 @@ private fun StatusBarOrderRow(title: String, up: Boolean, down: Boolean, onUp: (
     }
 }
 
-private data class LauncherIconMenuState(val disableSecondary: Boolean, val widgets: Boolean)
+private data class LauncherIconMenuState(val disableSecondary: Boolean, val widgets: Boolean, val iconLabelSpacingEnabled: Boolean, val iconLabelSpacingOffset: Int)
 
 @Composable
 internal fun LauncherIconMenuSettingsGroup() {
     val context = LocalContext.current.applicationContext
-    val editor = rememberCustomization(setOf(LauncherGestureSettings.MENU, LauncherGestureSettings.WIDGETS)) {
-        LauncherIconMenuState(LauncherGestureSettings.menu(it), LauncherGestureSettings.widgets(it))
+    val editor = rememberCustomization(setOf(LauncherGestureSettings.MENU, LauncherGestureSettings.WIDGETS,
+        LauncherGestureSettings.SPACING_ENABLED, LauncherGestureSettings.SPACING_OFFSET)) {
+        LauncherIconMenuState(LauncherGestureSettings.menu(it), LauncherGestureSettings.widgets(it),
+            LauncherGestureSettings.iconLabelSpacingEnabled(it), LauncherGestureSettings.iconLabelSpacingOffset(it))
     }
     val value = editor.state
     SettingsSection(title = stringResource(R.string.launcher_icon_interaction_group))
@@ -288,6 +290,32 @@ internal fun LauncherIconMenuSettingsGroup() {
                 onCheckedChange = { next -> editor.save(LauncherGestureSettings.WIDGETS, value.copy(widgets = next)) {
                     LauncherGestureSettings.save(context, LauncherGestureSettings.WIDGETS, next)
                 } }, hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row("icon-label-spacing") { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.launcher_icon_label_spacing_title), summary = stringResource(R.string.launcher_icon_label_spacing_summary),
+                checked = value.iconLabelSpacingEnabled, switchEnabled = editor.savingKey != LauncherGestureSettings.SPACING_ENABLED,
+                onCheckedChange = { next -> editor.save(LauncherGestureSettings.SPACING_ENABLED, value.copy(iconLabelSpacingEnabled = next)) {
+                    LauncherGestureSettings.save(context, LauncherGestureSettings.SPACING_ENABLED, next)
+                } }, hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row("icon-label-spacing-offset", visible = value.iconLabelSpacingEnabled) { above, below ->
+            FeatureSliderRow(
+                heading = stringResource(R.string.launcher_icon_label_spacing_offset),
+                currentValue = "${value.iconLabelSpacingOffset} dp",
+                value = value.iconLabelSpacingOffset.toFloat(),
+                valueRange = LauncherGestureRules.MIN_ICON_LABEL_SPACING.toFloat()..LauncherGestureRules.MAX_ICON_LABEL_SPACING.toFloat(),
+                steps = LauncherGestureRules.MAX_ICON_LABEL_SPACING - LauncherGestureRules.MIN_ICON_LABEL_SPACING - 1,
+                enabled = editor.savingKey != LauncherGestureSettings.SPACING_OFFSET,
+                onValueChange = { editor.state = editor.state.copy(iconLabelSpacingOffset = it.roundToInt()) },
+                onValueChangeFinished = { val next = editor.state; editor.save(LauncherGestureSettings.SPACING_OFFSET, next) {
+                    LauncherGestureSettings.saveIconLabelSpacingOffset(context, next.iconLabelSpacingOffset)
+                } },
+                onReset = { editor.save(LauncherGestureSettings.SPACING_OFFSET, value.copy(iconLabelSpacingOffset = 0)) {
+                    LauncherGestureSettings.saveIconLabelSpacingOffset(context, 0)
+                } },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
         }
     }
 }

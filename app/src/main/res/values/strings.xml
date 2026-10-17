@@ -1230,6 +1230,9 @@
     <string name="launcher_widgets_menu_summary">Show the native widget picker in the long-press menus of apps that provide widgets</string>
     <string name="launcher_disable_icon_menu_title">Disable secondary menus</string>
     <string name="launcher_disable_icon_menu_summary">Hide secondary menus for app icons</string>
+    <string name="launcher_icon_label_spacing_title">Icon label spacing</string>
+    <string name="launcher_icon_label_spacing_summary">Adjust the spacing between app icons and their labels</string>
+    <string name="launcher_icon_label_spacing_offset">Spacing offset</string>
     <string name="launcher_swipe_gesture_group">Swipe-up gestures</string>
     <string name="launcher_swipe_top_title">Simplify the swipe-up top area</string>
     <string name="launcher_swipe_top_summary">Remove the split-screen entry and hide controls in the top gesture area, with a wider floating-window trigger area; other split-screen entries are unchanged</string>

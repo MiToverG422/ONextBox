@@ -1164,6 +1164,9 @@
     <string name="launcher_widgets_menu_summary">ウィジェットを提供するアプリのアイコン長押しメニューに標準の選択画面への入口を表示</string>
     <string name="launcher_disable_icon_menu_title">サブメニューを無効化</string>
     <string name="launcher_disable_icon_menu_summary">アプリアイコンのサブメニューを非表示</string>
+    <string name="launcher_icon_label_spacing_title">アイコンとラベルの間隔</string>
+    <string name="launcher_icon_label_spacing_summary">アプリアイコンとラベルの間隔を調整します</string>
+    <string name="launcher_icon_label_spacing_offset">間隔オフセット</string>
     <string name="launcher_swipe_gesture_group">上スワイプジェスチャー</string>
     <string name="launcher_swipe_top_title">上スワイプの上部領域を簡素化</string>
     <string name="launcher_swipe_top_summary">上部ジェスチャー領域の画面分割入口と操作表示をなくし、フローティングウィンドウの判定領域を広げます。他の画面分割入口は変更しません</string>

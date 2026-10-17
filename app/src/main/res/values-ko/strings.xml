@@ -1164,6 +1164,9 @@
     <string name="launcher_widgets_menu_summary">위젯을 제공하는 앱의 아이콘 길게 누르기 메뉴에 기본 위젯 선택 항목 표시</string>
     <string name="launcher_disable_icon_menu_title">보조 메뉴 비활성화</string>
     <string name="launcher_disable_icon_menu_summary">앱 아이콘의 보조 메뉴 숨기기</string>
+    <string name="launcher_icon_label_spacing_title">아이콘 및 라벨 간격</string>
+    <string name="launcher_icon_label_spacing_summary">앱 아이콘과 라벨 사이의 간격을 조정합니다</string>
+    <string name="launcher_icon_label_spacing_offset">간격 오프셋</string>
     <string name="launcher_swipe_gesture_group">위로 스와이프 제스처</string>
     <string name="launcher_swipe_top_title">위로 스와이프 상단 영역 간소화</string>
     <string name="launcher_swipe_top_summary">상단 제스처 영역의 분할 화면 진입과 컨트롤을 숨기고 플로팅 창 실행 영역을 넓힙니다. 다른 분할 화면 진입에는 영향을 주지 않습니다</string>

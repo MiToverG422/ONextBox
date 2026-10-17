@@ -1176,6 +1176,9 @@
     <string name="launcher_widgets_menu_summary">在提供小工具的應用程式圖示長按選單中顯示原生小工具入口</string>
     <string name="launcher_disable_icon_menu_title">停用次級選單</string>
     <string name="launcher_disable_icon_menu_summary">隱藏應用程式圖示的次級選單</string>
+    <string name="launcher_icon_label_spacing_title">圖示與文字間距</string>
+    <string name="launcher_icon_label_spacing_summary">調節應用程式圖示與文字之間的間距</string>
+    <string name="launcher_icon_label_spacing_offset">間距偏移</string>
     <string name="launcher_swipe_gesture_group">上滑手勢</string>
     <string name="launcher_swipe_top_title">簡化上滑頂部區域</string>
     <string name="launcher_swipe_top_summary">移除頂部手勢分割畫面入口並隱藏控制項，擴大浮動視窗觸發區域，不影響其他分割畫面入口</string>

@@ -1164,6 +1164,9 @@
     <string name="launcher_widgets_menu_summary">Hiện mục chọn tiện ích gốc trong menu nhấn giữ biểu tượng của ứng dụng có tiện ích</string>
     <string name="launcher_disable_icon_menu_title">Tắt menu phụ</string>
     <string name="launcher_disable_icon_menu_summary">Ẩn menu phụ của biểu tượng ứng dụng</string>
+    <string name="launcher_icon_label_spacing_title">Khoảng cách giữa biểu tượng và nhãn</string>
+    <string name="launcher_icon_label_spacing_summary">Điều chỉnh khoảng cách giữa biểu tượng ứng dụng và nhãn</string>
+    <string name="launcher_icon_label_spacing_offset">Độ lệch khoảng cách</string>
     <string name="launcher_swipe_gesture_group">Cử chỉ vuốt lên</string>
     <string name="launcher_swipe_top_title">Đơn giản hóa vùng vuốt lên phía trên</string>
     <string name="launcher_swipe_top_summary">Xóa lối vào chia đôi màn hình và ẩn điều khiển ở vùng cử chỉ phía trên, mở rộng vùng kích hoạt cửa sổ nổi; các lối vào chia đôi màn hình khác không đổi</string>

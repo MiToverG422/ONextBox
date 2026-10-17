@@ -1164,6 +1164,9 @@
     <string name="launcher_widgets_menu_summary">Показывать встроенный выбор виджетов в меню долгого нажатия значков приложений с виджетами</string>
     <string name="launcher_disable_icon_menu_title">Отключить подменю</string>
     <string name="launcher_disable_icon_menu_summary">Скрыть подменю значков приложений</string>
+    <string name="launcher_icon_label_spacing_title">Расстояние между значком и подписью</string>
+    <string name="launcher_icon_label_spacing_summary">Настройте расстояние между значками приложений и подписями</string>
+    <string name="launcher_icon_label_spacing_offset">Смещение расстояния</string>
     <string name="launcher_swipe_gesture_group">Жесты смахивания вверх</string>
     <string name="launcher_swipe_top_title">Упростить верхнюю область жеста</string>
     <string name="launcher_swipe_top_summary">Убрать вход в разделение экрана и скрыть элементы управления в верхней области жеста, расширив зону запуска плавающего окна; другие входы в разделение экрана не меняются</string>

@@ -1226,6 +1226,9 @@
     <string name="launcher_widgets_menu_summary">在提供小组件的应用图标长按菜单中显示原生小组件入口</string>
     <string name="launcher_disable_icon_menu_title">禁用二级菜单</string>
     <string name="launcher_disable_icon_menu_summary">隐藏应用图标的二级菜单</string>
+    <string name="launcher_icon_label_spacing_title">图标与文字间距</string>
+    <string name="launcher_icon_label_spacing_summary">调节应用图标与文字之间的间距</string>
+    <string name="launcher_icon_label_spacing_offset">间距偏移</string>
     <string name="launcher_swipe_gesture_group">上滑手势</string>
     <string name="launcher_swipe_top_title">简化上滑顶部区域</string>
     <string name="launcher_swipe_top_summary">移除顶部手势分屏入口并隐藏控件，扩大浮窗触发区域，不影响其他分屏入口</string>
