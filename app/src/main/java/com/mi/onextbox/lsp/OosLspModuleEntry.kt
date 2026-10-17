@@ -185,6 +185,8 @@ class OosLspModuleEntry : XposedModule() {
                 LauncherHooker.hook(classLoader)
                 LauncherFeaturesHooker.hook(classLoader, target.sourceDir)
                 LauncherGestureHooker.hook(classLoader)
+                LauncherNotificationDotColorHooker.hook(classLoader)
+                LauncherNotificationDotShadowHooker.hook(classLoader)
                 ExpressCardHooker.hook(packageName, classLoader)
                 SystemUiRedOneHooker.hookLauncherClock()
             }

@@ -30,6 +30,13 @@ internal object ModernReflect {
     fun getStaticIntField(targetClass: Class<*>, fieldName: String): Int =
         findField(targetClass, fieldName).read(null) as Int
 
+    fun getIntField(target: Any, fieldName: String): Int =
+        findField(target.javaClass, fieldName).apply { isAccessible = true }.getInt(target)
+
+    fun setIntField(target: Any, fieldName: String, value: Int) {
+        findField(target.javaClass, fieldName).apply { isAccessible = true }.setInt(target, value)
+    }
+
     fun callMethod(target: Any?, methodName: String, vararg args: Any?): Any? {
         val receiver = requireNotNull(target) { "Receiver is null for $methodName" }
         val method = findBestMethod(receiver.javaClass, methodName, args, requireStatic = false)

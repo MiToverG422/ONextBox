@@ -44,6 +44,8 @@ internal object LauncherFeatureItems {
         LauncherFeatureItem(LauncherFeature.HideWorkBadge, R.string.launcher_hide_work_badge, R.string.launcher_hide_work_badge_summary),
         LauncherFeatureItem(LauncherFeature.HideCloneBadge, R.string.launcher_hide_clone_badge, R.string.launcher_hide_clone_badge_summary),
         LauncherFeatureItem(LauncherFeature.HideUpdateDot, R.string.launcher_hide_update_dot, R.string.launcher_hide_update_dot_summary),
+        LauncherFeatureItem(LauncherFeature.ColorfulNotificationDot, R.string.launcher_colorful_notification_dot, R.string.launcher_colorful_notification_dot_summary),
+        LauncherFeatureItem(LauncherFeature.NotificationDotShadow, R.string.launcher_notification_dot_shadow, R.string.launcher_notification_dot_shadow_summary),
     )
     val folder = listOf(
         LauncherFeatureItem(LauncherFeature.UnlimitedFolderInput, R.string.launcher_unlimited_folder_input, R.string.launcher_unlimited_folder_input_summary),

@@ -751,6 +751,10 @@
     <string name="launcher_hide_clone_badge_summary">複製アプリのアイコンバッジを隠す</string>
     <string name="launcher_hide_update_dot">アプリのインストール／更新ドットを非表示</string>
     <string name="launcher_hide_update_dot_summary">新規インストール・更新後のアプリ名の横のドットを隠す</string>
+    <string name="launcher_colorful_notification_dot">カラフルな通知ドット</string>
+    <string name="launcher_colorful_notification_dot_summary">通知ドットと数字バッジを各アプリのアイコンのメインカラーで表示する</string>
+    <string name="launcher_notification_dot_shadow">通知ドットの影</string>
+    <string name="launcher_notification_dot_shadow_summary">AOSP が通知ドットの下に描く影を復元する</string>
     <string name="launcher_unlimited_folder_input">フォルダの入力制限を解除</string>
     <string name="launcher_unlimited_folder_input_summary">フォルダ名の文字数制限を解除</string>
     <string name="launcher_dock">ホーム画面の Dock を有効化</string>

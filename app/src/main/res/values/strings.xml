@@ -815,6 +815,10 @@
     <string name="launcher_hide_clone_badge_summary">Hide the badge on cloned app icons</string>
     <string name="launcher_hide_update_dot">Hide app install/update dots</string>
     <string name="launcher_hide_update_dot_summary">Hide the dot beside newly installed or updated app names</string>
+    <string name="launcher_colorful_notification_dot">Colorful notification dots</string>
+    <string name="launcher_colorful_notification_dot_summary">Tint notification dots and number badges with each app icon\'s dominant color</string>
+    <string name="launcher_notification_dot_shadow">Notification dot shadow</string>
+    <string name="launcher_notification_dot_shadow_summary">Restore the drop shadow under notification dots that AOSP draws</string>
     <string name="launcher_unlimited_folder_input">Remove folder input limits</string>
     <string name="launcher_unlimited_folder_input_summary">Remove folder-name length limits</string>
     <string name="launcher_dock">Enable desktop Dock</string>

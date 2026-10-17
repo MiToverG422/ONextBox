@@ -751,6 +751,10 @@
     <string name="launcher_hide_clone_badge_summary">Скрыть значки на иконках клонированных приложений</string>
     <string name="launcher_hide_update_dot">Скрыть точки установки/обновления</string>
     <string name="launcher_hide_update_dot_summary">Скрыть точку возле названия нового или обновлённого приложения</string>
+    <string name="launcher_colorful_notification_dot">Цветные точки уведомлений</string>
+    <string name="launcher_colorful_notification_dot_summary">Окрашивать точки и числовые значки в основной цвет иконки приложения</string>
+    <string name="launcher_notification_dot_shadow">Тень точки уведомления</string>
+    <string name="launcher_notification_dot_shadow_summary">Восстановить тень под точкой уведомления, которую рисует AOSP</string>
     <string name="launcher_unlimited_folder_input">Убрать ограничение ввода в папках</string>
     <string name="launcher_unlimited_folder_input_summary">Убрать ограничение длины названия папки</string>
     <string name="launcher_dock">Включить Dock рабочего стола</string>

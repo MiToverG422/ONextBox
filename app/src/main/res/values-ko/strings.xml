@@ -751,6 +751,10 @@
     <string name="launcher_hide_clone_badge_summary">복제 앱 아이콘의 배지 숨기기</string>
     <string name="launcher_hide_update_dot">앱 설치/업데이트 점 숨기기</string>
     <string name="launcher_hide_update_dot_summary">새로 설치되거나 업데이트된 앱 이름 옆의 점 숨기기</string>
+    <string name="launcher_colorful_notification_dot">컬러 알림 점</string>
+    <string name="launcher_colorful_notification_dot_summary">알림 점과 숫자 배지를 각 앱 아이콘의 메인 색상으로 표시</string>
+    <string name="launcher_notification_dot_shadow">알림 점 그림자</string>
+    <string name="launcher_notification_dot_shadow_summary">AOSP가 알림 점 아래에 그리는 그림자 복원</string>
     <string name="launcher_unlimited_folder_input">폴더 입력 제한 해제</string>
     <string name="launcher_unlimited_folder_input_summary">폴더 이름의 입력 길이 제한 해제</string>
     <string name="launcher_dock">홈 화면 Dock 활성화</string>

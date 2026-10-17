@@ -751,6 +751,10 @@
     <string name="launcher_hide_clone_badge_summary">Ẩn huy hiệu trên biểu tượng ứng dụng nhân bản</string>
     <string name="launcher_hide_update_dot">Ẩn chấm cài đặt/cập nhật ứng dụng</string>
     <string name="launcher_hide_update_dot_summary">Ẩn chấm bên cạnh tên ứng dụng mới cài hoặc cập nhật</string>
+    <string name="launcher_colorful_notification_dot">Chấm thông báo nhiều màu</string>
+    <string name="launcher_colorful_notification_dot_summary">Tô màu chấm thông báo và huy hiệu số theo màu chủ đạo của từng biểu tượng ứng dụng</string>
+    <string name="launcher_notification_dot_shadow">Bóng đổ của chấm thông báo</string>
+    <string name="launcher_notification_dot_shadow_summary">Khôi phục bóng đổ dưới chấm thông báo mà AOSP vẽ</string>
     <string name="launcher_unlimited_folder_input">Bỏ giới hạn nhập tên thư mục</string>
     <string name="launcher_unlimited_folder_input_summary">Bỏ giới hạn độ dài tên thư mục</string>
     <string name="launcher_dock">Bật Dock màn hình chính</string>

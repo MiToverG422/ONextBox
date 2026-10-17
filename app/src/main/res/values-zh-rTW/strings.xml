@@ -763,6 +763,10 @@
     <string name="launcher_hide_clone_badge_summary">隱藏分身應用程式圖示上的角標</string>
     <string name="launcher_hide_update_dot">隱藏 App 安裝/更新圓點</string>
     <string name="launcher_hide_update_dot_summary">隱藏新安裝或更新應用程式名稱旁的圓點</string>
+    <string name="launcher_colorful_notification_dot">彩色通知圓點</string>
+    <string name="launcher_colorful_notification_dot_summary">讓通知圓點和數字角標跟隨每個應用程式圖示的主色調顯示</string>
+    <string name="launcher_notification_dot_shadow">通知圓點陰影</string>
+    <string name="launcher_notification_dot_shadow_summary">恢復 AOSP 在通知圓點下方繪製的投影陰影</string>
     <string name="launcher_unlimited_folder_input">移除資料夾輸入限制</string>
     <string name="launcher_unlimited_folder_input_summary">移除資料夾名稱的輸入長度限制</string>
     <string name="launcher_dock">啟用桌面 Dock 列</string>
