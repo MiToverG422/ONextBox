@@ -4,7 +4,8 @@ import android.content.Context
 
 enum class AppUiStyle {
     ColorOs,
-    Material3Expressive;
+    Material3Expressive,
+    Miuix;
 
     companion object {
         private const val PREFS_NAME = "onextbox_prefs"

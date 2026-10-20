@@ -60,6 +60,8 @@ internal fun SecurityPermissionFeaturesPage() {
         }
     }
 
+    AppLockDelaySettingsGroup()
+
     SettingsSection(title = stringResource(R.string.feature_permission_ui_group))
     SettingsGroup {
         val options = listOf(

@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="phone_manager_risk_cloud_title">Скрывать оповещения Fluid Cloud об опасных приложениях</string>
-    <string name="phone_manager_risk_cloud_summary">Использовать обычные уведомления о рисках вместо Fluid Cloud, не меняя обнаружение угроз и другие предупреждения</string>
-</resources>

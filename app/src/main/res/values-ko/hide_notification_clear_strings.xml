@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_notification_clear_title">알림 센터 지우기 버튼 숨기기</string>
-    <string name="hide_notification_clear_summary">모두 지우기 버튼을 숨깁니다. 스와이프로 알림을 지우는 기능에는 영향을 주지 않습니다</string>
-</resources>

@@ -13,10 +13,10 @@ class SoftwareUpdateHookContractTest {
         assertTrue(settings.contains("HookConfigSnapshot.boolean(feature.key, false)"))
     }
 
-    @Test fun updaterMainAndUiProcessesAreReloadableOnlyWithTheUserSwitchOn() {
+    @Test fun updaterMainAndUiProcessesReloadAutomaticallyWhenHealthy() {
         for (process in listOf("com.oplus.ota", "com.oplus.ota:ui", "com.oplus.sau", "com.oplus.sau:SetupZipService")) {
-            assertTrue(ModuleHotReloadPolicy.canReload(true, process, false, setOf(process.substringBefore(':')), true))
-            assertFalse(ModuleHotReloadPolicy.canReload(false, process, false, setOf(process.substringBefore(':')), true))
+            assertTrue(ModuleHotReloadPolicy.canReload(process, false, setOf(process.substringBefore(':')), true))
+            assertFalse(ModuleHotReloadPolicy.canReload(process, false, setOf(process.substringBefore(':')), false))
         }
         assertTrue(source("lsp/OosLspModuleEntry.kt").contains("SoftwareUpdateHooker.hook(classLoader, target.sourceDir)"))
         assertTrue(source("lsp/OosLspModuleEntry.kt").contains("SystemFileUpdateHooker.hook(classLoader, target.sourceDir)"))

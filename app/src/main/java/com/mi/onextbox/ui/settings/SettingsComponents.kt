@@ -220,6 +220,10 @@ internal fun Material3ExpressiveSegmentContentCard(
 
 @Composable
 fun SettingsSection(title: String) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        top.yukonga.miuix.kmp.basic.SmallTitle(text = title)
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         MaterialText(
             text = title,
@@ -242,6 +246,13 @@ fun SettingsGroup(
     bottomPadding: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        top.yukonga.miuix.kmp.basic.Card(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = if (bottomPadding == 16.dp) 12.dp else bottomPadding),
+            content = content,
+        )
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         val expressiveBottomPadding = if (bottomPadding == 16.dp) 13.dp else bottomPadding
         Column(
@@ -285,6 +296,7 @@ internal object SettingsTokens {
 
 @Composable
 fun SettingsDivider() {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) return
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         return
     }
@@ -335,18 +347,16 @@ internal fun Material3ExpressivePreferenceRow(
             verticalAlignment = Alignment.CenterVertically,
         ) { MaterialText(title) }
     }
-    if (bottomAction == null) {
-        row()
-    } else {
-        MaterialSurface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = shape,
-            color = MaterialTheme.colorScheme.surfaceBright,
-        ) {
-            Column {
-                row()
-                bottomAction()
-            }
+    // A conditional outer wrapper recreated the row (including its switch) when an auxiliary
+    // control appeared. Keep one composition path; only the auxiliary content enters/exits.
+    MaterialSurface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceBright,
+    ) {
+        Column {
+            row()
+            bottomAction?.invoke()
         }
     }
 }
@@ -446,6 +456,25 @@ fun SettingsCardRow(
     hasDividerBelow: Boolean = false,
     leadingContent: (@Composable () -> Unit)? = null,
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        top.yukonga.miuix.kmp.basic.BasicComponent(
+            startAction = leadingContent, onClick = onClick,
+        ) {
+            MiuixPreferenceValueLayout(title = title, summary = summary, value = trailing, enabled = true,
+                endAction = if (showArrow || showExpandArrow) ({
+                    MaterialIcon(
+                        imageVector = if (showExpandArrow) {
+                            if (expandArrowExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore
+                        } else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions,
+                    )
+                }) else null,
+            )
+        }
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressiveInferredSegmentPosition(hasDividerAbove, hasDividerBelow) {
         Material3ExpressivePreferenceRow(

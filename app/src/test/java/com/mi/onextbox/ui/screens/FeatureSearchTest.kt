@@ -4,6 +4,47 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FeatureSearchTest {
+    @Test fun enhancementThermalSwitchesUseTheInterfaceAndDisplayPage() {
+        listOf(com.mi.onextbox.R.string.display_enhancement_sr_thermal_title,
+            com.mi.onextbox.R.string.display_enhancement_color_thermal_title).forEach { title ->
+            val entry = FeatureSearchIndex.entries.single { it.title == title }
+            assertEquals(FeaturePageMode.SettingsAppearance, entry.page)
+            assertTrue(entry.description != 0)
+        }
+    }
+
+    @Test fun corePatchPageAndIndividualOptionsHaveTheCorrectDestination() {
+        val pageEntry = FeatureSearchIndex.entries.single {
+            it.title == com.mi.onextbox.R.string.corepatch_title
+        }
+        assertEquals(FeaturePageMode.CorePatch, pageEntry.page)
+        assertEquals(0, pageEntry.description)
+        com.mi.onextbox.lsp.CorePatchSettings.Option.entries.forEach { option ->
+            val entry = FeatureSearchIndex.entries.single { it.title == option.title }
+            assertEquals(FeaturePageMode.CorePatch, entry.page)
+            assertEquals(option.summary, entry.description)
+        }
+    }
+
+    @Test fun corePatchFullTitleAndShortNameAreSearchable() {
+        val title = "核心破解（实验性）"
+        assertEquals(3, featureSearchScore(title, title, ""))
+        assertEquals(3, featureSearchScore("核心破解(实验性)", title, ""))
+        assertEquals(2, featureSearchScore("核心破解", title, ""))
+        assertEquals(3, featureSearchScore("core patch (experimental)", "Core Patch (Experimental)", ""))
+    }
+
+    @Test fun powerIndicatorDisplayOptionsUseTheStatusBarPage() {
+        listOf(
+            com.mi.onextbox.R.string.power_indicator_hide_discharge_sign,
+            com.mi.onextbox.R.string.power_indicator_temperature,
+            com.mi.onextbox.R.string.power_indicator_temperature_unit,
+        ).forEach { title ->
+            assertEquals(FeaturePageMode.SystemUiStatusBar,
+                FeatureSearchIndex.entries.single { it.title == title }.page)
+        }
+    }
+
     @Test fun softwareUpdateHasOneDestinationForAllTenFeatures() {
         assertEquals(10, SoftwareUpdateFeatureItems.all.size)
         SoftwareUpdateFeatureItems.all.forEach { item ->
@@ -143,6 +184,7 @@ class FeatureSearchTest {
                 com.mi.onextbox.R.string.feature_settings_title_collapsed_title,
                 com.mi.onextbox.R.string.feature_settings_unlock_refresh_rate_title,
                 com.mi.onextbox.R.string.feature_settings_force_global_extreme_refresh_rate_title,
+                com.mi.onextbox.R.string.feature_settings_disable_adaptive_refresh_rate_title,
                 com.mi.onextbox.R.string.feature_extreme_refresh_165_title,
             ),
             FeaturePageMode.SettingsApps to listOf(

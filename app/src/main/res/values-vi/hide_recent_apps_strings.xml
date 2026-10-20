@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_recent_apps_title">Ẩn ứng dụng khỏi danh sách gần đây</string>
-    <string name="hide_recent_apps_summary">Ẩn thẻ tác vụ của ứng dụng đã chọn mà không đóng ứng dụng; nhóm chia đôi màn hình sẽ được ẩn cùng nhau</string>
-</resources>

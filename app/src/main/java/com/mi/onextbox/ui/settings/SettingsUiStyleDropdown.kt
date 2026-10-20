@@ -14,6 +14,7 @@ fun SettingsUiStyleDropdown(
     val labels = listOf(
         stringResource(R.string.ui_style_coloros),
         stringResource(R.string.ui_style_material3_expressive),
+        stringResource(R.string.ui_style_miuix),
     )
     SettingsWindowDropdownPreference(
         items = labels,

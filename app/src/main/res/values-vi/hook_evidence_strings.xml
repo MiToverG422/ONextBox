@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hook_evidence_title">Bản ghi Hook gần đây</string>
-    <string name="hook_evidence_notice">Chỉ là lịch sử nhật ký, không phản ánh trạng thái hiện tại hay xác nhận mọi thành phần hoạt động</string>
-    <string name="hook_evidence_installed">Đã cài bộ điều hợp</string>
-    <string name="hook_evidence_observed">Đã ghi nhận thực thi</string>
-    <string name="hook_evidence_unavailable">Bộ điều hợp không khả dụng, giữ hành vi gốc</string>
-</resources>

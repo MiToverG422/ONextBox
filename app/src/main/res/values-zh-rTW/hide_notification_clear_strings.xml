@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_notification_clear_title">隱藏通知中心清理按鈕</string>
-    <string name="hide_notification_clear_summary">隱藏通知中心的一鍵清理按鈕，不影響滑動清除通知</string>
-</resources>

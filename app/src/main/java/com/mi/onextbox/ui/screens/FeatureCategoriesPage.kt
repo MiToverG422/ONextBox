@@ -110,6 +110,11 @@ internal fun SettingsCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
                 R.string.feature_group_settings_hidden_features,
                 R.string.feature_settings_region_entry_summary,
             ),
+            FeatureCategoryLink(
+                FeaturePageMode.SettingsRealme,
+                R.string.settings_realme_title,
+                R.string.settings_realme_entry_summary,
+            ),
         ),
         onOpen = onOpen,
     )

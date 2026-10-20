@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="developer_activation_section">测试</string>
-    <string name="developer_activation_title">返回激活页</string>
-    <string name="developer_activation_summary">重新进入激活向导，方便测试</string>
-    <string name="developer_activation_confirm">将重置激活状态和协议确认记录，并返回激活向导首页，保留所有功能设置。是否继续？</string>
-    <string name="developer_activation_failed">无法返回激活页</string>
-</resources>

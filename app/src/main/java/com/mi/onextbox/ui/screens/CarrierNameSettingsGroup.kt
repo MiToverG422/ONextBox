@@ -26,6 +26,7 @@ import com.mi.onextbox.ui.settings.FeatureSettingWriteQueue
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsSection
 import com.mi.onextbox.ui.settings.SettingsToggleRow
+import com.mi.onextbox.ui.settings.settingsInteractionGate
 import io.github.suqi8.coui.kmp.basic.TextField as CouiTextField
 import io.github.suqi8.coui.kmp.basic.TextFieldMode
 import kotlinx.coroutines.CancellationException
@@ -69,7 +70,7 @@ internal fun CarrierNameSettingsGroup() {
     FeatureAnimatedGroup(animateChanges = true) {
         row(CarrierNameSettings.ENABLED) { above, below ->
             SettingsToggleRow(title = stringResource(R.string.carrier_name_title), summary = stringResource(R.string.carrier_name_summary),
-                checked = state.enabled, switchEnabled = savingKey != CarrierNameSettings.ENABLED,
+                checked = state.enabled, interactionEnabled = savingKey != CarrierNameSettings.ENABLED,
                 hasDividerAbove = above, hasDividerBelow = below,
                 onCheckedChange = { enabled -> save(CarrierNameSettings.ENABLED, state.copy(enabled = enabled)) {
                     CarrierNameSettings.setEnabled(application, enabled)
@@ -121,12 +122,12 @@ internal fun CarrierNameSettingsGroup() {
         content = {
             val placeholder = stringResource(R.string.carrier_name_original)
             if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-                OutlinedTextField(state = input, modifier = Modifier.fillMaxWidth(), inputTransformation = limiter,
-                    enabled = savingKey == null, lineLimits = TextFieldLineLimits.SingleLine,
+                OutlinedTextField(state = input, modifier = Modifier.fillMaxWidth().settingsInteractionGate(savingKey == null), inputTransformation = limiter,
+                    readOnly = savingKey != null, lineLimits = TextFieldLineLimits.SingleLine,
                     placeholder = { Text(placeholder) })
             } else {
-                CouiTextField(state = input, modifier = Modifier.fillMaxWidth(), backgroundMode = TextFieldMode.Line,
-                    label = placeholder, enabled = savingKey == null, inputTransformation = limiter,
+                CouiTextField(state = input, modifier = Modifier.fillMaxWidth().settingsInteractionGate(savingKey == null), backgroundMode = TextFieldMode.Line,
+                    label = placeholder, readOnly = savingKey != null, inputTransformation = limiter,
                     lineLimits = TextFieldLineLimits.SingleLine, showClearButton = true)
             }
         },

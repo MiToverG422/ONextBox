@@ -133,6 +133,10 @@ fun Page(
     blurBackdrop: LayerBackdrop?,
     scrollResetKey: Int? = null,
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        MiuixHomePage(modifier, currentTab, rootGranted, bottomChromePadding, onHomeHeroLongPress, scrollResetKey)
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressivePage(
             modifier = modifier,

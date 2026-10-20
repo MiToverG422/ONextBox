@@ -74,7 +74,7 @@ internal fun GameAssistantFeaturesPage() {
     FeatureAnimatedGroup(animateChanges = true) {
         options.forEach { (key, title, summary) -> row(key) { above, below ->
             SettingsToggleRow(title = stringResource(title), summary = if (summary == 0) "" else stringResource(summary),
-                checked = states[key] == true, switchEnabled = savingKey != key,
+                checked = states[key] == true, interactionEnabled = savingKey != key,
                 hasDividerAbove = above, hasDividerBelow = below,
                 onCheckedChange = { save(key, enabled = it) })
         } }

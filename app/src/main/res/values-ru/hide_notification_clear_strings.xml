@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_notification_clear_title">Скрыть кнопку очистки уведомлений</string>
-    <string name="hide_notification_clear_summary">Скрывает кнопку очистки всех уведомлений, не мешая удалять их смахиванием</string>
-</resources>

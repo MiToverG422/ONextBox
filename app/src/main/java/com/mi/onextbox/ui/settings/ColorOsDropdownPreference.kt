@@ -99,6 +99,7 @@ internal fun ColorOsWindowDropdownPreference(
     showValue: Boolean = true,
     onExpandedChange: ((Boolean) -> Unit)? = null,
     onSelectedIndexChange: ((Int) -> Unit)? = null,
+    interactionEnabled: Boolean = true,
 ) {
     val entry = remember(items, selectedIndex, onSelectedIndexChange) {
         DropdownEntry(
@@ -123,6 +124,7 @@ internal fun ColorOsWindowDropdownPreference(
         enabled = enabled,
         showValue = showValue,
         onExpandedChange = onExpandedChange,
+        interactionEnabled = interactionEnabled,
     )
 }
 
@@ -140,6 +142,7 @@ internal fun ColorOsWindowDropdownPreference(
     showValue: Boolean = true,
     collapseOnSelection: Boolean = true,
     onExpandedChange: ((Boolean) -> Unit)? = null,
+    interactionEnabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var expanded by remember { mutableStateOf(false) }
@@ -170,7 +173,7 @@ internal fun ColorOsWindowDropdownPreference(
     }
 
     BasicComponent(
-        modifier = modifier
+        modifier = modifier.settingsInteractionGate(interactionEnabled)
             .onGloballyPositioned { coordinates ->
                 val bounds = coordinates.boundsInWindow()
                 componentLeftInWindow = bounds.left
@@ -221,15 +224,19 @@ internal fun ColorOsWindowDropdownPreference(
                 },
                 onDismissRequest = { setExpanded(false) },
                 onItemClick = { index ->
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
-                    currentEntry.items.getOrNull(index)?.onClick?.invoke()
-                    if (collapseOnSelection) setExpanded(false)
+                    if (interactionEnabled && actualEnabled) {
+                        currentEntry.items.getOrNull(index)?.takeIf { it.enabled }?.let { item ->
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                            item.onClick?.invoke()
+                            if (collapseOnSelection) setExpanded(false)
+                        }
+                    }
                 },
             )
         },
         bottomAction = bottomAction,
         onClick = {
-            if (actualEnabled) {
+            if (actualEnabled && interactionEnabled) {
                 setExpanded(!expanded)
                 if (expanded) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.ContextClick)

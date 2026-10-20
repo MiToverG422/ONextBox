@@ -1,30 +1,17 @@
 package com.kyant.backdrop.effects
 
-import android.graphics.ColorFilter
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.RenderEffect
-import android.os.Build
 import androidx.annotation.FloatRange
-import androidx.compose.ui.graphics.asAndroidColorFilter
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.ColorMatrixColorFilter
 import com.kyant.backdrop.BackdropEffectScope
-import com.kyant.backdrop.GammaAdjustmentShaderString
-import kotlin.math.pow
+import com.kyant.backdrop.internal.ColorFilterEffect
+import com.kyant.backdrop.isRenderEffectSupported
 
 fun BackdropEffectScope.colorFilter(colorFilter: ColorFilter) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    if (!isRenderEffectSupported()) return
 
-    val currentEffect = renderEffect
-    renderEffect =
-        if (currentEffect != null) {
-            RenderEffect.createColorFilterEffect(colorFilter, currentEffect)
-        } else {
-            RenderEffect.createColorFilterEffect(colorFilter)
-        }
-}
-
-fun BackdropEffectScope.colorFilter(colorFilter: androidx.compose.ui.graphics.ColorFilter) {
-    colorFilter(colorFilter.asAndroidColorFilter())
+    renderEffect = ColorFilterEffect(renderEffect, colorFilter)
 }
 
 fun BackdropEffectScope.opacity(@FloatRange(from = 0.0, to = 1.0) alpha: Float) {
@@ -51,32 +38,10 @@ fun BackdropEffectScope.colorControls(
     colorFilter(colorControlsColorFilter(brightness, contrast, saturation))
 }
 
-fun BackdropEffectScope.vibrancy() {
-    colorFilter(VibrantColorFilter)
-}
-
 private val VibrantColorFilter = colorControlsColorFilter(saturation = 1.5f)
 
-fun BackdropEffectScope.exposureAdjustment(ev: Float) {
-    val scale = 2f.pow(ev / 2.2f)
-    val colorMatrix = ColorMatrix(
-        floatArrayOf(
-            scale, 0f, 0f, 0f, 0f,
-            0f, scale, 0f, 0f, 0f,
-            0f, 0f, scale, 0f, 0f,
-            0f, 0f, 0f, 1f, 0f
-        )
-    )
-    colorFilter(ColorMatrixColorFilter(colorMatrix))
-}
-
-fun BackdropEffectScope.gammaAdjustment(power: Float) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-
-    val shader = obtainRuntimeShader("GammaAdjustment", GammaAdjustmentShaderString).apply {
-        setFloatUniform("power", power)
-    }
-    effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
+fun BackdropEffectScope.vibrancy() {
+    colorFilter(VibrantColorFilter)
 }
 
 private fun colorControlsColorFilter(

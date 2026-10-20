@@ -160,7 +160,7 @@ internal fun PackageSelectionPage(
                 item("manual:$name") {
                     SettingsGroup {
                         SettingsSwitchPreference(title = stringResource(R.string.fluid_media_add_package),
-                            summary = name, checked = false, enabled = !saving,
+                            summary = name, checked = false, interactionEnabled = !saving,
                             onCheckedChange = { change(name, it) })
                     }
                 }
@@ -169,7 +169,7 @@ internal fun PackageSelectionPage(
                 SettingsLazyGroupItem(index = index, count = listed.size,
                     modifier = mediaBlacklistItemAnimation(raised = app.packageName == movingPackage)) {
                     SettingsSwitchPreference(title = app.label, summary = app.packageName,
-                        checked = app.packageName in selected, enabled = !saving,
+                        checked = app.packageName in selected, interactionEnabled = !saving,
                         startAction = { MediaBlacklistAppIcon(app.packageName) },
                         onCheckedChange = { change(app.packageName, it) })
                 }

@@ -132,7 +132,7 @@ internal fun FeatureSearchBar(
     }
     val surfaceModifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
         .height(if (material) 56.dp else 40.dp)
-    if (material) Box(surfaceModifier.background(background, RoundedCornerShape(50)), content = searchContent)
+    if (material || LocalAppUiStyle.current == AppUiStyle.Miuix) Box(surfaceModifier.background(background, RoundedCornerShape(50)), content = searchContent)
     else ColorOsSearchSurface(surfaceModifier, background, focused, editorEmpty = empty, content = searchContent)
 }
 

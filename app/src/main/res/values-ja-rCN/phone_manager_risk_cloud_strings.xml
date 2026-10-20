@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="phone_manager_risk_cloud_title">危険なアプリの流体クラウド通知を非表示</string>
-    <string name="phone_manager_risk_cloud_summary">流体クラウド通知を通常のリスク通知に変更します。リスク検出や他のセキュリティ警告には影響しません</string>
-</resources>

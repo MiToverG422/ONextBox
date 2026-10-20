@@ -8,7 +8,7 @@ import androidx.compose.ui.node.GlobalPositionAwareModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.InspectorInfo
-import com.kyant.backdrop.recordLayer
+import com.kyant.backdrop.internal.recordLayer
 
 fun Modifier.layerBackdrop(backdrop: LayerBackdrop): Modifier =
     this then LayerBackdropElement(backdrop)
@@ -22,7 +22,10 @@ private class LayerBackdropElement(
     }
 
     override fun update(node: LayerBackdropNode) {
-        node.backdrop = backdrop
+        if (node.backdrop != backdrop) {
+            node.backdrop.layerCoordinates = null
+            node.backdrop = backdrop
+        }
         node.invalidateDraw()
     }
 

@@ -49,6 +49,7 @@ import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentContentCard
 import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
 import com.mi.onextbox.ui.settings.SettingsRowTextContent
 import com.mi.onextbox.ui.settings.settingsInteractiveRowHighlight
+import com.mi.onextbox.ui.settings.settingsInteractionGate
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlin.math.roundToInt
@@ -63,26 +64,38 @@ internal fun FeatureSettingsSlider(
     steps: Int,
     modifier: Modifier = Modifier,
     onValueChangeFinished: (() -> Unit)? = null,
+    interactionEnabled: Boolean = true,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
+    val inputModifier = modifier.settingsInteractionGate(interactionEnabled)
+    val change: (Float) -> Unit = { if (interactionEnabled) onValueChange(it) }
+    val finish: (() -> Unit)? = onValueChangeFinished?.let { callback -> { if (interactionEnabled) callback() } }
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        val validRange = valueRange.start.isFinite() && valueRange.endInclusive.isFinite() && valueRange.endInclusive > valueRange.start
+        top.yukonga.miuix.kmp.basic.Slider(
+            value = if (validRange) value.takeIf { it.isFinite() }?.coerceIn(valueRange) ?: valueRange.start else 0f,
+            onValueChange = change, enabled = enabled && validRange,
+            valueRange = if (validRange) valueRange else 0f..1f, steps = steps, modifier = inputModifier,
+            onValueChangeFinished = finish,
+        )
+    } else if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         MaterialSlider(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = change,
             enabled = enabled,
             valueRange = valueRange,
             steps = steps,
-            modifier = modifier,
-            onValueChangeFinished = onValueChangeFinished,
+            modifier = inputModifier,
+            onValueChangeFinished = finish,
         )
     } else {
         ColorOs17SettingsSlider(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = change,
             enabled = enabled,
             valueRange = valueRange,
             steps = steps,
-            modifier = modifier,
-            onValueChangeFinished = onValueChangeFinished,
+            modifier = inputModifier,
+            onValueChangeFinished = finish,
         )
     }
 }
@@ -94,21 +107,24 @@ internal fun FeatureSliderRow(
     value: Float,
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int,
-    enabled: Boolean,
+    enabled: Boolean = true,
     onValueChange: (Float) -> Unit,
     onReset: () -> Unit,
     hasDividerAbove: Boolean = true,
     hasDividerBelow: Boolean = false,
     onValueChangeFinished: (() -> Unit)? = null,
     resetDescription: String = stringResource(R.string.feature_slider_reset),
+    interactionEnabled: Boolean = true,
 ) {
     val hapticTick = rememberColorOsHapticTick()
+    val nativeMiuixHaptics = LocalAppUiStyle.current == AppUiStyle.Miuix
     ColorOsSettingsSliderRow(
         heading = heading,
         title = currentValue,
         enabled = enabled,
         hasDividerAbove = hasDividerAbove,
         hasDividerBelow = hasDividerBelow,
+        interactionEnabled = interactionEnabled,
         titleAction = {
             val tint = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -116,7 +132,8 @@ internal fun FeatureSliderRow(
                 COUITheme.colorScheme.onSurfaceVariantActions
             }
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                IconButton(onClick = onReset, enabled = enabled, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = { if (interactionEnabled) onReset() }, enabled = enabled,
+                    modifier = Modifier.size(32.dp).settingsInteractionGate(interactionEnabled)) {
                     Icon(
                         imageVector = Icons.Rounded.Restore,
                         contentDescription = resetDescription,
@@ -131,8 +148,8 @@ internal fun FeatureSliderRow(
             value = value.coerceIn(valueRange),
             onValueChange = { next ->
                 val snapped = snapFeatureSliderValue(next, valueRange, steps)
-                if (enabled && abs(snapped - value) > 0.0001f) {
-                    hapticTick()
+                if (enabled && interactionEnabled && abs(snapped - value) > 0.0001f) {
+                    if (!nativeMiuixHaptics) hapticTick()
                     onValueChange(snapped)
                 }
             },
@@ -141,6 +158,7 @@ internal fun FeatureSliderRow(
             valueRange = valueRange,
             steps = steps,
             modifier = Modifier.fillMaxWidth(),
+            interactionEnabled = interactionEnabled,
         )
     }
 }
@@ -161,13 +179,29 @@ internal fun ColorOsSettingsSliderRow(
     hasDividerBelow: Boolean,
     heading: String? = null,
     titleAction: (@Composable () -> Unit)? = null,
+    interactionEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val rowModifier = Modifier.settingsInteractionGate(interactionEnabled)
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        Column(rowModifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+            heading?.let { top.yukonga.miuix.kmp.basic.Text(it, color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                top.yukonga.miuix.kmp.basic.Text(
+                    title, modifier = Modifier.weight(1f),
+                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+                titleAction?.invoke()
+            }
+            content()
+        }
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressiveInferredSegmentPosition(hasDividerAbove, hasDividerBelow) {
             Material3ExpressiveSegmentContentCard {
                 Column(
-                    modifier = Modifier
+                    modifier = rowModifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                 ) {
@@ -201,7 +235,7 @@ internal fun ColorOsSettingsSliderRow(
         label = "ColorOsSettingsSliderTitleAlpha",
     )
     Column(
-        modifier = Modifier
+        modifier = rowModifier
             .fillMaxWidth()
             .settingsInteractiveRowHighlight(
                 interactionSource = interactionSource,

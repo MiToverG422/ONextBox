@@ -13,7 +13,8 @@ materialKolor = "5.0.1"
 couiCompose = "1.9.3"
 couiComposeWindowSize = "1.9.0"
 couiCapsule = "2.1.1-patch2"
-kyantCapsule = "2.1.0"
+kyantShapes = "1.2.1"
+miuix = "0.9.4"
 couiAndroidxWindow = "1.5.0"
 libxposed = "102.0.0"
 palette = "1.0.0"
@@ -28,6 +29,7 @@ dynamicAnimation = "1.1.0"
 dexkit = "2.3.0"
 
 [libraries]
+miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -47,7 +49,7 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 coui-compose-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "couiCompose" }
 coui-compose-window-size = { module = "org.jetbrains.compose.material3:material3-window-size-class", version.ref = "couiComposeWindowSize" }
 coui-gaze-capsule = { module = "com.mocharealm.gaze:capsule", version.ref = "couiCapsule" }
-kyant-capsule = { module = "com.github.Kyant0:Capsule", version.ref = "kyantCapsule" }
+kyant-shapes = { module = "io.github.kyant0:shapes", version.ref = "kyantShapes" }
 coui-androidx-window = { group = "androidx.window", name = "window", version.ref = "couiAndroidxWindow" }
 libxposed-api = { group = "io.github.libxposed", name = "api", version.ref = "libxposed" }
 libxposed-service = { group = "io.github.libxposed", name = "service", version.ref = "libxposed" }

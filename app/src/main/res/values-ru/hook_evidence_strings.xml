@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hook_evidence_title">Последние записи Hook</string>
-    <string name="hook_evidence_notice">История журнала, а не текущее состояние или подтверждение работы всех компонентов</string>
-    <string name="hook_evidence_installed">Адаптер установлен</string>
-    <string name="hook_evidence_observed">Выполнение зафиксировано</string>
-    <string name="hook_evidence_unavailable">Адаптер недоступен, сохранено штатное поведение</string>
-</resources>

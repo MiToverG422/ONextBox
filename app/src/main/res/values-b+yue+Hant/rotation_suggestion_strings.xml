@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="rotation_suggestion_hide_title">隱藏旋轉建議按鈕</string>
-    <string name="rotation_suggestion_hide_summary">隱藏螢幕邊緣彈出嘅旋轉建議按鈕，唔改動自動旋轉同螢幕方向設定</string>
-</resources>

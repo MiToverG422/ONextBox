@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="feature_c16_stacked_signal_title">Native stacked dual-SIM signal</string>
-    <string name="feature_c16_stacked_signal_summary">Use the native stacked dual-SIM signal style, ported from C16</string>
-    <string name="feature_c16_stacked_signal_save_failed">Could not save the setting</string>
-</resources>

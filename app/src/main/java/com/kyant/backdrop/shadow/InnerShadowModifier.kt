@@ -1,6 +1,5 @@
 package com.kyant.backdrop.shadow
 
-import android.os.Build
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.BlurEffect
@@ -20,8 +19,9 @@ import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.node.requireGraphicsContext
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Density
-import com.kyant.backdrop.ShapeProvider
-import com.kyant.backdrop.clipOutline
+import com.kyant.backdrop.internal.ShapeProvider
+import com.kyant.backdrop.internal.clipOutline
+import com.kyant.backdrop.isRenderEffectSupported
 
 internal class InnerShadowElement(
     val shapeProvider: ShapeProvider,
@@ -78,7 +78,7 @@ internal class InnerShadowNode(
     override fun ContentDrawScope.draw() {
         drawContent()
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        if (!isRenderEffectSupported()) return
 
         val shadow = shadow() ?: return
 
@@ -150,14 +150,6 @@ internal class InnerShadowNode(
 
     private fun DrawScope.configurePaint(shadow: InnerShadow) {
         paint.color = shadow.color
-    }
-
-    private fun DrawScope.drawMaskedShadow(outline: Outline, layer: GraphicsLayer) {
-        val canvas = drawContext.canvas
-        canvas.save()
-        canvas.clipOutline(outline, clipPath)
-        drawLayer(layer)
-        canvas.restore()
     }
 }
 

@@ -85,6 +85,16 @@ fun SettingsPageSurface(
     backgroundContent: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        MiuixSettingsPageSurface(
+            title = title, modifier = modifier, showBack = showBack, onBack = onBack, actions = actions,
+            bottomContentPadding = bottomContentPadding, bottomChrome = bottomChrome,
+            contentScrollable = contentScrollable, edgeToEdgeBottom = edgeToEdgeBottom,
+            externalScrollState = externalScrollState, scrollResetKey = scrollResetKey,
+            backgroundContent = backgroundContent, content = content,
+        )
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressiveSettingsPageSurface(
             title = title,

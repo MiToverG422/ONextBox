@@ -106,6 +106,8 @@ internal fun SystemUiFeaturesPage(
                 SettingsDivider()
                 AospVolumeSettingsRow()
                 SettingsDivider()
+                NativeLiveUpdateSettingsRow()
+                SettingsDivider()
                 C16StackedSignalSettingsRow()
                 SettingsDivider()
                 SettingsToggleRow(

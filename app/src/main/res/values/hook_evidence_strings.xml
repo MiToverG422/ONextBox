@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hook_evidence_title">Recent Hook evidence</string>
-    <string name="hook_evidence_notice">Historical log records only; not live status or proof that all parts work</string>
-    <string name="hook_evidence_installed">Adapter installed</string>
-    <string name="hook_evidence_observed">Execution observed</string>
-    <string name="hook_evidence_unavailable">Adapter unavailable; stock behavior retained</string>
-</resources>

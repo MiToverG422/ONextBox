@@ -34,10 +34,11 @@ internal fun SettingsLazyGroupItem(
 ) {
     val last = index == count - 1
     val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val groupBottom = if (material && bottomPadding == 16.dp) 13.dp else bottomPadding
+    val miuix = LocalAppUiStyle.current == AppUiStyle.Miuix
+    val groupBottom = if (bottomPadding == 16.dp) { if (miuix) 12.dp else if (material) 13.dp else bottomPadding } else bottomPadding
     val rowModifier = modifier
         .fillMaxWidth()
-        .padding(horizontal = 16.dp)
+        .padding(horizontal = if (miuix) 12.dp else 16.dp)
         .padding(bottom = if (last) groupBottom else if (material) 2.dp else 0.dp)
     if (material) {
         Material3ExpressiveAnimatedSegmentPosition(index, count, durationMillis = 280) {
@@ -46,13 +47,14 @@ internal fun SettingsLazyGroupItem(
         return
     }
     val colors = CardDefaults.defaultColors()
+    val cornerRadius = if (LocalAppUiStyle.current == AppUiStyle.Miuix) top.yukonga.miuix.kmp.basic.CardDefaults.CornerRadius else AppUiTokens.CardCornerRadius
     val top by animateDpAsState(
-        targetValue = if (index == 0) AppUiTokens.CardCornerRadius else 0.dp,
+        targetValue = if (index == 0) cornerRadius else 0.dp,
         animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
         label = "settingsLazyGroupTopCorner",
     )
     val bottom by animateDpAsState(
-        targetValue = if (last) AppUiTokens.CardCornerRadius else 0.dp,
+        targetValue = if (last) cornerRadius else 0.dp,
         animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
         label = "settingsLazyGroupBottomCorner",
     )
@@ -73,6 +75,12 @@ internal fun <T> SettingsListGroup(
     content: @Composable ColumnScope.(index: Int, item: T) -> Unit,
 ) {
     if (items.isEmpty()) return
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        SettingsGroup(bottomPadding = bottomPadding) {
+            items.forEachIndexed { index, item -> contentKey(key(item)) { content(index, item) } }
+        }
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         SettingsGroup(bottomPadding = bottomPadding) {
             items.forEachIndexed { index, item ->

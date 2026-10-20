@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_screenshot_floating_title">Не показывать плавающие окна на снимках</string>
-    <string name="hide_screenshot_floating_summary">Исключает поддерживаемые плавающие окна, картинку в картинке и наложения приложений из системных снимков, не закрывая окна</string>
-</resources>

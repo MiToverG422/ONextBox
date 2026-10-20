@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="rotation_suggestion_hide_title">Hide rotation suggestion button</string>
-    <string name="rotation_suggestion_hide_summary">Hide the floating screen-rotation suggestion without changing auto-rotate or orientation settings</string>
-</resources>

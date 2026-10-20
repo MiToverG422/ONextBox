@@ -252,6 +252,7 @@ internal fun <T> OptionDropdownRow(
     onValueChange: (T) -> Unit,
     hasDividerAbove: Boolean,
     hasDividerBelow: Boolean,
+    interactionEnabled: Boolean = true,
 ) {
     val selectedIndex = options
         .indexOfFirst { it.first == selectedValue }
@@ -266,6 +267,7 @@ internal fun <T> OptionDropdownRow(
         summary = summary.takeIf { it.isNotBlank() },
         items = options.map { it.second },
         selectedIndex = selectedIndex,
+        interactionEnabled = interactionEnabled,
         onSelectedIndexChange = { index ->
             options.getOrNull(index)?.first?.let(onValueChange)
         },

@@ -135,8 +135,8 @@ internal object DataSimSignalHooker {
             }.onFailure { HookLog.w(TAG, "Data-SIM change listener unavailable", it) }
         }
 
-        fun capture(): Map<String, Any?> = mapOf("context" to context,
-            "controllers" to synchronized(controllers) { controllers.entries.map { listOf(it.key, it.value.source) } })
+        fun capture(): Map<String, Any?> = DataSimSignalReloadState.capture(context,
+            synchronized(controllers) { controllers.entries.map { it.key to it.value.source } })
 
         fun detach() {
             main.removeCallbacks(refresh)

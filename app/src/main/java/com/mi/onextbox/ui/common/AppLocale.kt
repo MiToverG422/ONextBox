@@ -2,6 +2,7 @@ package com.mi.onextbox.ui.common
 
 import android.content.Context
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.LocaleList
 import androidx.core.content.edit
 import java.util.Locale
@@ -69,6 +70,10 @@ object AppLocale {
         context
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit { putString(KEY_APP_LANGUAGE, normalizedTag) }
+        // In-place UI localization must also update dates/numbers that use Locale.getDefault().
+        val locale = if (normalizedTag.isBlank()) Resources.getSystem().configuration.locales[0]
+            else Locale.forLanguageTag(resourceLanguageTag(normalizedTag))
+        Locale.setDefault(locale)
     }
 
     fun wrapContext(context: Context): Context {

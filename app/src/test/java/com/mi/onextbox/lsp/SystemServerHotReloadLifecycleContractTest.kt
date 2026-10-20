@@ -20,6 +20,8 @@ class SystemServerHotReloadLifecycleContractTest {
         val text = source("SettingsGlobalExtremeRefreshRateHooker.kt")
         assertTrue(text.contains("capture = { policy }"))
         assertTrue(text.contains("restore = { savedPolicy -> bindPolicy(savedPolicy) }"))
+        assertTrue(text.contains("resumeAfterRejection = { policyReplay?.schedule() }"))
+        assertTrue(text.contains("policyReplay?.detach()"))
         assertTrue(text.contains("observerHandler?.removeCallbacksAndMessages(null)"))
         assertTrue(text.contains("unregisterContentObserver(it)"))
     }

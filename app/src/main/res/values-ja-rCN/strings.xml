@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="system_adaptation_runtime_restart">対応バージョンを切り替えました。設定は保持されます。完全に適用して以前の変更を解除するには、端末を再起動してください。</string>
+    <string name="developer_allow_hyperos3_title">HyperOS 3 サポートを許可</string>
+    <string name="system_adaptation_no_content">この対応バージョンには、まだ機能やツールがありません</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">一个 COUI 风格之 OPlus 系统自定义工具箱</string>
     <string name="tab_home">主頁</string>
@@ -533,17 +536,6 @@
     <string name="feature_touch_rate_override_on">有効遊戲觸控覆蓋</string>
     <string name="feature_touch_rate_override_off">済無効化遊戲觸控覆蓋</string>
     <string name="feature_touch_rate_auto_start">起動時自動適用</string>
-    <string name="tab_refresh_rate">更新率</string>
-    <string name="refresh_rate_auto_start">自動啟動</string>
-    <string name="refresh_rate_show_refresh_rate">表示刷新率</string>
-    <string name="refresh_rate_restore_default">復元既定更新率</string>
-    <string name="refresh_rate_restore_success">済復元既定更新率</string>
-    <string name="refresh_rate_restore_failed">復元失敗</string>
-    <string name="refresh_rate_apply_failed">套用失敗</string>
-    <string name="refresh_rate_no_modes">未找到支援之表示方式</string>
-    <string name="refresh_rate_selected">済選択</string>
-    <string name="refresh_rate_table_refresh_rate">刷新率</string>
-    <string name="refresh_rate_resolution_format">%1$d x %2$d</string>
     <string name="feature_permission_manager_title">権限管理</string>
     <string name="feature_permission_start_group">応用起動</string>
     <string name="feature_permission_old_dialog_title">旧版起動確認使用</string>
@@ -842,10 +834,6 @@
     <string name="traffic_roaming_summary">漫遊時限定背景通信制限選択追加</string>
     <string name="traffic_limit_title">既定通信量上限解除</string>
     <string name="traffic_limit_summary">自動設定 100 GB 既定上限取消</string>
-    <string name="settings_section_module_hot_reload">模組熱載入</string>
-    <string name="setting_module_hot_reload">模組熱載入（試験性）</string>
-    <string name="setting_module_hot_reload_summary">既定無効、模組更新後、全作用域之熱載入及実行資源引継を試行、繁忙或不兼容時、仍需再起動、初回啓用後、関連作用域を再起動</string>
-    <string name="setting_module_hot_reload_save_failed">熱載入設定同期不可。Xposed 框架接続確認後、再試行</string>
     <string name="about_logs_title">日誌</string>
     <string name="logs_source">日誌來源</string>
     <string name="logs_source_app">應用日誌</string>
@@ -1229,4 +1217,144 @@
     <string name="launcher_group_effects">視覺效果</string>
     <string name="launcher_force_blur_title">強制開啟桌面模糊動效</string>
     <string name="launcher_force_blur_summary">嘗試解除桌面背景、長按選單材質及相關模糊動效的機型限制，遵循系統模糊、省電和主題設定；可能增加耗電，韌體需保留原生模糊支援，切換後需重新啟動桌面</string>
+
+    <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
+
+    <string name="feature_c16_stacked_signal_title">標準デュアル SIM 積み重ね表示</string>
+    <string name="feature_c16_stacked_signal_summary">C16 から移植した標準のデュアル SIM 積み重ね信号表示を使用</string>
+    <string name="feature_c16_stacked_signal_save_failed">設定を保存できませんでした</string>
+
+    <string name="developer_activation_section">テスト</string>
+    <string name="developer_activation_title">有効化画面に戻る</string>
+    <string name="developer_activation_summary">テスト用に有効化ウィザードを開き直す</string>
+    <string name="developer_activation_confirm">有効化状態と規約への同意記録をリセットし、ウィザードの最初の画面に戻ります。機能設定は保持されます。続行しますか？</string>
+    <string name="developer_activation_failed">有効化画面を開けませんでした</string>
+
+    <string name="enabled_features_title">有効な機能</string>
+    <string name="enabled_features_notice">設定上の有効な機能だよ。Hook の動作確認結果ではないよ</string>
+    <string name="enabled_features_count">%1$d 個の機能が有効</string>
+    <string name="enabled_features_group_count">%1$d 個の機能</string>
+    <string name="enabled_features_copy">一覧をコピー</string>
+    <string name="enabled_features_expand">展開</string>
+    <string name="enabled_features_collapse">折りたたむ</string>
+    <string name="enabled_features_empty">有効な機能はないよ</string>
+    <string name="enabled_features_loading">読み込み中…</string>
+    <string name="enabled_features_error">設定を読み込めないよ。このページを開き直してね</string>
+    <string name="enabled_features_quick_hint">スイッチで切り替え、機能名をタップして設定を開けるよ。無効にした項目はページを離れるまで残るよ。一部の機能は対象プロセスの再起動が必要だよ</string>
+    <string name="enabled_features_save_failed">保存できなかったよ。実際の設定を再読み込みするね</string>
+
+    <string name="hide_notification_clear_title">通知センターの一括消去ボタンを非表示</string>
+    <string name="hide_notification_clear_summary">一括消去ボタンを非表示にします。スワイプによる通知の消去には影響しません</string>
+
+    <string name="hide_recent_apps_title">從最近任務列表中隱藏應用程式</string>
+    <string name="hide_recent_apps_summary">隱藏所選應用程式的最近任務卡片，不結束應用程式；分割畫面組合將整張隱藏</string>
+
+    <string name="hook_evidence_title">最近の Hook 記録</string>
+    <string name="hook_evidence_notice">過去のログだよ。現在の状態や全コンポーネントの動作を保証するものではないよ</string>
+    <string name="hook_evidence_installed">アダプターを登録済み</string>
+    <string name="hook_evidence_observed">実行を記録済み</string>
+    <string name="hook_evidence_unavailable">アダプターを利用できないよ。標準動作を維持</string>
+
+    <string name="network_identity_group">国・通信事業者</string>
+    <string name="network_identity_title">国・通信事業者を偽装（試験的）</string>
+    <string name="network_identity_summary">SIM 1 と SIM 2 の国コード・事業者名・MCC/MNC を個別に設定</string>
+    <string name="network_identity_region">国・地域</string>
+    <string name="network_identity_list">事業者一覧</string>
+    <string name="network_identity_popular">主な事業者</string>
+    <string name="network_identity_all">収録済みコードすべて</string>
+    <string name="network_identity_operator">通信事業者</string>
+    <string name="network_identity_original">元の情報を使用</string>
+    <string name="network_identity_notice">Hook の読み込み後は端末の再起動なしで変更できます。対象アプリを開き直してキャッシュを更新してください。事業者に依存するサービスに影響する場合があります。SIM 認証情報・IP の地域・ネットワーク登録は変更しません。全体または各 SIM のスイッチを無効にすると元に戻ります。モジュールを無効化・削除する前に本機能を無効にしてください。一覧には専用・共有コードを含み、すべての販売ブランドを網羅してはいません</string>
+
+    <string name="phone_manager_risk_cloud_title">危険なアプリの流体クラウド通知を非表示</string>
+    <string name="phone_manager_risk_cloud_summary">流体クラウド通知を通常のリスク通知に変更します。リスク検出や他のセキュリティ警告には影響しません</string>
+
+    <string name="power_indicator_title">消費電力表示（試験的）</string>
+    <string name="power_indicator_summary">時計の横にバッテリー側の推定電力を表示。インストール後はシステム UI の再起動が必要です。取得できない場合は非表示</string>
+    <string name="power_indicator_interval">更新間隔</string>
+    <string name="power_indicator_precision">小数点以下の桁数</string>
+    <string name="power_indicator_scale">バッテリー測定補正</string>
+    <string name="power_indicator_scale_notice">デュアルセルでも必ずしも2倍にはしません。単セルの測定値のみ ×2、パック全体の値は ×1</string>
+    <string name="power_indicator_scale_original">報告値 ×1</string>
+    <string name="power_indicator_scale_double">単セル補正 ×2</string>
+    <string name="power_indicator_scale_half">補正 ×0.5</string>
+    <string name="power_indicator_source">電流データソース</string>
+    <string name="power_indicator_source_notice">標準は Android API（µA）。端末の単位を確認してから sysfs を選択してください。単位が違うと電力も不正確になります</string>
+    <string name="power_indicator_source_api">Android API（µA）</string>
+    <string name="power_indicator_source_ma">バッテリー sysfs（mA）</string>
+    <string name="power_indicator_source_ua">バッテリー sysfs（µA）</string>
+    <string name="power_indicator_hide_charging">電源接続中は非表示</string>
+    <string name="power_indicator_charging_notice">無効時の + はバッテリーへの正味充電電力で、充電器出力や端末全体の消費電力ではありません</string>
+    <string name="power_indicator_font">文字サイズ</string>
+
+    <string name="rotation_suggestion_hide_title">回転提案ボタンを非表示</string>
+    <string name="rotation_suggestion_hide_summary">画面端の回転提案ボタンを非表示にします。自動回転や画面の向きの設定は変更しません</string>
+
+    <string name="hide_screenshot_floating_title">スクリーンショットからフローティングアプリを除外</string>
+    <string name="hide_screenshot_floating_summary">対応するフローティングウィンドウ、ピクチャーインピクチャー、アプリのオーバーレイを閉じずにシステムのスクリーンショットから除外</string>
+    <string name="power_indicator_hide_discharge_sign">放電負号非表示</string>
+    <string name="power_indicator_temperature">双行温度表示</string>
+    <string name="power_indicator_temperature_summary">上行功耗表示、下行電池温度表示</string>
+    <string name="power_indicator_temperature_unit">温度単位</string>
+    <string name="power_indicator_temperature_celsius">摂氏（°C）</string>
+    <string name="power_indicator_temperature_fahrenheit">華氏（°F）</string>
+    <string name="gallery_page_title">写真</string>
+    <string name="gallery_ai_retouch_title">AI 修図解禁（実験性）</string>
+    <string name="gallery_ai_retouch_summary">非旗艦機型 AI 修図使用許可</string>
+    <string name="gallery_save_failed">写真設定保存失敗</string>
+    <string name="settings_section_system_entry">起動方法</string>
+    <string name="setting_settings_home_entry">設定アイコン</string>
+    <string name="setting_settings_home_entry_summary">システム設定内のモジュール入口の位置を設定します</string>
+    <string name="setting_settings_home_entry_save_failed">設定を保存できません。Xposed フレームワークの接続を確認して再試行してください</string>
+    <string name="setting_settings_home_entry_disabled">無効</string>
+    <string name="setting_settings_home_entry_top">上部</string>
+    <string name="setting_settings_home_entry_middle">中央</string>
+    <string name="setting_settings_home_entry_bottom">下部</string>
+    <string name="setting_settings_home_entry_style">アイコンスタイル</string>
+    <string name="setting_settings_home_entry_style_system">デフォルト</string>
+    <string name="setting_settings_home_entry_style_app">アプリアイコン</string>
+    <string name="settings_section_system_adaptation">系統適配</string>
+    <string name="setting_system_adaptation_version">適配版本</string>
+    <string name="setting_system_adaptation_save_failed">無法保存系統適配版本，請確認 Xposed 框架連接後重試</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_title">LTPO/LTPS の動的な低下を無効化</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_summary">画面点灯中はシステム設定で選択したリフレッシュレートを維持します。有効にすると消費電力が増える場合があります。</string>
+    <string name="display_enhancement_group">画质增强</string>
+    <string name="display_enhancement_sr_thermal_title">解除画质超清增强温控限制</string>
+    <string name="display_enhancement_sr_thermal_summary">解除画质超清增强自身的温控限制，不解锁硬件能力，可能增加发热与耗电</string>
+    <string name="display_enhancement_color_thermal_title">解除视频色彩增强温控限制</string>
+    <string name="display_enhancement_color_thermal_summary">解除视频色彩增强自身的温控限制，可能增加发热与耗电，不影响整机温控保护</string>
+    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="settings_home_cleanup_group">設定ホーム</string>
+    <string name="settings_home_hide_account_title">上部のアカウント項目を非表示</string>
+    <string name="settings_home_hide_account_summary">システム設定ホームのアカウントカードを非表示にします</string>
+    <string name="settings_home_hide_update_title">上部の更新通知を非表示</string>
+    <string name="settings_home_hide_update_summary">システム設定ホームの更新通知を非表示にします</string>
+    <string name="power_indicator_follow_font_weight">システムのフォントの太さに合わせる</string>
+    <string name="keyguard_swipe_pin_title">スワイプで PIN を入力（試験的）</string>
+    <string name="keyguard_swipe_pin_summary">数字キーをなぞってロック画面の PIN を入力します。タップも使用できます。同じ数字はキーの外に出てから再度なぞってください</string>
+    <string name="settings_process_group">アプリ</string>
+    <string name="settings_show_process_manager_title">プロセス管理を強制表示</string>
+    <string name="settings_realme_title">Realme 機能</string>
+    <string name="settings_realme_entry_summary">システム設定に残されている Realme 専用項目</string>
+    <string name="settings_realme_app_volume">アプリ別音量ページを強制表示</string>
+    <string name="settings_realme_directional_sound">指向性サウンドを強制表示</string>
+    <string name="settings_realme_brightness_range">拡張輝度を強制表示</string>
+    <string name="settings_realme_multiple_faces">複数の顔登録を強制有効化</string>
+    <string name="settings_realme_sleep_capsule">睡眠カプセルを強制表示</string>
+    <string name="settings_realme_heart_rate">心拍数測定を強制表示</string>
+    <string name="settings_realme_dc_dimming">Realme DC 調光を強制表示</string>
+    <string name="settings_realme_dual_music">デュアルモード音楽共有を強制表示</string>
+    <string name="settings_realme_sleep_dependency">別途「睡眠カプセル」アプリが必要です（com.realme.wellbeing）</string>
+    <string name="settings_realme_heart_dependency">別途「心拍数測定」アプリが必要です（com.oplus.heartrate.detect）</string>
+    <string name="settings_realme_dependency_unavailable">必要なアプリが未インストール、無効、または起動不可のため利用できません</string>
+    <string name="settings_realme_laboratory">ラボを表示</string>
+    <string name="app_lock_group">アプリロック</string>
+    <string name="app_lock_delay_title">アプリの再ロックを遅延（試験的）</string>
+    <string name="app_lock_delay_summary">標準のロックタイミングにアプリを離れてから1分後・5分後を追加します。画面ロック時はすぐに再ロックします</string>
+    <string name="app_lock_delay_after_minutes">アプリを離れてから%1$d分後</string>
+    <string name="app_lock_delay_save_failed">アプリロックの時間を保存できませんでした</string>
+    <string name="native_live_update_title">標準のリアルタイム通知チップ</string>
+    <string name="native_live_update_summary">標準のリアルタイム通知チップを使用します。有効にすると Fluid Cloud は表示されず、両方を同時に使用できません。</string>
+    <string name="setting_hide_module_icon">モジュールのアプリアイコンを非表示</string>
+    <string name="setting_hide_module_icon_failed">アイコンの表示状態を変更できません</string>
 </resources>

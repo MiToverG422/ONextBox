@@ -11,8 +11,6 @@ import com.mi.onextbox.lsp.LspPreferenceStore
 import com.mi.onextbox.lsp.SideKeyFeaturePolicy
 import com.mi.onextbox.lsp.SideKeySettings
 import com.mi.onextbox.lsp.launcherSearchBarModeValue
-import com.mi.onextbox.refresh.RefreshRatePreferences
-import com.mi.onextbox.refresh.RefreshRateControllerClient
 import com.mi.onextbox.touch.TouchSamplingController
 import com.mi.onextbox.touch.TouchSamplingPreferences
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +39,7 @@ object ConfigBackup {
 
     private val supportedPrefs = listOf(
         APP_PREFS_NAME, LSP_PREFS_NAME,
-        RefreshRatePreferences.PREFS_NAME, TouchSamplingPreferences.PREFS_NAME,
+        TouchSamplingPreferences.PREFS_NAME,
     )
 
     data class ImportResult(val systemStateSynced: Boolean)
@@ -147,12 +145,6 @@ object ConfigBackup {
         val lspStateReset = runCatching {
             LspConfig.resetToDefaults(appContext)
         }.getOrDefault(false)
-        val refreshRateStateReset = runCatching {
-            RefreshRateControllerClient.resetRefreshRateMode(appContext) == true
-        }.getOrDefault(false)
-        require(prefs(appContext, RefreshRatePreferences.PREFS_NAME).edit().clear().commit()) {
-            "Failed to clear refresh rate preferences"
-        }
         val touchStateReset = runCatching {
             TouchSamplingController.resetConfiguration()
         }.getOrDefault(false)
@@ -172,7 +164,6 @@ object ConfigBackup {
 
         ResetResult(
             systemStateReset = lspStateReset &&
-                refreshRateStateReset &&
                 touchStateReset &&
                 permissionMonitorReset &&
                 launcherLayoutReset &&

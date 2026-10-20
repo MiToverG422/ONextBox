@@ -15,6 +15,33 @@ class HotReloadResourceCoordinatorTest {
     private fun hookResult(owner: HotReloadResourceCoordinator) =
         owner.withHook(fallback = { "original" }, action = { "module" })
 
+    @Test fun retiredGenerationCannotRecaptureAlreadyReleasedResourcesOrResumeOldHooks() {
+        val owner = coordinator()
+        var captured = 0
+        var detached = 0
+        var resumed = 0
+        owner.register("resource", capture = { captured++; "host-state" },
+            detach = { detached++ }, resumeAfterRejection = { resumed++ })
+        owner.prepare()
+        assertThrows(IllegalStateException::class.java) { owner.prepare() }
+        assertEquals(1, captured)
+        assertEquals(1, detached)
+        assertEquals(0, resumed)
+        assertTrue(owner.isRetiring)
+        assertEquals("original", hookResult(owner))
+    }
+
+    @Test fun quarantinedGenerationCannotRearmItselfThroughAnotherPreparation() {
+        val owner = coordinator()
+        var resumed = false
+        owner.register("resource", resumeAfterRejection = { resumed = true })
+        owner.fail()
+        assertThrows(IllegalStateException::class.java) { owner.prepare() }
+        assertFalse(resumed)
+        assertTrue(owner.isRetiring)
+        assertEquals("original", hookResult(owner))
+    }
+
     @Test fun firstLoadAfterCommitRunsWithoutAndroidLooper() {
         val owner = coordinator()
         val events = ArrayList<String>()

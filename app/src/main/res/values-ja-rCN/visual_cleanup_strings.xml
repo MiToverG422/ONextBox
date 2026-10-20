@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_screenshot_floating_title">スクリーンショットからフローティングアプリを除外</string>
-    <string name="hide_screenshot_floating_summary">対応するフローティングウィンドウ、ピクチャーインピクチャー、アプリのオーバーレイを閉じずにシステムのスクリーンショットから除外</string>
-</resources>

@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_recent_apps_title">从最近任务列表中隐藏应用</string>
-    <string name="hide_recent_apps_summary">隐藏所选应用的最近任务卡片，不结束应用；分屏组合将整张隐藏</string>
-</resources>

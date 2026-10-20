@@ -17,7 +17,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.Density
 import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.InverseLayerScope
+import com.kyant.backdrop.internal.InverseLayerScope
 
 private val DefaultOnDraw: ContentDrawScope.() -> Unit = { drawContent() }
 
@@ -54,7 +54,13 @@ class LayerBackdrop internal constructor(
             if (layerBlock != null) {
                 with(obtainInverseLayerScope()) { inverseTransform(density, layerBlock) }
             }
-            val offset = coordinates.positionInWindow() - layerCoordinates.positionInWindow()
+            val offset =
+                try {
+                    layerCoordinates.localPositionOf(coordinates)
+                } catch (_: Exception) {
+                    // TODO: outer transformations lead to wrong position calculation
+                    coordinates.positionInWindow() - layerCoordinates.positionInWindow()
+                }
             translate(-offset.x, -offset.y)
         }) {
             drawLayer(graphicsLayer)

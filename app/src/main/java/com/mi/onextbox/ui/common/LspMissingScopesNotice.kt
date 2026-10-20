@@ -113,7 +113,12 @@ internal fun LspMissingScopesNotice(
             if (scopes.size > 3) {
                 MissingScopeText(stringResource(R.string.lsp_missing_scopes_more, scopes.size - 3), 13.sp)
             }
-            if (material) {
+            if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+                top.yukonga.miuix.kmp.basic.TextButton(
+                    text = stringResource(R.string.onboarding_open_lsposed),
+                    onClick = onOpen, enabled = !opening, modifier = Modifier.fillMaxWidth(),
+                )
+            } else if (material) {
                 androidx.compose.material3.TextButton(
                     onClick = onOpen,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -149,7 +154,9 @@ internal fun LspMissingScopesNotice(
             }
         }
     }
-    if (material) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        top.yukonga.miuix.kmp.basic.Card(modifier = modifier.fillMaxWidth()) { content() }
+    } else if (material) {
         Surface(
             modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
@@ -174,7 +181,12 @@ private fun MissingScopeText(
     fontWeight: FontWeight = FontWeight.Normal,
     maxLines: Int = Int.MAX_VALUE,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        top.yukonga.miuix.kmp.basic.Text(
+            text = text, fontSize = fontSize, fontWeight = fontWeight, maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
+        )
+    } else if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         androidx.compose.material3.Text(
             text = text,
             fontSize = fontSize,

@@ -106,7 +106,6 @@ import androidx.core.net.toUri
 import androidx.core.content.ContextCompat
 import com.mi.onextbox.BuildConfig
 import com.mi.onextbox.R
-import com.mi.onextbox.lsp.ModuleHotReloadSettings
 import com.mi.onextbox.ui.common.AppIcons
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
@@ -148,9 +147,11 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.ThemeColorSpec
 import io.github.suqi8.coui.kmp.theme.ThemePaletteStyle
 import io.github.suqi8.coui.kmp.blur.isRuntimeShaderSupported
-import com.materialkolor.PaletteStyle
-import com.materialkolor.dynamicColorScheme
-import com.materialkolor.dynamiccolor.ColorSpec
+import com.mi.onextbox.ui.common.material3ExpressiveColorScheme
+import com.mi.onextbox.ui.common.MaterialColorSpec
+import com.mi.onextbox.ui.common.LocalAppAppearanceTransition
+import com.mi.onextbox.ui.common.rememberMaterialColorSpec
+import com.mi.onextbox.ui.common.setMaterialColorSpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -166,6 +167,9 @@ private const val SUQI8_PROFILE_URL = "https://github.com/suqi8"
 private const val COLORLARIS_PROFILE_URL = "https://github.com/Colorlaris"
 private const val ROVE24_PROFILE_URL = "https://github.com/Rove24"
 private const val ZOPULUS_PROFILE_URL = "https://github.com/zopulus"
+private const val CONCERROX_PROFILE_URL = "https://github.com/ConcerroX"
+private const val FISHCPY_PROFILE_URL = "https://github.com/fishcpy"
+private const val HEHEJUICE_PROFILE_URL = "https://github.com/HeheJuice"
 private const val GITHUB_REPOSITORY_URL = "https://github.com/MiToverG422/ONextBox"
 private const val TELEGRAM_CHANNEL_URL = "https://t.me/ONextBox"
 private const val SOFTWARE_UPDATE_CHECK_DELAY_MS = 2_000L
@@ -175,6 +179,9 @@ private const val MITOVERG_AVATAR_URL = "https://github.com/MiToverG422.png?size
 private const val COLORLARIS_AVATAR_URL = "https://github.com/Colorlaris.png?size=160"
 private const val ROVE24_AVATAR_URL = "https://github.com/Rove24.png?size=160"
 private const val ZOPULUS_AVATAR_URL = "https://github.com/zopulus.png?size=160"
+private const val CONCERROX_AVATAR_URL = "https://github.com/ConcerroX.png?size=160"
+private const val FISHCPY_AVATAR_URL = "https://github.com/fishcpy.png?size=160"
+private const val HEHEJUICE_AVATAR_URL = "https://github.com/HeheJuice.png?size=160"
 private const val COUI_REPOSITORY_URL = "https://github.com/suqi8/coui"
 private const val MIUIX_REPOSITORY_URL = "https://github.com/compose-miuix-ui/miuix"
 private const val OSHIN_REPOSITORY_URL = "https://github.com/suqi8/OShin"
@@ -204,7 +211,7 @@ private fun fallbackAvatarRes(avatarUrl: String): Int = when (avatarUrl) {
 private data class AboutLinkItem(
     @param:StringRes val titleRes: Int,
     @param:StringRes val summaryRes: Int,
-    val url: String,
+    val url: String? = null,
     val leadingContent: (@Composable () -> Unit)? = null,
 )
 
@@ -1726,6 +1733,24 @@ fun AboutContributorsPage() {
             url = ZOPULUS_PROFILE_URL,
             leadingContent = { GitHubAuthorAvatar(ZOPULUS_AVATAR_URL) },
         ),
+        AboutLinkItem(
+            titleRes = R.string.about_contributor_concerrox_title,
+            summaryRes = R.string.about_contributor_concerrox_summary,
+            url = CONCERROX_PROFILE_URL,
+            leadingContent = { GitHubAuthorAvatar(CONCERROX_AVATAR_URL) },
+        ),
+        AboutLinkItem(
+            titleRes = R.string.about_contributor_fishcpy_title,
+            summaryRes = R.string.about_contributor_fishcpy_summary,
+            url = FISHCPY_PROFILE_URL,
+            leadingContent = { GitHubAuthorAvatar(FISHCPY_AVATAR_URL) },
+        ),
+        AboutLinkItem(
+            titleRes = R.string.about_contributor_hehejuice_title,
+            summaryRes = R.string.about_contributor_hehejuice_summary,
+            url = HEHEJUICE_PROFILE_URL,
+            leadingContent = { GitHubAuthorAvatar(HEHEJUICE_AVATAR_URL) },
+        ),
     )
     AboutLinkGroup(items = items)
 }
@@ -1758,6 +1783,16 @@ fun AboutReferencesPage() {
             summaryRes = R.string.about_reference_gaze_capsule_summary,
             url = GAZE_CAPSULE_URL,
         ),
+        AboutLinkItem(
+            titleRes = R.string.about_reference_capsule_title,
+            summaryRes = R.string.about_reference_capsule_summary,
+            url = "https://github.com/Kyant0/Capsule",
+        ),
+        AboutLinkItem(
+            titleRes = R.string.about_reference_liquid_glass_title,
+            summaryRes = R.string.about_reference_liquid_glass_summary,
+            url = "https://github.com/Kyant0/AndroidLiquidGlass",
+        ),
     )
     val featureReferences = listOf(
         AboutLinkItem(
@@ -1774,6 +1809,16 @@ fun AboutReferencesPage() {
             titleRes = R.string.about_reference_inxlocker_title,
             summaryRes = R.string.about_reference_inxlocker_summary,
             url = INXLOCKER_REPOSITORY_URL,
+        ),
+        AboutLinkItem(
+            titleRes = R.string.about_reference_corepatch_title,
+            summaryRes = R.string.about_reference_corepatch_summary,
+            url = "https://github.com/LSPosed/CorePatch",
+        ),
+        AboutLinkItem(
+            titleRes = R.string.about_reference_nrfr_title,
+            summaryRes = R.string.about_reference_nrfr_summary,
+            url = "https://github.com/Ackites/Nrfr",
         ),
     )
     val libraries = listOf(
@@ -1796,6 +1841,16 @@ fun AboutReferencesPage() {
             titleRes = R.string.about_reference_xposed_api_title,
             summaryRes = R.string.about_reference_xposed_api_summary,
             url = XPOSED_API_URL,
+        ),
+        AboutLinkItem(
+            titleRes = R.string.about_reference_xposed_service_title,
+            summaryRes = R.string.about_reference_xposed_service_summary,
+            url = "https://github.com/libxposed/service",
+        ),
+        AboutLinkItem(
+            titleRes = R.string.about_reference_material_kolor_title,
+            summaryRes = R.string.about_reference_material_kolor_summary,
+            url = "https://github.com/jordond/MaterialKolor",
         ),
         AboutLinkItem(
             titleRes = R.string.about_reference_jetpack_compose_title,
@@ -2003,10 +2058,10 @@ private fun AboutLinkGroup(
             SettingsCardRow(
                 title = stringResource(item.titleRes),
                 summary = stringResource(item.summaryRes),
-                showArrow = true,
+                showArrow = item.url != null,
                 hasDividerAbove = index > 0,
                 hasDividerBelow = index < items.lastIndex,
-                onClick = { openUrl(context, item.url) },
+                onClick = item.url?.let { url -> { openUrl(context, url) } },
                 leadingContent = item.leadingContent,
             )
             if (index < items.lastIndex) SettingsDivider()
@@ -2269,6 +2324,8 @@ fun AppSettingsPage(
         },
     )
 
+    SettingsSystemAdaptationGroup()
+
     SettingsSection(title = stringResource(R.string.settings_section_display))
     if (appUiStyle == AppUiStyle.Material3Expressive) {
         Material3ExpressiveAppearanceSettingsGroup(
@@ -2361,7 +2418,7 @@ fun AppSettingsPage(
         )
         SettingsDivider()
         AnimatedVisibility(
-            visible = isRuntimeShaderSupported(),
+            visible = appUiStyle == AppUiStyle.ColorOs && isRuntimeShaderSupported(),
             enter = expandVertically(
                 animationSpec = tween(260, easing = FastOutSlowInEasing),
             ) + fadeIn(animationSpec = tween(180)),
@@ -2381,6 +2438,7 @@ fun AppSettingsPage(
                 SettingsDivider()
             }
         }
+        if (appUiStyle == AppUiStyle.ColorOs) {
         SettingsToggleRow(
             title = stringResource(R.string.setting_feature_page_new_style),
             summary = "",
@@ -2422,10 +2480,11 @@ fun AppSettingsPage(
             hasDividerBelow = true,
             enabled = liquidGlassBottomBarSupported,
         )
+        }
     }
     }
 
-    ModuleHotReloadSettingsGroup()
+    SettingsHomeEntrySettingsGroup()
 
     SettingsSection(title = stringResource(R.string.section_restore_backup))
     SettingsGroup {
@@ -2468,43 +2527,6 @@ fun AppSettingsPage(
 }
 
 @Composable
-private fun ModuleHotReloadSettingsGroup() {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val saveFailedText = stringResource(R.string.setting_module_hot_reload_save_failed)
-    var enabled by remember(context) { mutableStateOf(ModuleHotReloadSettings.isEnabled(context)) }
-    var saving by remember { mutableStateOf(false) }
-
-    SettingsSection(title = stringResource(R.string.settings_section_module_hot_reload))
-    SettingsGroup {
-        SettingsToggleRow(
-            title = stringResource(R.string.setting_module_hot_reload),
-            summary = stringResource(R.string.setting_module_hot_reload_summary),
-            checked = enabled,
-            enabled = !saving,
-            onCheckedChange = { selected ->
-                if (!saving) {
-                    saving = true
-                    scope.launch {
-                        try {
-                            withContext(Dispatchers.IO) {
-                                ModuleHotReloadSettings.setEnabled(context, selected)
-                            }
-                            enabled = selected
-                        } catch (error: Throwable) {
-                            if (error is CancellationException) throw error
-                            Toast.makeText(context, saveFailedText, Toast.LENGTH_LONG).show()
-                        } finally {
-                            saving = false
-                        }
-                    }
-                }
-            },
-        )
-    }
-}
-
-@Composable
 private fun Material3ExpressiveAppearanceSettingsGroup(
     appUiStyle: AppUiStyle,
     onAppUiStyleChange: (AppUiStyle) -> Unit,
@@ -2521,10 +2543,14 @@ private fun Material3ExpressiveAppearanceSettingsGroup(
     materialSwitchIconsEnabled: Boolean,
     onMaterialSwitchIconsEnabledChange: (Boolean) -> Unit,
 ) {
+    val materialColorSpec = rememberMaterialColorSpec()
+    val context = LocalContext.current
+    val appearanceTransition = LocalAppAppearanceTransition.current
+    val appearanceScope = rememberCoroutineScope()
     val paletteVisible = remember { MutableTransitionState(!appThemeMode.isMonet) }
     paletteVisible.targetState = !appThemeMode.isMonet
     val hasPaletteSlot = paletteVisible.currentState || paletteVisible.targetState || !paletteVisible.isIdle
-    val interactionStartIndex = if (hasPaletteSlot) 5 else 4
+    val interactionStartIndex = if (hasPaletteSlot) 6 else 5
     val segmentCount = interactionStartIndex + 3
     SettingsGroup {
         Material3ExpressiveSegmentPosition(index = 0, count = segmentCount) {
@@ -2550,8 +2576,30 @@ private fun Material3ExpressiveAppearanceSettingsGroup(
                 onModeChange = onAppThemeModeChange,
             )
         }
+        Material3ExpressiveSegmentPosition(index = 3, count = segmentCount) {
+            SettingsThemeTextDropdown(
+                title = stringResource(R.string.setting_theme_color_spec),
+                labels = MaterialColorSpec.entries.map { it.name },
+                selectedIndex = MaterialColorSpec.entries.indexOf(materialColorSpec),
+                onSelectedIndexChange = { index ->
+                    MaterialColorSpec.entries.getOrNull(index)?.let { spec ->
+                        if (spec != materialColorSpec && appearanceTransition?.isChanging != true) {
+                            if (appearanceTransition == null) {
+                                setMaterialColorSpec(context, spec)
+                            } else {
+                                appearanceScope.launch {
+                                    appearanceTransition.change { setMaterialColorSpec(context, spec) }
+                                }
+                            }
+                        }
+                    }
+                },
+                hasDividerAbove = true,
+                hasDividerBelow = true,
+            )
+        }
         Material3ExpressiveAnimatedSegmentPosition(
-            index = 3,
+            index = 4,
             count = segmentCount,
             durationMillis = if (appThemeMode.isMonet) 240 else 280,
         ) {
@@ -2578,7 +2626,7 @@ private fun Material3ExpressiveAppearanceSettingsGroup(
                 shrinkTowards = Alignment.Top,
             ) + fadeOut(animationSpec = spring(dampingRatio = 0.9f, stiffness = 800f)),
         ) {
-            Material3ExpressiveSegmentPosition(index = 4, count = segmentCount) {
+            Material3ExpressiveSegmentPosition(index = 5, count = segmentCount) {
                 Material3ExpressiveSegmentContentCard {
                     Material3ExpressiveThemeColorPicker(
                         appThemeMode = appThemeMode,
@@ -2621,6 +2669,7 @@ private fun Material3ExpressiveThemeColorPicker(
     selectedKeyColor: Long?,
     onKeyColorChange: (Long?) -> Unit,
 ) {
+    val materialColorSpec = rememberMaterialColorSpec()
     val expressiveSeedColors = listOf(
         0xFFF44336L, 0xFFE91E63L, 0xFF9C27B0L, 0xFF673AB7L, 0xFF3F51B5L,
         0xFF2196F3L, 0xFF00BCD4L, 0xFF009688L, 0xFF4FAF50L, 0xFFFFEB3BL,
@@ -2652,13 +2701,8 @@ private fun Material3ExpressiveThemeColorPicker(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         ) {
             itemsIndexed(colors, key = { _, color -> color }) { _, option ->
-                val swatch = remember(option, dark) {
-                    dynamicColorScheme(
-                        seedColor = Color(option),
-                        isDark = dark,
-                        style = PaletteStyle.TonalSpot,
-                        specVersion = ColorSpec.SpecVersion.SPEC_2025,
-                    )
+                val swatch = remember(option, dark, materialColorSpec) {
+                    material3ExpressiveColorScheme(Color(option), dark, spec = materialColorSpec)
                 }
                 val chosen = selectedColor == option
                 MaterialSurface(
@@ -2701,6 +2745,7 @@ fun DeveloperOptionsPage(
     onShowFpsMonitorChange: (Boolean) -> Unit,
 ) {
     DeveloperActivationEntry()
+    DeveloperHyperOsSupportGroup()
     SettingsSection(title = stringResource(R.string.settings_section_display))
     SettingsGroup {
         SettingsToggleRow(

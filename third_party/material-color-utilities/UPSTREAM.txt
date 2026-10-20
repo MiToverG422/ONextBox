@@ -1,0 +1,11 @@
+Material Color Utilities — Google LLC
+https://github.com/material-foundation/material-color-utilities
+Revision: dd62982dfdefdfc9232ce8d76e122fb1c6d188ae
+License: Apache-2.0 (see LICENSE)
+
+The Java CMF 2026 engine and its dependencies are included in
+app/src/main/java/com/mi/onextbox/color2026.
+Changes: package/import relocation to com.mi.onextbox.color2026;
+removed compile-time Error Prone Var/CanIgnoreReturnValue annotations.
+Color algorithms are unchanged. Only SchemeCmf is included from scheme/.
+This namespace is separate from COUI's MaterialKolor 5.x runtime.

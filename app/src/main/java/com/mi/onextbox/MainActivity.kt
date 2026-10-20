@@ -15,8 +15,6 @@ import android.view.ContextThemeWrapper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
@@ -45,12 +42,15 @@ import kotlinx.coroutines.withContext
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.lsp.LsposedScopeRequester
 import com.mi.onextbox.ui.common.AppLocale
+import com.mi.onextbox.ui.common.AppAppearanceTransitionHost
+import com.mi.onextbox.ui.common.AppAppearanceTransitionState
 import com.mi.onextbox.ui.common.AppLogStore
 import com.mi.onextbox.ui.common.AppThemeColorSpec
 import com.mi.onextbox.ui.common.AppThemeKeyColor
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppThemePaletteStyle
 import com.mi.onextbox.ui.common.AppUiStyle
+import com.mi.onextbox.ui.common.pageDensityScale
 import com.mi.onextbox.ui.common.AssistantScreenOption
 import com.mi.onextbox.ui.common.RootAccessState
 import com.mi.onextbox.ui.common.applyAssistantScreenOption
@@ -115,14 +115,6 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(AppLocale.wrapContext(newBase))
     }
 
-    private fun recreateForLocaleChange() {
-        window.decorView.post {
-            recreate()
-            @Suppress("DEPRECATION")
-            overridePendingTransition(0, 0)
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Keep onboarding and the prepared app destination in one window. Its final clear/dissolve
@@ -131,6 +123,13 @@ class MainActivity : ComponentActivity() {
         handleLaunchIntent(intent)
         AppLogStore.i("App", "MainActivity onCreate")
         setContent {
+            val appearanceTransition = remember { AppAppearanceTransitionState() }
+            val appearanceTransitionScope = rememberCoroutineScope()
+            fun changeAppAppearance(changed: Boolean, commit: () -> Unit) {
+                if (changed && !appearanceTransition.isChanging) {
+                    appearanceTransitionScope.launch { appearanceTransition.change(commit) }
+                }
+            }
             val prefs = remember {
                 getSharedPreferences("onextbox_prefs", MODE_PRIVATE)
             }
@@ -208,7 +207,7 @@ class MainActivity : ComponentActivity() {
             var currentTab by rememberSaveable {
                 mutableIntStateOf(0)
             }
-            // Reload the selected language from preferences after recreation.
+            // The localized context changes in place so navigation and scroll state survive.
             var appLanguageTag by remember {
                 mutableStateOf(AppLocale.getSelectedLanguageTag(this@MainActivity))
             }
@@ -619,11 +618,9 @@ class MainActivity : ComponentActivity() {
 
             val systemDensity = LocalDensity.current
             val appDensity = remember(appUiStyle, systemDensity.density, systemDensity.fontScale) {
-                if (appUiStyle == AppUiStyle.Material3Expressive) {
-                    Density(systemDensity.density * 0.95f, systemDensity.fontScale)
-                } else {
-                    systemDensity
-                }
+                val scale = appUiStyle.pageDensityScale
+                if (scale == 1f) systemDensity
+                else Density(systemDensity.density * scale, systemDensity.fontScale)
             }
             CompositionLocalProvider(
                 LocalContext provides localizedUiContext,
@@ -634,7 +631,7 @@ class MainActivity : ComponentActivity() {
                 // real activity so migration import survives in-place language changes.
                 LocalActivityResultRegistryOwner provides this@MainActivity,
             ) {
-                Box(modifier = Modifier.fillMaxSize()) {
+                AppAppearanceTransitionHost(state = appearanceTransition) {
                     if (onboardingCompleted || onboardingDestinationPrepared) {
                         Root(
                 openSoftwareUpdateRequest = openSoftwareUpdateRequest,
@@ -657,28 +654,29 @@ class MainActivity : ComponentActivity() {
                 onLiquidGlassBottomBarEnabledChange = { liquidGlassBottomBarEnabled = it },
                 appLanguageTag = appLanguageTag,
                 onAppLanguageChange = { languageTag ->
-                    if (appLanguageTag != languageTag) {
-                        appLanguageTag = languageTag
+                    changeAppAppearance(appLanguageTag != languageTag) {
                         AppLocale.setSelectedLanguageTag(this@MainActivity, languageTag)
-                        recreateForLocaleChange()
+                        appLanguageTag = languageTag
                     }
                 },
                 appThemeMode = appThemeMode,
                 onAppThemeModeChange = { mode ->
-                    appThemeMode = mode
-                    AppThemeMode.set(this@MainActivity, mode)
-                    prefs.edit().putString(
-                        if (appUiStyle == AppUiStyle.Material3Expressive) {
-                            PREF_MATERIAL_THEME_MODE
-                        } else {
-                            PREF_COLOROS_THEME_MODE
-                        },
-                        mode.name,
-                    ).apply()
+                    changeAppAppearance(appThemeMode != mode) {
+                        appThemeMode = mode
+                        AppThemeMode.set(this@MainActivity, mode)
+                        prefs.edit().putString(
+                            if (appUiStyle == AppUiStyle.Material3Expressive) {
+                                PREF_MATERIAL_THEME_MODE
+                            } else {
+                                PREF_COLOROS_THEME_MODE
+                            },
+                            mode.name,
+                        ).apply()
+                    }
                 },
                 appUiStyle = appUiStyle,
                 onAppUiStyleChange = { style ->
-                    if (style != appUiStyle) {
+                    changeAppAppearance(style != appUiStyle) {
                         val sourceKey = if (appUiStyle == AppUiStyle.Material3Expressive) {
                             PREF_MATERIAL_THEME_MODE
                         } else {
@@ -701,9 +699,9 @@ class MainActivity : ComponentActivity() {
                             .apply()
                         appThemeMode = nextMode
                         AppThemeMode.set(this@MainActivity, nextMode)
+                        appUiStyle = style
+                        AppUiStyle.set(this@MainActivity, style)
                     }
-                    appUiStyle = style
-                    AppUiStyle.set(this@MainActivity, style)
                 },
                 materialFloatingBottomBarEnabled = materialFloatingBottomBarEnabled,
                 onMaterialFloatingBottomBarEnabledChange = { materialFloatingBottomBarEnabled = it },
@@ -842,7 +840,7 @@ class MainActivity : ComponentActivity() {
                     )
                     }
                     if (onboardingVisible) {
-                        // The app's Material UI uses a smaller density. Activation always keeps
+                        // Alternative UI styles use a smaller density. Activation always keeps
                         // the same C17 sizing while its choices configure only the destination.
                         CompositionLocalProvider(LocalDensity provides systemDensity) {
                         OnboardingScreen(

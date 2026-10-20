@@ -66,7 +66,7 @@ internal fun DataSimSignalSettingsRow() {
             SettingsToggleRow(
                 title = stringResource(R.string.feature_only_data_sim_signal_title),
                 summary = stringResource(R.string.feature_only_data_sim_signal_summary),
-                checked = enabled, switchEnabled = savingKey != DataSimSignalSettings.KEY,
+                checked = enabled, interactionEnabled = savingKey != DataSimSignalSettings.KEY,
                 hasDividerAbove = above, hasDividerBelow = below,
                 onCheckedChange = { save(DataSimSignalSettings.KEY, it) },
             )
@@ -74,7 +74,7 @@ internal fun DataSimSignalSettingsRow() {
         row("independent-only", visible = enabled) { above, below ->
             SettingsToggleRow(
                 title = stringResource(R.string.feature_only_data_sim_independent_title), summary = "",
-                checked = independentOnly, switchEnabled = savingKey != DataSimSignalSettings.INDEPENDENT_ONLY,
+                checked = independentOnly, interactionEnabled = savingKey != DataSimSignalSettings.INDEPENDENT_ONLY,
                 hasDividerAbove = above, hasDividerBelow = below,
                 onCheckedChange = { save(DataSimSignalSettings.INDEPENDENT_ONLY, it) },
             )

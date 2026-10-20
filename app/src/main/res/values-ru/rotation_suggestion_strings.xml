@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="rotation_suggestion_hide_title">Скрывать кнопку предложения поворота</string>
-    <string name="rotation_suggestion_hide_summary">Скрывать всплывающую кнопку поворота экрана, не меняя автоповорот и настройки ориентации</string>
-</resources>

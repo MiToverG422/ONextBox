@@ -59,7 +59,12 @@ internal object HookConfigSnapshot {
     }
 
     fun boolean(key: String, defaultValue: Boolean): Boolean? =
-        values?.let { snapshot -> snapshot[key] as? Boolean ?: defaultValue }
+        values?.let { snapshot ->
+            if (!AdaptationRuntimePolicy.allowsKey(key, AdaptationRuntimePolicy.selected(snapshot))) false
+            else snapshot[key] as? Boolean ?: defaultValue
+        }
+
+    fun adaptationVersion() = AdaptationRuntimePolicy.selected(values)
 
     fun int(key: String, defaultValue: Int): Int? =
         values?.let { snapshot -> (snapshot[key] as? Number)?.toInt() ?: defaultValue }

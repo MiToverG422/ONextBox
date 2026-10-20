@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="phone_manager_risk_cloud_title">Ẩn cảnh báo ứng dụng rủi ro trên Fluid Cloud</string>
-    <string name="phone_manager_risk_cloud_summary">Dùng thông báo rủi ro thông thường thay cho Fluid Cloud, không ảnh hưởng đến phát hiện rủi ro và các cảnh báo bảo mật khác</string>
-</resources>

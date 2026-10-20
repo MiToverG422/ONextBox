@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="phone_manager_risk_cloud_title">關閉風險應用流體雲提醒</string>
-    <string name="phone_manager_risk_cloud_summary">將風險應用流體雲提醒改為一般風險通知，不影響風險偵測和其他安全提醒</string>
-</resources>

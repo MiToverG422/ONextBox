@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_notification_clear_title">Ẩn nút xóa thông báo</string>
-    <string name="hide_notification_clear_summary">Ẩn nút xóa tất cả trong trung tâm thông báo, không ảnh hưởng đến thao tác vuốt để xóa</string>
-</resources>

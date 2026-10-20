@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_recent_apps_title">Скрывать приложения в недавних</string>
-    <string name="hide_recent_apps_summary">Скрывает карточки выбранных приложений, не завершая их работу; пары разделённого экрана скрываются целиком</string>
-</resources>

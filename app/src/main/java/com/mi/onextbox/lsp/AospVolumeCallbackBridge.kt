@@ -1,13 +1,33 @@
 package com.mi.onextbox.lsp
 
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
+import com.mi.onextbox.lsp.compat.ModernHotReloadSession
+import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import io.github.libxposed.api.XposedInterface
 import android.os.Handler
+import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Deliver OEM state changes on the native subscriber's own handler. */
 internal object AospVolumeCallbackBridge {
+    @Volatile private var installed = false
+
+    fun registerHotReload(loader: ClassLoader) {
+        HotReloadLifecycle.registerReplay("aosp-volume:callback-bridge@${System.identityHashCode(loader)}",
+            capture = { installed }, replay = { if (it == true) install(loader) })
+        val previous = ModernHotReloadSession.current?.previousTargets.orEmpty()
+        if (previous.any { it is Method &&
+                it.declaringClass.name == "com.android.systemui.volume.VolumeDialogControllerImpl\$C" &&
+                it.name == "onStateChanged" && it.returnType == Void.TYPE &&
+                it.parameterTypes.map { type -> type.name } ==
+                    listOf("com.android.systemui.plugins.VolumeDialogController\$State", "int") }) {
+            install(loader)
+        }
+    }
+
+    @Synchronized
     fun install(loader: ClassLoader) {
+        if (installed) return
         val callbacks = Class.forName("com.android.systemui.plugins.VolumeDialogController\$Callbacks", false, loader)
         val state = Class.forName("com.android.systemui.plugins.VolumeDialogController\$State", false, loader)
         val producer = Class.forName(
@@ -43,21 +63,24 @@ internal object AospVolumeCallbackBridge {
                             val target = entry.key
                             val handler = entry.value as Handler
                             handler.post {
-                                // destroy() may unregister the subscriber before this runs.
-                                if (listeners[target] === handler) {
-                                    runCatching {
-                                        update.invoke(target, snapshot)
-                                        if (delivered.compareAndSet(false, true)) {
-                                            HookLog.i("ONextBox-AospVolume", "Native volume live state delivered")
-                                        }
-                                    }.onFailure(::reportFailure)
-                                }
+                                HotReloadLifecycle.withHook(fallback = {}, action = {
+                                    // destroy() may unregister the subscriber before this runs.
+                                    if (listeners[target] === handler) {
+                                        runCatching {
+                                            update.invoke(target, snapshot)
+                                            if (delivered.compareAndSet(false, true)) {
+                                                HookLog.i("ONextBox-AospVolume", "Native volume live state delivered")
+                                            }
+                                        }.onFailure(::reportFailure)
+                                    }
+                                })
                             }
                         }
                     }
                 }.onFailure(::reportFailure)
                 result
             })
+        installed = true
         // Initial-state delivery already invokes the one-argument callback on this ROM.
         HookLog.i("ONextBox-AospVolume", "Native volume concrete dispatcher bridge ready")
     }

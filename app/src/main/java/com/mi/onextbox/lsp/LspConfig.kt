@@ -660,6 +660,7 @@ object LspConfig {
         FaceTapUnlock("keyguard_face_tap_unlock"),
         FaceTapAnimation("keyguard_face_tap_animation"),
         BlockPasswordHighlight("keyguard_block_password_highlight"),
+        SwipePinInput("keyguard_swipe_pin_input"),
         AodScreenshot("keyguard_aod_screenshot"),
         ScreenOffRecording("keyguard_screen_off_recording");
 
@@ -884,6 +885,7 @@ object LspConfig {
     private const val KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON = "settings_restore_app_open_button"
     private const val KEY_WALLPAPERS_RED_ONE_ENTRY = "wallpapers_red_one_entry"
     private const val KEY_SETTINGS_UNLOCK_REFRESH_RATE = "settings_unlock_refresh_rate"
+    private const val KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE = "settings_disable_adaptive_refresh_rate"
     private const val KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE =
         "settings_force_global_extreme_refresh_rate"
     private const val KEY_GMS_REGION_RESTRICTION_BYPASS = "gms_region_restriction_bypass"
@@ -982,6 +984,7 @@ object LspConfig {
     private const val PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON = "oost.settings_restore_app_open_button"
     private const val PROP_KEY_WALLPAPERS_RED_ONE_ENTRY = "oost.wallpapers_red_one_entry"
     private const val PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE = "oost.settings_unlock_refresh_rate"
+    private const val PROP_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE = "oost.settings_disable_adaptive_refresh_rate"
     private const val PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE =
         "oost.settings_force_global_extreme_refresh_rate"
     private const val PROP_KEY_GMS_REGION_RESTRICTION_BYPASS = "oost.gms_region_restriction_bypass"
@@ -1082,6 +1085,7 @@ object LspConfig {
     private const val PERSIST_PROP_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON = "persist.sys.oost.settings_restore_app_open_button"
     private const val PERSIST_PROP_KEY_WALLPAPERS_RED_ONE_ENTRY = "persist.sys.oost.wallpapers_red_one_entry"
     private const val PERSIST_PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE = "persist.sys.oost.settings_unlock_refresh_rate"
+    private const val PERSIST_PROP_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE = "persist.sys.oost.settings_disable_adaptive_refresh_rate"
     private const val PERSIST_PROP_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE =
         "persist.sys.oost.settings_force_global_extreme_refresh_rate"
     private const val PERSIST_PROP_KEY_GMS_REGION_RESTRICTION_BYPASS = "persist.sys.oost.gms_region_restriction_bypass"
@@ -1180,6 +1184,7 @@ object LspConfig {
     private const val SETTINGS_KEY_SETTINGS_RESTORE_APP_OPEN_BUTTON = "oost_settings_restore_app_open_button"
     private const val SETTINGS_KEY_WALLPAPERS_RED_ONE_ENTRY = "oost_wallpapers_red_one_entry"
     private const val SETTINGS_KEY_SETTINGS_UNLOCK_REFRESH_RATE = "oost_settings_unlock_refresh_rate"
+    private const val SETTINGS_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE = SettingsFixedRefreshRateRules.TOGGLE_KEY
     private const val SETTINGS_KEY_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE =
         "oost_settings_force_global_extreme_refresh_rate"
     private const val SETTINGS_KEY_GMS_REGION_RESTRICTION_BYPASS = "oost_gms_region_restriction_bypass"
@@ -1263,6 +1268,7 @@ object LspConfig {
     private const val DEFAULT_SETTINGS_RESTORE_APP_OPEN_BUTTON = false
     private const val DEFAULT_WALLPAPERS_RED_ONE_ENTRY = false
     private const val DEFAULT_SETTINGS_UNLOCK_REFRESH_RATE = false
+    private const val DEFAULT_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE = false
     private const val DEFAULT_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE = false
     private const val DEFAULT_GMS_REGION_RESTRICTION_BYPASS = false
     private const val DEFAULT_ESIM_REGION_RESTRICTION_BYPASS = false
@@ -2215,6 +2221,21 @@ object LspConfig {
         )
     }
 
+    fun isSettingsDisableAdaptiveRefreshRateEnabled(context: Context): Boolean =
+        LspPreferenceStore.readBoolean(context, KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+            DEFAULT_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE)
+
+    fun setSettingsDisableAdaptiveRefreshRateEnabled(context: Context, enabled: Boolean) {
+        setSyncedBooleanPreference(
+            context = context,
+            prefsKey = KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+            enabled = enabled,
+            propertyKeys = listOf(PERSIST_PROP_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+                PROP_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+        )
+    }
+
     fun isSettingsRestoreSmartLockEnabled(context: Context): Boolean {
         return LspPreferenceStore.readBoolean(context, KEY_SETTINGS_RESTORE_SMART_LOCK, DEFAULT_SETTINGS_RESTORE_SMART_LOCK)
     }
@@ -2805,6 +2826,7 @@ object LspConfig {
             setSettingsRestoreAppOpenButtonEnabled(context, DEFAULT_SETTINGS_RESTORE_APP_OPEN_BUTTON)
             setWallpapersRedOneEntryEnabled(context, DEFAULT_WALLPAPERS_RED_ONE_ENTRY)
             setSettingsRefreshRateUnlocked(context, DEFAULT_SETTINGS_UNLOCK_REFRESH_RATE)
+            setSettingsDisableAdaptiveRefreshRateEnabled(context, DEFAULT_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE)
             setSettingsForceGlobalExtremeRefreshRateEnabled(
                 context,
                 DEFAULT_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
@@ -2938,6 +2960,7 @@ object LspConfig {
         val settingsRestoreAppOpenButton = isSettingsRestoreAppOpenButtonEnabled(context)
         val wallpapersRedOneEntry = isWallpapersRedOneEntryEnabled(context)
         val settingsUnlockRefreshRate = isSettingsRefreshRateUnlocked(context)
+        val settingsDisableAdaptiveRefreshRate = isSettingsDisableAdaptiveRefreshRateEnabled(context)
         val settingsForceGlobalExtremeRefreshRate =
             isSettingsForceGlobalExtremeRefreshRateEnabled(context)
         val settingsRestoreSmartLock = isSettingsRestoreSmartLockEnabled(context)
@@ -3429,6 +3452,12 @@ object LspConfig {
                 PROP_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
             ),
             settingsGlobalKey = SETTINGS_KEY_SETTINGS_UNLOCK_REFRESH_RATE,
+        )
+        syncScalarState(
+            value = if (settingsDisableAdaptiveRefreshRate) "1" else "0",
+            propertyKeys = listOf(PERSIST_PROP_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+                PROP_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE),
+            settingsGlobalKey = SETTINGS_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
         )
         syncScalarState(
             value = if (settingsForceGlobalExtremeRefreshRate) "1" else "0",
@@ -4147,6 +4176,14 @@ object LspConfig {
             defaultValue = DEFAULT_SETTINGS_FORCE_GLOBAL_EXTREME_REFRESH_RATE,
         )
     }
+
+    fun isSettingsDisableAdaptiveRefreshRateEnabledXposed(): Boolean = readXposedBooleanWithFallback(
+        persistPropertyKey = PERSIST_PROP_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+        propertyKey = PROP_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+        settingsKey = SETTINGS_KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+        prefsKey = KEY_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+        defaultValue = DEFAULT_SETTINGS_DISABLE_ADAPTIVE_REFRESH_RATE,
+    )
 
     fun isSettingsRestoreSmartLockEnabledXposed(): Boolean {
         return isSettingsInternationalEnabledXposed() && readXposedBoolean(

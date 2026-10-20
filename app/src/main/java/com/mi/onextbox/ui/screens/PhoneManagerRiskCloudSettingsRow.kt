@@ -29,7 +29,7 @@ internal fun PhoneManagerRiskCloudSettingsRow() {
     }
     SettingsToggleRow(title = stringResource(R.string.phone_manager_risk_cloud_title),
         summary = stringResource(R.string.phone_manager_risk_cloud_summary),
-        checked = enabled, switchEnabled = !saving, hasDividerAbove = true,
+        checked = enabled, interactionEnabled = !saving, hasDividerAbove = true,
         onCheckedChange = { next ->
             if (!saving) {
                 saving = true

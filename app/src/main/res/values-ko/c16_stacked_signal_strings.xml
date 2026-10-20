@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="feature_c16_stacked_signal_title">기본 듀얼 SIM 겹침 신호</string>
-    <string name="feature_c16_stacked_signal_summary">C16에서 이식한 기본 듀얼 SIM 겹침 신호 스타일 사용</string>
-    <string name="feature_c16_stacked_signal_save_failed">설정을 저장하지 못했습니다</string>
-</resources>

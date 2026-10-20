@@ -45,12 +45,12 @@ internal fun PowerIndicatorSettingsGroup() {
     FeatureAnimatedGroup(animateChanges = true) {
         row(PowerIndicatorSettings.ENABLED) { above, below ->
             SettingsToggleRow(title = stringResource(R.string.power_indicator_title),
-                summary = stringResource(R.string.power_indicator_summary), checked = state.enabled, switchEnabled = !saving,
+                summary = stringResource(R.string.power_indicator_summary), checked = state.enabled, interactionEnabled = !saving,
                 onCheckedChange = { save(state.copy(enabled = it)) }, hasDividerAbove = above, hasDividerBelow = below)
         }
         row("power-interval", visible = state.enabled) { above, below ->
             FeatureSliderRow(heading = stringResource(R.string.power_indicator_interval), currentValue = "${state.interval / 1000f} s",
-                value = state.interval.toFloat(), valueRange = 500f..10000f, steps = 18, enabled = !saving,
+                value = state.interval.toFloat(), valueRange = 500f..10000f, steps = 18, interactionEnabled = !saving,
                 onValueChange = { state = state.copy(interval = it.toInt()) }, onValueChangeFinished = { save(state) },
                 onReset = { save(state.copy(interval = 2000)) }, hasDividerAbove = above, hasDividerBelow = below)
         }
@@ -58,32 +58,54 @@ internal fun PowerIndicatorSettingsGroup() {
             val options = listOf(0 to "0 W", 1 to "0.0 W", 2 to "0.00 W")
             OptionDropdownRow(title = stringResource(R.string.power_indicator_precision), summary = "",
                 selectedLabel = options[state.decimals].second, options = options, selectedValue = state.decimals,
-                onValueChange = { save(state.copy(decimals = it)) }, hasDividerAbove = above, hasDividerBelow = below)
+                onValueChange = { save(state.copy(decimals = it)) }, interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below)
         }
         row("power-scale", visible = state.enabled) { above, below ->
             val options = listOf(0 to stringResource(R.string.power_indicator_scale_original),
                 1 to stringResource(R.string.power_indicator_scale_double), 2 to stringResource(R.string.power_indicator_scale_half))
             OptionDropdownRow(title = stringResource(R.string.power_indicator_scale), summary = stringResource(R.string.power_indicator_scale_notice),
                 selectedLabel = options[state.scale].second, options = options, selectedValue = state.scale,
-                onValueChange = { save(state.copy(scale = it)) }, hasDividerAbove = above, hasDividerBelow = below)
+                onValueChange = { save(state.copy(scale = it)) }, interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below)
         }
         row("power-source", visible = state.enabled) { above, below ->
             val options = listOf(0 to stringResource(R.string.power_indicator_source_api),
                 1 to stringResource(R.string.power_indicator_source_ma), 2 to stringResource(R.string.power_indicator_source_ua))
             OptionDropdownRow(title = stringResource(R.string.power_indicator_source), summary = stringResource(R.string.power_indicator_source_notice),
                 selectedLabel = options[state.source].second, options = options, selectedValue = state.source,
-                onValueChange = { save(state.copy(source = it)) }, hasDividerAbove = above, hasDividerBelow = below)
+                onValueChange = { save(state.copy(source = it)) }, interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below)
         }
         row("power-charging", visible = state.enabled) { above, below ->
             SettingsToggleRow(title = stringResource(R.string.power_indicator_hide_charging),
-                summary = stringResource(R.string.power_indicator_charging_notice), checked = state.hideCharging, switchEnabled = !saving,
+                summary = stringResource(R.string.power_indicator_charging_notice), checked = state.hideCharging, interactionEnabled = !saving,
                 onCheckedChange = { save(state.copy(hideCharging = it)) }, hasDividerAbove = above, hasDividerBelow = below)
         }
         row("power-font", visible = state.enabled) { above, below ->
             FeatureSliderRow(heading = stringResource(R.string.power_indicator_font), currentValue = "${state.fontSize} sp",
-                value = state.fontSize.toFloat(), valueRange = 8f..16f, steps = 7, enabled = !saving,
+                value = state.fontSize.toFloat(), valueRange = 8f..16f, steps = 7, interactionEnabled = !saving,
                 onValueChange = { state = state.copy(fontSize = it.toInt()) }, onValueChangeFinished = { save(state) },
                 onReset = { save(state.copy(fontSize = 10)) }, hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(PowerIndicatorSettings.FOLLOW_FONT_WEIGHT, visible = state.enabled) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.power_indicator_follow_font_weight),
+                summary = "", checked = state.followFontWeight, interactionEnabled = !saving,
+                onCheckedChange = { save(state.copy(followFontWeight = it)) }, hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(PowerIndicatorSettings.HIDE_DISCHARGE_SIGN, visible = state.enabled) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.power_indicator_hide_discharge_sign),
+                summary = "", checked = state.hideDischargeSign, interactionEnabled = !saving,
+                onCheckedChange = { save(state.copy(hideDischargeSign = it)) }, hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(PowerIndicatorSettings.SHOW_TEMPERATURE, visible = state.enabled) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.power_indicator_temperature),
+                summary = stringResource(R.string.power_indicator_temperature_summary), checked = state.showTemperature, interactionEnabled = !saving,
+                onCheckedChange = { save(state.copy(showTemperature = it)) }, hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(PowerIndicatorSettings.TEMPERATURE_UNIT, visible = state.enabled && state.showTemperature) { above, below ->
+            val options = listOf(0 to stringResource(R.string.power_indicator_temperature_celsius),
+                1 to stringResource(R.string.power_indicator_temperature_fahrenheit))
+            OptionDropdownRow(title = stringResource(R.string.power_indicator_temperature_unit), summary = "",
+                selectedLabel = options[state.temperatureUnit].second, options = options, selectedValue = state.temperatureUnit,
+                onValueChange = { save(state.copy(temperatureUnit = it)) }, interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below)
         }
     }
 }

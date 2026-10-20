@@ -29,7 +29,7 @@ internal fun RotationSuggestionSettingsRow(hasDividerAbove: Boolean, hasDividerB
     }
     SettingsToggleRow(title = stringResource(R.string.rotation_suggestion_hide_title),
         summary = stringResource(R.string.rotation_suggestion_hide_summary),
-        checked = enabled, switchEnabled = !saving, hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow,
+        checked = enabled, interactionEnabled = !saving, hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow,
         onCheckedChange = { next ->
             if (!saving) {
                 saving = true

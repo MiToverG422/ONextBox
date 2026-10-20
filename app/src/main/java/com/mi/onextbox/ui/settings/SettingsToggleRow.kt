@@ -12,6 +12,10 @@ import androidx.compose.material3.Icon as MaterialIcon
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
+/**
+ * [enabled] and [switchEnabled] represent real availability (and may dim the controls).
+ * Use [interactionEnabled] for transient preference writes to lock input without flashing colors.
+ */
 @Composable
 fun SettingsToggleRow(
     modifier: Modifier = Modifier,
@@ -28,6 +32,7 @@ fun SettingsToggleRow(
     onHiddenHold: (() -> Unit)? = null,
     onRowClick: (() -> Unit)? = null,
     switchEnabled: Boolean = enabled,
+    interactionEnabled: Boolean = true,
 ) {
     val row: @Composable () -> Unit = { SettingsSwitchPreference(
         modifier = modifier,
@@ -60,6 +65,7 @@ fun SettingsToggleRow(
         onHiddenHold = onHiddenHold,
         onRowClick = onRowClick,
         switchEnabled = switchEnabled,
+        interactionEnabled = interactionEnabled,
     ) }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressiveInferredSegmentPosition(hasDividerAbove, hasDividerBelow, row)

@@ -5,6 +5,11 @@
     <uses-sdk tools:overrideLibrary="io.github.suqi8.coui.kmp.blur" />
 
     <queries>
+        <package android:name="com.oplus.safecenter" />
+        <package android:name="com.realme.wellbeing" />
+        <package android:name="com.oplus.heartrate.detect" />
+        <package android:name="com.xiaomi.touchservice" />
+        <package android:name="com.miui.securitycenter" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -48,6 +53,7 @@
         <package android:name="com.oplus.wallpapers" />
         <package android:name="com.heytap.colorfulengine" />
         <package android:name="com.heytap.themestore" />
+        <package android:name="com.coloros.gallery3d" />
         <package android:name="com.oplus.launcher" />
         <package android:name="com.oneplus.launcher" />
         <package android:name="com.oplus.aod" />
@@ -117,9 +123,20 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS" />
             </intent-filter>
         </activity>
+
+        <activity-alias
+            android:name=".LauncherAlias"
+            android:targetActivity=".MainActivity"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <activity
             android:name=".OnboardingActivity"
@@ -143,11 +160,6 @@
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
-        <service
-            android:name=".refresh.RefreshRateBootJobService"
-            android:exported="false"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-
         <provider
             android:name=".push.PushMonitorProvider"
             android:authorities="${applicationId}.pushmonitor"
@@ -168,7 +180,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.USER_UNLOCKED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>

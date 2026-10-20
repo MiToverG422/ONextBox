@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_screenshot_floating_title">截圖隱藏小窗</string>
-    <string name="hide_screenshot_floating_summary">系統截圖時排除支援的應用程式浮窗、子母畫面及應用程式懸浮層，不關閉實際視窗</string>
-</resources>

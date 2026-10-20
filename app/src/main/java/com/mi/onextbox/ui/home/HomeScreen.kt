@@ -149,6 +149,10 @@ fun HomePage(
         }
     }
 
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        MiuixHomeContent(rootGranted, versionInfo, onHeroLongPress)
+        return
+    }
     HomeHeroCard(
         rootGranted = rootGranted,
         lsposedReady = versionInfo.lsposedReady,

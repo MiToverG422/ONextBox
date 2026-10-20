@@ -2,8 +2,10 @@ package com.mi.onextbox.lsp
 
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
+import com.mi.onextbox.lsp.compat.ModernHotReloadSession
 import com.mi.onextbox.lsp.compat.ModernMethodHook
 import com.mi.onextbox.lsp.compat.ModernReflect
+import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 
@@ -19,6 +21,10 @@ internal object HideRecentAppsHooker {
             val packageGetter = task.getDeclaredMethod("getPackageName")
             check(packageGetter.returnType == String::class.java)
             installRunningCardGate(loader, task, packageGetter)
+            val replay = RecentTaskHookReplay(base) { concrete -> install(concrete, base, task, packageGetter) }
+            HotReloadLifecycle.registerReplay("$TAG:types@${System.identityHashCode(loader)}",
+                capture = replay::capture, replay = { replay.restore(it) })
+            replay.restore(null, ModernHotReloadSession.current?.previousTargets.orEmpty())
             // The concrete ColorOS subclass is obfuscated; discover it from construction.
             base.declaredConstructors.forEach { constructor ->
                 ModernHookRegistry.installCompat("$TAG:ctor:${constructor.parameterCount}", constructor,
@@ -26,7 +32,7 @@ internal object HideRecentAppsHooker {
                         override fun afterHookedMethod(param: MethodHookParam) {
                             if (param.throwable != null) return
                             val concrete = param.thisObject?.javaClass ?: return
-                            runCatching { install(concrete, base, task, packageGetter) }
+                            runCatching { replay.discover(concrete) }
                                 .onFailure { HookLog.w(TAG, "Unsupported recent-task presentation; stock list retained", it) }
                         }
                     })

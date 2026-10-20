@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_screenshot_floating_title">Exclude floating apps from screenshots</string>
-    <string name="hide_screenshot_floating_summary">Exclude supported floating app windows and picture-in-picture layers from system screenshots without closing them</string>
-</resources>

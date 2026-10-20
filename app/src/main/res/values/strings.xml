@@ -1,4 +1,17 @@
 <resources>
+    <string name="system_adaptation_runtime_restart">Profile switched; saved choices are preserved. Restart the phone to fully apply this profile and clear changes from the previous one.</string>
+    <string name="developer_allow_hyperos3_title">Allow HyperOS 3 support</string>
+    <string name="hyperos_performance_notice_title">Compatibility and restart</string>
+    <string name="hyperos_performance_notice">Only songyuan, Android 16, OS3.0.310.0.WGNCNXM is supported. Other devices cannot enable these options. Enable the system framework, Xiaomi Touch Service and Security scopes in LSPosed. Restart the phone after enabling or disabling; disabling and restarting restores system behavior. Active vendor locks require a restart for module updates and cannot be hot-reloaded.</string>
+    <string name="hyperos_performance_group">Display and touch</string>
+    <string name="hyperos_refresh_title">Global 185 Hz</string>
+    <string name="hyperos_refresh_summary">Force the verified 185 Hz display mode, including the lock screen and AOD. Disables AOD panel low-power mode and increases power use; does not guarantee app frame rates.</string>
+    <string name="hyperos_idle_title">Disable LTPS</string>
+    <string name="hyperos_idle_summary">Disable idle refresh-rate reduction through the native idle timer. Does not change the panel type or select 185 Hz by itself; may increase power use.</string>
+    <string name="hyperos_touch_title">High touch report rate</string>
+    <string name="hyperos_touch_summary">Use this ROM’s existing 480 Hz touch profile globally. Does not change the display refresh rate; may increase power use and change touch response.</string>
+    <string name="hyperos_reboot_required">Saved. Restart the phone to apply or restore.</string>
+    <string name="system_adaptation_no_content">No features or tools are available for this adaptation yet</string>
     <string name="feature_search_hint">Search features</string>
     <string name="feature_search_clear">Clear search</string>
     <string name="feature_search_results">Results (%1$d)</string>
@@ -596,17 +609,6 @@
     <string name="feature_touch_rate_override_on">Game touch override enabled</string>
     <string name="feature_touch_rate_override_off">Game touch override disabled</string>
     <string name="feature_touch_rate_auto_start">Apply on boot</string>
-    <string name="tab_refresh_rate">Refresh rate</string>
-    <string name="refresh_rate_auto_start">Apply on boot</string>
-    <string name="refresh_rate_show_refresh_rate">Show refresh frequency</string>
-    <string name="refresh_rate_restore_default">Restore default refresh rate</string>
-    <string name="refresh_rate_restore_success">Default refresh rate restored</string>
-    <string name="refresh_rate_restore_failed">Restore failed</string>
-    <string name="refresh_rate_apply_failed">Apply failed</string>
-    <string name="refresh_rate_no_modes">No supported refresh rates were found</string>
-    <string name="refresh_rate_selected">Selected</string>
-    <string name="refresh_rate_table_refresh_rate">Refresh rate</string>
-    <string name="refresh_rate_resolution_format">%1$d x %2$d</string>
     <string name="feature_permission_manager_title">Permission Manager</string>
     <string name="feature_permission_start_group">App launching</string>
     <string name="feature_permission_old_dialog_title">Use the old app-start dialog</string>
@@ -896,10 +898,6 @@
     <string name="traffic_roaming_summary">Add a roaming-only background data restriction option</string>
     <string name="traffic_limit_title">Remove the default data limit</string>
     <string name="traffic_limit_summary">Disable the automatic 100 GB default limit</string>
-    <string name="settings_section_module_hot_reload">Module hot reload</string>
-    <string name="setting_module_hot_reload">Module hot reload (experimental)</string>
-    <string name="setting_module_hot_reload_summary">Off by default, after module updates, try hot reloading all scopes and taking over runtime resources, busy or incompatible scopes still need a restart, restart the relevant scopes after first enabling this option</string>
-    <string name="setting_module_hot_reload_save_failed">Unable to sync the hot reload setting. Check the Xposed framework connection and try again</string>
     <string name="about_logs_title">Logs</string>
     <string name="logs_source">Source</string>
     <string name="logs_source_app">Application logs</string>
@@ -1295,4 +1293,174 @@
     <string name="launcher_group_effects">Visual effects</string>
     <string name="launcher_force_blur_title">Force launcher blur effects</string>
     <string name="launcher_force_blur_summary">Try to unlock native desktop, icon menu and animated blur on restricted models while respecting system blur, power saving and theme settings; may increase power use and requires native firmware support; restart the launcher after changing</string>
+
+    <string name="about_contributor_concerrox_title" translatable="false">ConcerroX</string>
+    <string name="about_contributor_concerrox_summary" translatable="false">GitHub@ConcerroX</string>
+    <string name="about_contributor_fishcpy_title" translatable="false">fishcpy</string>
+    <string name="about_contributor_fishcpy_summary" translatable="false">GitHub@fishcpy</string>
+    <string name="about_contributor_hehejuice_title" translatable="false">HeheJuice</string>
+    <string name="about_reference_capsule_title" translatable="false">Capsule</string>
+    <string name="about_reference_capsule_summary" translatable="false">Kyant0 · Apache-2.0</string>
+    <string name="about_reference_liquid_glass_title" translatable="false">AndroidLiquidGlass</string>
+    <string name="about_reference_liquid_glass_summary" translatable="false">Kyant0 · Apache-2.0</string>
+    <string name="about_reference_corepatch_title" translatable="false">CorePatch N</string>
+    <string name="about_reference_corepatch_summary" translatable="false">LSPosed · GNU GPL v2.0</string>
+    <string name="about_reference_nrfr_title" translatable="false">Nrfr</string>
+    <string name="about_reference_nrfr_summary" translatable="false">Ackites · Apache-2.0</string>
+    <string name="about_reference_xposed_service_title" translatable="false">libxposed service</string>
+    <string name="about_reference_xposed_service_summary" translatable="false">libxposed · Apache-2.0</string>
+    <string name="about_reference_material_kolor_title" translatable="false">MaterialKolor</string>
+    <string name="about_reference_material_kolor_summary" translatable="false">jordond · MIT</string>
+    <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
+
+    <string name="feature_c16_stacked_signal_title">Native stacked dual-SIM signal</string>
+    <string name="feature_c16_stacked_signal_summary">Use the native stacked dual-SIM signal style, ported from C16</string>
+    <string name="feature_c16_stacked_signal_save_failed">Could not save the setting</string>
+
+<!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
+    <string name="corepatch_title">Core Patch (Experimental)</string>
+    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_downgrade">Bypass downgrade</string>
+    <string name="corepatch_downgrade_summary">Allow installing an older version over a newer version.</string>
+    <string name="corepatch_min_sdk">Bypass minimum SDK version check</string>
+    <string name="corepatch_min_sdk_summary">Allow installing APKs whose minSdkVersion is higher than the system SDK version.</string>
+    <string name="corepatch_verification">Bypass verification</string>
+    <string name="corepatch_verification_summary">Allow installing APKs with invalid or modified signatures.</string>
+    <string name="corepatch_resource_arsc">Bypass resources.arsc alignment restriction</string>
+    <string name="corepatch_resource_arsc_summary">Allow installing APKs whose resources.arsc is compressed or not 4-byte aligned on Android 11 and later.</string>
+    <string name="corepatch_digest">Bypass digest</string>
+    <string name="corepatch_digest_summary">Allow reinstalling an app with a different signature.</string>
+    <string name="corepatch_exact_signature">Bypass exact signature match</string>
+    <string name="corepatch_exact_signature_summary">Allow split APKs to use different signatures.</string>
+    <string name="corepatch_previous_signatures">Use previous signatures</string>
+    <string name="corepatch_previous_signatures_summary">Always use the installed app\'s signatures during installation.</string>
+    <string name="corepatch_hidden_apis">Allow hidden APIs for system apps</string>
+    <string name="corepatch_hidden_apis_summary">Allow system apps with signatures that do not match the platform signature to use hidden APIs without restriction.</string>
+    <string name="corepatch_shared_user">Bypass shared user verification</string>
+    <string name="corepatch_shared_user_summary">Allow packages with a different shared-user signature.</string>
+    <string name="corepatch_verification_agent">Disable Package Verification Agent</string>
+    <string name="corepatch_verification_agent_summary">For example, Google Play Protect.</string>
+    <string name="corepatch_block">Bypass installation blocklist</string>
+    <string name="corepatch_block_summary">Bypass blocklists on devices such as Nothing Phone.</string>
+
+    <string name="developer_activation_section">Testing</string>
+    <string name="developer_activation_title">Return to activation</string>
+    <string name="developer_activation_summary">Reopen the activation wizard for testing</string>
+    <string name="developer_activation_confirm">Reset activation and agreement confirmations, then return to the first activation page? Feature settings will be kept</string>
+    <string name="developer_activation_failed">Could not reopen activation</string>
+
+    <string name="hide_notification_clear_title">Hide notification clear button</string>
+    <string name="hide_notification_clear_summary">Hide the clear-all button in the notification center without affecting swipe-to-dismiss</string>
+
+    <string name="hide_recent_apps_title">Hide App from Recent Task List</string>
+    <string name="hide_recent_apps_summary">Hide recent-task cards for selected apps without stopping them; split-screen groups are hidden together</string>
+
+    <string name="hook_evidence_title">Recent Hook evidence</string>
+    <string name="hook_evidence_notice">Historical log records only; not live status or proof that all parts work</string>
+    <string name="hook_evidence_installed">Adapter installed</string>
+    <string name="hook_evidence_observed">Execution observed</string>
+    <string name="hook_evidence_unavailable">Adapter unavailable; stock behavior retained</string>
+
+    <string name="network_identity_group">Country and operator</string>
+    <string name="network_identity_title">Override network identity (experimental)</string>
+    <string name="network_identity_summary">Configure country, operator name and MCC/MNC separately for SIM 1 and SIM 2</string>
+    <string name="network_identity_region">Country / region</string>
+    <string name="network_identity_list">Operator list</string>
+    <string name="network_identity_popular">Common operators</string>
+    <string name="network_identity_all">All recorded codes</string>
+    <string name="network_identity_operator">Operator</string>
+    <string name="network_identity_original">Use original information</string>
+    <string name="network_identity_notice">Once the Hook is loaded, changes apply without rebooting the phone; reopen target apps to refresh cached data. May affect carrier-dependent services. SIM credentials, IP location and network registration remain unchanged. Disable the main or individual SIM switch to restore original values, and turn this feature off before disabling or uninstalling the module. The catalog includes private or shared codes, not every retail brand</string>
+
+    <string name="phone_manager_risk_cloud_title">Hide risk-app Fluid Cloud alerts</string>
+    <string name="phone_manager_risk_cloud_summary">Use ordinary risk notifications instead of Fluid Cloud alerts; risk detection and other security alerts remain unchanged</string>
+
+    <string name="power_indicator_title">Power indicator (experimental)</string>
+    <string name="power_indicator_summary">Show estimated battery-side power beside the clock; restart System UI once after installation. Unavailable readings are hidden</string>
+    <string name="power_indicator_interval">Refresh interval</string>
+    <string name="power_indicator_precision">Decimal places</string>
+    <string name="power_indicator_scale">Battery measurement correction</string>
+    <string name="power_indicator_scale_notice">Dual-cell batteries do not always need doubling. Use ×2 only for per-cell measurements; keep ×1 for whole-pack values</string>
+    <string name="power_indicator_scale_original">Reported value ×1</string>
+    <string name="power_indicator_scale_double">Per-cell correction ×2</string>
+    <string name="power_indicator_scale_half">Correction ×0.5</string>
+    <string name="power_indicator_source">Current data source</string>
+    <string name="power_indicator_source_notice">Default uses Android API (µA). Select a sysfs unit only when verified for your device; incorrect units produce incorrect power</string>
+    <string name="power_indicator_source_api">Android API (µA)</string>
+    <string name="power_indicator_source_ma">Battery sysfs (mA)</string>
+    <string name="power_indicator_source_ua">Battery sysfs (µA)</string>
+    <string name="power_indicator_hide_charging">Hide while plugged in</string>
+    <string name="power_indicator_charging_notice">When disabled, + indicates net battery charging power, not charger output or total device consumption</string>
+    <string name="power_indicator_font">Font size</string>
+
+    <string name="rotation_suggestion_hide_title">Hide rotation suggestion button</string>
+    <string name="rotation_suggestion_hide_summary">Hide the floating screen-rotation suggestion without changing auto-rotate or orientation settings</string>
+
+    <string name="hide_screenshot_floating_title">Exclude floating apps from screenshots</string>
+    <string name="hide_screenshot_floating_summary">Exclude supported floating app windows and picture-in-picture layers from system screenshots without closing them</string>
+    <string name="power_indicator_hide_discharge_sign">Hide discharge minus sign</string>
+    <string name="power_indicator_temperature">Show temperature on two lines</string>
+    <string name="power_indicator_temperature_summary">Show power on the first line and battery temperature on the second</string>
+    <string name="power_indicator_temperature_unit">Temperature unit</string>
+    <string name="power_indicator_temperature_celsius">Celsius (°C)</string>
+    <string name="power_indicator_temperature_fahrenheit">Fahrenheit (°F)</string>
+    <string name="gallery_page_title">Photos</string>
+    <string name="gallery_ai_retouch_title">Unlock AI Retouch (Experimental)</string>
+    <string name="gallery_ai_retouch_summary">Allow non-flagship devices to use AI Retouch</string>
+    <string name="gallery_save_failed">Could not save the Photos setting</string>
+    <string name="settings_section_system_entry">Entry points</string>
+    <string name="setting_settings_home_entry">Settings icon</string>
+    <string name="setting_settings_home_entry_summary">Set the position of the module shortcut in system Settings</string>
+    <string name="setting_settings_home_entry_save_failed">Could not save the setting. Check the Xposed framework connection and try again</string>
+    <string name="setting_settings_home_entry_disabled">Disabled</string>
+    <string name="setting_settings_home_entry_top">Top</string>
+    <string name="setting_settings_home_entry_middle">Middle</string>
+    <string name="setting_settings_home_entry_bottom">Bottom</string>
+    <string name="setting_settings_home_entry_style">Icon style</string>
+    <string name="setting_settings_home_entry_style_system">Default</string>
+    <string name="setting_settings_home_entry_style_app">App icon</string>
+    <string name="settings_section_system_adaptation">System adaptation</string>
+    <string name="setting_system_adaptation_version">Adaptation version</string>
+    <string name="setting_system_adaptation_save_failed">Could not save the system adaptation version. Check the Xposed framework connection and try again</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_title">Disable LTPO/LTPS downclocking</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_summary">Keep the refresh rate selected in system settings while the screen is on. Enabling this may increase power consumption.</string>
+    <string name="display_enhancement_group">Picture enhancement</string>
+    <string name="display_enhancement_sr_thermal_title">Remove Ultra-clear enhancement thermal limit</string>
+    <string name="display_enhancement_sr_thermal_summary">Remove the thermal limit specific to Ultra-clear enhancement without unlocking unsupported hardware. May increase heat and power consumption.</string>
+    <string name="display_enhancement_color_thermal_title">Remove video color enhancement thermal limit</string>
+    <string name="display_enhancement_color_thermal_summary">Remove the thermal limit specific to video color enhancement. May increase heat and power consumption; system-wide thermal protection is unchanged.</string>
+    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="settings_home_cleanup_group">Settings home</string>
+    <string name="settings_home_hide_account_title">Hide top account entry</string>
+    <string name="settings_home_hide_account_summary">Hide the account card on the system Settings home page</string>
+    <string name="settings_home_hide_update_title">Hide top update reminder</string>
+    <string name="settings_home_hide_update_summary">Hide update reminders on the system Settings home page</string>
+    <string name="power_indicator_follow_font_weight">Follow system font weight</string>
+    <string name="keyguard_swipe_pin_title">Swipe to enter PIN (experimental)</string>
+    <string name="keyguard_swipe_pin_summary">Slide across number keys to enter your lock screen PIN. Tap input remains available; leave and re-enter a key to repeat it</string>
+    <string name="settings_process_group">Applications</string>
+    <string name="settings_show_process_manager_title">Force show Process management</string>
+    <string name="settings_realme_title">Realme features</string>
+    <string name="settings_realme_entry_summary">Native Realme-specific Settings entries</string>
+    <string name="settings_realme_app_volume">Force show app volume page</string>
+    <string name="settings_realme_directional_sound">Force show directional sound</string>
+    <string name="settings_realme_brightness_range">Force show extended brightness</string>
+    <string name="settings_realme_multiple_faces">Force enable multiple face enrollment</string>
+    <string name="settings_realme_sleep_capsule">Force show Sleep Capsule</string>
+    <string name="settings_realme_heart_rate">Force show heart rate detection</string>
+    <string name="settings_realme_dc_dimming">Force show Realme DC dimming</string>
+    <string name="settings_realme_dual_music">Force show dual-mode music sharing</string>
+    <string name="settings_realme_sleep_dependency">Requires the standalone Sleep Capsule app (com.realme.wellbeing)</string>
+    <string name="settings_realme_heart_dependency">Requires the standalone Heart Rate Detection app (com.oplus.heartrate.detect)</string>
+    <string name="settings_realme_dependency_unavailable">Unavailable: the required app is missing, disabled, or has no accessible entry</string>
+    <string name="settings_realme_laboratory">Show Laboratory</string>
+    <string name="app_lock_group">App lock</string>
+    <string name="app_lock_delay_title">App lock relock delay (Experimental)</string>
+    <string name="app_lock_delay_summary">Add 1-minute and 5-minute delays after leaving an app to the native lock timing menu; locking the device relocks apps immediately</string>
+    <string name="app_lock_delay_after_minutes">%1$d min after leaving app</string>
+    <string name="app_lock_delay_save_failed">Could not save app lock timeout</string>
+    <string name="native_live_update_title">Native Live Update chips</string>
+    <string name="native_live_update_summary">Use native Live Update chips. Enabling this hides Fluid Cloud; the two cannot be used together.</string>
+    <string name="setting_hide_module_icon">Hide module App icon</string>
+    <string name="setting_hide_module_icon_failed">Unable to change launcher icon visibility</string>
 </resources>

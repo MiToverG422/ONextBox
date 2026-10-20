@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="feature_c16_stacked_signal_title">標準デュアル SIM 積み重ね表示</string>
-    <string name="feature_c16_stacked_signal_summary">C16 から移植した標準のデュアル SIM 積み重ね信号表示を使用</string>
-    <string name="feature_c16_stacked_signal_save_failed">設定を保存できませんでした</string>
-</resources>

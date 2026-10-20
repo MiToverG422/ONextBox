@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="feature_c16_stacked_signal_title">Стандартный сигнал двух SIM друг над другом</string>
-    <string name="feature_c16_stacked_signal_summary">Использовать стандартный стиль сигнала двух SIM друг над другом, перенесённый из C16</string>
-    <string name="feature_c16_stacked_signal_save_failed">Не удалось сохранить настройку</string>
-</resources>

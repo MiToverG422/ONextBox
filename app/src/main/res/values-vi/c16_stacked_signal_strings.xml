@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="feature_c16_stacked_signal_title">Tín hiệu hai SIM xếp chồng gốc</string>
-    <string name="feature_c16_stacked_signal_summary">Sử dụng kiểu tín hiệu hai SIM xếp chồng gốc, được chuyển từ C16</string>
-    <string name="feature_c16_stacked_signal_save_failed">Không thể lưu cài đặt</string>
-</resources>

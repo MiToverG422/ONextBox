@@ -51,7 +51,7 @@ internal fun SecurePayFeaturesPage() {
             title = stringResource(R.string.secure_pay_hide_risk_cloud_title),
             summary = stringResource(R.string.secure_pay_hide_risk_cloud_summary),
             checked = enabled,
-            switchEnabled = !saving,
+            interactionEnabled = !saving,
             onCheckedChange = { next ->
                 if (!saving) {
                     saving = true

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="system_adaptation_runtime_restart">Đã chuyển phiên bản tương thích và giữ nguyên lựa chọn. Khởi động lại điện thoại để áp dụng đầy đủ và xóa tác động còn lại của phiên bản trước.</string>
+    <string name="developer_allow_hyperos3_title">Cho phép hỗ trợ HyperOS 3</string>
+    <string name="system_adaptation_no_content">Chưa có tính năng hoặc công cụ cho phiên bản tương thích này</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">Hộp công cụ kiểu COUI để tùy chỉnh hệ thống OPlus</string>
     <string name="tab_home">Trang chủ</string>
@@ -533,17 +536,6 @@
     <string name="feature_touch_rate_override_on">Đã bật ghi đè cảm ứng trò chơi</string>
     <string name="feature_touch_rate_override_off">Ghi đè cảm ứng trò chơi đã bị vô hiệu hóa</string>
     <string name="feature_touch_rate_auto_start">Áp dụng khi khởi động</string>
-    <string name="tab_refresh_rate">Tốc độ làm mới</string>
-    <string name="refresh_rate_auto_start">Áp dụng khi khởi động</string>
-    <string name="refresh_rate_show_refresh_rate">Hiển thị tần số làm mới</string>
-    <string name="refresh_rate_restore_default">Khôi phục tốc độ làm mới mặc định</string>
-    <string name="refresh_rate_restore_success">Đã khôi phục tốc độ làm mới mặc định</string>
-    <string name="refresh_rate_restore_failed">Khôi phục  không thành công</string>
-    <string name="refresh_rate_apply_failed">Áp dụng không thành công</string>
-    <string name="refresh_rate_no_modes">Không tìm thấy tốc độ làm mới được hỗ trợ</string>
-    <string name="refresh_rate_selected">đã chọn</string>
-    <string name="refresh_rate_table_refresh_rate">Tốc độ làm mới</string>
-    <string name="refresh_rate_resolution_format">%1$d x %2$d</string>
     <string name="feature_permission_manager_title">Quản lý quyền</string>
     <string name="feature_permission_start_group">Mở ứng dụng</string>
     <string name="feature_permission_old_dialog_title">Dùng hộp thoại mở ứng dụng cũ</string>
@@ -842,10 +834,6 @@
     <string name="traffic_roaming_summary">Thêm tùy chọn chỉ hạn chế dữ liệu nền khi chuyển vùng</string>
     <string name="traffic_limit_title">Gỡ giới hạn dữ liệu mặc định</string>
     <string name="traffic_limit_summary">Tắt giới hạn 100 GB được đặt tự động</string>
-    <string name="settings_section_module_hot_reload">Tải lại nóng mô-đun</string>
-    <string name="setting_module_hot_reload">Tải lại nóng mô-đun (thử nghiệm)</string>
-    <string name="setting_module_hot_reload_summary">Mặc định tắt, sau khi cập nhật mô-đun, thử tải lại nóng và tiếp quản tài nguyên đang chạy ở mọi phạm vi, nếu đang bận hoặc không tương thích, vẫn cần khởi động lại, khởi động lại các phạm vi liên quan sau lần bật đầu tiên</string>
-    <string name="setting_module_hot_reload_save_failed">Không thể đồng bộ cài đặt tải lại nóng. Hãy kiểm tra kết nối với Xposed rồi thử lại</string>
     <string name="about_logs_title">Nhật ký</string>
     <string name="logs_source">Nguồn nhật ký</string>
     <string name="logs_source_app">Nhật ký ứng dụng</string>
@@ -1229,4 +1217,144 @@
     <string name="launcher_group_effects">Hiệu ứng hình ảnh</string>
     <string name="launcher_force_blur_title">Buộc bật hiệu ứng làm mờ màn hình chính</string>
     <string name="launcher_force_blur_summary">Thử gỡ giới hạn thiết bị cho nền màn hình chính, menu nhấn giữ và hoạt ảnh làm mờ, vẫn tuân theo cài đặt làm mờ hệ thống, tiết kiệm pin và chủ đề; có thể tăng tiêu thụ pin và cần firmware hỗ trợ sẵn; khởi động lại trình khởi chạy sau khi thay đổi</string>
+
+    <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
+
+    <string name="feature_c16_stacked_signal_title">Tín hiệu hai SIM xếp chồng gốc</string>
+    <string name="feature_c16_stacked_signal_summary">Sử dụng kiểu tín hiệu hai SIM xếp chồng gốc, được chuyển từ C16</string>
+    <string name="feature_c16_stacked_signal_save_failed">Không thể lưu cài đặt</string>
+
+    <string name="developer_activation_section">Kiểm thử</string>
+    <string name="developer_activation_title">Quay lại trang kích hoạt</string>
+    <string name="developer_activation_summary">Mở lại trình hướng dẫn kích hoạt để kiểm thử</string>
+    <string name="developer_activation_confirm">Đặt lại trạng thái kích hoạt và xác nhận thỏa thuận, rồi quay lại trang đầu? Các cài đặt tính năng sẽ được giữ nguyên</string>
+    <string name="developer_activation_failed">Không thể mở lại trang kích hoạt</string>
+
+    <string name="enabled_features_title">Tính năng đã bật</string>
+    <string name="enabled_features_notice">Hiển thị cấu hình, không phải trạng thái Hook đã xác minh</string>
+    <string name="enabled_features_count">Đã bật %1$d tính năng</string>
+    <string name="enabled_features_group_count">%1$d tính năng</string>
+    <string name="enabled_features_copy">Sao chép bản tóm tắt</string>
+    <string name="enabled_features_expand">Mở rộng</string>
+    <string name="enabled_features_collapse">Thu gọn</string>
+    <string name="enabled_features_empty">Chưa bật tính năng nào</string>
+    <string name="enabled_features_loading">Đang tải…</string>
+    <string name="enabled_features_error">Không thể đọc cấu hình. Hãy mở lại trang này để thử lại</string>
+    <string name="enabled_features_quick_hint">Dùng công tắc để bật/tắt hoặc nhấn tên tính năng để mở cài đặt. Các mục đã tắt vẫn hiện cho đến khi rời trang. Một số tính năng cần khởi động lại tiến trình liên quan</string>
+    <string name="enabled_features_save_failed">Không thể lưu. Cấu hình thực tế sẽ được tải lại</string>
+
+    <string name="hide_notification_clear_title">Ẩn nút xóa thông báo</string>
+    <string name="hide_notification_clear_summary">Ẩn nút xóa tất cả trong trung tâm thông báo, không ảnh hưởng đến thao tác vuốt để xóa</string>
+
+    <string name="hide_recent_apps_title">Ẩn ứng dụng khỏi danh sách gần đây</string>
+    <string name="hide_recent_apps_summary">Ẩn thẻ tác vụ của ứng dụng đã chọn mà không đóng ứng dụng; nhóm chia đôi màn hình sẽ được ẩn cùng nhau</string>
+
+    <string name="hook_evidence_title">Bản ghi Hook gần đây</string>
+    <string name="hook_evidence_notice">Chỉ là lịch sử nhật ký, không phản ánh trạng thái hiện tại hay xác nhận mọi thành phần hoạt động</string>
+    <string name="hook_evidence_installed">Đã cài bộ điều hợp</string>
+    <string name="hook_evidence_observed">Đã ghi nhận thực thi</string>
+    <string name="hook_evidence_unavailable">Bộ điều hợp không khả dụng, giữ hành vi gốc</string>
+
+    <string name="network_identity_group">Quốc gia và nhà mạng</string>
+    <string name="network_identity_title">Giả lập quốc gia và nhà mạng (thử nghiệm)</string>
+    <string name="network_identity_summary">Đặt riêng quốc gia, tên nhà mạng và MCC/MNC cho SIM 1 và SIM 2</string>
+    <string name="network_identity_region">Quốc gia / khu vực</string>
+    <string name="network_identity_list">Danh sách nhà mạng</string>
+    <string name="network_identity_popular">Nhà mạng phổ biến</string>
+    <string name="network_identity_all">Tất cả mã đã thu thập</string>
+    <string name="network_identity_operator">Nhà mạng</string>
+    <string name="network_identity_original">Dùng thông tin gốc</string>
+    <string name="network_identity_notice">Sau khi Hook được tải, thay đổi không cần khởi động lại điện thoại; mở lại ứng dụng đích để cập nhật bộ nhớ đệm. Có thể ảnh hưởng dịch vụ phụ thuộc nhà mạng. Không đổi thông tin xác thực SIM, khu vực IP hay đăng ký mạng. Tắt công tắc chính hoặc công tắc SIM tương ứng để khôi phục. Tắt tính năng trước khi vô hiệu hóa hoặc gỡ mô-đun. Danh sách có mã riêng hoặc dùng chung, không gồm mọi thương hiệu bán lẻ</string>
+
+    <string name="phone_manager_risk_cloud_title">Ẩn cảnh báo ứng dụng rủi ro trên Fluid Cloud</string>
+    <string name="phone_manager_risk_cloud_summary">Dùng thông báo rủi ro thông thường thay cho Fluid Cloud, không ảnh hưởng đến phát hiện rủi ro và các cảnh báo bảo mật khác</string>
+
+    <string name="power_indicator_title">Chỉ báo công suất (thử nghiệm)</string>
+    <string name="power_indicator_summary">Hiển thị công suất ước tính phía pin cạnh đồng hồ. Khởi động lại giao diện hệ thống sau khi cài đặt. Ẩn khi không đọc được dữ liệu</string>
+    <string name="power_indicator_interval">Chu kỳ làm mới</string>
+    <string name="power_indicator_precision">Số chữ số thập phân</string>
+    <string name="power_indicator_scale">Hiệu chỉnh phép đo pin</string>
+    <string name="power_indicator_scale_notice">Pin hai cell không phải lúc nào cũng cần nhân đôi. Chỉ dùng ×2 cho số đo một cell; dùng ×1 cho toàn bộ pin</string>
+    <string name="power_indicator_scale_original">Giá trị gốc ×1</string>
+    <string name="power_indicator_scale_double">Hiệu chỉnh một cell ×2</string>
+    <string name="power_indicator_scale_half">Hiệu chỉnh ×0.5</string>
+    <string name="power_indicator_source">Nguồn dữ liệu dòng điện</string>
+    <string name="power_indicator_source_notice">Mặc định dùng Android API (µA). Chỉ chọn sysfs khi đã xác minh đơn vị của thiết bị; sai đơn vị sẽ cho công suất sai</string>
+    <string name="power_indicator_source_api">Android API (µA)</string>
+    <string name="power_indicator_source_ma">Pin sysfs (mA)</string>
+    <string name="power_indicator_source_ua">Pin sysfs (µA)</string>
+    <string name="power_indicator_hide_charging">Ẩn khi cắm nguồn</string>
+    <string name="power_indicator_charging_notice">Khi tắt, + là công suất nạp ròng vào pin, không phải công suất bộ sạc hay mức tiêu thụ toàn thiết bị</string>
+    <string name="power_indicator_font">Cỡ chữ</string>
+
+    <string name="rotation_suggestion_hide_title">Ẩn nút đề xuất xoay màn hình</string>
+    <string name="rotation_suggestion_hide_summary">Ẩn nút đề xuất xoay ở cạnh màn hình, không thay đổi tự động xoay hay cài đặt hướng màn hình</string>
+
+    <string name="hide_screenshot_floating_title">Ẩn cửa sổ nổi trong ảnh chụp màn hình</string>
+    <string name="hide_screenshot_floating_summary">Loại cửa sổ nổi, hình trong hình và lớp phủ ứng dụng được hỗ trợ khỏi ảnh chụp hệ thống mà không đóng cửa sổ</string>
+    <string name="power_indicator_hide_discharge_sign">Ẩn dấu trừ khi xả pin</string>
+    <string name="power_indicator_temperature">Hiển thị nhiệt độ trên hai dòng</string>
+    <string name="power_indicator_temperature_summary">Dòng trên hiển thị công suất, dòng dưới hiển thị nhiệt độ pin</string>
+    <string name="power_indicator_temperature_unit">Đơn vị nhiệt độ</string>
+    <string name="power_indicator_temperature_celsius">Độ C (°C)</string>
+    <string name="power_indicator_temperature_fahrenheit">Độ F (°F)</string>
+    <string name="gallery_page_title">Ảnh</string>
+    <string name="gallery_ai_retouch_title">Mở khóa chỉnh sửa AI (Thử nghiệm)</string>
+    <string name="gallery_ai_retouch_summary">Cho phép thiết bị không thuộc dòng cao cấp sử dụng chỉnh sửa AI</string>
+    <string name="gallery_save_failed">Không thể lưu cài đặt Ảnh</string>
+    <string name="settings_section_system_entry">Lối vào</string>
+    <string name="setting_settings_home_entry">Biểu tượng trong Cài đặt</string>
+    <string name="setting_settings_home_entry_summary">Đặt vị trí lối tắt mô-đun trong Cài đặt hệ thống</string>
+    <string name="setting_settings_home_entry_save_failed">Không thể lưu cài đặt. Hãy kiểm tra kết nối khung Xposed và thử lại</string>
+    <string name="setting_settings_home_entry_disabled">Tắt</string>
+    <string name="setting_settings_home_entry_top">Trên cùng</string>
+    <string name="setting_settings_home_entry_middle">Ở giữa</string>
+    <string name="setting_settings_home_entry_bottom">Dưới cùng</string>
+    <string name="setting_settings_home_entry_style">Kiểu biểu tượng</string>
+    <string name="setting_settings_home_entry_style_system">Mặc định</string>
+    <string name="setting_settings_home_entry_style_app">Biểu tượng ứng dụng</string>
+    <string name="settings_section_system_adaptation">Tương thích hệ thống</string>
+    <string name="setting_system_adaptation_version">Phiên bản tương thích</string>
+    <string name="setting_system_adaptation_save_failed">Không thể lưu phiên bản tương thích. Hãy kiểm tra kết nối với Xposed rồi thử lại</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_title">Tắt hạ tần số động LTPO/LTPS</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_summary">Giữ tần số quét đã chọn trong cài đặt hệ thống khi màn hình bật. Bật tính năng này có thể tăng mức tiêu thụ điện.</string>
+    <string name="display_enhancement_group">Nâng cao chất lượng hình ảnh</string>
+    <string name="display_enhancement_sr_thermal_title">Bỏ giới hạn nhiệt của tăng cường siêu nét</string>
+    <string name="display_enhancement_sr_thermal_summary">Bỏ giới hạn nhiệt riêng của tính năng tăng cường siêu nét, không mở khóa phần cứng không hỗ trợ. Có thể tăng nhiệt và tiêu thụ điện</string>
+    <string name="display_enhancement_color_thermal_title">Bỏ giới hạn nhiệt của tăng cường màu video</string>
+    <string name="display_enhancement_color_thermal_summary">Bỏ giới hạn nhiệt riêng của tính năng tăng cường màu video. Có thể tăng nhiệt và tiêu thụ điện; giữ nguyên bảo vệ nhiệt toàn hệ thống</string>
+    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="settings_home_cleanup_group">Trang chủ Cài đặt</string>
+    <string name="settings_home_hide_account_title">Ẩn mục tài khoản ở trên cùng</string>
+    <string name="settings_home_hide_account_summary">Ẩn thẻ tài khoản trên trang chủ Cài đặt hệ thống</string>
+    <string name="settings_home_hide_update_title">Ẩn lời nhắc cập nhật ở trên cùng</string>
+    <string name="settings_home_hide_update_summary">Ẩn lời nhắc cập nhật trên trang chủ Cài đặt hệ thống</string>
+    <string name="power_indicator_follow_font_weight">Theo độ đậm phông chữ hệ thống</string>
+    <string name="keyguard_swipe_pin_title">Vuốt để nhập mã PIN (thử nghiệm)</string>
+    <string name="keyguard_swipe_pin_summary">Vuốt qua các phím số để nhập mã PIN màn hình khóa. Vẫn hỗ trợ chạm; để lặp lại số, vuốt ra ngoài phím rồi quay lại</string>
+    <string name="settings_process_group">Ứng dụng</string>
+    <string name="settings_show_process_manager_title">Buộc hiển thị quản lý tiến trình</string>
+    <string name="settings_realme_title">Tính năng Realme</string>
+    <string name="settings_realme_entry_summary">Các mục Realme còn trong cài đặt hệ thống</string>
+    <string name="settings_realme_app_volume">Buộc hiển thị trang âm lượng từng ứng dụng</string>
+    <string name="settings_realme_directional_sound">Buộc hiển thị âm thanh định hướng</string>
+    <string name="settings_realme_brightness_range">Buộc hiển thị độ sáng mở rộng</string>
+    <string name="settings_realme_multiple_faces">Buộc bật đăng ký nhiều khuôn mặt</string>
+    <string name="settings_realme_sleep_capsule">Buộc hiển thị Viên nang giấc ngủ</string>
+    <string name="settings_realme_heart_rate">Buộc hiển thị đo nhịp tim</string>
+    <string name="settings_realme_dc_dimming">Buộc hiển thị làm mờ DC Realme</string>
+    <string name="settings_realme_dual_music">Buộc hiển thị chia sẻ nhạc hai chế độ</string>
+    <string name="settings_realme_sleep_dependency">Cần ứng dụng Viên nang giấc ngủ riêng (com.realme.wellbeing)</string>
+    <string name="settings_realme_heart_dependency">Cần ứng dụng Đo nhịp tim riêng (com.oplus.heartrate.detect)</string>
+    <string name="settings_realme_dependency_unavailable">Chưa khả dụng: ứng dụng cần thiết chưa được cài, bị tắt hoặc không có lối vào khả dụng</string>
+    <string name="settings_realme_laboratory">Hiển thị Phòng thí nghiệm</string>
+    <string name="app_lock_group">Khóa ứng dụng</string>
+    <string name="app_lock_delay_title">Trì hoãn khóa lại ứng dụng (Thử nghiệm)</string>
+    <string name="app_lock_delay_summary">Thêm tùy chọn khóa sau 1 hoặc 5 phút rời ứng dụng vào menu gốc; khóa thiết bị sẽ khóa lại ứng dụng ngay</string>
+    <string name="app_lock_delay_after_minutes">%1$d phút sau khi rời ứng dụng</string>
+    <string name="app_lock_delay_save_failed">Không thể lưu thời gian khóa ứng dụng</string>
+    <string name="native_live_update_title">Viên thông báo trực tiếp gốc</string>
+    <string name="native_live_update_summary">Sử dụng viên thông báo trực tiếp gốc. Khi bật, Fluid Cloud sẽ bị ẩn; không thể sử dụng cả hai cùng lúc.</string>
+    <string name="setting_hide_module_icon">Ẩn biểu tượng ứng dụng mô-đun</string>
+    <string name="setting_hide_module_icon_failed">Không thể thay đổi trạng thái hiển thị biểu tượng</string>
 </resources>

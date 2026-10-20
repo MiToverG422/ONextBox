@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hook_evidence_title">最近 Hook 记录</string>
-    <string name="hook_evidence_notice">仅展示历史日志，不代表当前状态或全部组件均已生效</string>
-    <string name="hook_evidence_installed">已安装适配器</string>
-    <string name="hook_evidence_observed">已记录实际执行</string>
-    <string name="hook_evidence_unavailable">适配不可用，保留原生行为</string>
-</resources>

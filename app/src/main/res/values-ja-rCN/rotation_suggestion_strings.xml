@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="rotation_suggestion_hide_title">回転提案ボタンを非表示</string>
-    <string name="rotation_suggestion_hide_summary">画面端の回転提案ボタンを非表示にします。自動回転や画面の向きの設定は変更しません</string>
-</resources>

@@ -59,11 +59,13 @@ class FeatureRestartPlanTest {
 
     @Test fun nestedPageNamesDoNotChangeTheirApplicationScopes() {
         assertEquals(listOf("com.android.launcher"), featureRestartPackages(FeaturePageMode.Desktop))
-        for (mode in listOf(FeaturePageMode.DesktopLayout, FeaturePageMode.DesktopIcons,
+        for (mode in listOf(FeaturePageMode.DesktopLayout,
             FeaturePageMode.DesktopRecent, FeaturePageMode.DesktopPages)) {
             assertEquals(featureRestartPackages(FeaturePageMode.Desktop), featureRestartPackages(mode))
         }
         assertEquals(listOf("com.android.systemui"), featureRestartPackages(FeaturePageMode.SystemUiControlCenter))
+        assertEquals(listOf("com.android.launcher"),
+            featureRestartPackages(FeaturePageMode.DesktopIcons))
         assertEquals(listOf("com.android.systemui", "com.coloros.colordirectservice", "com.oplus.metis"),
             featureRestartPackages(FeaturePageMode.SystemUiFluidCloud))
     }

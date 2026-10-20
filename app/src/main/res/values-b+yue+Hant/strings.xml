@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="system_adaptation_runtime_restart">已切換適配版本，原有選擇已保留。請重新啟動手機以完整套用目前版本並清除上一版本的殘留效果</string>
+    <string name="developer_allow_hyperos3_title">允許 HyperOS 3 支援</string>
+    <string name="system_adaptation_no_content">目前適配版本暫無功能或工具</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">一個用 COUI 風格介面嘅 OPlus 系統自訂工具箱</string>
     <string name="tab_home">首頁</string>
@@ -538,17 +541,6 @@
     <string name="feature_touch_rate_override_on">已開啟遊戲觸控覆蓋</string>
     <string name="feature_touch_rate_override_off">已關閉遊戲觸控覆蓋</string>
     <string name="feature_touch_rate_auto_start">開機自動套用</string>
-    <string name="tab_refresh_rate">更新率</string>
-    <string name="refresh_rate_auto_start">開機自動套用</string>
-    <string name="refresh_rate_show_refresh_rate">顯示更新頻率</string>
-    <string name="refresh_rate_restore_default">還原預設更新率</string>
-    <string name="refresh_rate_restore_success">已還原預設更新率</string>
-    <string name="refresh_rate_restore_failed">還原失敗</string>
-    <string name="refresh_rate_apply_failed">套用失敗</string>
-    <string name="refresh_rate_no_modes">搵唔到支援嘅更新率</string>
-    <string name="refresh_rate_selected">已揀選</string>
-    <string name="refresh_rate_table_refresh_rate">更新率</string>
-    <string name="refresh_rate_resolution_format">%1$d x %2$d</string>
     <string name="feature_permission_manager_title">權限管理</string>
     <string name="feature_permission_start_group">應用程式跳轉</string>
     <string name="feature_permission_old_dialog_title">使用舊版跳轉彈窗</string>
@@ -842,10 +834,6 @@
     <string name="traffic_roaming_summary">新增只喺漫遊時限制背景流量嘅選項</string>
     <string name="traffic_limit_title">解除預設流量上限</string>
     <string name="traffic_limit_summary">取消自動設定嘅 100 GB 預設上限</string>
-    <string name="settings_section_module_hot_reload">模組熱載入</string>
-    <string name="setting_module_hot_reload">模組熱載入（實驗性）</string>
-    <string name="setting_module_hot_reload_summary">預設關閉，更新模組後，嘗試為全部作用域熱載入並接管運行資源，忙碌或唔兼容時仍要重啟，首次啟用後，要重啟相關作用域</string>
-    <string name="setting_module_hot_reload_save_failed">同步唔到熱載入設定，請檢查 Xposed 框架連線再試</string>
     <string name="about_logs_title">日誌</string>
     <string name="logs_source">日誌來源</string>
     <string name="logs_source_app">應用日誌</string>
@@ -1229,4 +1217,144 @@
     <string name="launcher_group_effects">視覺效果</string>
     <string name="launcher_force_blur_title">強制開啟桌面模糊動效</string>
     <string name="launcher_force_blur_summary">嘗試解除桌面背景、長按選單材質同相關模糊動效嘅機型限制，跟隨系統模糊、慳電同主題設定；可能增加耗電，韌體要保留原生模糊支援，切換後要重新啟動桌面</string>
+
+    <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
+
+    <string name="feature_c16_stacked_signal_title">原生雙卡堆疊訊號</string>
+    <string name="feature_c16_stacked_signal_summary">使用原生雙卡堆疊訊號樣式，由 C16 移植</string>
+    <string name="feature_c16_stacked_signal_save_failed">儲存設定失敗</string>
+
+    <string name="developer_activation_section">測試</string>
+    <string name="developer_activation_title">返回啟用頁</string>
+    <string name="developer_activation_summary">重新進入啟用精靈，方便測試</string>
+    <string name="developer_activation_confirm">將重設啟用狀態同協議確認記錄，返回啟用精靈首頁，保留所有功能設定。繼續？</string>
+    <string name="developer_activation_failed">無法返回啟用頁</string>
+
+    <string name="enabled_features_title">已啟用功能</string>
+    <string name="enabled_features_notice">顯示已設定嘅功能，唔代表 Hook 已驗證生效</string>
+    <string name="enabled_features_count">已啟用 %1$d 項功能</string>
+    <string name="enabled_features_group_count">%1$d 項功能</string>
+    <string name="enabled_features_copy">複製摘要</string>
+    <string name="enabled_features_expand">展開</string>
+    <string name="enabled_features_collapse">摺疊</string>
+    <string name="enabled_features_empty">未有啟用嘅功能</string>
+    <string name="enabled_features_loading">載入緊…</string>
+    <string name="enabled_features_error">讀取唔到設定，請重新開啟呢一頁再試</string>
+    <string name="enabled_features_quick_hint">用開關切換功能，或者撳功能名稱開啟設定。關閉咗嘅項目會保留到離開呢一頁，部分功能需要重新啟動作用域</string>
+    <string name="enabled_features_save_failed">儲存失敗，會重新載入實際設定</string>
+
+    <string name="hide_notification_clear_title">隱藏通知中心清理按鈕</string>
+    <string name="hide_notification_clear_summary">隱藏通知中心嘅一鍵清理按鈕，唔影響滑動清除通知</string>
+
+    <string name="hide_recent_apps_title">喺最近任務列表隱藏應用程式</string>
+    <string name="hide_recent_apps_summary">隱藏所選應用程式嘅最近任務卡片，唔會結束應用程式；分屏組合會成張隱藏</string>
+
+    <string name="hook_evidence_title">最近 Hook 記錄</string>
+    <string name="hook_evidence_notice">只顯示歷史日誌，唔代表目前狀態或者所有組件都生效</string>
+    <string name="hook_evidence_installed">已安裝適配器</string>
+    <string name="hook_evidence_observed">已記錄實際執行</string>
+    <string name="hook_evidence_unavailable">適配唔可用，保留原生行為</string>
+
+    <string name="network_identity_group">國家與電訊商</string>
+    <string name="network_identity_title">偽裝國家與電訊商（實驗性）</string>
+    <string name="network_identity_summary">支援 SIM 1、SIM 2 分別設定國家碼、電訊商名稱同 MCC/MNC</string>
+    <string name="network_identity_region">國家／地區</string>
+    <string name="network_identity_list">電訊商清單</string>
+    <string name="network_identity_popular">常用電訊商</string>
+    <string name="network_identity_all">全部已收錄編碼</string>
+    <string name="network_identity_operator">電訊商</string>
+    <string name="network_identity_original">使用原始資料</string>
+    <string name="network_identity_notice">Hook 載入後，修改唔使重新啟動手機，重新開啟目標應用程式就可以更新快取。可能影響依賴電訊商身分嘅服務，唔會改變 SIM 憑證、IP 地區或網絡註冊。關閉總開關或對應 SIM 開關可以還原，停用或解除安裝模組前請先關閉此功能。清單含專網或共用編碼，唔等同全部零售品牌</string>
+
+    <string name="phone_manager_risk_cloud_title">關閉風險應用流體雲提醒</string>
+    <string name="phone_manager_risk_cloud_summary">將風險應用流體雲提醒改為普通風險通知，唔影響風險偵測同其他安全提醒</string>
+
+    <string name="power_indicator_title">狀態欄功耗指示器（實驗性）</string>
+    <string name="power_indicator_summary">喺時鐘旁顯示電池側估算功率，安裝後首次使用要重啟系統介面，讀數不可用時隱藏</string>
+    <string name="power_indicator_interval">更新間隔</string>
+    <string name="power_indicator_precision">小數位數</string>
+    <string name="power_indicator_scale">電池計量校正</string>
+    <string name="power_indicator_scale_notice">雙電芯唔一定要乘二，只有單電芯計量先用 ×2；已經回傳整包數值就保持 ×1</string>
+    <string name="power_indicator_scale_original">原始計量 ×1</string>
+    <string name="power_indicator_scale_double">單電芯計量校正 ×2</string>
+    <string name="power_indicator_scale_half">計量修正 ×0.5</string>
+    <string name="power_indicator_source">電流資料來源</string>
+    <string name="power_indicator_source_notice">預設用 Android 介面（µA），確認機型底層單位後先轉 sysfs，單位揀錯會令功率出錯</string>
+    <string name="power_indicator_source_api">Android 介面（µA）</string>
+    <string name="power_indicator_source_ma">電池 sysfs（mA）</string>
+    <string name="power_indicator_source_ua">電池 sysfs（µA）</string>
+    <string name="power_indicator_hide_charging">接駁電源時隱藏</string>
+    <string name="power_indicator_charging_notice">關閉後，+ 代表電池淨充入功率，唔係充電器輸出功率或者整機耗電</string>
+    <string name="power_indicator_font">字體大小</string>
+
+    <string name="rotation_suggestion_hide_title">隱藏旋轉建議按鈕</string>
+    <string name="rotation_suggestion_hide_summary">隱藏螢幕邊緣彈出嘅旋轉建議按鈕，唔改動自動旋轉同螢幕方向設定</string>
+
+    <string name="hide_screenshot_floating_title">截圖隱藏小窗</string>
+    <string name="hide_screenshot_floating_summary">系統截圖時排除支援嘅應用浮窗、子母畫面同應用懸浮層，唔會關閉實際視窗</string>
+    <string name="power_indicator_hide_discharge_sign">隱藏放電負號</string>
+    <string name="power_indicator_temperature">雙行顯示溫度</string>
+    <string name="power_indicator_temperature_summary">上行顯示功耗，下行顯示電池溫度</string>
+    <string name="power_indicator_temperature_unit">溫度單位</string>
+    <string name="power_indicator_temperature_celsius">攝氏（°C）</string>
+    <string name="power_indicator_temperature_fahrenheit">華氏（°F）</string>
+    <string name="gallery_page_title">相簿</string>
+    <string name="gallery_ai_retouch_title">AI 修圖解鎖（實驗性）</string>
+    <string name="gallery_ai_retouch_summary">畀非旗艦機型使用AI 修圖</string>
+    <string name="gallery_save_failed">儲存唔到相簿設定</string>
+    <string name="settings_section_system_entry">入口</string>
+    <string name="setting_settings_home_entry">設定圖示</string>
+    <string name="setting_settings_home_entry_summary">設定模組入口喺系統設定入面嘅位置</string>
+    <string name="setting_settings_home_entry_save_failed">儲存唔到設定，請檢查 Xposed 框架連線後再試</string>
+    <string name="setting_settings_home_entry_disabled">停用</string>
+    <string name="setting_settings_home_entry_top">頂部</string>
+    <string name="setting_settings_home_entry_middle">中部</string>
+    <string name="setting_settings_home_entry_bottom">底部</string>
+    <string name="setting_settings_home_entry_style">圖示樣式</string>
+    <string name="setting_settings_home_entry_style_system">預設</string>
+    <string name="setting_settings_home_entry_style_app">App 圖示</string>
+    <string name="settings_section_system_adaptation">系統適配</string>
+    <string name="setting_system_adaptation_version">適配版本</string>
+    <string name="setting_system_adaptation_save_failed">儲存唔到系統適配版本，請檢查 Xposed 框架連線後再試</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_title">禁止 LTPO/LTPS 動態降頻</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_summary">亮屏時保持系統設定揀選嘅更新率，開啟可能增加耗電</string>
+    <string name="display_enhancement_group">畫質增強</string>
+    <string name="display_enhancement_sr_thermal_title">解除超清畫質增強溫控限制</string>
+    <string name="display_enhancement_sr_thermal_summary">解除超清畫質增強本身嘅溫控限制，唔會解鎖硬件能力，可能增加發熱同耗電</string>
+    <string name="display_enhancement_color_thermal_title">解除影片色彩增強溫控限制</string>
+    <string name="display_enhancement_color_thermal_summary">解除影片色彩增強本身嘅溫控限制，可能增加發熱同耗電，唔影響全機溫控保護</string>
+    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="settings_home_cleanup_group">設定首頁</string>
+    <string name="settings_home_hide_account_title">隱藏頂部帳號入口</string>
+    <string name="settings_home_hide_account_summary">隱藏系統設定首頁嘅帳號卡片</string>
+    <string name="settings_home_hide_update_title">隱藏頂部更新提醒</string>
+    <string name="settings_home_hide_update_summary">隱藏系統設定首頁嘅更新提醒</string>
+    <string name="power_indicator_follow_font_weight">跟隨系統字型字重</string>
+    <string name="keyguard_swipe_pin_title">滑動輸入鎖屏數字密碼（實驗性）</string>
+    <string name="keyguard_swipe_pin_summary">連續掃過數字鍵輸入鎖屏密碼，保留點按輸入；重複數字要移出按鍵再掃入</string>
+    <string name="settings_process_group">應用程式</string>
+    <string name="settings_show_process_manager_title">強制顯示進程管理</string>
+    <string name="settings_realme_title">Realme 特性</string>
+    <string name="settings_realme_entry_summary">系統設定保留嘅 Realme 專屬入口</string>
+    <string name="settings_realme_app_volume">強制顯示應用程式獨立音量頁面</string>
+    <string name="settings_realme_directional_sound">強制顯示定向聲音</string>
+    <string name="settings_realme_brightness_range">強制顯示擴展亮度</string>
+    <string name="settings_realme_multiple_faces">強制啟用多個人臉錄入</string>
+    <string name="settings_realme_sleep_capsule">強制顯示入眠膠囊</string>
+    <string name="settings_realme_heart_rate">強制顯示心率偵測</string>
+    <string name="settings_realme_dc_dimming">強制顯示 realme DC 調光</string>
+    <string name="settings_realme_dual_music">強制顯示雙模音樂分享</string>
+    <string name="settings_realme_sleep_dependency">需要獨立應用程式「入眠膠囊」（com.realme.wellbeing）</string>
+    <string name="settings_realme_heart_dependency">需要獨立應用程式「心率偵測」（com.oplus.heartrate.detect）</string>
+    <string name="settings_realme_dependency_unavailable">所需應用程式未安裝、已停用或無可用入口，暫時無法啟用</string>
+    <string name="settings_realme_laboratory">顯示實驗室</string>
+    <string name="app_lock_group">應用鎖</string>
+    <string name="app_lock_delay_title">應用鎖延遲鎖定（實驗性）</string>
+    <string name="app_lock_delay_summary">喺原生鎖定時機加入離開應用 1 分鐘、5 分鐘後嘅選項，鎖屏即刻重新上鎖</string>
+    <string name="app_lock_delay_after_minutes">離開應用 %1$d 分鐘後</string>
+    <string name="app_lock_delay_save_failed">無法儲存應用鎖鎖定時間</string>
+    <string name="native_live_update_title">原生即時通知膠囊</string>
+    <string name="native_live_update_summary">使用原生即時通知膠囊。開啟後會隱藏流體雲，兩者無法同時使用</string>
+    <string name="setting_hide_module_icon">隱藏模組 App 圖示</string>
+    <string name="setting_hide_module_icon_failed">無法修改桌面圖示顯示狀態</string>
 </resources>

@@ -23,12 +23,16 @@ class PhoneManagerRiskCloudContractTest {
         assertTrue(scoped.contains("PhoneManagerRiskCloudHooker.hook(classLoader, target.sourceDir)"))
     }
     @Test fun translationsArePresentAndNonEmpty() {
+        val expectedKeys = setOf("phone_manager_risk_cloud_title", "phone_manager_risk_cloud_summary")
         for (locale in listOf("values", "values-zh-rCN", "values-zh-rTW", "values-b+yue+Hant", "values-ja", "values-ja-rCN", "values-ko", "values-ru", "values-vi")) {
             val document = DocumentBuilderFactory.newInstance().newDocumentBuilder()
-                .parse(File(root, "res/$locale/phone_manager_risk_cloud_strings.xml"))
-            val entries = document.getElementsByTagName("string")
-            assertEquals(locale, 2, entries.length)
-            for (index in 0 until entries.length) assertTrue(locale, entries.item(index).textContent.isNotBlank())
+                .parse(File(root, "res/$locale/strings.xml"))
+            val nodes = document.getElementsByTagName("string")
+            val entries = (0 until nodes.length).map(nodes::item)
+                .filter { it.attributes.getNamedItem("name").nodeValue in expectedKeys }
+            assertEquals(locale, expectedKeys.size, entries.size)
+            assertEquals(locale, expectedKeys, entries.map { it.attributes.getNamedItem("name").nodeValue }.toSet())
+            entries.forEach { assertTrue(locale, it.textContent.isNotBlank()) }
         }
     }
 }

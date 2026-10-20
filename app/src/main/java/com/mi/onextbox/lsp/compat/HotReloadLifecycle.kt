@@ -9,7 +9,15 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /** Owns process-local resources separately from method hooks and never exports module callbacks. */
-internal object HotReloadLifecycle : HotReloadResourceCoordinator()
+internal object HotReloadLifecycle : HotReloadResourceCoordinator() {
+    override fun <T> withHook(fallback: () -> T, action: () -> T): T =
+        super.withHook(fallback) {
+            if (AdaptationHookGate.isBoundProfileActive()) action() else fallback()
+        }
+
+    fun <T> withInfrastructureHook(fallback: () -> T, action: () -> T): T =
+        super.withHook(fallback, action)
+}
 
 /** The dispatcher is injectable so retirement/rollback contracts can be exercised on the JVM. */
 internal open class HotReloadResourceCoordinator(
@@ -85,10 +93,11 @@ internal open class HotReloadResourceCoordinator(
         else check(main.post { if (!isRetiring) action() }) { "Main thread is unavailable" }
     }
 
-    fun <T> withHook(fallback: () -> T, action: () -> T): T = gate.invoke(fallback, action)
+    open fun <T> withHook(fallback: () -> T, action: () -> T): T = gate.invoke(fallback, action)
 
     /** All checks precede detach; a busy authentication/download flow vetoes the whole update. */
     fun prepare(): Map<String, Any?> {
+        check(!isRetiring) { "This generation has already retired; restart the scope" }
         var rollbackFailed = false
         try {
             check(gate.pause()) { "Hook callbacks are busy; restart the scope" }

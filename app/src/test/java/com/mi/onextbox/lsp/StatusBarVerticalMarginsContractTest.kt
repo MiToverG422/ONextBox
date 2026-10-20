@@ -57,7 +57,7 @@ class StatusBarVerticalMarginsContractTest {
         assertTrue(ui.contains("row(key, visible = value.verticalMarginsEnabled)"))
         assertTrue(ui.contains("R.string.statusbar_margin_top else R.string.statusbar_margin_bottom"))
         assertTrue(ui.contains("valueRange = -16f..40f, steps = 55"))
-        assertTrue(ui.contains("enabled = editor.savingKey != key"))
+        assertTrue(ui.contains("interactionEnabled = editor.savingKey != key"))
         assertTrue(ui.contains("value.copy(top = 0) else value.copy(bottom = 0)"))
         assertTrue(ui.contains("StatusBarLayoutSettings.VERTICAL_MARGINS_ENABLED, StatusBarLayoutSettings.TOP, StatusBarLayoutSettings.BOTTOM"))
         assertTrue(ui.contains("StatusBarLayoutSettings.setVerticalMarginsEnabled(context, next)"))

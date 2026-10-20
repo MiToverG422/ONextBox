@@ -29,7 +29,7 @@ internal fun HideScreenshotFloatingSettingsRow(hasDividerAbove: Boolean, hasDivi
     }
     SettingsToggleRow(title = stringResource(R.string.hide_screenshot_floating_title),
         summary = stringResource(R.string.hide_screenshot_floating_summary),
-        checked = enabled, switchEnabled = !saving, hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow,
+        checked = enabled, interactionEnabled = !saving, hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow,
         onCheckedChange = { next ->
             if (!saving) {
                 saving = true

@@ -225,6 +225,44 @@ class HookConfigSnapshotTest {
         assertFalse(HookConfigSnapshot.boolean("enabled", true)!!)
     }
 
+    @Test
+    fun profileSwitchMasksFeaturesWithoutOverwritingSavedChoices() {
+        val preferences = store(ready = true, enabled = true)
+        preferences.data["developer_allow_hyperos3"] = true
+        preferences.data["system_adaptation_version"] = 0
+        preferences.data["hyperos3_global_185hz"] = true
+        preferences.data["radius"] = 24
+        assertTrue(HookConfigSnapshot.attach(preferences))
+        assertTrue(HookConfigSnapshot.boolean("enabled", false)!!)
+        assertFalse(HookConfigSnapshot.boolean("hyperos3_global_185hz", false)!!)
+        repeat(100) {
+            preferences.putAndNotify("system_adaptation_version", 4)
+            assertFalse(HookConfigSnapshot.boolean("enabled", true)!!)
+            assertTrue(HookConfigSnapshot.boolean("hyperos3_global_185hz", false)!!)
+            assertTrue(HookConfigSnapshot.boolean("developer_allow_hyperos3", false)!!)
+            assertEquals(24, HookConfigSnapshot.int("radius", 0))
+            assertEquals(true, preferences.data["enabled"])
+            assertEquals(true, preferences.data["hyperos3_global_185hz"])
+            preferences.putAndNotify("system_adaptation_version", 0)
+            assertTrue(HookConfigSnapshot.boolean("enabled", false)!!)
+            assertFalse(HookConfigSnapshot.boolean("hyperos3_global_185hz", true)!!)
+        }
+    }
+
+    @Test
+    fun removingDeveloperAccessRestoresColorOsEffectiveFlagsWithoutDeletingHyperOsChoices() {
+        val preferences = store(ready = true, enabled = true)
+        preferences.data["developer_allow_hyperos3"] = true
+        preferences.data["system_adaptation_version"] = 4
+        preferences.data["hyperos3_high_touch_rate"] = true
+        assertTrue(HookConfigSnapshot.attach(preferences))
+        assertFalse(HookConfigSnapshot.boolean("enabled", true)!!)
+        preferences.putAndNotify("developer_allow_hyperos3", false)
+        assertTrue(HookConfigSnapshot.boolean("enabled", false)!!)
+        assertFalse(HookConfigSnapshot.boolean("hyperos3_high_touch_rate", true)!!)
+        assertEquals(true, preferences.data["hyperos3_high_touch_rate"])
+    }
+
     private fun store(ready: Boolean, enabled: Boolean? = null): FakePreferences =
         FakePreferences().also { preferences ->
             preferences.data[MODERN_PREFERENCES_READY_KEY] = ready

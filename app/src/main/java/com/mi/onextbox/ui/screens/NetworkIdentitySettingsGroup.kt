@@ -69,7 +69,7 @@ internal fun NetworkIdentitySettingsGroup() {
         row(NetworkIdentitySettings.ENABLED) { above, below ->
             SettingsToggleRow(title = stringResource(R.string.network_identity_title),
                 summary = stringResource(R.string.network_identity_summary), checked = state.enabled,
-                switchEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below,
+                interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below,
                 onCheckedChange = { if (it) confirming = true else save(state.copy(enabled = false)) })
         }
         (0..1).forEach { index ->
@@ -78,13 +78,13 @@ internal fun NetworkIdentitySettingsGroup() {
         row("identity-sim-$index", state.enabled) { above, below ->
             SettingsToggleRow(title = "SIM ${index + 1}", checked = slot.enabled,
                 summary = if (slot.enabled) "${slot.name} · ${slot.numeric}" else stringResource(R.string.network_identity_original),
-                switchEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below,
+                interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below,
                 onCheckedChange = { save(state.withSlot(index, slot.copy(enabled = it))) })
         }
         row("identity-region-$index", state.enabled && slot.enabled) { _, _ ->
             SettingsWindowDropdownPreference(title = stringResource(R.string.network_identity_region),
                 items = listOf("TW", "HK", "CN", "US"),
-                selectedIndex = NetworkIdentityRules.regions.indexOf(slot.region).coerceAtLeast(0), enabled = !saving && catalog.isNotEmpty(),
+                selectedIndex = NetworkIdentityRules.regions.indexOf(slot.region).coerceAtLeast(0), enabled = catalog.isNotEmpty(), interactionEnabled = !saving,
                 onSelectedIndexChange = { regionIndex ->
                     val region = NetworkIdentityRules.regions[regionIndex]
                     if (region != slot.region) catalog.firstOrNull { it.region == region && it.numeric in NetworkIdentityCatalog.popular }
@@ -100,7 +100,7 @@ internal fun NetworkIdentitySettingsGroup() {
         row("identity-operator-$index", state.enabled && slot.enabled) { _, _ ->
             SettingsWindowDropdownPreference(title = stringResource(R.string.network_identity_operator),
                 items = choices.map { "${it.title} · ${it.numeric}" },
-                selectedIndex = choices.indexOfFirst { it.numeric == slot.numeric }, enabled = !saving && choices.isNotEmpty(),
+                selectedIndex = choices.indexOfFirst { it.numeric == slot.numeric }, enabled = choices.isNotEmpty(), interactionEnabled = !saving,
                 maxHeight = 360.dp, onSelectedIndexChange = { choices.getOrNull(it)?.let { entry ->
                     save(state.withSlot(index, entry.selection(slot.enabled)))
                 } })

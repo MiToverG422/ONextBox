@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="developer_activation_section">テスト</string>
-    <string name="developer_activation_title">有効化画面に戻る</string>
-    <string name="developer_activation_summary">テスト用に有効化ウィザードを開き直す</string>
-    <string name="developer_activation_confirm">有効化状態と規約への同意記録をリセットし、ウィザードの最初の画面に戻ります。機能設定は保持されます。続行しますか？</string>
-    <string name="developer_activation_failed">有効化画面を開けませんでした</string>
-</resources>

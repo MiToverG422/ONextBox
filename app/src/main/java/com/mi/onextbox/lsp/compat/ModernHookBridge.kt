@@ -19,8 +19,10 @@ internal object ModernHookBridge {
         hooker: XposedInterface.Hooker,
     ): XposedInterface.HookHandle {
         executable.isAccessible = true
+        val profile = AdaptationHookGate.bind()
         return ModernHotReloadSession.install(executable) { chain ->
-            HotReloadLifecycle.withHook({ chain.proceed() }) { hooker.intercept(chain) }
+            if (!AdaptationHookGate.isActive(profile)) chain.proceed()
+            else HotReloadLifecycle.withHook({ chain.proceed() }) { hooker.intercept(chain) }
         }
     }
 
@@ -29,8 +31,10 @@ internal object ModernHookBridge {
         callback: ModernMethodHook,
     ): XposedInterface.HookHandle {
         executable.isAccessible = true
+        val profile = AdaptationHookGate.bind()
         return ModernHotReloadSession.install(executable) { chain ->
-            HotReloadLifecycle.withHook({ chain.proceed() }) { intercept(chain, callback) }
+            if (!AdaptationHookGate.isActive(profile)) chain.proceed()
+            else HotReloadLifecycle.withHook({ chain.proceed() }) { intercept(chain, callback) }
         }
     }
 

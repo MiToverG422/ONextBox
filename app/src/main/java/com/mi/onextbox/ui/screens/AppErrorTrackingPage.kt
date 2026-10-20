@@ -232,7 +232,7 @@ internal fun AppErrorTrackingRoute(
                     SettingsGroup {
                         SettingsToggleRow(
                             title = stringResource(R.string.app_errors_enable), summary = stringResource(R.string.app_errors_enable_summary),
-                            checked = enabled, enabled = !changing, onCheckedChange = { next ->
+                            checked = enabled, interactionEnabled = !changing, onCheckedChange = { next ->
                                 changing = true
                                 scope.launch {
                                     try {

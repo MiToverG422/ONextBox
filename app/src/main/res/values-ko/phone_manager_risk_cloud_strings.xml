@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="phone_manager_risk_cloud_title">위험 앱 Fluid Cloud 알림 숨기기</string>
-    <string name="phone_manager_risk_cloud_summary">Fluid Cloud 알림 대신 일반 위험 알림을 표시합니다. 위험 감지와 다른 보안 알림에는 영향을 주지 않습니다</string>
-</resources>

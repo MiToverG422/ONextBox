@@ -50,5 +50,11 @@ internal object SharedFeatureDefinitions {
     val hideScreenshotFloating = Toggle(R.string.hide_screenshot_floating_title, R.string.hide_screenshot_floating_summary,
         FeaturePageMode.Screenshot, { com.mi.onextbox.lsp.HideScreenshotFloatingSettings.enabled(it) },
         { context, enabled -> com.mi.onextbox.lsp.HideScreenshotFloatingSettings.set(context, enabled) })
-    val all = listOf(networkIdentity, qsCorner, stackedSignal, powerIndicator, phoneManagerRiskCloud, rotationSuggestion, launcherLabelSpacing, hideRecentApps, hideNotificationClear, hideScreenshotFloating)
+    val galleryAiRetouch = Toggle(R.string.gallery_ai_retouch_title, R.string.gallery_ai_retouch_summary,
+        FeaturePageMode.Gallery, { com.mi.onextbox.lsp.GalleryAiRetouchSettings.enabled(it) },
+        { context, enabled -> com.mi.onextbox.lsp.GalleryAiRetouchSettings.set(context, enabled) })
+    val nativeLiveUpdate = Toggle(R.string.native_live_update_title, R.string.native_live_update_summary,
+        FeaturePageMode.SystemUiNative, { com.mi.onextbox.lsp.NativeLiveUpdateSettings.enabled(it) },
+        { context, enabled -> com.mi.onextbox.lsp.NativeLiveUpdateSettings.set(context, enabled) })
+    val all = listOf(networkIdentity, qsCorner, stackedSignal, powerIndicator, phoneManagerRiskCloud, rotationSuggestion, launcherLabelSpacing, hideRecentApps, hideNotificationClear, hideScreenshotFloating, galleryAiRetouch, nativeLiveUpdate)
 }

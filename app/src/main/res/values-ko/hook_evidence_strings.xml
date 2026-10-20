@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hook_evidence_title">최근 Hook 기록</string>
-    <string name="hook_evidence_notice">과거 로그이며 현재 상태나 모든 구성 요소의 작동을 보장하지 않습니다</string>
-    <string name="hook_evidence_installed">어댑터 등록됨</string>
-    <string name="hook_evidence_observed">실행 기록됨</string>
-    <string name="hook_evidence_unavailable">어댑터 사용 불가, 기본 동작 유지</string>
-</resources>

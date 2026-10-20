@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_screenshot_floating_title">Ẩn cửa sổ nổi trong ảnh chụp màn hình</string>
-    <string name="hide_screenshot_floating_summary">Loại cửa sổ nổi, hình trong hình và lớp phủ ứng dụng được hỗ trợ khỏi ảnh chụp hệ thống mà không đóng cửa sổ</string>
-</resources>

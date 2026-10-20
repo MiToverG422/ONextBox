@@ -210,7 +210,8 @@ internal fun EnabledFeaturesPage(
                                 checked = entry.title in configured,
                                 // A write must not toggle the disabled appearance of
                                 // every unrelated switch in the page.
-                                switchEnabled = savingTitle != entry.title && !failed,
+                                switchEnabled = !failed,
+                                interactionEnabled = savingTitle != entry.title,
                                 onCheckedChange = { change(entry, it) },
                                 onRowClick = { if (!saving) onOpen(entry.page) },
                                 hasDividerAbove = above, hasDividerBelow = below,

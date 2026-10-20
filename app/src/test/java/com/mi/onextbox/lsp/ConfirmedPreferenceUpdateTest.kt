@@ -9,7 +9,7 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 class ConfirmedPreferenceUpdateTest {
-    private val key = "module_hot_reload_enabled"
+    private val key = "confirmed_boolean_test"
 
     @Test
     fun disablingReturnsOnlyAfterBothStoresContainFalse() {

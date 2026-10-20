@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_recent_apps_title">最近使ったアプリから非表示</string>
-    <string name="hide_recent_apps_summary">選択したアプリを終了せずに履歴カードを非表示にします。分割画面のペアはまとめて非表示になります</string>
-</resources>

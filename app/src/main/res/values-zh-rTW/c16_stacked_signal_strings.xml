@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="feature_c16_stacked_signal_title">原生雙卡堆疊訊號</string>
-    <string name="feature_c16_stacked_signal_summary">使用原生的雙卡堆疊訊號樣式，移植自 C16</string>
-    <string name="feature_c16_stacked_signal_save_failed">無法儲存設定</string>
-</resources>

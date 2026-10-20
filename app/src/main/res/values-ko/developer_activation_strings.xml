@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="developer_activation_section">테스트</string>
-    <string name="developer_activation_title">활성화 화면으로 돌아가기</string>
-    <string name="developer_activation_summary">테스트를 위해 활성화 마법사 다시 열기</string>
-    <string name="developer_activation_confirm">활성화 상태와 약관 동의 기록을 초기화하고 첫 화면으로 돌아갑니다. 기능 설정은 유지됩니다. 계속하시겠습니까?</string>
-    <string name="developer_activation_failed">활성화 화면을 열 수 없습니다</string>
-</resources>

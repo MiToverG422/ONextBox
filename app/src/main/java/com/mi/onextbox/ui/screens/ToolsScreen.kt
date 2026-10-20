@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.mi.onextbox.R
+import com.mi.onextbox.ui.common.rememberSystemAdaptationVersion
 import com.mi.onextbox.ui.settings.SettingsPageSurface
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
 
@@ -17,6 +18,15 @@ fun ToolsMainRoute(
     scrollResetKey: Int? = null,
     onOpen: (FeaturePageMode) -> Unit,
 ) {
+    if (!rememberSystemAdaptationVersion().hasColorOs17Pages) {
+        AdaptationEmptyPage(
+            title = stringResource(R.string.tab_tools),
+            modifier = modifier.fillMaxSize(),
+            bottomContentPadding = bottomContentPadding,
+            blurBackdrop = blurBackdrop,
+        )
+        return
+    }
     SettingsPageSurface(
         title = stringResource(R.string.tab_tools),
         modifier = modifier.fillMaxSize(),

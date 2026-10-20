@@ -14,6 +14,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import com.mi.onextbox.lsp.LspConfig.KeyguardFeature
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
+import com.mi.onextbox.lsp.compat.ModernHotReloadSession
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernMethodHook
 import com.mi.onextbox.lsp.compat.ModernReflect as Reflect
@@ -155,6 +156,15 @@ internal object FaceTapUnlockHooker {
             val detach = Reflect.findDeclaredMethodExact(host, "onDetachedFromWindow")
             val dispatch = Reflect.findDeclaredMethodExact(host, "dispatchTouchEvent", MotionEvent::class.java)
             haptics.prepare(loader)
+            val callbackBase = Reflect.findClass("android.hardware.fingerprint.FingerprintManager\$AuthenticationCallback", loader)
+            fun replayPointers(saved: Any?) {
+                val methods = (saved as? Array<*>)?.filterIsInstance<Method>().orEmpty() +
+                    ModernHotReloadSession.current?.previousTargets.orEmpty()
+                NativePointerCallbackReplay.owners(methods, callbackBase).forEach(::installNativePointerCallbacks)
+            }
+            HotReloadLifecycle.registerReplay("face-tap:pointer-hooks",
+                capture = { pointerHookMethods.toTypedArray() }, replay = ::replayPointers)
+            replayPointers(null)
 
             after(face) { param ->
                 if (!enabled()) return@after
@@ -326,40 +336,44 @@ internal object FaceTapUnlockHooker {
         runCatching {
             val monitor = Reflect.getObjectField(source, "keyguardUpdateMonitor") ?: return
             val callback = Reflect.getObjectField(monitor, "mFingerprintAuthenticationCallback") ?: return
-            val down = Reflect.findDeclaredMethodExact(callback.javaClass, "onUdfpsPointerDown", Int::class.javaPrimitiveType!!)
-            val up = Reflect.findDeclaredMethodExact(callback.javaClass, "onUdfpsPointerUp", Int::class.javaPrimitiveType!!)
-            check(down.returnType == Void.TYPE && up.returnType == Void.TYPE)
-            val requiredMethods = setOf(down, up)
-            var installed = false
-            listOf(down to true, up to false).forEach { (method, isDown) ->
-                if (method in pointerHookMethods) return@forEach
-                before(method) { param ->
-                    // A partially installed pair must not arm contacts without a sensor UP hook.
-                    if (!pointerHookMethods.containsAll(requiredMethods)) return@before
-                    val at = SystemClock.uptimeMillis()
-                    val eventCallback = param.thisObject
-                    onMain {
-                        val current = mech.get() ?: return@onMain
-                        val currentMonitor = Reflect.getObjectField(current, "keyguardUpdateMonitor") ?: return@onMain
-                        if (Reflect.getObjectField(currentMonitor, "mFingerprintAuthenticationCallback") !== eventCallback) return@onMain
-                        val state = liveState(forNativeContact = true)
-                        val wasPending = nativeHandoff.pending
-                        if (isDown) nativeHandoff.pointerDown(at, state)
-                        else nativeHandoff.pointerUp(at, state)
-                        if (nativeHandoff.pending || wasPending) {
-                            HookLog.d(TAG, "Native sensor ${if (isDown) "DOWN" else "UP"}; pending=${nativeHandoff.pending}")
-                        }
-                        schedule()
-                    }
-                }
-                pointerHookMethods += method
-                installed = true
-            }
-            if (installed) HookLog.i(TAG, "Native UDFPS pointer callbacks installed")
+            installNativePointerCallbacks(callback.javaClass)
         }.onFailure {
             if (pointerHookUnavailable.compareAndSet(false, true))
                 HookLog.w(TAG, "Native pointer handoff unavailable; window touch retained", it)
         }
+    }
+
+    private fun installNativePointerCallbacks(callbackType: Class<*>) {
+        val down = Reflect.findDeclaredMethodExact(callbackType, "onUdfpsPointerDown", Int::class.javaPrimitiveType!!)
+        val up = Reflect.findDeclaredMethodExact(callbackType, "onUdfpsPointerUp", Int::class.javaPrimitiveType!!)
+        check(down.returnType == Void.TYPE && up.returnType == Void.TYPE)
+        val requiredMethods = setOf(down, up)
+        var installed = false
+        listOf(down to true, up to false).forEach { (method, isDown) ->
+            if (method in pointerHookMethods) return@forEach
+            before(method) { param ->
+                // A partially installed pair must not arm contacts without a sensor UP hook.
+                if (!pointerHookMethods.containsAll(requiredMethods)) return@before
+                val at = SystemClock.uptimeMillis()
+                val eventCallback = param.thisObject
+                onMain {
+                    val current = mech.get() ?: return@onMain
+                    val currentMonitor = Reflect.getObjectField(current, "keyguardUpdateMonitor") ?: return@onMain
+                    if (Reflect.getObjectField(currentMonitor, "mFingerprintAuthenticationCallback") !== eventCallback) return@onMain
+                    val state = liveState(forNativeContact = true)
+                    val wasPending = nativeHandoff.pending
+                    if (isDown) nativeHandoff.pointerDown(at, state)
+                    else nativeHandoff.pointerUp(at, state)
+                    if (nativeHandoff.pending || wasPending) {
+                        HookLog.d(TAG, "Native sensor ${if (isDown) "DOWN" else "UP"}; pending=${nativeHandoff.pending}")
+                    }
+                    schedule()
+                }
+            }
+            pointerHookMethods += method
+            installed = true
+        }
+        if (installed) HookLog.i(TAG, "Native UDFPS pointer callbacks installed")
     }
 
     private fun captureIcon(source: Any) {

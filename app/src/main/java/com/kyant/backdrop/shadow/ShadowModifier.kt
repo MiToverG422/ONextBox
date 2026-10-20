@@ -1,6 +1,5 @@
 package com.kyant.backdrop.shadow
 
-import android.graphics.BlurMaskFilter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Paint
@@ -18,7 +17,8 @@ import androidx.compose.ui.node.requireGraphicsContext
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
-import com.kyant.backdrop.ShapeProvider
+import com.kyant.backdrop.internal.ShapeProvider
+import com.kyant.backdrop.internal.blur
 import kotlin.math.ceil
 
 internal class ShadowElement(
@@ -126,16 +126,9 @@ internal class ShadowNode(
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun DrawScope.configurePaint(shadow: Shadow) {
         paint.color = shadow.color
-        val blurRadius = shadow.radius.toPx()
-        paint.asFrameworkPaint().maskFilter =
-            if (blurRadius > 0f) {
-                BlurMaskFilter(blurRadius, BlurMaskFilter.Blur.NORMAL)
-            } else {
-                null
-            }
+        paint.blur(shadow.radius.toPx())
     }
 }
 

@@ -123,6 +123,7 @@ import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LsposedScopeRequester
 import com.mi.onextbox.ui.layout.BottomNavigationBar
 import com.mi.onextbox.ui.layout.Material3ExpressiveBottomNavigationBar
+import com.mi.onextbox.ui.layout.MiuixBottomNavigationBar
 import com.mi.onextbox.ui.layout.BlurredChromeBar
 import com.mi.onextbox.ui.layout.LocalChromeNativeBlurEnabled
 import com.mi.onextbox.ui.layout.LiquidGlassBottomNavigationBar
@@ -144,9 +145,11 @@ import com.mi.onextbox.ui.settings.AboutSubRoute
 import com.mi.onextbox.ui.settings.SoftwareUpdateUiState
 import com.mi.onextbox.ui.settings.rememberSoftwareUpdateUiState
 import com.mi.onextbox.ui.common.AppLocale
+import com.mi.onextbox.ui.common.appearanceChangeBottomBar
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.Material3ExpressiveAppTheme
+import com.mi.onextbox.ui.common.AppUiStyleAppTheme
 import com.mi.onextbox.ui.common.ColorOs17AppTheme
 import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.LocalColorOsProgressiveCardAnimationEnabled
@@ -406,6 +409,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureThemeStore : RootRoute
 
     @Serializable
+    data object FeatureGallery : RootRoute
+
+    @Serializable
     data object FeatureSecurePay : RootRoute
 
     @Serializable
@@ -461,15 +467,14 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureSettingsAboutDevice : RootRoute
+    @Serializable
+    data object FeatureSettingsRealme : RootRoute
 
     @Serializable
     data object FeatureSecurityPermission : RootRoute
 
     @Serializable
     data object FeatureTouchSampling : RootRoute
-
-    @Serializable
-    data object FeatureRefreshRate : RootRoute
 
     @Serializable
     data object FeatureWallpapers : RootRoute
@@ -548,6 +553,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.TrafficManagement -> RootRoute.FeatureTrafficManagement
     FeaturePageMode.PhoneManager -> RootRoute.FeaturePhoneManager
     FeaturePageMode.ThemeStore -> RootRoute.FeatureThemeStore
+    FeaturePageMode.Gallery -> RootRoute.FeatureGallery
     FeaturePageMode.SecurePay -> RootRoute.FeatureSecurePay
     FeaturePageMode.GameAssistant -> RootRoute.FeatureGameAssistant
     FeaturePageMode.OShare -> RootRoute.FeatureOShare
@@ -566,9 +572,9 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.SettingsApps -> RootRoute.FeatureSettingsApps
     FeaturePageMode.SettingsPermissions -> RootRoute.FeatureSettingsPermissions
     FeaturePageMode.SettingsAboutDevice -> RootRoute.FeatureSettingsAboutDevice
+    FeaturePageMode.SettingsRealme -> RootRoute.FeatureSettingsRealme
     FeaturePageMode.SecurityPermission -> RootRoute.FeatureSecurityPermission
     FeaturePageMode.TouchSampling -> RootRoute.FeatureTouchSampling
-    FeaturePageMode.RefreshRate -> RootRoute.FeatureRefreshRate
     FeaturePageMode.Wallpapers -> RootRoute.FeatureWallpapers
     FeaturePageMode.Aod -> RootRoute.FeatureAod
     FeaturePageMode.Screenshot -> RootRoute.FeatureScreenshot
@@ -978,11 +984,12 @@ fun Root(
             LocalAppUiStyle provides appUiStyle,
             LocalMaterialSwitchIconsEnabled provides materialSwitchIconsEnabled,
         ) {
-            Material3ExpressiveAppTheme(mode = appThemeMode, keyColor = appThemeKeyColor) {
+            AppUiStyleAppTheme(style = appUiStyle, mode = appThemeMode, keyColor = appThemeKeyColor,
+                paletteStyle = appThemePaletteStyle, colorSpec = appThemeColorSpec) {
         val colors = COUITheme.colorScheme
-        val blurBackdrop = rememberChromeBlurBackdrop(blurEffectEnabled)
+        val blurBackdrop = rememberChromeBlurBackdrop(blurEffectEnabled && appUiStyle == AppUiStyle.ColorOs)
         val liquidBottomBarSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        val liquidBackdrop = if (liquidBottomBarSupported && liquidGlassBottomBarEnabled) {
+        val liquidBackdrop = if (appUiStyle == AppUiStyle.ColorOs && liquidBottomBarSupported && liquidGlassBottomBarEnabled) {
             rememberLiquidLayerBackdrop()
         } else {
             null
@@ -1063,6 +1070,7 @@ fun Root(
                     subclass(RootRoute.FeatureTrafficManagement::class)
                     subclass(RootRoute.FeaturePhoneManager::class)
                     subclass(RootRoute.FeatureThemeStore::class)
+                    subclass(RootRoute.FeatureGallery::class)
                     subclass(RootRoute.FeatureSecurePay::class)
                     subclass(RootRoute.FeatureGameAssistant::class)
                     subclass(RootRoute.FeatureOShare::class)
@@ -1082,9 +1090,9 @@ fun Root(
                     subclass(RootRoute.FeatureSettingsApps::class)
                     subclass(RootRoute.FeatureSettingsPermissions::class)
                     subclass(RootRoute.FeatureSettingsAboutDevice::class)
+                    subclass(RootRoute.FeatureSettingsRealme::class)
                     subclass(RootRoute.FeatureSecurityPermission::class)
                     subclass(RootRoute.FeatureTouchSampling::class)
-                    subclass(RootRoute.FeatureRefreshRate::class)
                     subclass(RootRoute.FeatureWallpapers::class)
                     subclass(RootRoute.FeatureAod::class)
                     subclass(RootRoute.FeatureScreenshot::class)
@@ -2075,6 +2083,7 @@ fun Root(
             val liquidGlassVisible = visible && liquidOnly && liquidGlassActive
             AnimatedVisibility(
                 visible = liquidGlassVisible,
+                modifier = Modifier.appearanceChangeBottomBar(),
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it }),
             ) {
@@ -2099,6 +2108,7 @@ fun Root(
             }
             AnimatedVisibility(
                 visible = visible && !liquidOnly && !liquidGlassActive,
+                modifier = Modifier.appearanceChangeBottomBar(),
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically(),
             ) {
@@ -2110,7 +2120,21 @@ fun Root(
                     Box(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        if (ui.appUiStyle == AppUiStyle.Material3Expressive) {
+                        if (ui.appUiStyle == AppUiStyle.Miuix) {
+                            MiuixBottomNavigationBar(
+                                tabs = ui.visibleTabs,
+                                selectedIndex = ui.selectedIndex,
+                                onTabSelected = { index ->
+                                    actions.onHapticClick()
+                                    actions.popToMainRoute()
+                                    mainPagerState.animateToPage(index)
+                                    actions.onTabChange(ui.visibleTabs[index].screenIndex)
+                                },
+                                modifier = Modifier.onGloballyPositioned { coordinates ->
+                                    actions.onBottomNavigationHeightChange(coordinates.size.height)
+                                },
+                            )
+                        } else if (ui.appUiStyle == AppUiStyle.Material3Expressive) {
                             Material3ExpressiveBottomNavigationBar(
                                 tabs = ui.visibleTabs,
                                 selectedIndex = ui.selectedIndex,
@@ -2407,6 +2431,9 @@ fun Root(
             entry<RootRoute.FeatureThemeStore> {
                 featureEntryContent(FeaturePageMode.ThemeStore)
             }
+            entry<RootRoute.FeatureGallery> {
+                featureEntryContent(FeaturePageMode.Gallery)
+            }
             entry<RootRoute.FeatureSecurePay> {
                 featureEntryContent(FeaturePageMode.SecurePay)
             }
@@ -2472,14 +2499,14 @@ fun Root(
             entry<RootRoute.FeatureSettingsAboutDevice> {
                 featureEntryContent(FeaturePageMode.SettingsAboutDevice)
             }
+            entry<RootRoute.FeatureSettingsRealme> {
+                featureEntryContent(FeaturePageMode.SettingsRealme)
+            }
             entry<RootRoute.FeatureSecurityPermission> {
                 featureEntryContent(FeaturePageMode.SecurityPermission)
             }
             entry<RootRoute.FeatureTouchSampling> {
                 featureEntryContent(FeaturePageMode.TouchSampling)
-            }
-            entry<RootRoute.FeatureRefreshRate> {
-                featureEntryContent(FeaturePageMode.RefreshRate)
             }
             entry<RootRoute.FeatureWallpapers> {
                 featureEntryContent(FeaturePageMode.Wallpapers)

@@ -21,10 +21,10 @@ class ModuleHotReloadPolicyTest {
     }
 
     @Test
-    fun disabledPreferenceAlwaysRejectsReload() {
-        supported.forEach { process ->
-            assertFalse(process, canReload(process, enabled = false))
-        }
+    fun eligibilityHasNoUserToggleParameter() {
+        val method = ModuleHotReloadPolicy::class.java.declaredMethods.single { it.name == "canReload" }
+        assertEquals(4, method.parameterCount)
+        assertEquals(String::class.java, method.parameterTypes.first())
     }
 
     @Test
@@ -133,9 +133,8 @@ class ModuleHotReloadPolicyTest {
 
     private fun canReload(
         process: String,
-        enabled: Boolean = true,
         healthy: Boolean = true,
         systemServer: Boolean = false,
         packages: Set<String> = setOf(process),
-    ): Boolean = ModuleHotReloadPolicy.canReload(enabled, process, systemServer, packages, healthy)
+    ): Boolean = ModuleHotReloadPolicy.canReload(process, systemServer, packages, healthy)
 }

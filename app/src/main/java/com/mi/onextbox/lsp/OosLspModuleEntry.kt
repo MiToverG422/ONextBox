@@ -2,6 +2,7 @@ package com.mi.onextbox.lsp
 
 import android.util.Log
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
+import com.mi.onextbox.lsp.compat.AdaptationHookGate
 import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.HotReloadDispatchMailbox
@@ -26,7 +27,7 @@ class OosLspModuleEntry : XposedModule() {
     private val reloadTargets = CopyOnWriteArrayList<ReloadTarget>()
     private var reloadMailbox = HotReloadDispatchMailbox.create()
     private val lifecycleReceiver = Consumer<Array<Any>> { row ->
-        HotReloadLifecycle.withHook(
+        HotReloadLifecycle.withInfrastructureHook(
             fallback = { deferLifecycle(row) },
             action = { dispatchLifecycle(readTarget(row)) },
         )
@@ -78,6 +79,10 @@ class OosLspModuleEntry : XposedModule() {
     }
 
     private fun dispatchSystemServer(loader: ClassLoader) {
+        if (AdaptationHookGate.bind() == SystemAdaptationVersion.HyperOs3) {
+            HyperOsPerformanceHooker.hook(PACKAGE_SYSTEM, loader)
+            return
+        }
         CorePatchIntegration.hook(loader)
         if (LspConfig.isImmersiveNavigationEnabledXposed()) {
             ImmersiveNavigationHooker.hook()
@@ -89,6 +94,7 @@ class OosLspModuleEntry : XposedModule() {
         BatteryOptimizationHooker.hookSystemServer(loader)
         SystemRootDetectionHooker.hookSystemServer(loader)
         PermissionSystemHooker.hook(loader)
+        AppLockDelaySystemHooker.hook(loader)
         NotificationRemovalHooker.hookSystemServer(loader)
         SmallWindowHooker.hookSystemServer(loader)
         KeyguardCaptureHooker.hookSystemServer(loader)
@@ -96,6 +102,7 @@ class OosLspModuleEntry : XposedModule() {
         InstallerRedirectHooker.hook(loader)
         NativeFilePickerHooker.hook(loader)
         SettingsGlobalExtremeRefreshRateHooker.hook(classLoader = loader)
+        DisplayEnhancementThermalHooker.hookSystemServer(loader)
         AssistantHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader)
         GmsRegionRestrictionHooker.hook(classLoader = loader)
         AthenaPolicyHooker.hook(classLoader = loader)
@@ -137,6 +144,13 @@ class OosLspModuleEntry : XposedModule() {
         val packageName = target.packageName
         val classLoader = target.classLoader
 
+        if (AdaptationHookGate.bind() == SystemAdaptationVersion.HyperOs3) {
+            if (packageName in HyperOsPerformanceSettings.packages) {
+                HyperOsPerformanceHooker.hook(packageName, classLoader)
+            }
+            return
+        }
+
         InstallerRedirectHooker.hookApp()
 
         when (packageName) {
@@ -153,6 +167,7 @@ class OosLspModuleEntry : XposedModule() {
                 ImmersiveNavigationHooker.hook(classLoader)
                 AospBackPanelHooker.hook(classLoader)
                 AospVolumeHooker.hook(classLoader)
+                NativeLiveUpdateHooker.hook(classLoader)
                 C16StackedSignalHooker.hook(classLoader)
                 AssistantHooker.hook(packageName, classLoader)
                 SystemUiHooker.hook(packageName, classLoader)
@@ -169,6 +184,7 @@ class OosLspModuleEntry : XposedModule() {
                 FaceTapUnlockHooker.hook(classLoader)
                 KeyguardCaptureHooker.hookSystemUi(classLoader)
                 PasswordDialHighlightHooker.hook(classLoader)
+                PinSwipeInputHooker.hook(classLoader)
                 FluidCloudMediaBlacklistHooker.hook(classLoader)
             }
 
@@ -179,6 +195,11 @@ class OosLspModuleEntry : XposedModule() {
                     classLoader = classLoader,
                 )
                 SettingsTitleCollapseHooker.hook(classLoader)
+                SettingsHomeEntryHooker.hook(classLoader)
+                SettingsHomeCleanupHooker.hook(classLoader)
+                SettingsProcessManager.hook(classLoader)
+                SettingsRealmeFeatures.hook(classLoader)
+                DisplayEnhancementThermalHooker.hookSettings(classLoader)
                 SettingsAppInfoCardHooker.hook(classLoader)
                 PermanentClockSecondsHooker.hookSettings(classLoader)
             }
@@ -236,6 +257,7 @@ class OosLspModuleEntry : XposedModule() {
             FileManagerCardRules.PACKAGE_NAME -> FileManagerHooker.hook(classLoader)
 
             "com.oplus.securitypermission" -> SecurityPermissionHooker.hook(classLoader)
+            AppLockDelaySettings.PACKAGE -> AppLockDelayMenuHooker.hook(classLoader)
 
             PhoneManagerSettings.PACKAGE_NAME -> {
                 PhoneManagerCountdownHooker.hook(classLoader, target.sourceDir)
@@ -244,6 +266,10 @@ class OosLspModuleEntry : XposedModule() {
 
             OShareSettings.PACKAGE_NAME -> OShareVisibilityHooker.hook(classLoader)
             ThemeStoreSettings.PACKAGE_NAME -> ThemeStoreHooker.hook(classLoader)
+            GalleryAiRetouchSettings.PACKAGE_NAME -> {
+                if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
+                    GalleryAiRetouchHooker.hook(classLoader, target.sourceDir)
+            }
             SecurePaySettings.PACKAGE_NAME -> SecurePayHooker.hook(classLoader, target.sourceDir)
             GameAssistantSettings.PACKAGE_NAME -> GameAssistantHooker.hook(classLoader, target.sourceDir)
 
@@ -278,17 +304,14 @@ class OosLspModuleEntry : XposedModule() {
     override fun onHotReloading(param: XposedModuleInterface.HotReloadingParam): Boolean {
         val session = ModernHotReloadSession.current
         val currentTargets = reloadTargets.toList()
-        // Read the framework-owned preference at the decision point, not an APK-bundled flag.
-        val enabled = runCatching {
-            getRemotePreferences(PREFERENCES_GROUP)
-                .getBoolean(ModuleHotReloadSettings.PREFERENCE_KEY, false)
-        }.getOrDefault(false)
         if (!ModuleHotReloadPolicy.canReload(
-                enabled, processName, systemServer, currentTargets.map { it.packageName }.toSet(),
-                session?.healthy == true && currentTargets.isNotEmpty() && HookConfigSnapshot.isListening,
+                processName, systemServer, currentTargets.map { it.packageName }.toSet(),
+                session?.healthy == true && currentTargets.isNotEmpty() &&
+                    !HotReloadLifecycle.isRetiring && HookConfigSnapshot.isListening && HookConfigSnapshot.isAvailable,
             )) {
-            if (enabled) reloadStatus("Hot reload deferred for $processName; restart this scope. " +
+            reloadStatus("Hot reload deferred for $processName; restart this scope. " +
                 "healthy=${session?.healthy}, preferences=${HookConfigSnapshot.isListening}, " +
+                "snapshot=${HookConfigSnapshot.isAvailable}, retiring=${HotReloadLifecycle.isRetiring}, " +
                 "packages=${currentTargets.map { it.packageName }.distinct()}")
             return false
         }
@@ -297,7 +320,7 @@ class OosLspModuleEntry : XposedModule() {
             resourceState = HotReloadLifecycle.prepare()
             val targets = reloadTargets.toList()
             check(ModuleHotReloadPolicy.canReload(
-                enabled, processName, systemServer, targets.map { it.packageName }.toSet(), session?.healthy == true,
+                processName, systemServer, targets.map { it.packageName }.toSet(), session?.healthy == true,
             )) { "Lifecycle changed while preparing hot reload" }
             val mailbox = HotReloadDispatchMailbox.retire(reloadMailbox)
             // Only platform values and the host's loader cross the module-classloader boundary.
@@ -334,7 +357,7 @@ class OosLspModuleEntry : XposedModule() {
             val rows = state[3] as? Array<*> ?: error("Missing target lifecycle records")
             val targets = rows.map(::readTarget)
             check(ModuleHotReloadPolicy.canReload(
-                true, processName, systemServer, targets.map { it.packageName }.toSet(), targets.isNotEmpty(),
+                processName, systemServer, targets.map { it.packageName }.toSet(), targets.isNotEmpty(),
             )) { "Unsupported lifecycle records" }
             @Suppress("UNCHECKED_CAST")
             val resources = state[4] as? Map<String, Any?> ?: error("Missing resource ownership state")
@@ -342,7 +365,9 @@ class OosLspModuleEntry : XposedModule() {
             val mailbox = state[5] as? Array<Any?> ?: error("Missing lifecycle handover")
             reloadMailbox = mailbox
             HotReloadLifecycle.begin(resources)
-            session = ModernHotReloadSession.begin(staging = true)
+            session = ModernHotReloadSession.begin(
+                staging = true, previousTargets = param.oldHookHandles.map { it.executable },
+            )
             check(attachRuntime() && HookConfigSnapshot.isAvailable) { "Remote preferences are not ready" }
 
             // API 102 does not replay initial callbacks. Preserve the exact dispatch order and paths.

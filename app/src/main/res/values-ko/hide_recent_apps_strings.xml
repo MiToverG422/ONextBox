@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_recent_apps_title">최근 앱 목록에서 앱 숨기기</string>
-    <string name="hide_recent_apps_summary">선택한 앱을 종료하지 않고 최근 앱 카드를 숨깁니다. 분할 화면 그룹은 함께 숨겨집니다</string>
-</resources>

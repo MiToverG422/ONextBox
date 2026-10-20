@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="system_adaptation_runtime_restart">호환 버전을 전환했습니다. 기존 설정은 유지됩니다. 완전히 적용하고 이전 변경 사항을 해제하려면 휴대전화를 다시 시작하세요.</string>
+    <string name="developer_allow_hyperos3_title">HyperOS 3 지원 허용</string>
+    <string name="system_adaptation_no_content">현재 호환 버전에는 아직 기능이나 도구가 없습니다</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">OPlus 시스템을 사용자 정의하기 위한 COUI 스타일 도구 상자</string>
     <string name="tab_home">홈</string>
@@ -533,17 +536,6 @@
     <string name="feature_touch_rate_override_on">게임 터치 재정의 활성화됨</string>
     <string name="feature_touch_rate_override_off">게임 터치 재정의 비활성화됨</string>
     <string name="feature_touch_rate_auto_start">부팅 시 적용</string>
-    <string name="tab_refresh_rate">재생률</string>
-    <string name="refresh_rate_auto_start">부팅 시 적용</string>
-    <string name="refresh_rate_show_refresh_rate">새로 고침 빈도 표시</string>
-    <string name="refresh_rate_restore_default">기본 새로 고침 빈도 복원</string>
-    <string name="refresh_rate_restore_success">기본 새로 고침 빈도가 복원되었습니다</string>
-    <string name="refresh_rate_restore_failed">복원 실패</string>
-    <string name="refresh_rate_apply_failed">적용 실패</string>
-    <string name="refresh_rate_no_modes">지원되는 새로 고침 빈도를 찾을 수 없습니다</string>
-    <string name="refresh_rate_selected">선택됨</string>
-    <string name="refresh_rate_table_refresh_rate">재생률</string>
-    <string name="refresh_rate_resolution_format">%1$d x %2$d</string>
     <string name="feature_permission_manager_title">권한 관리</string>
     <string name="feature_permission_start_group">앱 실행</string>
     <string name="feature_permission_old_dialog_title">이전 실행 대화상자 사용</string>
@@ -842,10 +834,6 @@
     <string name="traffic_roaming_summary">로밍 중에만 백그라운드 데이터를 제한하는 옵션을 추가합니다</string>
     <string name="traffic_limit_title">기본 데이터 한도 해제</string>
     <string name="traffic_limit_summary">자동 설정되는 100 GB 기본 한도를 해제합니다</string>
-    <string name="settings_section_module_hot_reload">모듈 핫 리로드</string>
-    <string name="setting_module_hot_reload">모듈 핫 리로드(실험적)</string>
-    <string name="setting_module_hot_reload_summary">기본적으로 꺼져 있습니다, 모듈 업데이트 후 모든 적용 대상에서 핫 리로드와 실행 자원 인계를 시도합니다, 처리 중이거나 호환되지 않으면 재시작이 필요합니다, 처음 켠 뒤에는 관련 적용 대상을 재시작하세요</string>
-    <string name="setting_module_hot_reload_save_failed">핫 리로드 설정을 동기화할 수 없습니다. Xposed 프레임워크 연결을 확인한 후 다시 시도하세요</string>
     <string name="about_logs_title">로그</string>
     <string name="logs_source">로그 종류</string>
     <string name="logs_source_app">앱 로그</string>
@@ -1229,4 +1217,170 @@
     <string name="launcher_group_effects">시각 효과</string>
     <string name="launcher_force_blur_title">홈 화면 흐림 효과 강제 활성화</string>
     <string name="launcher_force_blur_summary">홈 배경, 길게 누르기 메뉴 및 흐림 애니메이션의 기종 제한 해제를 시도하며 시스템 흐림, 절전 및 테마 설정을 따름; 전력 소비가 늘 수 있고 펌웨어의 기본 지원이 필요함; 변경 후 런처를 다시 시작해야 함</string>
+
+    <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
+
+    <string name="feature_c16_stacked_signal_title">기본 듀얼 SIM 겹침 신호</string>
+    <string name="feature_c16_stacked_signal_summary">C16에서 이식한 기본 듀얼 SIM 겹침 신호 스타일 사용</string>
+    <string name="feature_c16_stacked_signal_save_failed">설정을 저장하지 못했습니다</string>
+
+<!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
+    <string name="corepatch_title">Core Patch (Experimental)</string>
+    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_downgrade">다운그레이드 허용</string>
+    <string name="corepatch_downgrade_summary">애플리케이션 다운그레이드를 허용합니다.</string>
+    <string name="corepatch_min_sdk">최소 SDK 버전 제한 우회</string>
+    <string name="corepatch_min_sdk_summary">minSdkVersion이 현재 시스템 버전보다 높은 APK 설치를 허용합니다.</string>
+    <string name="corepatch_verification">다이제스트 확인 비활성화</string>
+    <string name="corepatch_verification_summary">apk의 파일을 수정한 후 앱을 설치할 수 있습니다. (잘못된 다이제스트 오류를 무시).</string>
+    <string name="corepatch_resource_arsc">resources.arsc 정렬 제한 우회</string>
+    <string name="corepatch_resource_arsc_summary">Android 11 이상에서 resources.arsc가 압축되었거나 4바이트 경계로 정렬되지 않은 APK 설치를 허용합니다.</string>
+    <string name="corepatch_digest">비교 서명 비활성화</string>
+    <string name="corepatch_digest_summary">다른 서명을 가진 앱을 재설치할 수 있습니다.</string>
+    <string name="corepatch_exact_signature">정확한 서명 일치 우회</string>
+    <string name="corepatch_exact_signature_summary">분할 APK가 서로 다른 서명을 사용하도록 허용</string>
+    <string name="corepatch_previous_signatures">설치된 서명 사용</string>
+    <string name="corepatch_previous_signatures_summary">설치할 때는 항상 이미 설치된 앱의 서명을 사용하십시오.\n 이것은 매우 <b>위험</b>합니다.\n 정말로 필요한 경우에만 활성화하십시오!</string>
+    <string name="corepatch_hidden_apis">시스템 앱의 숨겨진 API 사용 허용</string>
+    <string name="corepatch_hidden_apis_summary">플랫폼 서명과 일치하지 않는 시스템 앱이 숨겨진 API를 제한 없이 사용하도록 허용합니다.</string>
+    <string name="corepatch_shared_user">공유 사용자 검증 우회</string>
+    <string name="corepatch_shared_user_summary">공유 사용자와 다른 서명으로 앱 설치를 허용합니다 (<b>\'서명 비교 비활성화\'도 활성화해야 합니다</b>)</string>
+    <string name="corepatch_verification_agent">패키지 검증 에이전트 비활성화</string>
+    <string name="corepatch_verification_agent_summary">예: Google Play 보호</string>
+    <string name="corepatch_block">차단 우회</string>
+    <string name="corepatch_block_summary">Nothing Phone과 같은 일부 기기에서 차단 목록을 우회합니다</string>
+
+    <string name="developer_activation_section">테스트</string>
+    <string name="developer_activation_title">활성화 화면으로 돌아가기</string>
+    <string name="developer_activation_summary">테스트를 위해 활성화 마법사 다시 열기</string>
+    <string name="developer_activation_confirm">활성화 상태와 약관 동의 기록을 초기화하고 첫 화면으로 돌아갑니다. 기능 설정은 유지됩니다. 계속하시겠습니까?</string>
+    <string name="developer_activation_failed">활성화 화면을 열 수 없습니다</string>
+
+    <string name="enabled_features_title">활성화된 기능</string>
+    <string name="enabled_features_notice">설정된 기능이며 Hook 작동 확인 결과가 아닙니다</string>
+    <string name="enabled_features_count">기능 %1$d개 활성화됨</string>
+    <string name="enabled_features_group_count">기능 %1$d개</string>
+    <string name="enabled_features_copy">요약 복사</string>
+    <string name="enabled_features_expand">펼치기</string>
+    <string name="enabled_features_collapse">접기</string>
+    <string name="enabled_features_empty">활성화된 기능 없음</string>
+    <string name="enabled_features_loading">불러오는 중…</string>
+    <string name="enabled_features_error">설정을 읽을 수 없습니다. 이 페이지를 다시 열어 주세요</string>
+    <string name="enabled_features_quick_hint">스위치로 기능을 전환하거나 이름을 눌러 설정을 열 수 있습니다. 끈 항목은 페이지를 나갈 때까지 남습니다. 일부 기능은 대상 프로세스를 다시 시작해야 합니다</string>
+    <string name="enabled_features_save_failed">저장하지 못했습니다. 실제 설정을 다시 불러옵니다</string>
+
+    <string name="hide_notification_clear_title">알림 센터 지우기 버튼 숨기기</string>
+    <string name="hide_notification_clear_summary">모두 지우기 버튼을 숨깁니다. 스와이프로 알림을 지우는 기능에는 영향을 주지 않습니다</string>
+
+    <string name="hide_recent_apps_title">최근 앱 목록에서 앱 숨기기</string>
+    <string name="hide_recent_apps_summary">선택한 앱을 종료하지 않고 최근 앱 카드를 숨깁니다. 분할 화면 그룹은 함께 숨겨집니다</string>
+
+    <string name="hook_evidence_title">최근 Hook 기록</string>
+    <string name="hook_evidence_notice">과거 로그이며 현재 상태나 모든 구성 요소의 작동을 보장하지 않습니다</string>
+    <string name="hook_evidence_installed">어댑터 등록됨</string>
+    <string name="hook_evidence_observed">실행 기록됨</string>
+    <string name="hook_evidence_unavailable">어댑터 사용 불가, 기본 동작 유지</string>
+
+    <string name="network_identity_group">국가 및 통신사</string>
+    <string name="network_identity_title">국가 및 통신사 정보 변경 (실험적)</string>
+    <string name="network_identity_summary">SIM 1과 SIM 2의 국가 코드, 통신사 이름 및 MCC/MNC를 각각 설정</string>
+    <string name="network_identity_region">국가 / 지역</string>
+    <string name="network_identity_list">통신사 목록</string>
+    <string name="network_identity_popular">주요 통신사</string>
+    <string name="network_identity_all">수록된 모든 코드</string>
+    <string name="network_identity_operator">통신사</string>
+    <string name="network_identity_original">원래 정보 사용</string>
+    <string name="network_identity_notice">Hook 로드 후에는 휴대전화 재시작 없이 변경됩니다. 캐시 갱신을 위해 대상 앱을 다시 여세요. 통신사에 의존하는 서비스에 영향을 줄 수 있습니다. SIM 인증 정보, IP 지역 및 네트워크 등록은 변경하지 않습니다. 전체 또는 해당 SIM 스위치를 끄면 원래 값이 복원됩니다. 모듈 비활성화 또는 삭제 전에 이 기능을 끄세요. 목록은 전용·공유 코드를 포함하며 모든 판매 브랜드를 포함하지는 않습니다</string>
+
+    <string name="phone_manager_risk_cloud_title">위험 앱 Fluid Cloud 알림 숨기기</string>
+    <string name="phone_manager_risk_cloud_summary">Fluid Cloud 알림 대신 일반 위험 알림을 표시합니다. 위험 감지와 다른 보안 알림에는 영향을 주지 않습니다</string>
+
+    <string name="power_indicator_title">전력 표시기 (실험적)</string>
+    <string name="power_indicator_summary">시계 옆에 배터리 측 추정 전력을 표시합니다. 설치 후 시스템 UI를 한 번 다시 시작해야 합니다. 측정할 수 없으면 숨깁니다</string>
+    <string name="power_indicator_interval">새로 고침 간격</string>
+    <string name="power_indicator_precision">소수 자릿수</string>
+    <string name="power_indicator_scale">배터리 측정 보정</string>
+    <string name="power_indicator_scale_notice">듀얼 셀이라고 항상 두 배는 아닙니다. 단일 셀 측정에만 ×2, 전체 팩 값에는 ×1을 사용하세요</string>
+    <string name="power_indicator_scale_original">보고된 값 ×1</string>
+    <string name="power_indicator_scale_double">단일 셀 보정 ×2</string>
+    <string name="power_indicator_scale_half">보정 ×0.5</string>
+    <string name="power_indicator_source">전류 데이터 소스</string>
+    <string name="power_indicator_source_notice">기본값은 Android API (µA)입니다. 기기의 단위를 확인한 뒤 sysfs를 선택하세요. 단위가 틀리면 전력도 부정확합니다</string>
+    <string name="power_indicator_source_api">Android API (µA)</string>
+    <string name="power_indicator_source_ma">배터리 sysfs (mA)</string>
+    <string name="power_indicator_source_ua">배터리 sysfs (µA)</string>
+    <string name="power_indicator_hide_charging">전원 연결 중 숨기기</string>
+    <string name="power_indicator_charging_notice">끄면 +는 배터리의 순 충전 전력이며 충전기 출력이나 기기 전체 소비 전력이 아닙니다</string>
+    <string name="power_indicator_font">글꼴 크기</string>
+
+    <string name="rotation_suggestion_hide_title">회전 제안 버튼 숨기기</string>
+    <string name="rotation_suggestion_hide_summary">화면 가장자리의 회전 제안 버튼을 숨깁니다. 자동 회전이나 화면 방향 설정은 변경하지 않습니다</string>
+
+    <string name="hide_screenshot_floating_title">스크린샷에서 플로팅 앱 제외</string>
+    <string name="hide_screenshot_floating_summary">지원되는 플로팅 창, PIP 및 앱 오버레이를 닫지 않고 시스템 스크린샷에서 제외</string>
+    <string name="power_indicator_hide_discharge_sign">방전 음수 기호 숨기기</string>
+    <string name="power_indicator_temperature">온도 두 줄 표시</string>
+    <string name="power_indicator_temperature_summary">첫째 줄에 전력, 둘째 줄에 배터리 온도 표시</string>
+    <string name="power_indicator_temperature_unit">온도 단위</string>
+    <string name="power_indicator_temperature_celsius">섭씨(°C)</string>
+    <string name="power_indicator_temperature_fahrenheit">화씨(°F)</string>
+    <string name="gallery_page_title">사진</string>
+    <string name="gallery_ai_retouch_title">AI 리터치 잠금 해제 (실험적)</string>
+    <string name="gallery_ai_retouch_summary">비플래그십 기기에서 AI 리터치를 사용할 수 있도록 합니다</string>
+    <string name="gallery_save_failed">사진 설정을 저장하지 못했습니다</string>
+    <string name="settings_section_system_entry">실행 경로</string>
+    <string name="setting_settings_home_entry">설정 아이콘</string>
+    <string name="setting_settings_home_entry_summary">시스템 설정에서 모듈 바로가기의 위치를 설정합니다</string>
+    <string name="setting_settings_home_entry_save_failed">설정을 저장하지 못했습니다. Xposed 프레임워크 연결을 확인하고 다시 시도해 주세요</string>
+    <string name="setting_settings_home_entry_disabled">사용 안 함</string>
+    <string name="setting_settings_home_entry_top">상단</string>
+    <string name="setting_settings_home_entry_middle">중간</string>
+    <string name="setting_settings_home_entry_bottom">하단</string>
+    <string name="setting_settings_home_entry_style">아이콘 스타일</string>
+    <string name="setting_settings_home_entry_style_system">기본값</string>
+    <string name="setting_settings_home_entry_style_app">앱 아이콘</string>
+    <string name="settings_section_system_adaptation">시스템 호환 설정</string>
+    <string name="setting_system_adaptation_version">호환 버전</string>
+    <string name="setting_system_adaptation_save_failed">호환 버전을 저장하지 못했습니다. Xposed 프레임워크 연결을 확인한 후 다시 시도하세요</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_title">LTPO/LTPS 동적 주사율 저하 방지</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_summary">화면이 켜져 있을 때 시스템 설정에서 선택한 주사율을 유지합니다. 사용 시 전력 소모가 늘어날 수 있습니다.</string>
+    <string name="display_enhancement_group">화질 향상</string>
+    <string name="display_enhancement_sr_thermal_title">초고화질 향상 온도 제한 해제</string>
+    <string name="display_enhancement_sr_thermal_summary">초고화질 향상 기능 자체의 온도 제한을 해제합니다. 미지원 하드웨어 기능은 활성화하지 않으며 발열과 전력 소비가 증가할 수 있습니다</string>
+    <string name="display_enhancement_color_thermal_title">동영상 색상 향상 온도 제한 해제</string>
+    <string name="display_enhancement_color_thermal_summary">동영상 색상 향상 기능 자체의 온도 제한을 해제합니다. 발열과 전력 소비가 증가할 수 있으며 시스템 전체의 온도 보호는 유지됩니다</string>
+    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="settings_home_cleanup_group">설정 홈</string>
+    <string name="settings_home_hide_account_title">상단 계정 항목 숨기기</string>
+    <string name="settings_home_hide_account_summary">시스템 설정 홈의 계정 카드를 숨깁니다</string>
+    <string name="settings_home_hide_update_title">상단 업데이트 알림 숨기기</string>
+    <string name="settings_home_hide_update_summary">시스템 설정 홈의 업데이트 알림을 숨깁니다</string>
+    <string name="power_indicator_follow_font_weight">시스템 글꼴 두께 따르기</string>
+    <string name="keyguard_swipe_pin_title">스와이프로 PIN 입력 (실험적)</string>
+    <string name="keyguard_swipe_pin_summary">숫자 키를 연속으로 지나 잠금 화면 PIN을 입력합니다. 탭 입력도 유지되며 같은 숫자는 키를 벗어났다가 다시 지나 입력합니다</string>
+    <string name="settings_process_group">앱</string>
+    <string name="settings_show_process_manager_title">프로세스 관리 강제 표시</string>
+    <string name="settings_realme_title">Realme 기능</string>
+    <string name="settings_realme_entry_summary">시스템 설정에 남아 있는 Realme 전용 항목</string>
+    <string name="settings_realme_app_volume">앱별 음량 페이지 강제 표시</string>
+    <string name="settings_realme_directional_sound">지향성 사운드 강제 표시</string>
+    <string name="settings_realme_brightness_range">확장 밝기 강제 표시</string>
+    <string name="settings_realme_multiple_faces">다중 얼굴 등록 강제 활성화</string>
+    <string name="settings_realme_sleep_capsule">수면 캡슐 강제 표시</string>
+    <string name="settings_realme_heart_rate">심박수 측정 강제 표시</string>
+    <string name="settings_realme_dc_dimming">Realme DC 디밍 강제 표시</string>
+    <string name="settings_realme_dual_music">듀얼 모드 음악 공유 강제 표시</string>
+    <string name="settings_realme_sleep_dependency">별도의 수면 캡슐 앱이 필요합니다 (com.realme.wellbeing)</string>
+    <string name="settings_realme_heart_dependency">별도의 심박수 측정 앱이 필요합니다 (com.oplus.heartrate.detect)</string>
+    <string name="settings_realme_dependency_unavailable">필요한 앱이 없거나 비활성화되었거나 실행할 수 없어 사용할 수 없습니다</string>
+    <string name="settings_realme_laboratory">실험실 표시</string>
+    <string name="app_lock_group">앱 잠금</string>
+    <string name="app_lock_delay_title">앱 다시 잠금 지연 (실험적)</string>
+    <string name="app_lock_delay_summary">기본 잠금 시점 메뉴에 앱을 나간 후 1분 및 5분 옵션을 추가합니다. 화면을 잠그면 앱도 즉시 다시 잠깁니다</string>
+    <string name="app_lock_delay_after_minutes">앱을 나간 후 %1$d분</string>
+    <string name="app_lock_delay_save_failed">앱 잠금 시간을 저장할 수 없습니다</string>
+    <string name="native_live_update_title">기본 실시간 알림 칩</string>
+    <string name="native_live_update_summary">기본 실시간 알림 칩을 사용합니다. 활성화하면 Fluid Cloud가 표시되지 않으며 두 기능을 동시에 사용할 수 없습니다.</string>
+    <string name="setting_hide_module_icon">모듈 앱 아이콘 숨기기</string>
+    <string name="setting_hide_module_icon_failed">아이콘 표시 상태를 변경할 수 없습니다</string>
 </resources>

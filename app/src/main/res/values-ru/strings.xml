@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="system_adaptation_runtime_restart">Версия переключена, настройки сохранены. Перезагрузите телефон, чтобы применить текущую версию и сбросить эффекты предыдущей.</string>
+    <string name="developer_allow_hyperos3_title">Разрешить поддержку HyperOS 3</string>
+    <string name="system_adaptation_no_content">Для этой версии пока нет функций и инструментов</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">Набор инструментов в стиле COUI для настройки систем OPlus</string>
     <string name="tab_home">Главная</string>
@@ -533,17 +536,6 @@
     <string name="feature_touch_rate_override_on">Переопределение сенсорного экрана в игре включено</string>
     <string name="feature_touch_rate_override_off">Переопределение сенсорного экрана в игре отключено</string>
     <string name="feature_touch_rate_auto_start">Применить при загрузке</string>
-    <string name="tab_refresh_rate">Частота обновления</string>
-    <string name="refresh_rate_auto_start">Применить при загрузке</string>
-    <string name="refresh_rate_show_refresh_rate">Показать частоту обновления</string>
-    <string name="refresh_rate_restore_default">Восстановить частоту обновления по умолчанию</string>
-    <string name="refresh_rate_restore_success">Восстановлена частота обновления по умолчанию</string>
-    <string name="refresh_rate_restore_failed">Восстановление не удалось</string>
-    <string name="refresh_rate_apply_failed">Не удалось применить</string>
-    <string name="refresh_rate_no_modes">Поддерживаемые частоты обновления не найдены</string>
-    <string name="refresh_rate_selected">Выбрано</string>
-    <string name="refresh_rate_table_refresh_rate">Частота обновления</string>
-    <string name="refresh_rate_resolution_format">%1$d x %2$d</string>
     <string name="feature_permission_manager_title">Управление разрешениями</string>
     <string name="feature_permission_start_group">Запуск приложений</string>
     <string name="feature_permission_old_dialog_title">Старый диалог запуска</string>
@@ -842,10 +834,6 @@
     <string name="traffic_roaming_summary">Добавить ограничение фонового трафика только в роуминге</string>
     <string name="traffic_limit_title">Отменить лимит трафика по умолчанию</string>
     <string name="traffic_limit_summary">Отключить автоматический лимит 100 ГБ</string>
-    <string name="settings_section_module_hot_reload">Горячая перезагрузка модуля</string>
-    <string name="setting_module_hot_reload">Горячая перезагрузка модуля (экспериментально)</string>
-    <string name="setting_module_hot_reload_summary">По умолчанию выключено, после обновления модуль пытается перезагрузить код и передать ресурсы новой версии во всех целевых процессах, занятые или несовместимые процессы требуют перезапуска, после первого включения перезапустите целевые процессы</string>
-    <string name="setting_module_hot_reload_save_failed">Не удалось синхронизировать настройку горячей перезагрузки. Проверьте подключение к Xposed и повторите попытку</string>
     <string name="about_logs_title">Журнал</string>
     <string name="logs_source">Источник</string>
     <string name="logs_source_app">Журнал приложения</string>
@@ -1229,4 +1217,172 @@
     <string name="launcher_group_effects">Визуальные эффекты</string>
     <string name="launcher_force_blur_title">Принудительное размытие рабочего стола</string>
     <string name="launcher_force_blur_summary">Попытаться снять ограничения модели для фона, меню значков и анимированного размытия, сохраняя системные настройки размытия, энергосбережения и темы; возможно увеличение расхода энергии, нужна встроенная поддержка прошивки; после изменения перезапустите лаунчер</string>
+
+    <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
+
+    <string name="feature_c16_stacked_signal_title">Стандартный сигнал двух SIM друг над другом</string>
+    <string name="feature_c16_stacked_signal_summary">Использовать стандартный стиль сигнала двух SIM друг над другом, перенесённый из C16</string>
+    <string name="feature_c16_stacked_signal_save_failed">Не удалось сохранить настройку</string>
+
+<!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
+    <string name="corepatch_title">Core Patch (Experimental)</string>
+    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_downgrade">Разрешить понижать версию.</string>
+    <string name="corepatch_downgrade_summary">Разрешить переустановку приложений на прошлые версии.</string>
+    <string name="corepatch_min_sdk">Обойти ограничение минимальной версии SDK</string>
+    <string name="corepatch_min_sdk_summary">Разрешить установку APK, у которых minSdkVersion выше версии системы.</string>
+    <string name="corepatch_verification">Отключить проверку дайджеста</string>
+    <string name="corepatch_verification_summary">Позволяет устанавливать приложения после изменения файла в apk (игнорировать недопустимую ошибку дайджеста).</string>
+    <string name="corepatch_resource_arsc">Обойти ограничение выравнивания resources.arsc</string>
+    <string name="corepatch_resource_arsc_summary">Разрешить установку APK, в которых resources.arsc сжат или не выровнен по границе 4 байт, на Android 11 и новее.</string>
+    <string name="corepatch_digest">Отключить сравнение подписей</string>
+    <string name="corepatch_digest_summary">Разрешить переустановку приложения с другими подписями.</string>
+    <string name="corepatch_exact_signature">Обойти точное совпадение подписей</string>
+    <string name="corepatch_exact_signature_summary">Разрешить разделённым APK использовать разные подписи.</string>
+    <string name="corepatch_previous_signatures">Использовать установленные подписи</string>
+    <string name="corepatch_previous_signatures_summary">"При установке всегда используйте подписи из уже установленных приложений.
+  Это крайне «опасно».
+  Включайте только тогда, когда это действительно необходимо! "</string>
+    <string name="corepatch_hidden_apis">Разрешить скрытые API для системных приложений</string>
+    <string name="corepatch_hidden_apis_summary">Разрешить системным приложениям с подписью, отличной от платформенной, свободно использовать скрытые API.</string>
+    <string name="corepatch_shared_user">Обойти проверку общего пользователя</string>
+    <string name="corepatch_shared_user_summary">Разрешить установку приложения с подписью, отличающейся от подписи его общего пользователя (<b>также должен быть включен ‘Отключить сравнение подписей’</b>)</string>
+    <string name="corepatch_verification_agent">Отключить агент проверки пакетов</string>
+    <string name="corepatch_verification_agent_summary">например, Google Play Protection</string>
+    <string name="corepatch_block">Обойти блокировку</string>
+    <string name="corepatch_block_summary">Обойти список блокировок на некоторых устройствах, например Nothing Phone</string>
+
+    <string name="developer_activation_section">Тестирование</string>
+    <string name="developer_activation_title">Вернуться к активации</string>
+    <string name="developer_activation_summary">Повторно открыть мастер активации для тестирования</string>
+    <string name="developer_activation_confirm">Сбросить состояние активации и согласие с условиями, затем открыть первую страницу мастера? Настройки функций сохранятся</string>
+    <string name="developer_activation_failed">Не удалось открыть активацию</string>
+
+    <string name="enabled_features_title">Включённые функции</string>
+    <string name="enabled_features_notice">Показаны настройки, а не подтверждённое состояние хуков</string>
+    <string name="enabled_features_count">Включено функций: %1$d</string>
+    <string name="enabled_features_group_count">Функций: %1$d</string>
+    <string name="enabled_features_copy">Копировать сводку</string>
+    <string name="enabled_features_expand">Развернуть</string>
+    <string name="enabled_features_collapse">Свернуть</string>
+    <string name="enabled_features_empty">Нет включённых функций</string>
+    <string name="enabled_features_loading">Загрузка…</string>
+    <string name="enabled_features_error">Не удалось прочитать настройки. Откройте эту страницу заново</string>
+    <string name="enabled_features_quick_hint">Используйте переключатели или нажмите название функции для перехода к настройкам. Выключенные пункты остаются до выхода со страницы. Некоторым функциям нужен перезапуск целевого процесса</string>
+    <string name="enabled_features_save_failed">Не удалось сохранить. Фактические настройки будут загружены заново</string>
+
+    <string name="hide_notification_clear_title">Скрыть кнопку очистки уведомлений</string>
+    <string name="hide_notification_clear_summary">Скрывает кнопку очистки всех уведомлений, не мешая удалять их смахиванием</string>
+
+    <string name="hide_recent_apps_title">Скрывать приложения в недавних</string>
+    <string name="hide_recent_apps_summary">Скрывает карточки выбранных приложений, не завершая их работу; пары разделённого экрана скрываются целиком</string>
+
+    <string name="hook_evidence_title">Последние записи Hook</string>
+    <string name="hook_evidence_notice">История журнала, а не текущее состояние или подтверждение работы всех компонентов</string>
+    <string name="hook_evidence_installed">Адаптер установлен</string>
+    <string name="hook_evidence_observed">Выполнение зафиксировано</string>
+    <string name="hook_evidence_unavailable">Адаптер недоступен, сохранено штатное поведение</string>
+
+    <string name="network_identity_group">Страна и оператор</string>
+    <string name="network_identity_title">Подмена страны и оператора (экспериментально)</string>
+    <string name="network_identity_summary">Отдельная настройка страны, имени оператора и MCC/MNC для SIM 1 и SIM 2</string>
+    <string name="network_identity_region">Страна / регион</string>
+    <string name="network_identity_list">Список операторов</string>
+    <string name="network_identity_popular">Основные операторы</string>
+    <string name="network_identity_all">Все включённые коды</string>
+    <string name="network_identity_operator">Оператор</string>
+    <string name="network_identity_original">Использовать исходные данные</string>
+    <string name="network_identity_notice">После загрузки Hook изменения применяются без перезагрузки телефона; перезапустите нужные приложения для обновления кэша. Возможны изменения в работе служб оператора. Данные авторизации SIM, регион IP и регистрация в сети не меняются. Общий переключатель или переключатель отдельной SIM восстанавливает исходные значения. Выключите функцию перед отключением или удалением модуля. Каталог включает частные и общие коды, а не все розничные бренды</string>
+
+    <string name="phone_manager_risk_cloud_title">Скрывать оповещения Fluid Cloud об опасных приложениях</string>
+    <string name="phone_manager_risk_cloud_summary">Использовать обычные уведомления о рисках вместо Fluid Cloud, не меняя обнаружение угроз и другие предупреждения</string>
+
+    <string name="power_indicator_title">Индикатор мощности (экспериментальный)</string>
+    <string name="power_indicator_summary">Показывает оценку мощности на стороне батареи рядом с часами. После установки перезапустите System UI. Недоступные показания скрываются</string>
+    <string name="power_indicator_interval">Интервал обновления</string>
+    <string name="power_indicator_precision">Знаки после запятой</string>
+    <string name="power_indicator_scale">Коррекция измерений батареи</string>
+    <string name="power_indicator_scale_notice">Две ячейки не всегда требуют удвоения. Используйте ×2 только для измерений одной ячейки, ×1 — для всей батареи</string>
+    <string name="power_indicator_scale_original">Исходное значение ×1</string>
+    <string name="power_indicator_scale_double">Одна ячейка ×2</string>
+    <string name="power_indicator_scale_half">Коррекция ×0.5</string>
+    <string name="power_indicator_source">Источник тока</string>
+    <string name="power_indicator_source_notice">По умолчанию Android API (µA). Выбирайте sysfs только после проверки единиц устройства: неверные единицы дают неверную мощность</string>
+    <string name="power_indicator_source_api">Android API (µA)</string>
+    <string name="power_indicator_source_ma">Батарея sysfs (mA)</string>
+    <string name="power_indicator_source_ua">Батарея sysfs (µA)</string>
+    <string name="power_indicator_hide_charging">Скрывать при подключении питания</string>
+    <string name="power_indicator_charging_notice">Если выключено, + означает чистую мощность зарядки батареи, а не выход зарядного устройства или потребление всего телефона</string>
+    <string name="power_indicator_font">Размер шрифта</string>
+
+    <string name="rotation_suggestion_hide_title">Скрывать кнопку предложения поворота</string>
+    <string name="rotation_suggestion_hide_summary">Скрывать всплывающую кнопку поворота экрана, не меняя автоповорот и настройки ориентации</string>
+
+    <string name="hide_screenshot_floating_title">Не показывать плавающие окна на снимках</string>
+    <string name="hide_screenshot_floating_summary">Исключает поддерживаемые плавающие окна, картинку в картинке и наложения приложений из системных снимков, не закрывая окна</string>
+    <string name="power_indicator_hide_discharge_sign">Скрывать минус при разряде</string>
+    <string name="power_indicator_temperature">Температура второй строкой</string>
+    <string name="power_indicator_temperature_summary">Сверху — мощность, снизу — температура батареи</string>
+    <string name="power_indicator_temperature_unit">Единица температуры</string>
+    <string name="power_indicator_temperature_celsius">Цельсий (°C)</string>
+    <string name="power_indicator_temperature_fahrenheit">Фаренгейт (°F)</string>
+    <string name="gallery_page_title">Фото</string>
+    <string name="gallery_ai_retouch_title">Разблокировать ИИ-ретушь (экспериментально)</string>
+    <string name="gallery_ai_retouch_summary">Разрешить ИИ-ретушь на нефлагманских устройствах</string>
+    <string name="gallery_save_failed">Не удалось сохранить настройки приложения «Фото»</string>
+    <string name="settings_section_system_entry">Точки входа</string>
+    <string name="setting_settings_home_entry">Значок в настройках</string>
+    <string name="setting_settings_home_entry_summary">Выберите положение ярлыка модуля в системных настройках</string>
+    <string name="setting_settings_home_entry_save_failed">Не удалось сохранить настройку. Проверьте подключение к Xposed и повторите попытку</string>
+    <string name="setting_settings_home_entry_disabled">Отключено</string>
+    <string name="setting_settings_home_entry_top">Вверху</string>
+    <string name="setting_settings_home_entry_middle">В середине</string>
+    <string name="setting_settings_home_entry_bottom">Внизу</string>
+    <string name="setting_settings_home_entry_style">Стиль значка</string>
+    <string name="setting_settings_home_entry_style_system">По умолчанию</string>
+    <string name="setting_settings_home_entry_style_app">Значок приложения</string>
+    <string name="settings_section_system_adaptation">Адаптация к системе</string>
+    <string name="setting_system_adaptation_version">Версия системы</string>
+    <string name="setting_system_adaptation_save_failed">Не удалось сохранить версию системы. Проверьте подключение к фреймворку Xposed и повторите попытку</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_title">Отключить снижение частоты LTPO/LTPS</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_summary">Удерживать выбранную в системе частоту при включённом экране. Включение может увеличить расход энергии.</string>
+    <string name="display_enhancement_group">Улучшение изображения</string>
+    <string name="display_enhancement_sr_thermal_title">Снять температурный лимит сверхчёткого изображения</string>
+    <string name="display_enhancement_sr_thermal_summary">Снимает температурный лимит улучшения чёткости, не открывая неподдерживаемые аппаратные функции. Может увеличить нагрев и расход энергии</string>
+    <string name="display_enhancement_color_thermal_title">Снять температурный лимит улучшения цвета видео</string>
+    <string name="display_enhancement_color_thermal_summary">Снимает температурный лимит улучшения цвета видео. Может увеличить нагрев и расход энергии. Общая тепловая защита системы сохраняется</string>
+    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="settings_home_cleanup_group">Главная страница настроек</string>
+    <string name="settings_home_hide_account_title">Скрыть аккаунт вверху настроек</string>
+    <string name="settings_home_hide_account_summary">Скрывает карточку аккаунта на главной странице системных настроек</string>
+    <string name="settings_home_hide_update_title">Скрыть напоминание об обновлении</string>
+    <string name="settings_home_hide_update_summary">Скрывает напоминания об обновлении вверху системных настроек</string>
+    <string name="power_indicator_follow_font_weight">Использовать системную толщину шрифта</string>
+    <string name="keyguard_swipe_pin_title">Ввод PIN-кода свайпом (экспериментально)</string>
+    <string name="keyguard_swipe_pin_summary">Проводите по цифровым клавишам для ввода PIN-кода. Нажатия сохраняются; для повтора цифры выйдите за пределы клавиши и вернитесь</string>
+    <string name="settings_process_group">Приложения</string>
+    <string name="settings_show_process_manager_title">Принудительно показывать управление процессами</string>
+    <string name="settings_realme_title">Функции Realme</string>
+    <string name="settings_realme_entry_summary">Встроенные разделы Realme в системных настройках</string>
+    <string name="settings_realme_app_volume">Принудительно показывать страницу громкости приложений</string>
+    <string name="settings_realme_directional_sound">Принудительно показывать направленный звук</string>
+    <string name="settings_realme_brightness_range">Принудительно показывать расширенную яркость</string>
+    <string name="settings_realme_multiple_faces">Принудительно включить регистрацию нескольких лиц</string>
+    <string name="settings_realme_sleep_capsule">Принудительно показать капсулу сна</string>
+    <string name="settings_realme_heart_rate">Принудительно показать измерение пульса</string>
+    <string name="settings_realme_dc_dimming">Принудительно показать DC-затемнение Realme</string>
+    <string name="settings_realme_dual_music">Принудительно показать совместное прослушивание музыки</string>
+    <string name="settings_realme_sleep_dependency">Нужно отдельное приложение «Капсула сна» (com.realme.wellbeing)</string>
+    <string name="settings_realme_heart_dependency">Нужно отдельное приложение для измерения пульса (com.oplus.heartrate.detect)</string>
+    <string name="settings_realme_dependency_unavailable">Недоступно: нужное приложение не установлено, отключено или не имеет доступного входа</string>
+    <string name="settings_realme_laboratory">Показать лабораторию</string>
+    <string name="app_lock_group">Блокировка приложений</string>
+    <string name="app_lock_delay_title">Задержка повторной блокировки (Экспериментально)</string>
+    <string name="app_lock_delay_summary">Добавляет в системное меню блокировку через 1 или 5 минут после выхода из приложения. При блокировке устройства приложения блокируются сразу</string>
+    <string name="app_lock_delay_after_minutes">Через %1$d мин. после выхода из приложения</string>
+    <string name="app_lock_delay_save_failed">Не удалось сохранить время блокировки</string>
+    <string name="native_live_update_title">Системная капсула Live Update</string>
+    <string name="native_live_update_summary">Использовать системную капсулу Live Update. При включении Fluid Cloud скрывается; совместное использование невозможно.</string>
+    <string name="setting_hide_module_icon">Скрыть значок приложения модуля</string>
+    <string name="setting_hide_module_icon_failed">Не удалось изменить видимость значка</string>
 </resources>

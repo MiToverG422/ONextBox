@@ -39,12 +39,17 @@ internal fun KeyguardInteractionSettings() {
     var highlightBlocked by remember {
         mutableStateOf(LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.BlockPasswordHighlight))
     }
+    var swipePinEnabled by remember {
+        mutableStateOf(LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.SwipePinInput))
+    }
+    var savingSwipePin by remember { mutableStateOf(false) }
     DisposableEffect(context, owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 enabled = LspConfig.isKeyguardFeatureEnabled(context, feature)
                 animationEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.FaceTapAnimation)
                 highlightBlocked = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.BlockPasswordHighlight)
+                swipePinEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.SwipePinInput)
             }
         }
         owner.lifecycle.addObserver(observer)
@@ -83,6 +88,35 @@ internal fun KeyguardInteractionSettings() {
                         writeLock.withLock {
                             withContext(Dispatchers.IO) {
                                 LspConfig.setKeyguardFeatureEnabled(context, KeyguardFeature.FaceTapAnimation, checked)
+                            }
+                        }
+                    }
+                },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
+        }
+        row("swipe-pin") { above, below ->
+            SettingsToggleRow(
+                title = stringResource(R.string.keyguard_swipe_pin_title),
+                summary = stringResource(R.string.keyguard_swipe_pin_summary),
+                checked = swipePinEnabled,
+                interactionEnabled = !savingSwipePin,
+                onCheckedChange = { checked ->
+                    if (!savingSwipePin) {
+                        savingSwipePin = true
+                        swipePinEnabled = checked
+                        val pending = com.mi.onextbox.ui.settings.FeatureSettingWriteQueue.application.enqueue {
+                            LspConfig.setKeyguardFeatureEnabled(context, KeyguardFeature.SwipePinInput, checked)
+                        }
+                        scope.launch {
+                            try { pending.await() }
+                            catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                            catch (_: Exception) {
+                                android.widget.Toast.makeText(context, R.string.ota_save_failed, android.widget.Toast.LENGTH_LONG).show()
+                            } finally {
+                                swipePinEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.SwipePinInput)
+                                savingSwipePin = false
                             }
                         }
                     }

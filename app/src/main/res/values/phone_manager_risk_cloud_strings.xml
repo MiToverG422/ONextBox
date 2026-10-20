@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="phone_manager_risk_cloud_title">Hide risk-app Fluid Cloud alerts</string>
-    <string name="phone_manager_risk_cloud_summary">Use ordinary risk notifications instead of Fluid Cloud alerts; risk detection and other security alerts remain unchanged</string>
-</resources>

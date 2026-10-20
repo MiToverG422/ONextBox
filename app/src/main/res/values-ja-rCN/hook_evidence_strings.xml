@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hook_evidence_title">最近の Hook 記録</string>
-    <string name="hook_evidence_notice">過去のログだよ。現在の状態や全コンポーネントの動作を保証するものではないよ</string>
-    <string name="hook_evidence_installed">アダプターを登録済み</string>
-    <string name="hook_evidence_observed">実行を記録済み</string>
-    <string name="hook_evidence_unavailable">アダプターを利用できないよ。標準動作を維持</string>
-</resources>

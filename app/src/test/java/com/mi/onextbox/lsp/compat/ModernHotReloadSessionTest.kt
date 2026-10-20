@@ -13,6 +13,29 @@ import org.junit.Test
 
 class ModernHotReloadSessionTest {
     @Test
+    fun stagingExposesOnlyACopyOfPreviousHostTargetsUntilCommit() {
+        val installer = RecordingInstaller()
+        val oldTargets = arrayListOf<Executable>(target("first"))
+        val session = ModernHotReloadSession.Session(true, installer::install, oldTargets)
+        oldTargets.clear()
+        assertEquals(listOf(target("first")), session.previousTargets)
+        session.install(target("first"), hooker("replacement"))
+        session.commit(listOf(FakeHandle(target("first"), id(0))))
+        assertTrue(session.previousTargets.isEmpty())
+    }
+
+    @Test
+    fun initialAndFailedSessionsDoNotRetainPreviousTargets() {
+        val targets = listOf<Executable>(target("first"))
+        val initial = ModernHotReloadSession.Session(false, previousTargets = targets)
+        assertTrue(initial.previousTargets.isEmpty())
+        val staged = ModernHotReloadSession.Session(true, previousTargets = targets)
+        assertEquals(targets, staged.previousTargets)
+        staged.markFailed()
+        assertTrue(staged.previousTargets.isEmpty())
+    }
+
+    @Test
     fun initialInstallAssignsStableIdsPerExecutable() {
         val installer = RecordingInstaller()
         val session = ModernHotReloadSession.Session(false, installer::install)

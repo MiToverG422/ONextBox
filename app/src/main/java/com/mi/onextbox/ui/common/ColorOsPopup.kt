@@ -307,6 +307,14 @@ fun ColorOsPopup(
     anchorCenterX: Float? = null,
     content: @Composable () -> Unit,
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        top.yukonga.miuix.kmp.window.WindowListPopup(
+            show = show, onDismissRequest = onDismissRequest,
+            popupModifier = modifier.widthIn(min = minWidth, max = maxWidth),
+            minWidth = minWidth, maxHeight = maxHeight, content = content,
+        )
+        return
+    }
     var popupMounted by remember { mutableStateOf(show) }
     val scaleProgress = remember { Animatable(0f) }
     val alphaProgress = remember { Animatable(0f) }

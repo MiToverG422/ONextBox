@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_screenshot_floating_title">스크린샷에서 플로팅 앱 제외</string>
-    <string name="hide_screenshot_floating_summary">지원되는 플로팅 창, PIP 및 앱 오버레이를 닫지 않고 시스템 스크린샷에서 제외</string>
-</resources>

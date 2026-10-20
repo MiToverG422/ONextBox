@@ -5,20 +5,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
+import com.mi.onextbox.lsp.DisplayEnhancementThermalSettings
 import com.mi.onextbox.ui.common.restartScopePackages
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsSection
 import com.mi.onextbox.ui.settings.SettingsToggleRow
 import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
+import com.mi.onextbox.ui.settings.FeatureSettingWriteQueue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -105,11 +110,39 @@ internal fun SettingsFeaturesPage(
     var settingsForceGlobalExtremeRefreshRate by rememberSaveable {
         mutableStateOf(LspConfig.isSettingsForceGlobalExtremeRefreshRateEnabled(context))
     }
+    var settingsDisableAdaptiveRefreshRate by rememberSaveable {
+        mutableStateOf(LspConfig.isSettingsDisableAdaptiveRefreshRateEnabled(context))
+    }
+    var superResolutionThermalBypass by rememberSaveable {
+        mutableStateOf(DisplayEnhancementThermalSettings.enabled(context, DisplayEnhancementThermalSettings.SUPER_RESOLUTION))
+    }
+    var videoColorThermalBypass by rememberSaveable {
+        mutableStateOf(DisplayEnhancementThermalSettings.enabled(context, DisplayEnhancementThermalSettings.VIDEO_COLOR))
+    }
+    var enhancementSaving by remember { mutableStateOf(false) }
+    fun saveEnhancement(key: String, enabled: Boolean) {
+        if (enhancementSaving) return
+        enhancementSaving = true
+        val pending = FeatureSettingWriteQueue.application.enqueue {
+            DisplayEnhancementThermalSettings.set(context, key, enabled)
+        }
+        scope.launch {
+            try { pending.await() }
+            catch (cancel: CancellationException) { throw cancel }
+            catch (_: Exception) { Toast.makeText(context, R.string.app_errors_sync_failed, Toast.LENGTH_LONG).show() }
+            finally {
+                superResolutionThermalBypass = DisplayEnhancementThermalSettings.enabled(context, DisplayEnhancementThermalSettings.SUPER_RESOLUTION)
+                videoColorThermalBypass = DisplayEnhancementThermalSettings.enabled(context, DisplayEnhancementThermalSettings.VIDEO_COLOR)
+                enhancementSaving = false
+            }
+        }
+    }
     var settingsRestoreSmartLockEnabled by rememberSaveable {
         mutableStateOf(LspConfig.isSettingsRestoreSmartLockEnabled(context))
     }
 
     if (mode == FeaturePageMode.SettingsAppearance) {
+        SettingsHomeCleanupGroup()
         SettingsSection(title = stringResource(R.string.feature_group_settings_interface))
         SettingsGroup {
             SettingsToggleRow(
@@ -135,6 +168,33 @@ internal fun SettingsFeaturesPage(
                 checked = permissionMonitorVisible,
                 onCheckedChange = onPermissionMonitorVisibleChange,
             )
+        }
+    }
+
+    if (mode == FeaturePageMode.SettingsAppearance) {
+        SettingsSection(title = stringResource(R.string.display_enhancement_group))
+        SettingsGroup {
+            Material3ExpressiveSegmentPosition(index = 0, count = 2) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.display_enhancement_sr_thermal_title),
+                    summary = stringResource(R.string.display_enhancement_sr_thermal_summary),
+                    checked = superResolutionThermalBypass,
+                    interactionEnabled = !enhancementSaving,
+                    onCheckedChange = { saveEnhancement(DisplayEnhancementThermalSettings.SUPER_RESOLUTION, it) },
+                    hasDividerBelow = true,
+                )
+            }
+            SettingsDivider()
+            Material3ExpressiveSegmentPosition(index = 1, count = 2) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.display_enhancement_color_thermal_title),
+                    summary = stringResource(R.string.display_enhancement_color_thermal_summary),
+                    checked = videoColorThermalBypass,
+                    interactionEnabled = !enhancementSaving,
+                    onCheckedChange = { saveEnhancement(DisplayEnhancementThermalSettings.VIDEO_COLOR, it) },
+                    hasDividerAbove = true,
+                )
+            }
         }
     }
 
@@ -212,7 +272,7 @@ internal fun SettingsFeaturesPage(
     if (mode == FeaturePageMode.SettingsAppearance) {
         SettingsSection(title = stringResource(R.string.feature_group_screen_refresh_rate))
         SettingsGroup {
-            Material3ExpressiveSegmentPosition(index = 0, count = 3) {
+            Material3ExpressiveSegmentPosition(index = 0, count = 4) {
                 SettingsToggleRow(
                     title = stringResource(R.string.feature_settings_unlock_refresh_rate_title),
                     summary = stringResource(R.string.feature_settings_unlock_refresh_rate_summary),
@@ -229,7 +289,7 @@ internal fun SettingsFeaturesPage(
                 )
             }
             SettingsDivider()
-            Material3ExpressiveSegmentPosition(index = 1, count = 3) {
+            Material3ExpressiveSegmentPosition(index = 1, count = 4) {
                 SettingsToggleRow(
                     title = stringResource(R.string.feature_settings_force_global_extreme_refresh_rate_title),
                     summary = stringResource(R.string.feature_settings_force_global_extreme_refresh_rate_summary),
@@ -247,7 +307,25 @@ internal fun SettingsFeaturesPage(
                 )
             }
             SettingsDivider()
-            Material3ExpressiveSegmentPosition(index = 2, count = 3) {
+            Material3ExpressiveSegmentPosition(index = 2, count = 4) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.feature_settings_disable_adaptive_refresh_rate_title),
+                    summary = stringResource(R.string.feature_settings_disable_adaptive_refresh_rate_summary),
+                    checked = settingsDisableAdaptiveRefreshRate,
+                    onCheckedChange = { enabled ->
+                        settingsDisableAdaptiveRefreshRate = enabled
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                LspConfig.setSettingsDisableAdaptiveRefreshRateEnabled(context, enabled)
+                            }
+                        }
+                    },
+                    hasDividerAbove = true,
+                    hasDividerBelow = true,
+                )
+            }
+            SettingsDivider()
+            Material3ExpressiveSegmentPosition(index = 3, count = 4) {
                 SettingsToggleRow(
                     title = stringResource(R.string.feature_extreme_refresh_165_title),
                     summary = stringResource(R.string.feature_extreme_refresh_165_summary),

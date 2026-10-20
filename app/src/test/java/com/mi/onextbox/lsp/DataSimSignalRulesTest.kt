@@ -52,7 +52,7 @@ class DataSimSignalRulesTest {
         val row = source("main/java/com/mi/onextbox/ui/screens/DataSimSignalSettingsRow.kt")
         assertTrue(row.contains("FeatureAnimatedRows(hasDividerBelow = true, animateChanges = true)"))
         assertTrue(row.contains("row(\"independent-only\", visible = enabled)"))
-        assertTrue(row.contains("switchEnabled = savingKey != DataSimSignalSettings.INDEPENDENT_ONLY"))
+        assertTrue(row.contains("interactionEnabled = savingKey != DataSimSignalSettings.INDEPENDENT_ONLY"))
         val hook = source("main/java/com/mi/onextbox/lsp/DataSimSignalHooker.kt")
         assertTrue(hook.contains("DataSimSignalRules.forceIndependent(DataSimSignalSettings.enabledXposed()"))
         assertTrue(hook.contains("DataSimSignalSettings.independentOnlyXposed(), dataSubId()"))

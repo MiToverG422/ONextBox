@@ -59,7 +59,7 @@ internal fun PhoneManagerFeaturesPage() {
             summary = stringResource(R.string.phone_manager_skip_countdown_summary),
             checked = enabled,
             hasDividerBelow = true,
-            enabled = !applying,
+            interactionEnabled = !applying,
             onCheckedChange = { checked ->
                 if (!applying) {
                     applying = true

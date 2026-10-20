@@ -1,23 +1,34 @@
 package com.kyant.backdrop.effects
 
-import android.graphics.RenderEffect
-import android.os.Build
+import androidx.compose.ui.graphics.RenderEffect
 import com.kyant.backdrop.BackdropEffectScope
+import com.kyant.backdrop.RuntimeShader
+import com.kyant.backdrop.internal.RuntimeShaderEffect
+import com.kyant.backdrop.internal.chain
+import com.kyant.backdrop.isRenderEffectSupported
+import com.kyant.backdrop.isRuntimeShaderSupported
+import org.intellij.lang.annotations.Language
+import kotlin.contracts.ExperimentalContracts
 
 fun BackdropEffectScope.effect(effect: RenderEffect) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    if (!isRenderEffectSupported()) return
 
-    val currentEffect = renderEffect
-    renderEffect =
-        if (currentEffect != null) {
-            RenderEffect.createChainEffect(effect, currentEffect)
-        } else {
-            effect
-        }
+    renderEffect = renderEffect.chain(effect)
 }
 
-fun BackdropEffectScope.effect(effect: androidx.compose.ui.graphics.RenderEffect) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+@OptIn(ExperimentalContracts::class)
+fun BackdropEffectScope.runtimeShaderEffect(
+    key: String,
+    @Language("AGSL") shaderString: String,
+    uniformShaderName: String,
+    block: RuntimeShader.() -> Unit
+) {
+    if (!isRuntimeShaderSupported()) return
 
-    effect(effect.asAndroidRenderEffect())
+    val effect =
+        RuntimeShaderEffect(
+            runtimeShader = obtainRuntimeShader(key, shaderString).apply(block),
+            uniformShaderName = uniformShaderName
+        )
+    renderEffect = renderEffect.chain(effect)
 }

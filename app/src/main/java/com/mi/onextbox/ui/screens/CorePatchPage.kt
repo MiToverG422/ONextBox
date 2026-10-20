@@ -43,7 +43,7 @@ internal fun CorePatchPage() {
             row(option.key) { above, below ->
                 val enabled = remember(revision, option) { CorePatchSettings.enabled(app, option) }
                 SettingsToggleRow(title = stringResource(option.title), summary = stringResource(option.summary),
-                    checked = enabled, switchEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below,
+                    checked = enabled, interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below,
                     onCheckedChange = { next -> if (!saving) { if (next) confirm = option else save(option, false) } })
             }
         }

@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="rotation_suggestion_hide_title">Ẩn nút đề xuất xoay màn hình</string>
-    <string name="rotation_suggestion_hide_summary">Ẩn nút đề xuất xoay ở cạnh màn hình, không thay đổi tự động xoay hay cài đặt hướng màn hình</string>
-</resources>

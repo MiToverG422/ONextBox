@@ -72,16 +72,23 @@ internal fun SettingsSwitchPreference(
     onHiddenHold: (() -> Unit)? = null,
     onRowClick: (() -> Unit)? = null,
     switchEnabled: Boolean = enabled,
+    interactionEnabled: Boolean = true,
 ) {
     val currentOnCheckedChange by rememberUpdatedState(onCheckedChange)
+    val currentInteractionEnabled by rememberUpdatedState(interactionEnabled)
+    val currentSwitchEnabled by rememberUpdatedState(enabled && switchEnabled)
+    val onChange: (Boolean) -> Unit = { if (currentInteractionEnabled && currentSwitchEnabled) currentOnCheckedChange(it) }
     val currentOnHiddenHold by rememberUpdatedState(onHiddenHold)
     val hiddenHoldEnabled = hiddenHoldDurationMillis != null && onHiddenHold != null
-    val rowClick: (() -> Unit)? = if (hiddenHoldEnabled) null else onRowClick ?: {
-        currentOnCheckedChange.takeIf { enabled && switchEnabled }?.invoke(!checked)
-        Unit
-    }
+    val rowClick: (() -> Unit)? = if (hiddenHoldEnabled) null else ({
+        if (currentInteractionEnabled) {
+            if (onRowClick != null) onRowClick()
+            else if (enabled && switchEnabled) currentOnCheckedChange(!checked)
+        }
+    })
+    val inputModifier = modifier.settingsInteractionGate(interactionEnabled)
     val gestureModifier = if (hiddenHoldEnabled) {
-        modifier.pointerInput(checked, enabled, hiddenHoldDurationMillis) {
+        inputModifier.pointerInput(checked, enabled, hiddenHoldDurationMillis) {
             var hiddenHoldTriggered = false
             detectTapGestures(
                 onPress = {
@@ -90,21 +97,38 @@ internal fun SettingsSwitchPreference(
                         tryAwaitRelease()
                         true
                     } ?: false
-                    if (!releasedBeforeTimeout) {
+                    if (!releasedBeforeTimeout && currentInteractionEnabled) {
                         hiddenHoldTriggered = true
                         currentOnHiddenHold?.invoke()
                         tryAwaitRelease()
                     }
                 },
                 onTap = {
-                    if (!hiddenHoldTriggered && enabled) {
+                    if (!hiddenHoldTriggered && enabled && currentInteractionEnabled) {
                         currentOnCheckedChange(!checked)
                     }
                 },
             )
         }
     } else {
-        modifier
+        inputModifier
+    }
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        MiuixPreferenceRow(
+            modifier = gestureModifier, title = title, summary = summary,
+            startAction = startAction, bottomAction = bottomAction, enabled = enabled,
+            onClick = rowClick, role = if (onRowClick == null) Role.Switch else Role.Button,
+            endActions = {
+                endActions()
+                top.yukonga.miuix.kmp.basic.Switch(
+                    checked = checked,
+                    modifier = Modifier.settingsInteractionGate(interactionEnabled),
+                    onCheckedChange = onChange.takeIf { enabled && switchEnabled && !hiddenHoldEnabled },
+                    enabled = enabled && switchEnabled,
+                )
+            },
+        )
+        return
     }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         val showSwitchIcons = LocalMaterialSwitchIconsEnabled.current
@@ -117,7 +141,8 @@ internal fun SettingsSwitchPreference(
                 endActions()
                 MaterialSwitch(
                     checked = checked,
-                    onCheckedChange = currentOnCheckedChange.takeIf { enabled && switchEnabled && !hiddenHoldEnabled },
+                    modifier = Modifier.settingsInteractionGate(interactionEnabled),
+                    onCheckedChange = onChange.takeIf { enabled && switchEnabled && !hiddenHoldEnabled },
                     enabled = enabled && switchEnabled,
                     thumbContent = if (showSwitchIcons && (checked || enabled)) ({
                         MaterialIcon(
@@ -156,7 +181,8 @@ internal fun SettingsSwitchPreference(
             }
             ColorOsSwitch(
                 checked = checked,
-                onCheckedChange = currentOnCheckedChange.takeIf { enabled && switchEnabled && !hiddenHoldEnabled },
+                modifier = Modifier.settingsInteractionGate(interactionEnabled),
+                onCheckedChange = onChange.takeIf { enabled && switchEnabled && !hiddenHoldEnabled },
                 enabled = enabled && switchEnabled,
             )
         },
@@ -183,7 +209,20 @@ internal fun SettingsWindowDropdownPreference(
     showValue: Boolean = true,
     onExpandedChange: ((Boolean) -> Unit)? = null,
     onSelectedIndexChange: ((Int) -> Unit)? = null,
+    interactionEnabled: Boolean = true,
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        MiuixDropdownPreference(
+            entry = DropdownEntry(items = items.mapIndexed { index, text ->
+                DropdownItem(text = text, selected = index == selectedIndex, onClick = { onSelectedIndexChange?.invoke(index) })
+            }),
+            title = title, modifier = modifier, summary = summary, startAction = startAction,
+            bottomAction = bottomAction, maxHeight = maxHeight, enabled = enabled,
+            showValue = showValue, collapseOnSelection = true, onExpandedChange = onExpandedChange,
+            interactionEnabled = interactionEnabled,
+        )
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressiveDropdownPreference(
             entry = DropdownEntry(
@@ -205,6 +244,7 @@ internal fun SettingsWindowDropdownPreference(
             showValue = showValue,
             collapseOnSelection = true,
             onExpandedChange = onExpandedChange,
+            interactionEnabled = interactionEnabled,
         )
         return
     }
@@ -222,6 +262,7 @@ internal fun SettingsWindowDropdownPreference(
         showValue = showValue,
         onExpandedChange = onExpandedChange,
         onSelectedIndexChange = onSelectedIndexChange,
+        interactionEnabled = interactionEnabled,
     )
 }
 
@@ -238,6 +279,7 @@ private fun Material3ExpressiveDropdownPreference(
     showValue: Boolean,
     collapseOnSelection: Boolean,
     onExpandedChange: ((Boolean) -> Unit)?,
+    interactionEnabled: Boolean = true,
 ) {
     var expanded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var anchorOffset by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(IntOffset.Zero) }
@@ -248,7 +290,7 @@ private fun Material3ExpressiveDropdownPreference(
             onExpandedChange?.invoke(value)
         }
     }
-    Box(modifier = modifier.fillMaxWidth().trackMaterial3ExpressivePress { anchorOffset = it }) {
+    Box(modifier = modifier.fillMaxWidth().settingsInteractionGate(interactionEnabled).trackMaterial3ExpressivePress { anchorOffset = it }) {
         Material3ExpressivePreferenceRow(
             title = title,
             summary = summary,
@@ -256,7 +298,7 @@ private fun Material3ExpressiveDropdownPreference(
             bottomAction = bottomAction,
             enabled = actualEnabled,
             role = Role.DropdownList,
-            onClick = { setExpanded(!expanded) },
+            onClick = { if (interactionEnabled) setExpanded(!expanded) },
             endActions = {
                 val selectedText = entry.items.firstOrNull { it.selected }?.text
                 if (showValue && !selectedText.isNullOrEmpty()) {
@@ -280,6 +322,7 @@ private fun Material3ExpressiveDropdownPreference(
             entry.items.forEachIndexed { index, item ->
                 key(index, item.text) {
                     SelectableDropdownMenuItem(
+                        modifier = Modifier.settingsInteractionGate(interactionEnabled),
                         text = {
                             MaterialText(
                                 text = item.text,
@@ -288,8 +331,10 @@ private fun Material3ExpressiveDropdownPreference(
                         selected = item.selected,
                         enabled = item.enabled,
                         onClick = {
-                            item.onClick?.invoke()
-                            if (collapseOnSelection) setExpanded(false)
+                            if (interactionEnabled && actualEnabled && item.enabled) {
+                                item.onClick?.invoke()
+                                if (collapseOnSelection) setExpanded(false)
+                            }
                         },
                         shapes = MenuDefaults.itemShape(index = index, count = entry.items.size),
                         selectedLeadingIcon = {
@@ -355,7 +400,17 @@ internal fun SettingsWindowDropdownPreference(
     showValue: Boolean = true,
     collapseOnSelection: Boolean = true,
     onExpandedChange: ((Boolean) -> Unit)? = null,
+    interactionEnabled: Boolean = true,
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        MiuixDropdownPreference(
+            entry = entry, title = title, modifier = modifier, summary = summary, startAction = startAction,
+            bottomAction = bottomAction, maxHeight = maxHeight, enabled = enabled,
+            showValue = showValue, collapseOnSelection = collapseOnSelection, onExpandedChange = onExpandedChange,
+            interactionEnabled = interactionEnabled,
+        )
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressiveDropdownPreference(
             entry = entry,
@@ -369,6 +424,7 @@ internal fun SettingsWindowDropdownPreference(
             showValue = showValue,
             collapseOnSelection = collapseOnSelection,
             onExpandedChange = onExpandedChange,
+            interactionEnabled = interactionEnabled,
         )
         return
     }
@@ -385,5 +441,6 @@ internal fun SettingsWindowDropdownPreference(
         showValue = showValue,
         collapseOnSelection = collapseOnSelection,
         onExpandedChange = onExpandedChange,
+        interactionEnabled = interactionEnabled,
     )
 }

@@ -48,18 +48,23 @@ internal object SettingsGlobalExtremeRefreshRateHooker {
     private var changeObserver: ContentObserver? = null
     private var observerContext: Context? = null
     private var observerHandler: Handler? = null
+    private var policyReplay: SettingsRefreshRatePolicyReplay? = null
 
     fun hook(classLoader: ClassLoader?): Int {
         HotReloadLifecycle.register("global-extreme-refresh-observer",
             capture = { policy },
             detach = {
                 changeObserver?.let { observerContext?.contentResolver?.unregisterContentObserver(it) }
+                SettingsFixedRefreshRateHooker.clear()
+                policyReplay?.detach()
+                policyReplay = null
                 observerHandler?.removeCallbacksAndMessages(null)
                 changeObserver = null
                 observerHandler = null
                 policy = null
             },
             restore = { savedPolicy -> bindPolicy(savedPolicy) },
+            resumeAfterRejection = { policyReplay?.schedule() },
         )
         val loader = classLoader ?: return 0
         val configs = XposedHelpers.findClassIfExists(CONFIGS_CLASS, loader) ?: return 0
@@ -158,7 +163,7 @@ internal object SettingsGlobalExtremeRefreshRateHooker {
                 result
             })
             HookLog.i(TAG, "OEM extreme-mode config hooks installed: ${installedKeys.joinToString()}")
-            installedKeys.size
+            installedKeys.size + SettingsFixedRefreshRateHooker.hook(loader)
         }.getOrElse { error ->
             installedKeys.forEach(ModernHookRegistry::unhook)
             HookLog.w(TAG, "OEM extreme-mode config hook registration failed", error)
@@ -208,14 +213,16 @@ internal object SettingsGlobalExtremeRefreshRateHooker {
         val handler = Handler(Looper.getMainLooper())
         observerContext = oemContext
         observerHandler = handler
-        fun refreshTarget() {
+        fun refreshTarget(force: Boolean = false) {
             if (HotReloadLifecycle.isRetiring) return
             val next = resolveTarget(oemPolicy, oemContext)
-            if (next == target) return
+            val fixedChanged = SettingsFixedRefreshRateHooker.updatePolicy(oemPolicy, oemContext)
+            if (!force && next == target && !fixedChanged) return
             target = next
             runCatching { callback.invoke(listener) }
                 .onFailure { HookLog.w(TAG, "OEM config refresh failed", it) }
-            HookLog.i(TAG, "OEM global extreme target: ${next.hertz} Hz (ID ${next.rateId})")
+            val reason = if (force) " after hook resume" else ""
+            HookLog.i(TAG, "OEM global extreme target$reason: ${next.hertz} Hz (ID ${next.rateId})")
         }
         val resolutionUri = Settings.Secure.getUriFor(RESOLUTION_KEY)
         val observer = object : ContentObserver(handler) {
@@ -225,7 +232,7 @@ internal object SettingsGlobalExtremeRefreshRateHooker {
                         refreshTarget()
                         // The setting can change before the display service finishes switching.
                         if (uri == resolutionUri) handler.postDelayed({
-                            HotReloadLifecycle.withHook(fallback = {}, action = ::refreshTarget)
+                            HotReloadLifecycle.withHook(fallback = {}, action = { refreshTarget() })
                         }, 1500L)
                     }
                 })
@@ -233,16 +240,25 @@ internal object SettingsGlobalExtremeRefreshRateHooker {
         }
         changeObserver = observer
         resolver.registerContentObserver(Settings.Global.getUriFor(TOGGLE_KEY), false, observer)
+        resolver.registerContentObserver(Settings.Global.getUriFor(SettingsFixedRefreshRateRules.TOGGLE_KEY), false, observer)
+        resolver.registerContentObserver(Settings.Global.getUriFor("low_power"), false, observer)
         resolver.registerContentObserver(Settings.Secure.getUriFor(PICK_MODE_KEY), false, observer)
         resolver.registerContentObserver(Settings.Secure.getUriFor(CHOICE_RATE_KEY), false, observer)
         resolver.registerContentObserver(resolutionUri, false, observer)
 
-        val initial = resolveTarget(oemPolicy, oemContext)
-        target = initial
-        if (initial.rateId != 0) {
-            callback.invoke(listener)
-            HookLog.i(TAG, "OEM global extreme target at startup: ${initial.hertz} Hz (ID ${initial.rateId})")
-        }
+        target = resolveTarget(oemPolicy, oemContext)
+        SettingsFixedRefreshRateHooker.updatePolicy(oemPolicy, oemContext)
+        // Resource restore and afterCommit actions still run with hooks paused. Calling the
+        // OEM listener there would cache its unhooked 120 Hz default until the next selection.
+        policyReplay = SettingsRefreshRatePolicyReplay(
+            lifecycle = HotReloadLifecycle,
+            post = { handler.post(it) },
+            remove = { handler.removeCallbacks(it) },
+            reapply = {
+                runCatching { refreshTarget(force = true) }
+                    .onFailure { HookLog.w(TAG, "OEM policy reapply after hook resume failed", it) }
+            },
+        ).also { it.schedule() }
     }
 
     private fun resolveTarget(oemPolicy: Any, oemContext: Context): Target {

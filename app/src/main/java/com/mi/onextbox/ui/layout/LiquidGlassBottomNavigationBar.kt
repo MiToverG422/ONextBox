@@ -63,7 +63,7 @@ import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
-import com.kyant.capsule.ContinuousCapsule
+import com.kyant.shapes.Capsule
 import com.mi.onextbox.ui.common.BottomTab
 import com.mi.onextbox.ui.common.DampedDragAnimation
 import com.mi.onextbox.ui.common.InteractiveHighlight
@@ -85,6 +85,8 @@ fun LiquidGlassBottomNavigationBar(
     backdrop: Backdrop,
     modifier: Modifier = Modifier,
 ) {
+    if (tabs.isEmpty()) return
+
     val colors = COUITheme.colorScheme
     val isLightTheme = colors.background.red + colors.background.green + colors.background.blue > 1.5f
     val contentColor = if (isLightTheme) Color.Black else Color.White
@@ -92,6 +94,7 @@ fun LiquidGlassBottomNavigationBar(
     val containerColor = if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f) else Color(0xFF121212).copy(0.4f)
     val iconColorFilter = ColorFilter.tint(contentColor)
     val tabsBackdrop = rememberLayerBackdrop()
+    val capsuleShape = remember { Capsule() }
 
     BoxWithConstraints(
         modifier = modifier
@@ -107,23 +110,23 @@ fun LiquidGlassBottomNavigationBar(
     ) {
         val density = LocalDensity.current
         val tabWidth = with(density) {
-            (constraints.maxWidth.toFloat() - 8.dp.toPx()) / tabs.size
+            ((constraints.maxWidth.toFloat() - 8.dp.toPx()) / tabs.size).coerceAtLeast(1f)
         }
         val animationScope = rememberCoroutineScope()
         val offsetAnimation = remember { Animatable(0f) }
-        val panelOffset by remember(density) {
+        val panelOffset by remember(density, constraints.maxWidth) {
             derivedStateOf {
-                val fraction = (offsetAnimation.value / constraints.maxWidth.toFloat()).fastCoerceIn(-1f, 1f)
+                val fraction = (offsetAnimation.value / constraints.maxWidth.coerceAtLeast(1).toFloat()).fastCoerceIn(-1f, 1f)
                 with(density) {
                     4.dp.toPx() * fraction.sign * EaseOut.transform(abs(fraction))
                 }
             }
         }
         val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
-        var currentIndex by remember { mutableIntStateOf(selectedIndex.coerceIn(0, tabs.size - 1)) }
+        var currentIndex by remember(tabs.size) { mutableIntStateOf(selectedIndex.coerceIn(0, tabs.size - 1)) }
         val latestSelectedIndex by rememberUpdatedState(selectedIndex)
         val latestOnTabSelected by rememberUpdatedState(onTabSelected)
-        val dampedDragAnimation = remember(animationScope) {
+        val dampedDragAnimation = remember(animationScope, tabs.size, tabWidth, isLtr) {
             DampedDragAnimation(
                 animationScope = animationScope,
                 initialValue = selectedIndex.coerceIn(0, tabs.size - 1).toFloat(),
@@ -152,7 +155,7 @@ fun LiquidGlassBottomNavigationBar(
             )
         }
 
-        LaunchedEffect(selectedIndex) {
+        LaunchedEffect(selectedIndex, tabs.size) {
             currentIndex = selectedIndex.coerceIn(0, tabs.size - 1)
         }
 
@@ -165,7 +168,7 @@ fun LiquidGlassBottomNavigationBar(
             }
         }
 
-        val interactiveHighlight = remember(animationScope) {
+        val interactiveHighlight = remember(animationScope, dampedDragAnimation, tabWidth, isLtr) {
             InteractiveHighlight(
                 animationScope = animationScope,
                 position = { size, _ ->
@@ -187,7 +190,7 @@ fun LiquidGlassBottomNavigationBar(
                 val icon = if (index == currentIndex) tab.selectedIcon else tab.unselectedIcon
                 Column(
                     Modifier
-                        .clip(ContinuousCapsule)
+                        .clip(capsuleShape)
                         .clickable { onTabSelected(index) }
                         .fillMaxHeight()
                         .weight(1f)
@@ -236,7 +239,7 @@ fun LiquidGlassBottomNavigationBar(
                 .graphicsLayer { translationX = panelOffset }
                 .drawBackdrop(
                     backdrop = backdrop,
-                    shape = { ContinuousCapsule },
+                    shape = { capsuleShape },
                     effects = {
                         vibrancy()
                         blur(8.dp.toPx())
@@ -269,7 +272,7 @@ fun LiquidGlassBottomNavigationBar(
                     .graphicsLayer { translationX = panelOffset }
                     .drawBackdrop(
                         backdrop = backdrop,
-                        shape = { ContinuousCapsule },
+                        shape = { capsuleShape },
                         highlight = {
                             Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
                         },
@@ -305,7 +308,7 @@ fun LiquidGlassBottomNavigationBar(
                 .then(dampedDragAnimation.modifier)
                 .drawBackdrop(
                     backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
-                    shape = { ContinuousCapsule },
+                    shape = { capsuleShape },
                     highlight = {
                         Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
                     },

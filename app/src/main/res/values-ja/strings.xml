@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="system_adaptation_runtime_restart">対応バージョンを切り替えました。設定は保持されます。完全に適用して以前の変更を解除するには、端末を再起動してください。</string>
+    <string name="developer_allow_hyperos3_title">HyperOS 3 サポートを許可</string>
+    <string name="system_adaptation_no_content">この対応バージョンには、まだ機能やツールがありません</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">OPlus システムをカスタマイズするための COUI スタイルのツールボックス</string>
     <string name="tab_home">ホーム</string>
@@ -533,17 +536,6 @@
     <string name="feature_touch_rate_override_on">ゲームタッチオーバーライドが有効になりました</string>
     <string name="feature_touch_rate_override_off">ゲームタッチオーバーライドが無効になりました</string>
     <string name="feature_touch_rate_auto_start">起動時に適用</string>
-    <string name="tab_refresh_rate">リフレッシュレート</string>
-    <string name="refresh_rate_auto_start">起動時に適用</string>
-    <string name="refresh_rate_show_refresh_rate">更新頻度を表示</string>
-    <string name="refresh_rate_restore_default">デフォルトのリフレッシュ レートに戻す</string>
-    <string name="refresh_rate_restore_success">デフォルトのリフレッシュ レートが復元されました</string>
-    <string name="refresh_rate_restore_failed">復元に失敗しました</string>
-    <string name="refresh_rate_apply_failed">適用に失敗しました</string>
-    <string name="refresh_rate_no_modes">サポートされているリフレッシュ レートが見つかりませんでした</string>
-    <string name="refresh_rate_selected">選択済み</string>
-    <string name="refresh_rate_table_refresh_rate">リフレッシュレート</string>
-    <string name="refresh_rate_resolution_format">%1$d × %2$d</string>
     <string name="feature_permission_manager_title">権限管理</string>
     <string name="feature_permission_start_group">アプリの起動</string>
     <string name="feature_permission_old_dialog_title">旧版の起動ダイアログを使用</string>
@@ -842,10 +834,6 @@
     <string name="traffic_roaming_summary">バックグラウンド通信をローミング時のみ制限する選択肢を追加します</string>
     <string name="traffic_limit_title">デフォルトのデータ通信上限を解除</string>
     <string name="traffic_limit_summary">自動設定される 100 GB の上限を無効にします</string>
-    <string name="settings_section_module_hot_reload">モジュールのホットリロード</string>
-    <string name="setting_module_hot_reload">モジュールのホットリロード（試験的）</string>
-    <string name="setting_module_hot_reload_summary">初期設定では無効、モジュール更新後に全スコープのホットリロードと実行中リソースの引き継ぎを試行、処理中や非互換の場合は再起動が必要、初めて有効にした後は対象スコープを再起動してください</string>
-    <string name="setting_module_hot_reload_save_failed">ホットリロード設定を同期できませんでした。Xposed フレームワークの接続を確認して、もう一度お試しください</string>
     <string name="about_logs_title">ログ</string>
     <string name="logs_source">ログの種類</string>
     <string name="logs_source_app">アプリログ</string>
@@ -1229,4 +1217,170 @@
     <string name="launcher_group_effects">視覚効果</string>
     <string name="launcher_force_blur_title">ホームのぼかし効果を強制的に有効化</string>
     <string name="launcher_force_blur_summary">ホーム背景、長押しメニュー、ぼかしアニメーションの機種制限の解除を試みます。システムのぼかし、省電力、テーマ設定を尊重します。消費電力が増える場合があり、ファームウェアのネイティブ対応が必要です。変更後はホームを再起動してください</string>
+
+    <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
+
+    <string name="feature_c16_stacked_signal_title">標準デュアル SIM 積み重ね表示</string>
+    <string name="feature_c16_stacked_signal_summary">C16 から移植した標準のデュアル SIM 積み重ね信号表示を使用</string>
+    <string name="feature_c16_stacked_signal_save_failed">設定を保存できませんでした</string>
+
+<!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
+    <string name="corepatch_title">Core Patch (Experimental)</string>
+    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_downgrade">ダウングレードを許可する</string>
+    <string name="corepatch_downgrade_summary">アプリのダウングレードを許可します。</string>
+    <string name="corepatch_min_sdk">最小 SDK バージョンの制限を回避</string>
+    <string name="corepatch_min_sdk_summary">minSdkVersion が現在のシステムバージョンより高い APK のインストールを許可します。</string>
+    <string name="corepatch_verification">ダイジェストの検証を無効化する</string>
+    <string name="corepatch_verification_summary">APK ファイルの変更後にアプリをインストールできるようにします。(無効なダイジェストのエラーを無視します)</string>
+    <string name="corepatch_resource_arsc">resources.arsc のアラインメント制限を回避</string>
+    <string name="corepatch_resource_arsc_summary">Android 11 以降で、resources.arsc が圧縮されている、または 4 バイト境界にアラインされていない APK のインストールを許可します。</string>
+    <string name="corepatch_digest">署名の比較を無効化する</string>
+    <string name="corepatch_digest_summary">署名が異なるアプリの再インストールを許可します。</string>
+    <string name="corepatch_exact_signature">署名の完全一致を回避</string>
+    <string name="corepatch_exact_signature_summary">分割 APK ごとに異なる署名を使用できるようにする</string>
+    <string name="corepatch_previous_signatures">インストールされている署名を使用する</string>
+    <string name="corepatch_previous_signatures_summary">インストール時に、既にインストールされているアプリの署名を使用します。\nこの操作は、<b>非常に危険</b>です。\n本当に必要となる時のみ有効化してください！</string>
+    <string name="corepatch_hidden_apis">システムアプリに非表示 API の使用を許可</string>
+    <string name="corepatch_hidden_apis_summary">プラットフォーム署名と一致しないシステムアプリが非表示 API を制限なく使用できるようにします。</string>
+    <string name="corepatch_shared_user">共有ユーザー認証をバイパス</string>
+    <string name="corepatch_shared_user_summary">共有ユーザーと異なる署名のアプリをインストールできるようにします（<b>「署名の比較を無効化」も有効にする必要があります</b>）</string>
+    <string name="corepatch_verification_agent">パッケージ検証エージェントを無効化</string>
+    <string name="corepatch_verification_agent_summary">例: Google Play プロテクション</string>
+    <string name="corepatch_block">ブロックをバイパスする</string>
+    <string name="corepatch_block_summary">Nothing Phone などの一部のデバイスのブロックリストをバイパスします。</string>
+
+    <string name="developer_activation_section">テスト</string>
+    <string name="developer_activation_title">有効化画面に戻る</string>
+    <string name="developer_activation_summary">テスト用に有効化ウィザードを開き直す</string>
+    <string name="developer_activation_confirm">有効化状態と規約への同意記録をリセットし、ウィザードの最初の画面に戻ります。機能設定は保持されます。続行しますか？</string>
+    <string name="developer_activation_failed">有効化画面を開けませんでした</string>
+
+    <string name="enabled_features_title">有効な機能</string>
+    <string name="enabled_features_notice">設定上の有効な機能です。Hook の動作確認結果ではありません</string>
+    <string name="enabled_features_count">%1$d 個の機能が有効</string>
+    <string name="enabled_features_group_count">%1$d 個の機能</string>
+    <string name="enabled_features_copy">一覧をコピー</string>
+    <string name="enabled_features_expand">展開</string>
+    <string name="enabled_features_collapse">折りたたむ</string>
+    <string name="enabled_features_empty">有効な機能はありません</string>
+    <string name="enabled_features_loading">読み込み中…</string>
+    <string name="enabled_features_error">設定を読み込めません。このページを開き直してください</string>
+    <string name="enabled_features_quick_hint">スイッチで切り替え、機能名をタップして設定を開けます。無効にした項目はページを離れるまで残ります。一部の機能は対象プロセスの再起動が必要です</string>
+    <string name="enabled_features_save_failed">保存できませんでした。実際の設定を再読み込みします</string>
+
+    <string name="hide_notification_clear_title">通知センターの一括消去ボタンを非表示</string>
+    <string name="hide_notification_clear_summary">一括消去ボタンを非表示にします。スワイプによる通知の消去には影響しません</string>
+
+    <string name="hide_recent_apps_title">最近使ったアプリから非表示</string>
+    <string name="hide_recent_apps_summary">選択したアプリを終了せずに履歴カードを非表示にします。分割画面のペアはまとめて非表示になります</string>
+
+    <string name="hook_evidence_title">最近の Hook 記録</string>
+    <string name="hook_evidence_notice">過去のログです。現在の状態や全コンポーネントの動作を保証するものではありません</string>
+    <string name="hook_evidence_installed">アダプターを登録済み</string>
+    <string name="hook_evidence_observed">実行を記録済み</string>
+    <string name="hook_evidence_unavailable">アダプターを利用できません。標準動作を維持</string>
+
+    <string name="network_identity_group">国・通信事業者</string>
+    <string name="network_identity_title">国・通信事業者を偽装（試験的）</string>
+    <string name="network_identity_summary">SIM 1 と SIM 2 の国コード・事業者名・MCC/MNC を個別に設定</string>
+    <string name="network_identity_region">国・地域</string>
+    <string name="network_identity_list">事業者一覧</string>
+    <string name="network_identity_popular">主な事業者</string>
+    <string name="network_identity_all">収録済みコードすべて</string>
+    <string name="network_identity_operator">通信事業者</string>
+    <string name="network_identity_original">元の情報を使用</string>
+    <string name="network_identity_notice">Hook の読み込み後は端末の再起動なしで変更できます。対象アプリを開き直してキャッシュを更新してください。事業者に依存するサービスに影響する場合があります。SIM 認証情報・IP の地域・ネットワーク登録は変更しません。全体または各 SIM のスイッチを無効にすると元に戻ります。モジュールを無効化・削除する前に本機能を無効にしてください。一覧には専用・共有コードを含み、すべての販売ブランドを網羅してはいません</string>
+
+    <string name="phone_manager_risk_cloud_title">危険なアプリの流体クラウド通知を非表示</string>
+    <string name="phone_manager_risk_cloud_summary">流体クラウド通知を通常のリスク通知に変更します。リスク検出や他のセキュリティ警告には影響しません</string>
+
+    <string name="power_indicator_title">消費電力表示（試験的）</string>
+    <string name="power_indicator_summary">時計の横にバッテリー側の推定電力を表示。インストール後はシステム UI の再起動が必要です。取得できない場合は非表示</string>
+    <string name="power_indicator_interval">更新間隔</string>
+    <string name="power_indicator_precision">小数点以下の桁数</string>
+    <string name="power_indicator_scale">バッテリー測定補正</string>
+    <string name="power_indicator_scale_notice">デュアルセルでも必ずしも2倍にはしません。単セルの測定値のみ ×2、パック全体の値は ×1</string>
+    <string name="power_indicator_scale_original">報告値 ×1</string>
+    <string name="power_indicator_scale_double">単セル補正 ×2</string>
+    <string name="power_indicator_scale_half">補正 ×0.5</string>
+    <string name="power_indicator_source">電流データソース</string>
+    <string name="power_indicator_source_notice">標準は Android API（µA）。端末の単位を確認してから sysfs を選択してください。単位が違うと電力も不正確になります</string>
+    <string name="power_indicator_source_api">Android API（µA）</string>
+    <string name="power_indicator_source_ma">バッテリー sysfs（mA）</string>
+    <string name="power_indicator_source_ua">バッテリー sysfs（µA）</string>
+    <string name="power_indicator_hide_charging">電源接続中は非表示</string>
+    <string name="power_indicator_charging_notice">無効時の + はバッテリーへの正味充電電力で、充電器出力や端末全体の消費電力ではありません</string>
+    <string name="power_indicator_font">文字サイズ</string>
+
+    <string name="rotation_suggestion_hide_title">回転提案ボタンを非表示</string>
+    <string name="rotation_suggestion_hide_summary">画面端の回転提案ボタンを非表示にします。自動回転や画面の向きの設定は変更しません</string>
+
+    <string name="hide_screenshot_floating_title">スクリーンショットからフローティングアプリを除外</string>
+    <string name="hide_screenshot_floating_summary">対応するフローティングウィンドウ、ピクチャーインピクチャー、アプリのオーバーレイを閉じずにシステムのスクリーンショットから除外</string>
+    <string name="power_indicator_hide_discharge_sign">放電時のマイナス記号を非表示</string>
+    <string name="power_indicator_temperature">温度を2行で表示</string>
+    <string name="power_indicator_temperature_summary">上段に電力、下段にバッテリー温度を表示</string>
+    <string name="power_indicator_temperature_unit">温度の単位</string>
+    <string name="power_indicator_temperature_celsius">摂氏（°C）</string>
+    <string name="power_indicator_temperature_fahrenheit">華氏（°F）</string>
+    <string name="gallery_page_title">写真</string>
+    <string name="gallery_ai_retouch_title">AI レタッチを解除（試験的）</string>
+    <string name="gallery_ai_retouch_summary">非フラッグシップ機でも AI レタッチを使用できるようにします</string>
+    <string name="gallery_save_failed">写真アプリの設定を保存できませんでした</string>
+    <string name="settings_section_system_entry">起動方法</string>
+    <string name="setting_settings_home_entry">設定アイコン</string>
+    <string name="setting_settings_home_entry_summary">システム設定内のモジュール入口の位置を設定します</string>
+    <string name="setting_settings_home_entry_save_failed">設定を保存できません。Xposed フレームワークの接続を確認して再試行してください</string>
+    <string name="setting_settings_home_entry_disabled">無効</string>
+    <string name="setting_settings_home_entry_top">上部</string>
+    <string name="setting_settings_home_entry_middle">中央</string>
+    <string name="setting_settings_home_entry_bottom">下部</string>
+    <string name="setting_settings_home_entry_style">アイコンスタイル</string>
+    <string name="setting_settings_home_entry_style_system">デフォルト</string>
+    <string name="setting_settings_home_entry_style_app">アプリアイコン</string>
+    <string name="settings_section_system_adaptation">システム互換設定</string>
+    <string name="setting_system_adaptation_version">対応システム</string>
+    <string name="setting_system_adaptation_save_failed">対応システムを保存できませんでした。Xposed フレームワークへの接続を確認して再試行してください</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_title">LTPO/LTPS の動的な低下を無効化</string>
+    <string name="feature_settings_disable_adaptive_refresh_rate_summary">画面点灯中はシステム設定で選択したリフレッシュレートを維持します。有効にすると消費電力が増える場合があります。</string>
+    <string name="display_enhancement_group">画質補正</string>
+    <string name="display_enhancement_sr_thermal_title">超解像補正の温度制限を解除</string>
+    <string name="display_enhancement_sr_thermal_summary">超解像補正自体の温度制限を解除します。非対応ハードウェアの機能は有効になりません。発熱や消費電力が増加する場合があります</string>
+    <string name="display_enhancement_color_thermal_title">動画の色彩補正の温度制限を解除</string>
+    <string name="display_enhancement_color_thermal_summary">動画の色彩補正自体の温度制限を解除します。発熱や消費電力が増加する場合があります。端末全体の温度保護には影響しません</string>
+    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="settings_home_cleanup_group">設定ホーム</string>
+    <string name="settings_home_hide_account_title">上部のアカウント項目を非表示</string>
+    <string name="settings_home_hide_account_summary">システム設定ホームのアカウントカードを非表示にします</string>
+    <string name="settings_home_hide_update_title">上部の更新通知を非表示</string>
+    <string name="settings_home_hide_update_summary">システム設定ホームの更新通知を非表示にします</string>
+    <string name="power_indicator_follow_font_weight">システムのフォントの太さに合わせる</string>
+    <string name="keyguard_swipe_pin_title">スワイプで PIN を入力（試験的）</string>
+    <string name="keyguard_swipe_pin_summary">数字キーをなぞってロック画面の PIN を入力します。タップも使用できます。同じ数字はキーの外に出てから再度なぞってください</string>
+    <string name="settings_process_group">アプリ</string>
+    <string name="settings_show_process_manager_title">プロセス管理を強制表示</string>
+    <string name="settings_realme_title">Realme 機能</string>
+    <string name="settings_realme_entry_summary">システム設定に残されている Realme 専用項目</string>
+    <string name="settings_realme_app_volume">アプリ別音量ページを強制表示</string>
+    <string name="settings_realme_directional_sound">指向性サウンドを強制表示</string>
+    <string name="settings_realme_brightness_range">拡張輝度を強制表示</string>
+    <string name="settings_realme_multiple_faces">複数の顔登録を強制有効化</string>
+    <string name="settings_realme_sleep_capsule">睡眠カプセルを強制表示</string>
+    <string name="settings_realme_heart_rate">心拍数測定を強制表示</string>
+    <string name="settings_realme_dc_dimming">Realme DC 調光を強制表示</string>
+    <string name="settings_realme_dual_music">デュアルモード音楽共有を強制表示</string>
+    <string name="settings_realme_sleep_dependency">別途「睡眠カプセル」アプリが必要です（com.realme.wellbeing）</string>
+    <string name="settings_realme_heart_dependency">別途「心拍数測定」アプリが必要です（com.oplus.heartrate.detect）</string>
+    <string name="settings_realme_dependency_unavailable">必要なアプリが未インストール、無効、または起動不可のため利用できません</string>
+    <string name="settings_realme_laboratory">ラボを表示</string>
+    <string name="app_lock_group">アプリロック</string>
+    <string name="app_lock_delay_title">アプリの再ロックを遅延（試験的）</string>
+    <string name="app_lock_delay_summary">標準のロックタイミングにアプリを離れてから1分後・5分後を追加します。画面ロック時はすぐに再ロックします</string>
+    <string name="app_lock_delay_after_minutes">アプリを離れてから%1$d分後</string>
+    <string name="app_lock_delay_save_failed">アプリロックの時間を保存できませんでした</string>
+    <string name="native_live_update_title">標準のリアルタイム通知チップ</string>
+    <string name="native_live_update_summary">標準のリアルタイム通知チップを使用します。有効にすると Fluid Cloud は表示されず、両方を同時に使用できません。</string>
+    <string name="setting_hide_module_icon">モジュールのアプリアイコンを非表示</string>
+    <string name="setting_hide_module_icon_failed">アイコンの表示状態を変更できません</string>
 </resources>

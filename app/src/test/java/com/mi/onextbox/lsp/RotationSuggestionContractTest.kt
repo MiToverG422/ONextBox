@@ -20,9 +20,15 @@ class RotationSuggestionContractTest {
         assertFalse(source.contains("setRotationLock"))
     }
     @Test fun translatedLabelsExist() {
+        val expectedKeys = setOf("rotation_suggestion_hide_title", "rotation_suggestion_hide_summary")
         for (locale in listOf("values", "values-zh-rCN", "values-zh-rTW", "values-b+yue+Hant", "values-ja", "values-ja-rCN", "values-ko", "values-ru", "values-vi")) {
-            val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(root, "res/$locale/rotation_suggestion_strings.xml"))
-            assertEquals(locale, 2, doc.getElementsByTagName("string").length)
+            val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(root, "res/$locale/strings.xml"))
+            val nodes = doc.getElementsByTagName("string")
+            val entries = (0 until nodes.length).map(nodes::item)
+                .filter { it.attributes.getNamedItem("name").nodeValue in expectedKeys }
+            assertEquals(locale, expectedKeys.size, entries.size)
+            assertEquals(locale, expectedKeys, entries.map { it.attributes.getNamedItem("name").nodeValue }.toSet())
+            entries.forEach { assertTrue(locale, it.textContent.isNotBlank()) }
         }
     }
 }

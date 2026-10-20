@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="rotation_suggestion_hide_title">회전 제안 버튼 숨기기</string>
-    <string name="rotation_suggestion_hide_summary">화면 가장자리의 회전 제안 버튼을 숨깁니다. 자동 회전이나 화면 방향 설정은 변경하지 않습니다</string>
-</resources>

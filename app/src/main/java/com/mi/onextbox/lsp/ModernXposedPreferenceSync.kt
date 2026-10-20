@@ -57,6 +57,23 @@ object ModernXposedPreferenceSync : XposedServiceHelper.OnServiceListener {
         }.get()
     }
 
+    /** Persist enum selections with the same serialized confirmation as Boolean preferences. */
+    fun setIntAndSync(context: Context, key: String, value: Int) {
+        initialize(context)
+        initializer.submit {
+            try {
+                val local = checkNotNull(localPreferences) { "Local preferences are not ready" }
+                val bound = checkNotNull(remoteBinding.get()) { "Xposed service is not connected" }
+                commitConfirmedIntPreference(local, bound.preferences, key, value) {
+                    LspFrameworkService.isCurrent(bound.service)
+                }
+            } catch (error: Throwable) {
+                ConfigSyncStatus.failed("framework preferences")
+                throw error
+            }
+        }.get()
+    }
+
     private fun scheduleSync() {
         if (!syncQueued.compareAndSet(false, true)) return
         initializer.execute {

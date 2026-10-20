@@ -1,9 +1,12 @@
 system
+com.xiaomi.touchservice
+com.miui.securitycenter
 com.android.systemui
 com.oplus.screenshot
 com.oplus.screenrecorder
 com.android.settings
 com.oplus.securitypermission
+com.oplus.safecenter
 com.coloros.phonemanager
 com.coloros.securepay
 com.oplus.games
@@ -20,6 +23,7 @@ com.oplus.euicc
 com.oplus.wallpapers
 com.heytap.colorfulengine
 com.heytap.themestore
+com.coloros.gallery3d
 com.android.phone
 com.google.android.googlequicksearchbox
 com.google.android.apps.messaging

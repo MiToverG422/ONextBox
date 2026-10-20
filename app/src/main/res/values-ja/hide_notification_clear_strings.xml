@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_notification_clear_title">通知センターの一括消去ボタンを非表示</string>
-    <string name="hide_notification_clear_summary">一括消去ボタンを非表示にします。スワイプによる通知の消去には影響しません</string>
-</resources>

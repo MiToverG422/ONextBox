@@ -12,19 +12,17 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import com.materialkolor.PaletteStyle
-import com.materialkolor.dynamicColorScheme
-import com.materialkolor.dynamiccolor.ColorSpec
 
 val LocalAppUiStyle = compositionLocalOf { AppUiStyle.ColorOs }
 val LocalMaterialSwitchIconsEnabled = compositionLocalOf { false }
 
-/** Material 3 Expressive motion and Tonal Spot 2025 palette for this app's theme choices. */
+/** Material 3 Expressive motion and CMF 2026 palette for this app's theme choices. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun Material3ExpressiveAppTheme(
     mode: AppThemeMode,
     keyColor: Long?,
+    use2026: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -40,13 +38,9 @@ fun Material3ExpressiveAppTheme(
         mode.isMonet -> Color(0xFF2196F3)
         else -> keyColor?.let(::Color) ?: Color(0xFF2196F3)
     }
-    val colors = remember(seed, dark) {
-        dynamicColorScheme(
-            seedColor = seed,
-            isDark = dark,
-            style = PaletteStyle.TonalSpot,
-            specVersion = ColorSpec.SpecVersion.SPEC_2025,
-        )
+    val spec = rememberMaterialColorSpec()
+    val colors = remember(seed, dark, use2026, spec) {
+        material3ExpressiveColorScheme(seed, dark, use2026, spec)
     }
     MaterialExpressiveTheme(
         colorScheme = colors,

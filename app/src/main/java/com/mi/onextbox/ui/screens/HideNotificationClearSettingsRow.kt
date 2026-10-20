@@ -29,7 +29,7 @@ internal fun HideNotificationClearSettingsRow(hasDividerAbove: Boolean, hasDivid
     }
     SettingsToggleRow(title = stringResource(R.string.hide_notification_clear_title),
         summary = stringResource(R.string.hide_notification_clear_summary),
-        checked = enabled, switchEnabled = !saving, hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow,
+        checked = enabled, interactionEnabled = !saving, hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow,
         onCheckedChange = { next ->
             if (!saving) {
                 saving = true

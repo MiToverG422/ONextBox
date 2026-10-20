@@ -46,7 +46,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Button as MaterialButton
@@ -124,6 +123,8 @@ import com.mi.onextbox.ui.common.ColorOs17SettingsSlider
 import com.mi.onextbox.ui.common.CouiConfirmDialog
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.AppUiStyle
+import com.mi.onextbox.ui.common.rememberSystemAdaptationVersion
+import com.mi.onextbox.lsp.SystemAdaptationVersion
 import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.rememberColorOsHapticTick
 import com.mi.onextbox.ui.common.rememberHapticClick
@@ -203,6 +204,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     TrafficManagement,
     PhoneManager,
     ThemeStore,
+    Gallery,
     SecurePay,
     GameAssistant,
     OShare,
@@ -217,13 +219,13 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Athena,
     Settings,
     SettingsRegion(true),
+    SettingsRealme(true),
     SettingsAppearance(true),
     SettingsApps(true),
     SettingsPermissions(true),
     SettingsAboutDevice(true),
     SecurityPermission,
     TouchSampling,
-    RefreshRate,
     Wallpapers,
     Aod,
     Screenshot,
@@ -264,6 +266,23 @@ fun FeatureMainRoute(
     onLaunchOriginChanged: (FeaturePageMode, FeatureLaunchOrigin) -> Unit = { _, _ -> },
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
 ) {
+    if (rememberSystemAdaptationVersion() == SystemAdaptationVersion.HyperOs3) {
+        HyperOsPerformancePage(
+            modifier = modifier.fillMaxSize(),
+            bottomContentPadding = subPageBottomExtension,
+            blurBackdrop = blurBackdrop,
+        )
+        return
+    }
+    if (!rememberSystemAdaptationVersion().hasColorOs17Pages) {
+        AdaptationEmptyPage(
+            title = stringResource(R.string.tab_features),
+            modifier = modifier.fillMaxSize(),
+            bottomContentPadding = subPageBottomExtension,
+            blurBackdrop = blurBackdrop,
+        )
+        return
+    }
     var showRestartConfirm by remember { mutableStateOf(false) }
     // The editor and result list read one state; no value/selection feedback loop.
     val searchState = rememberTextFieldState()
@@ -390,6 +409,16 @@ fun FeatureSubRoute(
     onOpenSubPage: (FeaturePageMode) -> Unit,
     onOpenAppErrorDetail: (Long) -> Unit,
 ) {
+    if (!rememberSystemAdaptationVersion().hasColorOs17Pages) {
+        AdaptationEmptyPage(
+            title = featurePageTitle(pageMode),
+            modifier = modifier.fillMaxSize(),
+            bottomContentPadding = subPageBottomExtension,
+            blurBackdrop = blurBackdrop,
+            onBack = onBack,
+        )
+        return
+    }
     val context = LocalContext.current
     val resources = LocalResources.current
     val subPageStateHolder = rememberSaveableStateHolder()
@@ -442,7 +471,7 @@ fun FeatureSubRoute(
                     onClick = { pushMonitorRefresh++ },
                 )
             }
-            if (pageMode != FeaturePageMode.EsimDiagnostics && pageMode != FeaturePageMode.TouchSampling && pageMode != FeaturePageMode.RefreshRate && pageMode != FeaturePageMode.SystemMessages) {
+            if (pageMode != FeaturePageMode.EsimDiagnostics && pageMode != FeaturePageMode.TouchSampling && pageMode != FeaturePageMode.SystemMessages) {
                 FeatureRestartActionButton(
                     contentDescription = stringResource(R.string.feature_restart_scope_confirm_action),
                     onClick = {
@@ -594,6 +623,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.TrafficManagement -> stringResource(R.string.traffic_page_title)
     FeaturePageMode.PhoneManager -> stringResource(R.string.phone_manager_title)
     FeaturePageMode.ThemeStore -> stringResource(R.string.theme_store_title)
+    FeaturePageMode.Gallery -> stringResource(R.string.gallery_page_title)
     FeaturePageMode.SecurePay -> stringResource(R.string.secure_pay_title)
     FeaturePageMode.GameAssistant -> stringResource(R.string.game_assistant_title)
     FeaturePageMode.OShare -> stringResource(R.string.oshare_title)
@@ -608,13 +638,13 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Athena -> stringResource(R.string.feature_group_athena)
     FeaturePageMode.Settings -> stringResource(R.string.tab_settings)
     FeaturePageMode.SettingsRegion -> stringResource(R.string.feature_group_settings_hidden_features)
+    FeaturePageMode.SettingsRealme -> stringResource(R.string.settings_realme_title)
     FeaturePageMode.SettingsAppearance -> stringResource(R.string.settings_category_interface_display)
     FeaturePageMode.SettingsApps -> stringResource(R.string.feature_group_app_management)
     FeaturePageMode.SettingsPermissions -> stringResource(R.string.settings_category_permissions)
     FeaturePageMode.SettingsAboutDevice -> stringResource(R.string.feature_group_about_device)
     FeaturePageMode.SecurityPermission -> stringResource(R.string.feature_permission_manager_title)
     FeaturePageMode.TouchSampling -> stringResource(R.string.feature_touch_rate_title)
-    FeaturePageMode.RefreshRate -> stringResource(R.string.tab_refresh_rate)
     FeaturePageMode.Wallpapers -> stringResource(R.string.feature_wallpapers_title)
     FeaturePageMode.Aod -> stringResource(R.string.feature_aod_enhance_title)
     FeaturePageMode.Screenshot -> stringResource(R.string.feature_screenshot_title)
@@ -625,9 +655,9 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
 internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (mode) {
     FeaturePageMode.Desktop,
     FeaturePageMode.DesktopLayout,
-    FeaturePageMode.DesktopIcons,
     FeaturePageMode.DesktopRecent,
     FeaturePageMode.DesktopHiddenApps,
+    FeaturePageMode.DesktopIcons,
     FeaturePageMode.DesktopPages -> listOf(
         "com.android.launcher",
     )
@@ -656,6 +686,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.TrafficManagement -> listOf("com.oplus.trafficmonitor")
     FeaturePageMode.PhoneManager -> listOf(PhoneManagerSettings.PACKAGE_NAME)
     FeaturePageMode.ThemeStore -> listOf(ThemeStoreSettings.PACKAGE_NAME)
+    FeaturePageMode.Gallery -> listOf(com.mi.onextbox.lsp.GalleryAiRetouchSettings.PACKAGE_NAME)
     FeaturePageMode.SecurePay -> listOf(SecurePaySettings.PACKAGE_NAME)
     FeaturePageMode.GameAssistant -> listOf(GameAssistantSettings.PACKAGE_NAME)
     FeaturePageMode.OShare -> listOf(OShareSettings.PACKAGE_NAME)
@@ -672,8 +703,10 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.SettingsApps,
     FeaturePageMode.SettingsPermissions,
     FeaturePageMode.SettingsAboutDevice,
-    FeaturePageMode.SettingsRegion -> listOf("com.android.settings")
+    FeaturePageMode.SettingsRegion,
+    FeaturePageMode.SettingsRealme -> listOf("com.android.settings")
     FeaturePageMode.SecurityPermission -> listOf(
+        "com.oplus.safecenter",
         "com.oplus.securitypermission", "com.android.settings",
         "com.android.permissioncontroller", "android", "system",
     )
@@ -693,7 +726,6 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.SystemMessages,
     FeaturePageMode.AppErrors,
     FeaturePageMode.NotificationBatch,
-    FeaturePageMode.RefreshRate,
     FeaturePageMode.TouchSampling -> emptyList()
 }
 
@@ -882,7 +914,7 @@ private fun FeatureMainPage(
     onLaunchOriginChanged: (FeaturePageMode, FeatureLaunchOrigin) -> Unit,
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
 ) {
-    val entries = remember { featureMainEntries() }
+    val entries = remember { colorOs17FeatureMainEntries() }
 
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressiveFeatureMainPage(entries = entries, onOpen = onOpen)
@@ -912,7 +944,7 @@ private fun FeatureMainPage(
 
 @Composable
 internal fun ToolsMainPage(onOpen: (FeaturePageMode) -> Unit) {
-    val entries = remember { toolsMainEntries() }
+    val entries = remember { colorOs17ToolsMainEntries() }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         Material3ExpressiveFeatureMainPage(
             entries = entries,
@@ -961,7 +993,7 @@ private fun Material3ExpressiveFeatureMainPage(
     }
 }
 
-private fun featureMainEntries(): List<FeatureMainEntry> = buildList {
+private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         add(
             FeatureMainEntry(
                 titleRes = R.string.section_system_desktop,
@@ -1016,6 +1048,13 @@ private fun featureMainEntries(): List<FeatureMainEntry> = buildList {
                 titleRes = R.string.theme_store_title,
                 iconPackages = listOf(ThemeStoreSettings.PACKAGE_NAME),
                 pageMode = FeaturePageMode.ThemeStore,
+            )
+        )
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.gallery_page_title,
+                iconPackages = listOf(com.mi.onextbox.lsp.GalleryAiRetouchSettings.PACKAGE_NAME),
+                pageMode = FeaturePageMode.Gallery,
             )
         )
         add(
@@ -1152,7 +1191,7 @@ private fun featureMainEntries(): List<FeatureMainEntry> = buildList {
         )
 }
 
-private fun toolsMainEntries(): List<FeatureMainEntry> = listOf(
+private fun colorOs17ToolsMainEntries(): List<FeatureMainEntry> = listOf(
     FeatureMainEntry(
         titleRes = R.string.notification_batch_title,
         iconPackages = emptyList(),
@@ -1164,12 +1203,6 @@ private fun toolsMainEntries(): List<FeatureMainEntry> = listOf(
         iconPackages = emptyList(),
         pageMode = FeaturePageMode.AppErrors,
         iconGlyph = Icons.Rounded.BugReport,
-    ),
-    FeatureMainEntry(
-        titleRes = R.string.tab_refresh_rate,
-        iconPackages = emptyList(),
-        pageMode = FeaturePageMode.RefreshRate,
-        iconGlyph = Icons.Rounded.Speed,
     ),
     FeatureMainEntry(
         titleRes = R.string.feature_touch_rate_title,
@@ -1387,7 +1420,7 @@ internal fun FeatureLaunchIcon(
     modifier: Modifier = Modifier,
 ) {
     val entry = remember(pageMode) {
-        (featureMainEntries() + toolsMainEntries()).firstOrNull { it.pageMode == pageMode }
+        (colorOs17FeatureMainEntries() + colorOs17ToolsMainEntries()).firstOrNull { it.pageMode == pageMode }
     } ?: return
     Box(
         contentAlignment = Alignment.Center,
@@ -1551,6 +1584,7 @@ private fun FeatureSubPage(
         FeaturePageMode.TrafficManagement -> TrafficManagementPage()
         FeaturePageMode.PhoneManager -> PhoneManagerFeaturesPage()
         FeaturePageMode.ThemeStore -> ThemeStoreFeaturesPage()
+        FeaturePageMode.Gallery -> GalleryFeaturesPage()
         FeaturePageMode.SecurePay -> SecurePayFeaturesPage()
         FeaturePageMode.GameAssistant -> GameAssistantFeaturesPage()
         FeaturePageMode.OShare -> OShareFeaturesPage()
@@ -1563,6 +1597,7 @@ private fun FeatureSubPage(
         FeaturePageMode.AppErrors -> Unit
         FeaturePageMode.NotificationBatch -> Unit
         FeaturePageMode.Athena -> AthenaFeaturesPage()
+        FeaturePageMode.SettingsRealme -> SettingsRealmePage()
         FeaturePageMode.Settings,
         FeaturePageMode.SettingsAppearance,
         FeaturePageMode.SettingsApps,
@@ -1580,7 +1615,6 @@ private fun FeatureSubPage(
         )
         FeaturePageMode.TouchSampling -> TouchSamplingPage()
         FeaturePageMode.SecurityPermission -> SecurityPermissionFeaturesPage()
-        FeaturePageMode.RefreshRate -> RefreshRatePage()
         FeaturePageMode.Wallpapers -> WallpapersFeaturesPage()
         FeaturePageMode.Aod -> AodFeaturesPage(
             aodEnhanceEnabled = aodEnhanceEnabled,

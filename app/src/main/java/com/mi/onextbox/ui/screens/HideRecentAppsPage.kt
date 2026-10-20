@@ -29,7 +29,7 @@ internal fun HideRecentAppsSettingsRow(hasDividerAbove: Boolean, hasDividerBelow
     }
     SettingsToggleRow(title = stringResource(R.string.hide_recent_apps_title),
         summary = stringResource(R.string.hide_recent_apps_summary),
-        checked = enabled, switchEnabled = !saving, hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow,
+        checked = enabled, interactionEnabled = !saving, hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow,
         onCheckedChange = { next ->
             if (!saving) {
                 saving = true

@@ -21,6 +21,25 @@ fun CouiConfirmDialog(
     onDismissFinished: (() -> Unit)? = null,
     content: (@Composable () -> Unit)? = null,
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        top.yukonga.miuix.kmp.window.WindowDialog(
+            show = show, title = title, summary = summary,
+            onDismissRequest = onDismissRequest, onDismissFinished = onDismissFinished,
+        ) {
+            content?.invoke()
+            androidx.compose.foundation.layout.Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+            ) {
+                top.yukonga.miuix.kmp.basic.TextButton(negativeText, onClick = onNegative, modifier = Modifier.weight(1f))
+                top.yukonga.miuix.kmp.basic.TextButton(
+                    positiveText, onClick = onPositive, modifier = Modifier.weight(1f),
+                    colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary(),
+                )
+            }
+        }
+        return
+    }
     if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
         if (show) {
             androidx.compose.material3.AlertDialog(

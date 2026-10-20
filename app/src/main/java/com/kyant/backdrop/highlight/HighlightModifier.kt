@@ -1,7 +1,5 @@
 package com.kyant.backdrop.highlight
 
-import android.graphics.BlurMaskFilter
-import android.os.Build
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
@@ -22,8 +20,11 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastCoerceAtMost
 import com.kyant.backdrop.RuntimeShaderCacheImpl
-import com.kyant.backdrop.ShapeProvider
-import com.kyant.backdrop.clipOutline
+import com.kyant.backdrop.internal.ShapeProvider
+import com.kyant.backdrop.internal.blur
+import com.kyant.backdrop.internal.clipOutline
+import com.kyant.backdrop.internal.setRuntimeShader
+import com.kyant.backdrop.isRuntimeShaderSupported
 import kotlin.math.ceil
 
 internal class HighlightElement(
@@ -147,25 +148,19 @@ internal class HighlightNode(
         prevStyle = null
     }
 
-    @Suppress("DEPRECATION")
     private fun DrawScope.configurePaint(highlight: Highlight) {
         paint.color = highlight.style.color
-        paint.strokeWidth =
-            ceil(highlight.width.toPx().fastCoerceAtMost(size.minDimension / 2f)) * 2f
-        val blurRadius = highlight.blurRadius.toPx()
-        paint.asFrameworkPaint().maskFilter =
-            if (blurRadius > 0f) {
-                BlurMaskFilter(blurRadius, BlurMaskFilter.Blur.NORMAL)
-            } else {
-                null
-            }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            paint.shader = with(highlight.style) {
-                createShader(
-                    shape = shapeProvider.shape,
-                    runtimeShaderCache = runtimeShaderCache
-                )
-            }
+        paint.strokeWidth = ceil(highlight.width.toPx().fastCoerceAtMost(size.minDimension / 2f)) * 2f
+        paint.blur(highlight.blurRadius.toPx())
+        if (isRuntimeShaderSupported()) {
+            val shader =
+                with(highlight.style) {
+                    createShader(
+                        shape = shapeProvider.shape,
+                        runtimeShaderCache = runtimeShaderCache
+                    )
+                }
+            paint.setRuntimeShader(shader)
         }
     }
 }

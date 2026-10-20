@@ -1025,6 +1025,7 @@ private fun AppearancePage(
     val uiStyles = listOf(
         AppUiStyle.ColorOs to stringResource(R.string.ui_style_coloros),
         AppUiStyle.Material3Expressive to stringResource(R.string.ui_style_material3_expressive),
+        AppUiStyle.Miuix to stringResource(R.string.ui_style_miuix),
     )
     val themeModes = listOf(
         AppThemeMode.System to stringResource(R.string.theme_mode_system),
@@ -1312,8 +1313,11 @@ private fun MiniAppearanceSettings(
                 MiniAppearanceRow(
                     title = stringResource(R.string.setting_ui_style),
                     value = stringResource(
-                        if (material) R.string.ui_style_material3_expressive
-                        else R.string.ui_style_coloros,
+                        when (style) {
+                            AppUiStyle.Material3Expressive -> R.string.ui_style_material3_expressive
+                            AppUiStyle.Miuix -> R.string.ui_style_miuix
+                            AppUiStyle.ColorOs -> R.string.ui_style_coloros
+                        },
                     ),
                     material = material,
                     surface = surface,
@@ -1396,6 +1400,7 @@ private fun MiniAppearanceSettings(
             val options = listOf(
                 AppUiStyle.ColorOs to stringResource(R.string.ui_style_coloros),
                 AppUiStyle.Material3Expressive to stringResource(R.string.ui_style_material3_expressive),
+                AppUiStyle.Miuix to stringResource(R.string.ui_style_miuix),
             )
             options.forEachIndexed { index, (option, label) ->
                 Row(

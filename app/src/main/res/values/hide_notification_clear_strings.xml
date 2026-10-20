@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_notification_clear_title">Hide notification clear button</string>
-    <string name="hide_notification_clear_summary">Hide the clear-all button in the notification center without affecting swipe-to-dismiss</string>
-</resources>

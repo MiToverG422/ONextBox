@@ -13,7 +13,8 @@ class ConsolidatedStringsTest {
         "feature_aosp_back_panel_" to 2,
         "fluid_browser_" to 4,
         "launcher_custom_grid_" to 7,
-        "phone_manager_" to 4,
+        "phone_manager_" to 6,
+        "rotation_suggestion_" to 2,
         "side_key_" to 36,
         "ota_" to 46,
     )
@@ -24,6 +25,14 @@ class ConsolidatedStringsTest {
         locales.forEach { locale ->
             strings(locale)
             splitFiles.forEach { name -> assertFalse("$locale/$name", File(root, "$locale/$name").exists()) }
+            File(root, locale).listFiles { file -> file.extension == "xml" && file.name != "strings.xml" }!!
+                .forEach { file ->
+                    val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
+                    listOf("string", "string-array", "plurals").forEach { tag ->
+                        assertEquals("$locale/${file.name} still contains $tag resources", 0,
+                            document.getElementsByTagName(tag).length)
+                    }
+                }
         }
     }
 

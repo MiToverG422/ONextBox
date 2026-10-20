@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.mi.onextbox.lsp.LspConfig
-import com.mi.onextbox.refresh.RefreshRateBootScheduler
 import android.os.UserManager
 import com.mi.onextbox.touch.TouchSamplingController
 import com.mi.onextbox.ui.common.AppLogStore
@@ -18,7 +17,6 @@ class BootSyncReceiver : BroadcastReceiver() {
         val action = intent?.action ?: return
         if (
             action != Intent.ACTION_BOOT_COMPLETED &&
-            action != Intent.ACTION_USER_UNLOCKED &&
             action != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
             action != Intent.ACTION_MY_PACKAGE_REPLACED
         ) {
@@ -27,11 +25,6 @@ class BootSyncReceiver : BroadcastReceiver() {
 
         // Credential-encrypted selections are unavailable until the first unlock.
         if (!context.getSystemService(UserManager::class.java).isUserUnlocked) return
-        // Schedule before the shared shell's mirror/touch work can block this receiver.
-        runCatching { RefreshRateBootScheduler.schedule(context.applicationContext) }
-            .onFailure { AppLogStore.w("RefreshRate", "Boot scheduling failed: ${it.javaClass.simpleName}") }
-        if (action == Intent.ACTION_USER_UNLOCKED) return
-
         val pendingResult = goAsync()
         val appContext = context.applicationContext
         worker.execute {

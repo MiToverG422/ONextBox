@@ -68,7 +68,7 @@ internal fun ThemeStoreFeaturesPage() {
             title = stringResource(R.string.theme_store_vip_title),
             summary = stringResource(R.string.theme_store_vip_summary),
             checked = enabled,
-            switchEnabled = savingKey != ThemeStoreSettings.ENABLED,
+            interactionEnabled = savingKey != ThemeStoreSettings.ENABLED,
             hasDividerBelow = true,
             onCheckedChange = { save(ThemeStoreSettings.ENABLED, it) },
         )
@@ -77,7 +77,7 @@ internal fun ThemeStoreFeaturesPage() {
             title = stringResource(R.string.theme_store_ads_title),
             summary = stringResource(R.string.theme_store_ads_summary),
             checked = adsEnabled,
-            switchEnabled = savingKey != ThemeStoreSettings.ADS,
+            interactionEnabled = savingKey != ThemeStoreSettings.ADS,
             hasDividerAbove = true,
             onCheckedChange = { save(ThemeStoreSettings.ADS, it) },
         )

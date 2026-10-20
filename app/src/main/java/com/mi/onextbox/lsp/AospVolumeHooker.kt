@@ -12,6 +12,7 @@ internal object AospVolumeHooker {
 
     fun hook(loader: ClassLoader) {
         runCatching {
+            AospVolumeCallbackBridge.registerHotReload(loader)
             val type = Class.forName("com.oplus.systemui.dagger.DaggerOplusReferenceGlobalRootComponent\$OplusReferenceSysUIComponentImpl", false, loader)
             val method = type.getDeclaredMethod("volumeDialog")
             ModernHookRegistry.installFast("aosp-volume:factory", method, XposedInterface.Hooker { chain ->

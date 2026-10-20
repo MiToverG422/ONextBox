@@ -11,10 +11,15 @@ internal object ModernHotReloadSession {
         private var staging: Boolean,
         private val installer: (Executable, String, XposedInterface.Hooker) -> XposedInterface.HookHandle =
             { executable, id, hooker -> installDirect(executable, id, hooker) },
+        previousTargets: Collection<Executable> = emptyList(),
     ) {
         private val handles = ConcurrentLinkedQueue<ManagedHandle>()
         private val ids = HotReloadHookIds<Executable>()
         private val failed = AtomicBoolean(false)
+        private var precedingTargets = if (staging) previousTargets.toList() else emptyList()
+
+        /** Host methods only: bootstrap dynamic hooks without retaining old callbacks or handles. */
+        val previousTargets: List<Executable> get() = precedingTargets.toList()
 
         var hasCommittedHooks: Boolean = false
             private set
@@ -53,6 +58,7 @@ internal object ModernHotReloadSession {
                     hasCommittedHooks = true
                 }
                 staging = false
+                precedingTargets = emptyList()
             } catch (error: Throwable) {
                 markFailed()
                 // Replacement is atomic per hook, not per module. Keep successful replacements and
@@ -61,7 +67,10 @@ internal object ModernHotReloadSession {
             }
         }
 
-        fun markFailed() { failed.set(true) }
+        fun markFailed() {
+            failed.set(true)
+            precedingTargets = emptyList()
+        }
 
         private inner class ManagedHandle(
             private val target: Executable,
@@ -94,7 +103,8 @@ internal object ModernHotReloadSession {
     var current: Session? = null
         private set
 
-    fun begin(staging: Boolean): Session = Session(staging).also { current = it }
+    fun begin(staging: Boolean, previousTargets: Collection<Executable> = emptyList()): Session =
+        Session(staging, previousTargets = previousTargets).also { current = it }
 
     fun install(executable: Executable, hooker: XposedInterface.Hooker): XposedInterface.HookHandle =
         current?.install(executable, hooker) ?: installDirect(executable, null, hooker)

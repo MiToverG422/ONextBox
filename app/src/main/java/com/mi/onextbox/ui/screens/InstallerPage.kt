@@ -117,7 +117,8 @@ internal fun InstallerPage() {
                     SettingsToggleRow(
                         title = stringResource(title), summary = stringResource(summary),
                         checked = flags[feature] == true,
-                        enabled = !saving && (feature == Feature.Enabled || flags[Feature.Enabled] == true),
+                        enabled = feature == Feature.Enabled || flags[Feature.Enabled] == true,
+                        interactionEnabled = !saving,
                         onCheckedChange = { value ->
                             if (!saving) {
                                 saving = true

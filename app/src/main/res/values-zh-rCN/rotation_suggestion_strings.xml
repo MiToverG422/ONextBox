@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="rotation_suggestion_hide_title">屏蔽旋转建议按钮</string>
-    <string name="rotation_suggestion_hide_summary">隐藏屏幕边缘弹出的旋转建议按钮，不改变自动旋转及屏幕方向设置</string>
-</resources>

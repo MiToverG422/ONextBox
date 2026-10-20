@@ -35,6 +35,12 @@ fun ColorOsTopBarButton(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
+        top.yukonga.miuix.kmp.basic.IconButton(onClick = onClick, modifier = modifier) {
+            Box(contentAlignment = Alignment.Center, content = content)
+        }
+        return
+    }
     val interactionSource = remember { MutableInteractionSource() }
     val pressScale = remember { Animatable(1f) }
     val pressMask = remember { Animatable(0f) }

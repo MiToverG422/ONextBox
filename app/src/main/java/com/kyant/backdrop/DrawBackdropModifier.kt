@@ -1,6 +1,5 @@
 package com.kyant.backdrop
 
-import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -9,7 +8,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
@@ -33,6 +31,8 @@ import androidx.compose.ui.unit.IntSize
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.highlight.HighlightElement
+import com.kyant.backdrop.internal.ShapeProvider
+import com.kyant.backdrop.internal.recordLayer
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.InnerShadowElement
 import com.kyant.backdrop.shadow.Shadow
@@ -176,7 +176,10 @@ private class DrawBackdropElement(
         node.shapeProvider = shapeProvider
         node.effects = effects
         node.layerBlock = layerBlock
-        node.exportedBackdrop = exportedBackdrop
+        if (node.exportedBackdrop != exportedBackdrop) {
+            node.exportedBackdrop?.layerCoordinates = null
+            node.exportedBackdrop = exportedBackdrop
+        }
         node.onDrawBehind = onDrawBehind
         node.onDrawBackdrop = onDrawBackdrop
         node.onDrawSurface = onDrawSurface
@@ -359,11 +362,11 @@ private class DrawBackdropNode(
     }
 
     private fun updateEffects() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            effectScope.apply(effects)
-            graphicsLayer?.renderEffect = effectScope.renderEffect?.asComposeRenderEffect()
-            padding = effectScope.padding
-        }
+        if (!isRenderEffectSupported()) return
+
+        effectScope.apply(effects)
+        graphicsLayer?.renderEffect = effectScope.renderEffect
+        padding = effectScope.padding
     }
 
     override fun onAttach() {

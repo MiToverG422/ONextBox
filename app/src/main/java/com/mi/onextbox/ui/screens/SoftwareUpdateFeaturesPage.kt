@@ -90,7 +90,7 @@ internal fun SoftwareUpdateFeaturesPage() {
                     title = stringResource(item.title),
                     summary = stringResource(item.summary),
                     checked = values[item.feature] == true,
-                    enabled = item.feature !in applying,
+                    interactionEnabled = item.feature !in applying,
                     hasDividerAbove = index > 0,
                     hasDividerBelow = index < items.lastIndex,
                     onCheckedChange = { checked ->

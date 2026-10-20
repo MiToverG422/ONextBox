@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="hide_recent_apps_title">Hide App from Recent Task List</string>
-    <string name="hide_recent_apps_summary">Hide recent-task cards for selected apps without stopping them; split-screen groups are hidden together</string>
-</resources>
