@@ -370,6 +370,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureSystemUiPercentageSettings : RootRoute
 
     @Serializable
+    data object FeatureSystemUiSideVolumePercentageSettings : RootRoute
+
+    @Serializable
     data object FeatureSystemUiSmallWindow : RootRoute
 
     @Serializable
@@ -549,6 +552,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.SystemUiControlCenter -> RootRoute.FeatureSystemUiControlCenter
     FeaturePageMode.SystemUiCornerSettings -> RootRoute.FeatureSystemUiCornerSettings
     FeaturePageMode.SystemUiPercentageSettings -> RootRoute.FeatureSystemUiPercentageSettings
+    FeaturePageMode.SystemUiSideVolumePercentageSettings -> RootRoute.FeatureSystemUiSideVolumePercentageSettings
     FeaturePageMode.SystemUiSmallWindow -> RootRoute.FeatureSystemUiSmallWindow
     FeaturePageMode.SystemUiLockScreen -> RootRoute.FeatureSystemUiLockScreen
     FeaturePageMode.SystemUiNavigationBar -> RootRoute.FeatureSystemUiNavigationBar
@@ -1069,6 +1073,7 @@ fun Root(
                     subclass(RootRoute.FeatureSystemUiControlCenter::class)
                     subclass(RootRoute.FeatureSystemUiCornerSettings::class)
                     subclass(RootRoute.FeatureSystemUiPercentageSettings::class)
+                    subclass(RootRoute.FeatureSystemUiSideVolumePercentageSettings::class)
                     subclass(RootRoute.FeatureSystemUiSmallWindow::class)
                     subclass(RootRoute.FeatureSystemUiLockScreen::class)
                     subclass(RootRoute.FeatureSystemUiNavigationBar::class)
@@ -2406,6 +2411,9 @@ fun Root(
             }
             entry<RootRoute.FeatureSystemUiPercentageSettings> {
                 featureEntryContent(FeaturePageMode.SystemUiPercentageSettings)
+            }
+            entry<RootRoute.FeatureSystemUiSideVolumePercentageSettings> {
+                featureEntryContent(FeaturePageMode.SystemUiSideVolumePercentageSettings)
             }
             entry<RootRoute.FeatureSystemUiSmallWindow> {
                 featureEntryContent(FeaturePageMode.SystemUiSmallWindow)

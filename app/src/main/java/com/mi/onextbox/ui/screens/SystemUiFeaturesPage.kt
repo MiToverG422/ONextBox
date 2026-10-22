@@ -120,6 +120,9 @@ internal fun SystemUiFeaturesPage(
             }
         }
         FeaturePageMode.SystemUiVolume -> {
+            SideVolumePercentageSettingsGroup {
+                onOpenSubPage(FeaturePageMode.SystemUiSideVolumePercentageSettings)
+            }
             SettingsGroup {
                 VolumeSafetyWarningSettingsRow()
             }

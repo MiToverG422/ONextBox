@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="side_volume_group">Боковой ползунок громкости</string>
+    <string name="side_volume_percentage_title">Показывать проценты</string>
+    <string name="side_volume_percentage_summary">Показывать проценты на ползунках, включая отдельные регуляторы громкости</string>
+    <string name="side_volume_keep_wide_title">Сохранять ширину ползунка при регулировке</string>
     <string name="qs_slider_percentage_title">Проценты на ползунках</string>
     <string name="qs_slider_percentage_summary">Показывать проценты на ползунках яркости и громкости, включая развёрнутые панели</string>
     <string name="qs_slider_percentage_properties">Настройки отображения процентов</string>

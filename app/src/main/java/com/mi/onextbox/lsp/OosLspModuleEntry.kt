@@ -165,6 +165,10 @@ class OosLspModuleEntry : XposedModule() {
                     .onFailure { HookLog.w("ONextBox-QsTileCorner", "Tile corner adapter unavailable", it) }
                 runCatching { QsSliderPercentageHooker.hook(classLoader) }
                     .onFailure { HookLog.w("ONextBox-QsPercentage", "Slider percentage adapter unavailable", it) }
+                runCatching { SideVolumePercentageHooker.hook(classLoader) }
+                    .onFailure { HookLog.w("ONextBox-SideVolumePercentage", "Volume popup percentage adapter unavailable", it) }
+                runCatching { SideVolumeAppearanceHooker.hook(classLoader) }
+                    .onFailure { HookLog.w("ONextBox-SideVolumeAppearance", "Volume popup appearance adapter unavailable", it) }
                 SideKeySystemUiHooker.hook(classLoader)
                 ImmersiveNavigationHooker.hook(classLoader)
                 AospBackPanelHooker.hook(classLoader)

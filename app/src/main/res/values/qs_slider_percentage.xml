@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="side_volume_group">Side volume slider</string>
+    <string name="side_volume_percentage_title">Show percentage</string>
+    <string name="side_volume_percentage_summary">Show percentages on volume sliders, including multiple volume controls</string>
+    <string name="side_volume_keep_wide_title">Keep the slider wide while adjusting volume</string>
     <string name="qs_slider_percentage_title">Slider percentage</string>
     <string name="qs_slider_percentage_summary">Show percentages on brightness and volume sliders, including expanded panels</string>
     <string name="qs_slider_percentage_properties">Percentage properties</string>

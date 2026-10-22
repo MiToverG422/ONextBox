@@ -60,6 +60,8 @@ internal class EnabledFeatureActions {
         R.string.carrier_name_title to { context, enabled -> CarrierNameSettings.setEnabled(context, enabled) },
         SharedFeatureDefinitions.qsCorner.action(),
         SharedFeatureDefinitions.qsPercentage.action(),
+        SharedFeatureDefinitions.sideVolumePercentage.action(),
+        SharedFeatureDefinitions.sideVolumeKeepWide.action(),
         SharedFeatureDefinitions.volumeSafetyWarning.action(),
         SharedFeatureDefinitions.nativeLiveUpdate.action(),
         SharedFeatureDefinitions.powerIndicator.action(),

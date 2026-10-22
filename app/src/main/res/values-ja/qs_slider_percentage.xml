@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="side_volume_group">サイド音量バー</string>
+    <string name="side_volume_percentage_title">パーセント表示</string>
+    <string name="side_volume_percentage_summary">各音量バーにパーセントを表示します。複数の音量調整にも適用されます</string>
+    <string name="side_volume_keep_wide_title">音量調整中もバーの太さを維持</string>
     <string name="qs_slider_percentage_title">スライダーのパーセント表示</string>
     <string name="qs_slider_percentage_summary">明るさと音量のスライダーにパーセントを表示します。展開パネルにも適用されます</string>
     <string name="qs_slider_percentage_properties">パーセント表示の設定</string>

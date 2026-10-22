@@ -190,6 +190,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     SystemUiControlCenter(true),
     SystemUiCornerSettings(true),
     SystemUiPercentageSettings(true),
+    SystemUiSideVolumePercentageSettings(true),
     SystemUiVolume(true),
     SystemUiSmallWindow(true),
     SystemUiLockScreen(true),
@@ -613,6 +614,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.SystemUiControlCenter -> stringResource(R.string.feature_group_control_center)
     FeaturePageMode.SystemUiCornerSettings -> stringResource(R.string.qs_tile_corner_settings_title)
     FeaturePageMode.SystemUiPercentageSettings -> stringResource(R.string.qs_slider_percentage_properties)
+    FeaturePageMode.SystemUiSideVolumePercentageSettings -> stringResource(R.string.qs_slider_percentage_properties)
     FeaturePageMode.SystemUiSmallWindow -> stringResource(R.string.small_window_title)
     FeaturePageMode.SystemUiLockScreen -> stringResource(R.string.keyguard_page_title)
     FeaturePageMode.SystemUiNavigationBar -> stringResource(R.string.feature_group_navigation_bar)
@@ -677,6 +679,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.SystemUiNotificationCenter,
     FeaturePageMode.SystemUiCornerSettings,
     FeaturePageMode.SystemUiPercentageSettings,
+    FeaturePageMode.SystemUiSideVolumePercentageSettings,
     FeaturePageMode.SystemUiControlCenter -> listOf("com.android.systemui")
     FeaturePageMode.SystemUiFluidCloud -> listOf("com.android.systemui") + FluidCloudBrowserSettings.packages
     FeaturePageMode.SystemUiLockScreen -> listOf("com.android.systemui")
@@ -1537,6 +1540,7 @@ private fun FeatureSubPage(
         FeaturePageMode.SystemUiIconOrder -> StatusBarIconOrderPage()
         FeaturePageMode.SystemUiCornerSettings -> QsTileCornerSettingsPage()
         FeaturePageMode.SystemUiPercentageSettings -> QsSliderPercentageSettingsPage()
+        FeaturePageMode.SystemUiSideVolumePercentageSettings -> QsSliderPercentageSettingsPage(sideVolume = true)
         FeaturePageMode.SystemUiFluidCloud -> FluidCloudFeaturesPage(onOpenSubPage)
         FeaturePageMode.SystemUiFluidCloudMediaBlacklist -> Unit
         FeaturePageMode.DesktopHiddenApps -> Unit

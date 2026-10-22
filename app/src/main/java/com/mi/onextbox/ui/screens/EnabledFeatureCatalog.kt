@@ -21,6 +21,8 @@ internal object EnabledFeatureCatalog {
         SharedFeatureDefinitions.networkIdentity.catalogEntry(),
         SharedFeatureDefinitions.qsCorner.catalogEntry(),
         SharedFeatureDefinitions.qsPercentage.catalogEntry(),
+        SharedFeatureDefinitions.sideVolumePercentage.catalogEntry(),
+        SharedFeatureDefinitions.sideVolumeKeepWide.catalogEntry(),
         SharedFeatureDefinitions.volumeSafetyWarning.catalogEntry(),
         SharedFeatureDefinitions.nativeLiveUpdate.catalogEntry(),
         SharedFeatureDefinitions.powerIndicator.catalogEntry(),

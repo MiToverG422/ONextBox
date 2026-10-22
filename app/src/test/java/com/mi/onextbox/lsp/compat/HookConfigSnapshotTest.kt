@@ -236,6 +236,55 @@ class HookConfigSnapshotTest {
     }
 
     @Test
+    fun sideVolumeAndControlCenterPercentagesKeepIndependentSwitchesAndAttributes() {
+        val side = com.mi.onextbox.lsp.SideVolumePercentageSettings
+        val qs = com.mi.onextbox.lsp.QsSliderPercentageSettings
+        val preferences = store(ready = true)
+        assertTrue(HookConfigSnapshot.attach(preferences))
+        assertEquals(com.mi.onextbox.lsp.QsSliderPercentageSettings.State(), side.stateXposed())
+        assertTrue(side.keys.intersect(qs.keys).isEmpty())
+        preferences.putAndNotify(side.ENABLED, true)
+        preferences.putAndNotify(side.SIZE, 17)
+        preferences.putAndNotify(side.COLOR, 0xFF36D167L)
+        preferences.putAndNotify(side.OFFSET, 25)
+        assertTrue(side.stateXposed().enabled)
+        assertFalse(qs.stateXposed().enabled)
+        assertEquals(11, qs.stateXposed().sizeSp)
+        assertNull(qs.stateXposed().color)
+        assertEquals(10, qs.stateXposed().offset)
+        val originalToken = side.configurationTokenXposed()
+        preferences.putAndNotify(qs.ENABLED, true)
+        preferences.putAndNotify(qs.SIZE, 22)
+        preferences.putAndNotify(qs.COLOR, 0xFFFFFFFFL)
+        assertEquals(originalToken, side.configurationTokenXposed())
+        preferences.putAndNotify(side.ENABLED, false)
+        assertNull(side.configurationTokenXposed())
+        assertTrue(qs.stateXposed().enabled)
+        assertEquals(17, side.stateXposed().sizeSp)
+        preferences.putAndNotify(side.COLOR, null)
+        assertNull(side.stateXposed().color)
+        assertEquals(0xFFFFFFFFL, qs.stateXposed().color)
+    }
+
+    @Test
+    fun sideVolumeAppearanceUpdatesAndDefaultsStayIndependentOfPercentage() {
+        val appearance = com.mi.onextbox.lsp.SideVolumeAppearanceSettings
+        val percentage = com.mi.onextbox.lsp.SideVolumePercentageSettings
+        val preferences = store(ready = true)
+        assertTrue(HookConfigSnapshot.attach(preferences))
+        assertNull(appearance.configurationTokenXposed())
+        assertNull(percentage.configurationTokenXposed())
+        preferences.putAndNotify(appearance.KEEP_WIDE, true)
+        assertTrue(appearance.stateXposed().keepWide)
+        assertTrue(appearance.configurationTokenXposed() != null)
+        preferences.putAndNotify(percentage.ENABLED, true)
+        assertTrue(appearance.stateXposed().keepWide)
+        preferences.putAndNotify(appearance.KEEP_WIDE, false)
+        assertNull(appearance.configurationTokenXposed())
+        assertTrue(percentage.stateXposed().enabled)
+    }
+
+    @Test
     fun percentageDefaultsAndClampsSurviveMissingAndInvalidStoredNumbers() {
         val settings = com.mi.onextbox.lsp.QsSliderPercentageSettings
         assertEquals(com.mi.onextbox.lsp.QsSliderPercentageSettings.State(), settings.stateXposed())

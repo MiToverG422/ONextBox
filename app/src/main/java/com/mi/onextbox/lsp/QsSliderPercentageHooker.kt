@@ -21,7 +21,7 @@ internal object QsSliderPercentageHooker {
     private val styles = WeakHashMap<View, NativeStyle>()
     private var reported = false
 
-    private class NativeStyle(view: View) {
+    internal class NativeStyle(view: View) {
         private val loader = view.javaClass.classLoader
         private val label = Reflect.newInstance(checkNotNull(Reflect.findClassIfExists(LABEL, loader)), view.context)
         val text = Reflect.callMethod(label, "getTextView") as TextView
