@@ -188,6 +188,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     SystemUiFluidCloudMediaBlacklist(true),
     SystemUiNotificationCenter(true),
     SystemUiControlCenter(true),
+    SystemUiCornerSettings(true),
     SystemUiVolume(true),
     SystemUiSmallWindow(true),
     SystemUiLockScreen(true),
@@ -609,6 +610,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.SystemUiFluidCloudMediaBlacklist -> stringResource(R.string.fluid_media_apps_title)
     FeaturePageMode.SystemUiNotificationCenter -> stringResource(R.string.feature_group_notification_center)
     FeaturePageMode.SystemUiControlCenter -> stringResource(R.string.feature_group_control_center)
+    FeaturePageMode.SystemUiCornerSettings -> stringResource(R.string.qs_tile_corner_settings_title)
     FeaturePageMode.SystemUiSmallWindow -> stringResource(R.string.small_window_title)
     FeaturePageMode.SystemUiLockScreen -> stringResource(R.string.keyguard_page_title)
     FeaturePageMode.SystemUiNavigationBar -> stringResource(R.string.feature_group_navigation_bar)
@@ -671,6 +673,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.SystemUiIconOrder,
     FeaturePageMode.SystemUiFluidCloudMediaBlacklist,
     FeaturePageMode.SystemUiNotificationCenter,
+    FeaturePageMode.SystemUiCornerSettings,
     FeaturePageMode.SystemUiControlCenter -> listOf("com.android.systemui")
     FeaturePageMode.SystemUiFluidCloud -> listOf("com.android.systemui") + FluidCloudBrowserSettings.packages
     FeaturePageMode.SystemUiLockScreen -> listOf("com.android.systemui")
@@ -1529,6 +1532,7 @@ private fun FeatureSubPage(
         FeaturePageMode.NotificationRemoval -> NotificationRemovalPage()
         FeaturePageMode.SystemUi -> SystemUiCategoriesPage(onOpenSubPage)
         FeaturePageMode.SystemUiIconOrder -> StatusBarIconOrderPage()
+        FeaturePageMode.SystemUiCornerSettings -> QsTileCornerSettingsPage()
         FeaturePageMode.SystemUiFluidCloud -> FluidCloudFeaturesPage(onOpenSubPage)
         FeaturePageMode.SystemUiFluidCloudMediaBlacklist -> Unit
         FeaturePageMode.DesktopHiddenApps -> Unit

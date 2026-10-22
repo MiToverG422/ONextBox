@@ -1216,8 +1216,10 @@
     <string name="carrier_name_reset">통신사 이름 복원</string>
     <string name="qs_tile_corner_group">제어 센터 모양</string>
     <string name="qs_tile_corner_title">제어 센터 모서리 맞춤 설정</string>
-    <string name="qs_tile_corner_summary">제어 센터 타일, 미디어 카드, 밝기 및 음량 슬라이더의 모서리를 조절하며 끄면 시스템 모양으로 복원</string>
+    <string name="qs_tile_corner_summary" formatted="false">타일 크기별로 모서리 반경을 백분율로 조절합니다. -1은 시스템 값이며 100%는 짧은 변의 절반입니다</string>
     <string name="qs_tile_corner_radius">모서리 반경</string>
+    <string name="qs_tile_corner_settings_title">모서리 조절</string>
+    <string name="qs_tile_corner_size_radius">%1$s 타일 모서리 반경</string>
     <string name="launcher_group_effects">시각 효과</string>
     <string name="launcher_force_blur_title">홈 화면 흐림 효과 강제 활성화</string>
     <string name="launcher_force_blur_summary">홈 배경, 길게 누르기 메뉴 및 흐림 애니메이션의 기종 제한 해제를 시도하며 시스템 흐림, 절전 및 테마 설정을 따름; 전력 소비가 늘 수 있고 펌웨어의 기본 지원이 필요함; 변경 후 런처를 다시 시작해야 함</string>

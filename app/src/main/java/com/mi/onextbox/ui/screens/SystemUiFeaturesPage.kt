@@ -255,7 +255,7 @@ internal fun SystemUiFeaturesPage(
             }
         }
         FeaturePageMode.SystemUiControlCenter -> {
-            QsTileCornerSettingsGroup()
+            QsTileCornerSettingsGroup { onOpenSubPage(FeaturePageMode.SystemUiCornerSettings) }
             SettingsGroup {
                 SettingsToggleRow(
                     title = stringResource(R.string.feature_hide_qs_edit_title),

@@ -25,9 +25,12 @@ class QsDeviceCardCornerContractTest {
         assertTrue(hook.contains("\"getBlurDrawable\""))
         assertTrue(hook.contains("\"setCornerRadius\", radius, weight"))
         assertTrue(hook.contains("\"getCornerWeight\", drawable"))
-        assertTrue(hook.contains("clip(view, radius, weight)"))
-        assertTrue(hook.contains("view.findViewById<View>(id)?.let { clip(it, radius, weight) }"))
-        assertTrue(hook.contains("if (current != radius)"))
+        assertTrue(hook.contains("clip(view, drawable, radius, weight)"))
+        assertTrue(hook.contains("view.findViewById<View>(id)?.let { clip(it, drawable, radius, weight) }"))
+        assertFalse(hook.contains("view.clipToOutline = true"))
+        assertTrue(hook.contains("if (!view.clipToOutline) return"))
+        assertTrue(hook.contains("if (current != radius || currentWeight != weight)"))
+        assertTrue(hook.contains("usesDrawable(drawable)"))
         for (unsafe in listOf("setDeviceState", "setShapeType", "setBackground(", "setLayoutParams", "setPadding")) {
             assertFalse(unsafe, hook.contains(unsafe))
         }

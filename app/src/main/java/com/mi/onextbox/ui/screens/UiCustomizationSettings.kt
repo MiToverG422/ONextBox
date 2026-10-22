@@ -70,7 +70,7 @@ private fun <T> rememberCustomization(keys: Set<String>, read: (Context) -> T): 
 }
 
 @Composable
-internal fun QsTileCornerSettingsGroup() {
+internal fun QsTileCornerSettingsGroup(onOpenCorners: () -> Unit) {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(QsTileCornerSettings.keys, QsTileCornerSettings::state)
     val value = editor.state
@@ -84,18 +84,49 @@ internal fun QsTileCornerSettingsGroup() {
                     QsTileCornerSettings.setEnabled(context, enabled)
                 } })
         }
-        row(QsTileCornerSettings.RADIUS, visible = value.enabled) { above, below ->
-            FeatureSliderRow(heading = stringResource(R.string.qs_tile_corner_radius), currentValue = "${value.radius} dp",
-                value = value.radius.toFloat(), valueRange = 0f..QsTileCornerRules.MAX_DP.toFloat(), steps = QsTileCornerRules.MAX_DP - 1,
-                interactionEnabled = editor.savingKey != QsTileCornerSettings.RADIUS,
-                onValueChange = { editor.state = editor.state.copy(radius = it.roundToInt()) },
-                onValueChangeFinished = {
-                    val selected = editor.state
-                    editor.save(QsTileCornerSettings.RADIUS, selected) { QsTileCornerSettings.setRadius(context, selected.radius) }
-                },
-                onReset = { editor.save(QsTileCornerSettings.RADIUS, value.copy(radius = QsTileCornerRules.DEFAULT_DP)) {
-                    QsTileCornerSettings.setRadius(context, QsTileCornerRules.DEFAULT_DP)
-                } }, hasDividerAbove = above, hasDividerBelow = below)
+        row("corner-settings", visible = value.enabled) { above, below ->
+            SettingsCardRow(title = stringResource(R.string.qs_tile_corner_settings_title),
+                summary = "", showArrow = true,
+                hasDividerAbove = above, hasDividerBelow = below, onClick = onOpenCorners)
+        }
+    }
+}
+
+@Composable
+internal fun QsTileCornerSettingsPage() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(QsTileCornerSettings.keys, QsTileCornerSettings::state)
+    val value = editor.state
+    SettingsSection(title = stringResource(R.string.qs_tile_corner_radius))
+    FeatureAnimatedGroup(animateChanges = true) {
+        QsTileCornerSettings.Size.entries.forEach { size ->
+            row(size.key) { above, below ->
+                val radius = value.radius(size)
+                FeatureSliderRow(
+                    heading = stringResource(R.string.qs_tile_corner_size_radius, size.label),
+                    currentValue = if (radius == QsTileCornerRules.SYSTEM_DEFAULT)
+                        stringResource(R.string.feature_slider_current_default)
+                        else stringResource(R.string.feature_slider_current_value, "$radius%"),
+                    value = radius.toFloat(),
+                    valueRange = QsTileCornerRules.SYSTEM_DEFAULT.toFloat()..QsTileCornerRules.MAX_PERCENT.toFloat(),
+                    steps = QsTileCornerRules.MAX_PERCENT,
+                    enabled = value.enabled,
+                    interactionEnabled = editor.savingKey != size.key,
+                    onValueChange = { editor.state = editor.state.withRadius(size, it.roundToInt()) },
+                    onValueChangeFinished = {
+                        val selected = editor.state
+                        editor.save(size.key, selected) {
+                            QsTileCornerSettings.setRadius(context, size, selected.radius(size))
+                        }
+                    },
+                    onReset = {
+                        editor.save(size.key, value.withRadius(size, QsTileCornerRules.SYSTEM_DEFAULT)) {
+                            QsTileCornerSettings.setRadius(context, size, QsTileCornerRules.SYSTEM_DEFAULT)
+                        }
+                    },
+                    hasDividerAbove = above, hasDividerBelow = below,
+                )
+            }
         }
     }
 }

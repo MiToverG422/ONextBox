@@ -1292,8 +1292,10 @@
     <string name="carrier_name_reset">Restore carrier names</string>
     <string name="qs_tile_corner_group">Control Center appearance</string>
     <string name="qs_tile_corner_title">Custom Control Center corners</string>
-    <string name="qs_tile_corner_summary">Adjust corners for Control Center tiles, the media card, and brightness/volume sliders; turn off to restore system shapes</string>
+    <string name="qs_tile_corner_summary" formatted="false">Adjust corners by tile size; -1 uses system corners, and 100% is half the shorter side</string>
     <string name="qs_tile_corner_radius">Corner radius</string>
+    <string name="qs_tile_corner_settings_title">Corner adjustment</string>
+    <string name="qs_tile_corner_size_radius">%1$s tile corner radius</string>
     <string name="launcher_group_effects">Visual effects</string>
     <string name="launcher_force_blur_title">Force launcher blur effects</string>
     <string name="launcher_force_blur_summary">Try to unlock native desktop, icon menu and animated blur on restricted models while respecting system blur, power saving and theme settings; may increase power use and requires native firmware support; restart the launcher after changing</string>

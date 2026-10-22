@@ -1216,8 +1216,10 @@
     <string name="carrier_name_reset">Восстановить названия операторов</string>
     <string name="qs_tile_corner_group">Внешний вид центра управления</string>
     <string name="qs_tile_corner_title">Углы центра управления</string>
-    <string name="qs_tile_corner_summary">Настройка углов плиток, медиакарточки и ползунков яркости и громкости в центре управления; отключите для восстановления системной формы</string>
+    <string name="qs_tile_corner_summary" formatted="false">Радиус в процентах для каждого размера плитки: -1 — системное значение, 100% — половина короткой стороны</string>
     <string name="qs_tile_corner_radius">Радиус скругления</string>
+    <string name="qs_tile_corner_settings_title">Настройка скругления</string>
+    <string name="qs_tile_corner_size_radius">Радиус углов плитки %1$s</string>
     <string name="launcher_group_effects">Визуальные эффекты</string>
     <string name="launcher_force_blur_title">Принудительное размытие рабочего стола</string>
     <string name="launcher_force_blur_summary">Попытаться снять ограничения модели для фона, меню значков и анимированного размытия, сохраняя системные настройки размытия, энергосбережения и темы; возможно увеличение расхода энергии, нужна встроенная поддержка прошивки; после изменения перезапустите лаунчер</string>

@@ -1216,8 +1216,10 @@
     <string name="carrier_name_reset">Khôi phục tên nhà mạng</string>
     <string name="qs_tile_corner_group">Giao diện Trung tâm điều khiển</string>
     <string name="qs_tile_corner_title">Tùy chỉnh góc Trung tâm điều khiển</string>
-    <string name="qs_tile_corner_summary">Điều chỉnh góc các ô, thẻ phương tiện và thanh độ sáng/âm lượng trong Trung tâm điều khiển; tắt để khôi phục hình dạng hệ thống</string>
+    <string name="qs_tile_corner_summary" formatted="false">Điều chỉnh bán kính theo phần trăm cho từng kích thước ô; -1 dùng giá trị hệ thống, 100% bằng nửa cạnh ngắn</string>
     <string name="qs_tile_corner_radius">Bán kính góc</string>
+    <string name="qs_tile_corner_settings_title">Điều chỉnh góc bo</string>
+    <string name="qs_tile_corner_size_radius">Bán kính góc ô %1$s</string>
     <string name="launcher_group_effects">Hiệu ứng hình ảnh</string>
     <string name="launcher_force_blur_title">Buộc bật hiệu ứng làm mờ màn hình chính</string>
     <string name="launcher_force_blur_summary">Thử gỡ giới hạn thiết bị cho nền màn hình chính, menu nhấn giữ và hoạt ảnh làm mờ, vẫn tuân theo cài đặt làm mờ hệ thống, tiết kiệm pin và chủ đề; có thể tăng tiêu thụ pin và cần firmware hỗ trợ sẵn; khởi động lại trình khởi chạy sau khi thay đổi</string>

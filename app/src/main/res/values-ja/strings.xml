@@ -1216,8 +1216,10 @@
     <string name="carrier_name_reset">通信事業者名を元に戻す</string>
     <string name="qs_tile_corner_group">コントロールセンターの外観</string>
     <string name="qs_tile_corner_title">コントロールセンターの角丸をカスタマイズ</string>
-    <string name="qs_tile_corner_summary">コントロールセンターのタイル、メディアカード、明るさ・音量スライダーの角丸を調整、オフでシステムの形状に戻ります</string>
+    <string name="qs_tile_corner_summary" formatted="false">サイズごとに角丸を割合で調整。-1 はシステム値、100% はタイルの短辺の半分です</string>
     <string name="qs_tile_corner_radius">角丸の半径</string>
+    <string name="qs_tile_corner_settings_title">角丸の調整</string>
+    <string name="qs_tile_corner_size_radius">%1$sタイルの角丸半径</string>
     <string name="launcher_group_effects">視覚効果</string>
     <string name="launcher_force_blur_title">ホームのぼかし効果を強制的に有効化</string>
     <string name="launcher_force_blur_summary">ホーム背景、長押しメニュー、ぼかしアニメーションの機種制限の解除を試みます。システムのぼかし、省電力、テーマ設定を尊重します。消費電力が増える場合があり、ファームウェアのネイティブ対応が必要です。変更後はホームを再起動してください</string>

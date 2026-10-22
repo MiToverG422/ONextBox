@@ -80,6 +80,8 @@ internal object QsDeviceCardCorners {
     }
 
     private fun contentState(view: View): List<Any?>? {
+        val percent = size(view)?.let { QsTileCornerSettings.radiusXposed(it) }
+        if (percent == null && synchronized(applied) { !applied.containsKey(view) }) return emptyList()
         if (view.width <= 0 || view.height <= 0) return null
         val drawable = Reflect.callMethod(view, "getBlurDrawable") as? Drawable ?: return null
         val path = Reflect.callMethod(drawable, "getPathProvider") ?: return null
@@ -89,30 +91,36 @@ internal object QsDeviceCardCorners {
             Reflect.callMethod(path, "getCornerRadius", drawable), Reflect.callMethod(path, "getCornerWeight", drawable),
             System.identityHashCode(inner), inner.width, inner.height,
             System.identityHashCode(view.outlineProvider), view.clipToOutline,
-            System.identityHashCode(inner.outlineProvider), inner.clipToOutline)
+            System.identityHashCode(inner.outlineProvider), inner.clipToOutline,
+            percent)
     }
+
+    private fun size(view: View): QsTileCornerSettings.Size? =
+        generateSequence(view as View?) { it.parent as? View }
+            .take(4).mapNotNull(QsCornerSizeResolver::resolve).firstOrNull()
 
     private fun update(view: View, refreshPaint: Boolean = false): Boolean {
         if (HotReloadLifecycle.isRetiring || nativeShape.get() == true || view.javaClass.name !in classNames) return false
         return runCatching {
-            val dp = QsTileCornerSettings.radiusXposed()
-            if (dp == null) {
+            val percent = size(view)?.let { QsTileCornerSettings.radiusXposed(it) }
+            if (percent == null) {
                 if (synchronized(applied) { applied.containsKey(view) }) restore(view)
                 return@runCatching true
             }
             if (view.width <= 0 || view.height <= 0) return@runCatching false
-            val radius = QsTileCornerRules.pixels(dp, view.resources.displayMetrics.density, view.width, view.height) ?: return@runCatching false
+            val radius = QsTileCornerRules.pixels(percent, view.width, view.height) ?: return@runCatching false
             val drawable = Reflect.callMethod(view, "getBlurDrawable") as? Drawable ?: return@runCatching false
             val inner = innerView(view) ?: return@runCatching false
             if (inner.width <= 0 || inner.height <= 0) return@runCatching false
             synchronized(applied) { applied[view] = true }
             val path = requireNotNull(Reflect.callMethod(drawable, "getPathProvider"))
-            val weight = (Reflect.callMethod(path, "getCornerWeight", drawable) as? Number)?.toFloat()
+            val currentWeight = (Reflect.callMethod(path, "getCornerWeight", drawable) as? Number)?.toFloat()
+            val weight = QsCornerSmoothness.weight(currentWeight)
             val current = (Reflect.callMethod(path, "getCornerRadius", drawable) as Number).toFloat()
-            if (current != radius) {
+            if (current != radius || currentWeight != weight) {
                 Reflect.callMethod(drawable, "setCornerRadius", radius, weight)
             }
-            if (refreshPaint || current != radius || synchronized(painted) { painted[drawable] != radius }) {
+            if (refreshPaint || current != radius || currentWeight != weight || synchronized(painted) { painted[drawable] != radius }) {
                 // A new PluginDrawable starts with radius=0 even when its
                 // underlying blur configuration was built with a circle.
                 // The native equal-value setter otherwise skips propagation.
@@ -120,29 +128,30 @@ internal object QsDeviceCardCorners {
                 drawable.invalidateSelf()
                 synchronized(painted) { painted[drawable] = radius }
             }
-            clip(view, radius, weight)
+            clip(view, drawable, radius, weight)
             // The inner layout can also retain its own native circular clip.
             val idName = targets.getValue(view.javaClass.simpleName)
             val id = view.resources.getIdentifier(idName, "id", "com.android.systemui")
-            if (id != 0) view.findViewById<View>(id)?.let { clip(it, radius, weight) }
+            if (id != 0) view.findViewById<View>(id)?.let { clip(it, drawable, radius, weight) }
             if (reported.add("applied:${view.javaClass.name}")) HookLog.i(TAG,
-                "Device-plugin corners applied: ${view.javaClass.simpleName}, requested=${dp}dp/${radius}px, drawable=${drawable.javaClass.simpleName}")
+                "Device-plugin corners applied: ${view.javaClass.simpleName}, requested=${percent}%/${radius}px, drawable=${drawable.javaClass.simpleName}")
             true
         }.onFailure {
             if (reported.add("update")) HookLog.w(TAG, "Device card corner update unavailable", it)
         }.getOrDefault(false)
     }
 
-    private fun clip(view: View, radius: Float, weight: Float?) {
+    private fun clip(view: View, drawable: Drawable, radius: Float, weight: Float?) {
+        if (!view.clipToOutline) return
         val previous = synchronized(clips) { clips[view] }
-        if (previous?.radius == radius && previous.weight == weight && view.outlineProvider === previous.custom && view.clipToOutline) return
+        if (previous?.radius == radius && previous.weight == weight && view.outlineProvider === previous.custom &&
+            (previous.custom as? QsCornerDrawableOutline)?.usesDrawable(drawable) == true) return
         val owned = previous != null && view.outlineProvider === previous.custom
         val original = if (owned) previous.original else view.outlineProvider
         val clipped = if (owned) previous.clipped else view.clipToOutline
-        val custom = QsCornerClipOutline(radius, weight, view.javaClass.classLoader ?: ClassLoader.getSystemClassLoader())
+        val custom = QsCornerDrawableOutline(drawable)
         synchronized(clips) { clips[view] = Clip(original, clipped, custom, radius, weight) }
         view.outlineProvider = custom
-        view.clipToOutline = true
         view.invalidateOutline()
     }
 

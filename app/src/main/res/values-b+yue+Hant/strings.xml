@@ -1216,8 +1216,10 @@
     <string name="carrier_name_reset">還原電訊商名稱</string>
     <string name="qs_tile_corner_group">控制中心外觀</string>
     <string name="qs_tile_corner_title">自訂控制中心圓角</string>
-    <string name="qs_tile_corner_summary">調校控制中心磁貼、媒體卡片同亮度及音量條嘅圓角，關閉後還原系統形狀</string>
+    <string name="qs_tile_corner_summary" formatted="false">按尺寸調校圓角百分比，-1 用系統值，100% 係磁貼短邊嘅一半</string>
     <string name="qs_tile_corner_radius">圓角半徑</string>
+    <string name="qs_tile_corner_settings_title">圓角調節</string>
+    <string name="qs_tile_corner_size_radius">%1$s磁貼圓角半徑</string>
     <string name="launcher_group_effects">視覺效果</string>
     <string name="launcher_force_blur_title">強制開啟桌面模糊動效</string>
     <string name="launcher_force_blur_summary">嘗試解除桌面背景、長按選單材質同相關模糊動效嘅機型限制，跟隨系統模糊、慳電同主題設定；可能增加耗電，韌體要保留原生模糊支援，切換後要重新啟動桌面</string>

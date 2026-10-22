@@ -364,6 +364,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureSystemUiControlCenter : RootRoute
 
     @Serializable
+    data object FeatureSystemUiCornerSettings : RootRoute
+
+    @Serializable
     data object FeatureSystemUiSmallWindow : RootRoute
 
     @Serializable
@@ -541,6 +544,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.SystemUiFluidCloudMediaBlacklist -> RootRoute.FeatureSystemUiFluidCloudMediaBlacklist
     FeaturePageMode.SystemUiNotificationCenter -> RootRoute.FeatureSystemUiNotificationCenter
     FeaturePageMode.SystemUiControlCenter -> RootRoute.FeatureSystemUiControlCenter
+    FeaturePageMode.SystemUiCornerSettings -> RootRoute.FeatureSystemUiCornerSettings
     FeaturePageMode.SystemUiSmallWindow -> RootRoute.FeatureSystemUiSmallWindow
     FeaturePageMode.SystemUiLockScreen -> RootRoute.FeatureSystemUiLockScreen
     FeaturePageMode.SystemUiNavigationBar -> RootRoute.FeatureSystemUiNavigationBar
@@ -1059,6 +1063,7 @@ fun Root(
                     subclass(RootRoute.FeatureSystemUiFluidCloudMediaBlacklist::class)
                     subclass(RootRoute.FeatureSystemUiNotificationCenter::class)
                     subclass(RootRoute.FeatureSystemUiControlCenter::class)
+                    subclass(RootRoute.FeatureSystemUiCornerSettings::class)
                     subclass(RootRoute.FeatureSystemUiSmallWindow::class)
                     subclass(RootRoute.FeatureSystemUiLockScreen::class)
                     subclass(RootRoute.FeatureSystemUiNavigationBar::class)
@@ -2390,6 +2395,9 @@ fun Root(
             }
             entry<RootRoute.FeatureSystemUiControlCenter> {
                 featureEntryContent(FeaturePageMode.SystemUiControlCenter)
+            }
+            entry<RootRoute.FeatureSystemUiCornerSettings> {
+                featureEntryContent(FeaturePageMode.SystemUiCornerSettings)
             }
             entry<RootRoute.FeatureSystemUiSmallWindow> {
                 featureEntryContent(FeaturePageMode.SystemUiSmallWindow)

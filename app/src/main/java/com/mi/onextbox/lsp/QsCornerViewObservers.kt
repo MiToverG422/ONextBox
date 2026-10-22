@@ -106,7 +106,7 @@ internal class QsCornerViewObservers(
             if (!HotReloadLifecycle.isRetiring) target.get()?.let { view ->
                 val now = android.os.SystemClock.uptimeMillis()
                 if (now < retryAt) return@let
-                val dp = QsTileCornerSettings.radiusXposed()
+                val dp = QsTileCornerSettings.configurationTokenXposed()
                 if (!schedule.shouldProbe(now, view.isShown, dp, view.width, view.height,
                         System.identityHashCode(view.background), System.identityHashCode(view.parent),
                         view.resources.displayMetrics.density, view.layoutDirection)) return@let
