@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qs_slider_percentage_title">Hiển thị phần trăm thanh trượt</string>
+    <string name="qs_slider_percentage_summary">Hiển thị phần trăm trên thanh độ sáng và âm lượng, bao gồm bảng mở rộng</string>
+    <string name="qs_slider_percentage_properties">Cài đặt thuộc tính phần trăm</string>
+    <string name="qs_slider_percentage_size">Cỡ chữ</string>
+    <string name="qs_slider_percentage_color">Màu chữ</string>
+    <string name="qs_slider_percentage_offset">Điều chỉnh vị trí dọc</string>
+    <string name="settings_color_white">Trắng</string>
+    <string name="settings_color_black">Đen</string>
+</resources>

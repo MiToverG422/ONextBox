@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qs_slider_percentage_title">スライダーのパーセント表示</string>
+    <string name="qs_slider_percentage_summary">明るさと音量のスライダーにパーセントを表示します。展開パネルにも適用されます</string>
+    <string name="qs_slider_percentage_properties">パーセント表示の設定</string>
+    <string name="qs_slider_percentage_size">文字サイズ</string>
+    <string name="qs_slider_percentage_color">文字色</string>
+    <string name="qs_slider_percentage_offset">縦方向の位置</string>
+    <string name="settings_color_white">白</string>
+    <string name="settings_color_black">黒</string>
+</resources>

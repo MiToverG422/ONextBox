@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qs_slider_percentage_title">進度條百分比顯示</string>
+    <string name="qs_slider_percentage_summary">在亮度、音量條上顯示百分比，包含二級面板</string>
+    <string name="qs_slider_percentage_properties">百分比屬性設定</string>
+    <string name="qs_slider_percentage_size">文字大小</string>
+    <string name="qs_slider_percentage_color">文字顏色</string>
+    <string name="qs_slider_percentage_offset">縱向位置偏移</string>
+    <string name="settings_color_white">白色</string>
+    <string name="settings_color_black">黑色</string>
+</resources>

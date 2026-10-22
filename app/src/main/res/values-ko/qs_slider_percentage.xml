@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qs_slider_percentage_title">슬라이더 백분율 표시</string>
+    <string name="qs_slider_percentage_summary">확장 패널을 포함한 밝기 및 음량 슬라이더에 백분율 표시</string>
+    <string name="qs_slider_percentage_properties">백분율 속성 설정</string>
+    <string name="qs_slider_percentage_size">글자 크기</string>
+    <string name="qs_slider_percentage_color">글자 색상</string>
+    <string name="qs_slider_percentage_offset">세로 위치 조정</string>
+    <string name="settings_color_white">흰색</string>
+    <string name="settings_color_black">검은색</string>
+</resources>

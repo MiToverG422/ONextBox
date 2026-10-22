@@ -72,6 +72,9 @@ internal object HookConfigSnapshot {
     fun float(key: String, defaultValue: Float): Float? =
         values?.let { snapshot -> (snapshot[key] as? Number)?.toFloat() ?: defaultValue }
 
+    fun long(key: String, defaultValue: Long? = null): Long? =
+        values?.let { snapshot -> (snapshot[key] as? Number)?.toLong() ?: defaultValue }
+
     fun string(key: String, defaultValue: String?): String? =
         values?.let { snapshot -> snapshot[key] as? String ?: defaultValue }
 

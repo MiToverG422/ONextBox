@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="qs_slider_percentage_title">Slider percentage</string>
+    <string name="qs_slider_percentage_summary">Show percentages on brightness and volume sliders, including expanded panels</string>
+    <string name="qs_slider_percentage_properties">Percentage properties</string>
+    <string name="qs_slider_percentage_size">Text size</string>
+    <string name="qs_slider_percentage_color">Text color</string>
+    <string name="qs_slider_percentage_offset">Vertical position offset</string>
+    <string name="settings_color_white">White</string>
+    <string name="settings_color_black">Black</string>
+</resources>

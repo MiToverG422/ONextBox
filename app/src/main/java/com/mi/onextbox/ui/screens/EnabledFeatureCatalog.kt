@@ -20,6 +20,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.app_lock_delay_title, FeaturePageMode.SecurityPermission) { AppLockDelaySettings.enabled(it) },
         SharedFeatureDefinitions.networkIdentity.catalogEntry(),
         SharedFeatureDefinitions.qsCorner.catalogEntry(),
+        SharedFeatureDefinitions.qsPercentage.catalogEntry(),
         SharedFeatureDefinitions.volumeSafetyWarning.catalogEntry(),
         SharedFeatureDefinitions.nativeLiveUpdate.catalogEntry(),
         SharedFeatureDefinitions.powerIndicator.catalogEntry(),

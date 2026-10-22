@@ -59,6 +59,7 @@ internal class EnabledFeatureActions {
         R.string.feature_fluid_cloud_material_title to { context, enabled -> LspConfig.setFluidCloudMaterialEnabled(context, enabled) },
         R.string.carrier_name_title to { context, enabled -> CarrierNameSettings.setEnabled(context, enabled) },
         SharedFeatureDefinitions.qsCorner.action(),
+        SharedFeatureDefinitions.qsPercentage.action(),
         SharedFeatureDefinitions.volumeSafetyWarning.action(),
         SharedFeatureDefinitions.nativeLiveUpdate.action(),
         SharedFeatureDefinitions.powerIndicator.action(),

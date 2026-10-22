@@ -163,6 +163,8 @@ class OosLspModuleEntry : XposedModule() {
                 CarrierNameHooker.hook(classLoader)
                 runCatching { QsTileCornerHooker.hook(classLoader) }
                     .onFailure { HookLog.w("ONextBox-QsTileCorner", "Tile corner adapter unavailable", it) }
+                runCatching { QsSliderPercentageHooker.hook(classLoader) }
+                    .onFailure { HookLog.w("ONextBox-QsPercentage", "Slider percentage adapter unavailable", it) }
                 SideKeySystemUiHooker.hook(classLoader)
                 ImmersiveNavigationHooker.hook(classLoader)
                 AospBackPanelHooker.hook(classLoader)

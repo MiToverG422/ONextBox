@@ -367,6 +367,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureSystemUiCornerSettings : RootRoute
 
     @Serializable
+    data object FeatureSystemUiPercentageSettings : RootRoute
+
+    @Serializable
     data object FeatureSystemUiSmallWindow : RootRoute
 
     @Serializable
@@ -545,6 +548,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.SystemUiNotificationCenter -> RootRoute.FeatureSystemUiNotificationCenter
     FeaturePageMode.SystemUiControlCenter -> RootRoute.FeatureSystemUiControlCenter
     FeaturePageMode.SystemUiCornerSettings -> RootRoute.FeatureSystemUiCornerSettings
+    FeaturePageMode.SystemUiPercentageSettings -> RootRoute.FeatureSystemUiPercentageSettings
     FeaturePageMode.SystemUiSmallWindow -> RootRoute.FeatureSystemUiSmallWindow
     FeaturePageMode.SystemUiLockScreen -> RootRoute.FeatureSystemUiLockScreen
     FeaturePageMode.SystemUiNavigationBar -> RootRoute.FeatureSystemUiNavigationBar
@@ -1064,6 +1068,7 @@ fun Root(
                     subclass(RootRoute.FeatureSystemUiNotificationCenter::class)
                     subclass(RootRoute.FeatureSystemUiControlCenter::class)
                     subclass(RootRoute.FeatureSystemUiCornerSettings::class)
+                    subclass(RootRoute.FeatureSystemUiPercentageSettings::class)
                     subclass(RootRoute.FeatureSystemUiSmallWindow::class)
                     subclass(RootRoute.FeatureSystemUiLockScreen::class)
                     subclass(RootRoute.FeatureSystemUiNavigationBar::class)
@@ -2398,6 +2403,9 @@ fun Root(
             }
             entry<RootRoute.FeatureSystemUiCornerSettings> {
                 featureEntryContent(FeaturePageMode.SystemUiCornerSettings)
+            }
+            entry<RootRoute.FeatureSystemUiPercentageSettings> {
+                featureEntryContent(FeaturePageMode.SystemUiPercentageSettings)
             }
             entry<RootRoute.FeatureSystemUiSmallWindow> {
                 featureEntryContent(FeaturePageMode.SystemUiSmallWindow)

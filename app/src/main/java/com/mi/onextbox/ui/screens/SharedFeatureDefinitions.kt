@@ -5,6 +5,7 @@ import com.mi.onextbox.R
 import com.mi.onextbox.lsp.C16StackedSignalSettings
 import com.mi.onextbox.lsp.NetworkIdentitySettings
 import com.mi.onextbox.lsp.QsTileCornerSettings
+import com.mi.onextbox.lsp.QsSliderPercentageSettings
 import com.mi.onextbox.lsp.VolumeSafetyWarningSettings
 
 /** Incremental migration: one definition drives search, inventory and quick switches. */
@@ -27,6 +28,9 @@ internal object SharedFeatureDefinitions {
     val qsCorner = Toggle(R.string.qs_tile_corner_title, R.string.qs_tile_corner_summary,
         FeaturePageMode.SystemUiControlCenter, { QsTileCornerSettings.state(it).enabled },
         { context, enabled -> QsTileCornerSettings.setEnabled(context, enabled) })
+    val qsPercentage = Toggle(R.string.qs_slider_percentage_title, R.string.qs_slider_percentage_summary,
+        FeaturePageMode.SystemUiControlCenter, { QsSliderPercentageSettings.state(it).enabled },
+        { context, enabled -> QsSliderPercentageSettings.setEnabled(context, enabled) })
     val stackedSignal = Toggle(R.string.feature_c16_stacked_signal_title, R.string.feature_c16_stacked_signal_summary,
         FeaturePageMode.SystemUiNative, { C16StackedSignalSettings.enabled(it) },
         { context, enabled -> C16StackedSignalSettings.set(context, enabled) })
@@ -67,6 +71,7 @@ internal object SharedFeatureDefinitions {
     val all = listOf(
         networkIdentity,
         qsCorner,
+        qsPercentage,
         stackedSignal,
         volumeSafetyWarning,
         powerIndicator,

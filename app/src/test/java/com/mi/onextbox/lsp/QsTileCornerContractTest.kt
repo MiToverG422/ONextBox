@@ -83,7 +83,7 @@ class QsTileCornerContractTest {
     }
     @Test fun sharedDualUiUsesAnimatedJoinedCardsSliderAndExplicitReset() {
         val customization = source("ui/screens/UiCustomizationSettings")
-        val parent = customization.substringAfter("internal fun QsTileCornerSettingsGroup(").substringBefore("internal fun QsTileCornerSettingsPage")
+        val parent = customization.substringAfter("internal fun QsTileCornerSettingsGroup(").substringBefore("internal fun QsSliderPercentageSettingsPage")
         assertTrue(parent.contains("visible = value.enabled"))
         assertTrue(parent.contains("onClick = onOpenCorners"))
         assertFalse(parent.contains("FeatureSliderRow"))
@@ -98,7 +98,7 @@ class QsTileCornerContractTest {
         assertTrue(ui.contains("stringResource(R.string.feature_slider_current_value, \"\$radius%\")"))
         assertTrue(ui.contains("QsTileCornerSettings.Size.entries.forEach"))
         assertTrue(source("ui/screens/SystemUiFeaturesPage").substringAfter("FeaturePageMode.SystemUiControlCenter ->")
-            .contains("QsTileCornerSettingsGroup { onOpenSubPage(FeaturePageMode.SystemUiCornerSettings) }"))
+            .contains("onOpenCorners = { onOpenSubPage(FeaturePageMode.SystemUiCornerSettings) }"))
         val screen = source("ui/screens/FeaturesScreen")
         assertTrue(screen.contains("FeaturePageMode.SystemUiCornerSettings -> QsTileCornerSettingsPage()"))
         assertTrue(screen.substringAfter("internal fun featureRestartPackages").contains("FeaturePageMode.SystemUiCornerSettings,"))

@@ -209,6 +209,48 @@ class HookConfigSnapshotTest {
     }
 
     @Test
+    fun percentageAttributesUpdateIndependentlyAndResetColorToNative() {
+        val settings = com.mi.onextbox.lsp.QsSliderPercentageSettings
+        val preferences = store(ready = true)
+        assertTrue(HookConfigSnapshot.attach(preferences))
+        assertNull(settings.configurationTokenXposed())
+        preferences.putAndNotify(settings.ENABLED, true)
+        val originalToken = settings.configurationTokenXposed()
+        assertTrue(originalToken != null)
+        // Corner settings remain off; percentage rendering has its own refresh token.
+        assertNull(com.mi.onextbox.lsp.QsTileCornerSettings.configurationTokenXposed())
+        preferences.putAndNotify(settings.COLOR, 0xFFFFFFFFL)
+        assertEquals(0xFFFFFFFFL, settings.stateXposed().color)
+        assertTrue(originalToken != settings.configurationTokenXposed())
+        preferences.putAndNotify(settings.SIZE, 28)
+        assertEquals(28, settings.stateXposed().sizeSp)
+        assertEquals(10, settings.stateXposed().offset)
+        preferences.putAndNotify(settings.OFFSET, 100)
+        assertEquals(100, settings.stateXposed().offset)
+        preferences.putAndNotify(settings.COLOR, null)
+        assertNull(settings.stateXposed().color)
+        preferences.putAndNotify(settings.ENABLED, false)
+        assertNull(settings.configurationTokenXposed())
+        assertEquals(28, settings.stateXposed().sizeSp)
+        assertEquals(100, settings.stateXposed().offset)
+    }
+
+    @Test
+    fun percentageDefaultsAndClampsSurviveMissingAndInvalidStoredNumbers() {
+        val settings = com.mi.onextbox.lsp.QsSliderPercentageSettings
+        assertEquals(com.mi.onextbox.lsp.QsSliderPercentageSettings.State(), settings.stateXposed())
+        val preferences = store(ready = true)
+        assertTrue(HookConfigSnapshot.attach(preferences))
+        assertNull(HookConfigSnapshot.long(settings.COLOR))
+        preferences.putAndNotify(settings.COLOR, 0L)
+        assertEquals(0L, HookConfigSnapshot.long(settings.COLOR))
+        preferences.putAndNotify(settings.SIZE, -100)
+        preferences.putAndNotify(settings.OFFSET, 200)
+        assertEquals(5, settings.stateXposed().sizeSp)
+        assertEquals(100, settings.stateXposed().offset)
+    }
+
+    @Test
     fun transientReadFailureDoesNotDiscardLastValidSnapshot() {
         val preferences = store(ready = true, enabled = true)
         assertTrue(HookConfigSnapshot.attach(preferences))

@@ -70,9 +70,10 @@ private fun <T> rememberCustomization(keys: Set<String>, read: (Context) -> T): 
 }
 
 @Composable
-internal fun QsTileCornerSettingsGroup(onOpenCorners: () -> Unit) {
+internal fun QsTileCornerSettingsGroup(onOpenCorners: () -> Unit, onOpenPercentage: () -> Unit) {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(QsTileCornerSettings.keys, QsTileCornerSettings::state)
+    val percentage = rememberCustomization(QsSliderPercentageSettings.keys, QsSliderPercentageSettings::state)
     val value = editor.state
     SettingsSection(title = stringResource(R.string.qs_tile_corner_group))
     FeatureAnimatedGroup(animateChanges = true) {
@@ -88,6 +89,67 @@ internal fun QsTileCornerSettingsGroup(onOpenCorners: () -> Unit) {
             SettingsCardRow(title = stringResource(R.string.qs_tile_corner_settings_title),
                 summary = "", showArrow = true,
                 hasDividerAbove = above, hasDividerBelow = below, onClick = onOpenCorners)
+        }
+        row(QsSliderPercentageSettings.ENABLED) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.qs_slider_percentage_title),
+                summary = stringResource(R.string.qs_slider_percentage_summary),
+                checked = percentage.state.enabled, interactionEnabled = percentage.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { enabled ->
+                    percentage.save(QsSliderPercentageSettings.ENABLED, percentage.state.copy(enabled = enabled)) {
+                        QsSliderPercentageSettings.setEnabled(context, enabled)
+                    }
+                })
+        }
+        row("percentage-settings", visible = percentage.state.enabled) { above, below ->
+            SettingsCardRow(title = stringResource(R.string.qs_slider_percentage_properties),
+                summary = "", showArrow = true,
+                hasDividerAbove = above, hasDividerBelow = below, onClick = onOpenPercentage)
+        }
+    }
+}
+
+@Composable
+internal fun QsSliderPercentageSettingsPage() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(QsSliderPercentageSettings.keys, QsSliderPercentageSettings::state)
+    val value = editor.state
+    fun save(key: String, next: QsSliderPercentageSettings.State) = editor.save(key, next) {
+        QsSliderPercentageSettings.save(context, key, next)
+    }
+    SettingsSection(title = stringResource(R.string.qs_slider_percentage_title))
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(QsSliderPercentageSettings.SIZE) { above, below ->
+            FeatureSliderRow(
+                heading = stringResource(R.string.qs_slider_percentage_size),
+                currentValue = stringResource(R.string.feature_slider_current_value, "${value.sizeSp} sp"),
+                value = value.sizeSp.toFloat(),
+                valueRange = QsSliderPercentageRules.MIN_SIZE_SP.toFloat()..QsSliderPercentageRules.MAX_SIZE_SP.toFloat(),
+                steps = QsSliderPercentageRules.MAX_SIZE_SP - QsSliderPercentageRules.MIN_SIZE_SP - 1,
+                interactionEnabled = editor.savingKey == null,
+                onValueChange = { editor.state = editor.state.copy(sizeSp = it.roundToInt()) },
+                onValueChangeFinished = { save(QsSliderPercentageSettings.SIZE, editor.state) },
+                onReset = { save(QsSliderPercentageSettings.SIZE, value.copy(sizeSp = QsSliderPercentageRules.DEFAULT_SIZE_SP)) },
+                hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(QsSliderPercentageSettings.COLOR) { above, below ->
+            SettingsColorPicker(
+                title = stringResource(R.string.qs_slider_percentage_color),
+                selectedColor = value.color,
+                onColorChange = { save(QsSliderPercentageSettings.COLOR, value.copy(color = it)) },
+                interactionEnabled = editor.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(QsSliderPercentageSettings.OFFSET) { above, below ->
+            FeatureSliderRow(
+                heading = stringResource(R.string.qs_slider_percentage_offset),
+                currentValue = stringResource(R.string.feature_slider_current_value, "${value.offset}%"),
+                value = value.offset.toFloat(), valueRange = 0f..100f, steps = 99,
+                interactionEnabled = editor.savingKey == null,
+                onValueChange = { editor.state = editor.state.copy(offset = it.roundToInt()) },
+                onValueChangeFinished = { save(QsSliderPercentageSettings.OFFSET, editor.state) },
+                onReset = { save(QsSliderPercentageSettings.OFFSET, value.copy(offset = QsSliderPercentageRules.DEFAULT_OFFSET)) },
+                hasDividerAbove = above, hasDividerBelow = below)
         }
     }
 }
