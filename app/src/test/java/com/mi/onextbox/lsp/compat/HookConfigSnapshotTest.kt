@@ -223,7 +223,7 @@ class HookConfigSnapshotTest {
         assertEquals(0xFFFFFFFFL, settings.stateXposed().color)
         assertTrue(originalToken != settings.configurationTokenXposed())
         preferences.putAndNotify(settings.SIZE, 28)
-        assertEquals(28, settings.stateXposed().sizeSp)
+        assertEquals(22, settings.stateXposed().sizeSp)
         assertEquals(10, settings.stateXposed().offset)
         preferences.putAndNotify(settings.OFFSET, 100)
         assertEquals(100, settings.stateXposed().offset)
@@ -231,7 +231,7 @@ class HookConfigSnapshotTest {
         assertNull(settings.stateXposed().color)
         preferences.putAndNotify(settings.ENABLED, false)
         assertNull(settings.configurationTokenXposed())
-        assertEquals(28, settings.stateXposed().sizeSp)
+        assertEquals(22, settings.stateXposed().sizeSp)
         assertEquals(100, settings.stateXposed().offset)
     }
 

@@ -79,14 +79,14 @@ class QsSliderPercentageRulesTest {
         }
     }
 
-    @Test fun defaultSizeMatchesTheNativeTitleAndAttributeBoundsAreEnforced() {
+    @Test fun defaultSizeMatchesTheNativeSubtitleAndAttributeBoundsAreEnforced() {
         val state = QsSliderPercentageSettings.State()
         assertFalse(state.enabled)
         assertNull(state.color)
-        assertEquals(14, state.sizeSp)
+        assertEquals(11, state.sizeSp)
         assertEquals(10, state.offset)
         assertEquals(5, QsSliderPercentageRules.size(Int.MIN_VALUE))
-        assertEquals(28, QsSliderPercentageRules.size(Int.MAX_VALUE))
+        assertEquals(22, QsSliderPercentageRules.size(Int.MAX_VALUE))
         assertEquals(0, QsSliderPercentageRules.offset(-1))
         assertEquals(100, QsSliderPercentageRules.offset(101))
     }

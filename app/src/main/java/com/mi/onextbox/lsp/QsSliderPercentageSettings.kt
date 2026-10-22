@@ -5,8 +5,9 @@ import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import kotlin.math.roundToInt
 
 internal object QsSliderPercentageRules {
-    // ColorOS 17.99.02: oplus_separate_qs_tile_label -> qs_tile_text_size (14sp).
-    const val DEFAULT_SIZE_SP = 14
+    // ColorOS 17.99.02: 2x1 tile subtitle -> qs_two_x_one_second_label_desc_text_size (11dp).
+    // The default draw reads that native resource; explicit user choices remain in sp.
+    const val DEFAULT_SIZE_SP = 11
     const val MIN_SIZE_SP = 5
     const val MAX_SIZE_SP = DEFAULT_SIZE_SP * 2
     const val DEFAULT_OFFSET = 10

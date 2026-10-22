@@ -26,7 +26,7 @@ internal object QsSliderPercentageHooker {
         private val label = Reflect.newInstance(checkNotNull(Reflect.findClassIfExists(LABEL, loader)), view.context)
         val text = Reflect.callMethod(label, "getTextView") as TextView
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
-        private val sizeResource = text.resources.getIdentifier("qs_tile_text_size", "dimen", "com.android.systemui")
+        private val sizeResource = text.resources.getIdentifier("qs_two_x_one_second_label_desc_text_size", "dimen", "com.android.systemui")
         val defaultSizePx: Float
             get() = if (sizeResource != 0) text.resources.getDimension(sizeResource)
                 else TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
@@ -141,7 +141,7 @@ internal object QsSliderPercentageHooker {
         val native = style(view)
         val paint = native.paint
         paint.color = state.color?.toInt() ?: native.text.currentTextColor
-        // The default follows the native resource including font scaling; explicit sizes are sp.
+        // The default follows the 2x1 tile subtitle resource; explicit sizes are sp.
         paint.textSize = if (state.sizeSp == QsSliderPercentageRules.DEFAULT_SIZE_SP) native.defaultSizePx
             else TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, state.sizeSp.toFloat(), view.resources.displayMetrics)
         val detail = generateSequence(view.parent) { it.parent }.filterIsInstance<View>()
