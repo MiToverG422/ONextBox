@@ -188,6 +188,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     SystemUiFluidCloudMediaBlacklist(true),
     SystemUiNotificationCenter(true),
     SystemUiControlCenter(true),
+    SystemUiVolume(true),
     SystemUiSmallWindow(true),
     SystemUiLockScreen(true),
     SystemUiNavigationBar(true),
@@ -600,6 +601,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.DesktopPages -> stringResource(R.string.desktop_category_pages)
     FeaturePageMode.SystemUi -> stringResource(R.string.section_lsp)
     FeaturePageMode.SystemUiNative -> stringResource(R.string.feature_group_native)
+    FeaturePageMode.SystemUiVolume -> stringResource(R.string.feature_group_volume)
     FeaturePageMode.SystemUiDynamicColor -> stringResource(R.string.feature_group_dynamic_color)
     FeaturePageMode.SystemUiStatusBar -> stringResource(R.string.feature_group_beautify)
     FeaturePageMode.SystemUiIconOrder -> stringResource(R.string.statusbar_order_title)
@@ -663,6 +665,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     )
     FeaturePageMode.SystemUi,
     FeaturePageMode.SystemUiNative,
+    FeaturePageMode.SystemUiVolume,
     FeaturePageMode.SystemUiDynamicColor,
     FeaturePageMode.SystemUiStatusBar,
     FeaturePageMode.SystemUiIconOrder,
@@ -1535,6 +1538,7 @@ private fun FeatureSubPage(
         FeaturePageMode.Screenshot -> CaptureFeaturesPage(LspConfig.KeyguardFeature.AodScreenshot)
         FeaturePageMode.ScreenRecording -> CaptureFeaturesPage(LspConfig.KeyguardFeature.ScreenOffRecording)
         FeaturePageMode.SystemUiNative,
+        FeaturePageMode.SystemUiVolume,
         FeaturePageMode.SystemUiDynamicColor,
         FeaturePageMode.SystemUiStatusBar,
         FeaturePageMode.SystemUiNotificationCenter,

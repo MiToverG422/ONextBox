@@ -340,6 +340,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureSystemUiNative : RootRoute
 
     @Serializable
+    data object FeatureSystemUiVolume : RootRoute
+
+    @Serializable
     data object FeatureSystemUiDynamicColor : RootRoute
 
     @Serializable
@@ -530,6 +533,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.DesktopPages -> RootRoute.FeatureDesktopPages
     FeaturePageMode.SystemUi -> RootRoute.FeatureSystemUi
     FeaturePageMode.SystemUiNative -> RootRoute.FeatureSystemUiNative
+    FeaturePageMode.SystemUiVolume -> RootRoute.FeatureSystemUiVolume
     FeaturePageMode.SystemUiDynamicColor -> RootRoute.FeatureSystemUiDynamicColor
     FeaturePageMode.SystemUiStatusBar -> RootRoute.FeatureSystemUiStatusBar
     FeaturePageMode.SystemUiIconOrder -> RootRoute.FeatureSystemUiIconOrder
@@ -1047,6 +1051,7 @@ fun Root(
                     subclass(RootRoute.FeatureDesktopPages::class)
                     subclass(RootRoute.FeatureSystemUi::class)
                     subclass(RootRoute.FeatureSystemUiNative::class)
+                    subclass(RootRoute.FeatureSystemUiVolume::class)
                     subclass(RootRoute.FeatureSystemUiDynamicColor::class)
                     subclass(RootRoute.FeatureSystemUiStatusBar::class)
                     subclass(RootRoute.FeatureSystemUiIconOrder::class)
@@ -2361,6 +2366,9 @@ fun Root(
             }
             entry<RootRoute.FeatureSystemUiNative> {
                 featureEntryContent(FeaturePageMode.SystemUiNative)
+            }
+            entry<RootRoute.FeatureSystemUiVolume> {
+                featureEntryContent(FeaturePageMode.SystemUiVolume)
             }
             entry<RootRoute.FeatureSystemUiDynamicColor> {
                 featureEntryContent(FeaturePageMode.SystemUiDynamicColor)

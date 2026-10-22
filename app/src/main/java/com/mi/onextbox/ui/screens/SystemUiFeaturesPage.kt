@@ -119,6 +119,11 @@ internal fun SystemUiFeaturesPage(
                 )
             }
         }
+        FeaturePageMode.SystemUiVolume -> {
+            SettingsGroup {
+                VolumeSafetyWarningSettingsRow()
+            }
+        }
         FeaturePageMode.SystemUiDynamicColor -> {
             SettingsGroup {
                 OptionDropdownRow(

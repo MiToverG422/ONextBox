@@ -67,6 +67,11 @@ internal fun SystemUiCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
                 R.string.feature_system_ui_control_center_entry_summary,
             ),
             FeatureCategoryLink(
+                FeaturePageMode.SystemUiVolume,
+                R.string.feature_group_volume,
+                R.string.feature_system_ui_volume_entry_summary,
+            ),
+            FeatureCategoryLink(
                 FeaturePageMode.SystemUiDynamicColor,
                 R.string.feature_group_dynamic_color,
                 R.string.feature_system_ui_dynamic_color_entry_summary,

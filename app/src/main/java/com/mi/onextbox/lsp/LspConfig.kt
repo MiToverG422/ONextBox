@@ -2746,6 +2746,7 @@ object LspConfig {
             setRoundNotificationClearButtonEnabled(context, false)
             setAospBackPanelEnabled(context, false)
             AospVolumeSettings.set(context, false)
+            VolumeSafetyWarningSettings.set(context, false)
             ScreenCaptureSettings.set(context, false)
             LargeNetworkTypeSettings.set(context, false)
             LargeNetworkTypeSettings.setSystemFont(context, false)

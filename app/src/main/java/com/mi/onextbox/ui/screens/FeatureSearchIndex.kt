@@ -110,6 +110,12 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_compact_caption, R.string.small_window_compact_caption_summary),
         Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_unlimited_count, R.string.small_window_unlimited_count_summary),
         Entry(FeaturePageMode.SystemUiSmallWindow, R.string.small_window_unlimited_frame_rate, R.string.small_window_unlimited_frame_rate_summary),
+        Entry(
+            FeaturePageMode.SystemUiVolume,
+            R.string.feature_group_volume,
+            R.string.feature_system_ui_volume_entry_summary,
+        ),
+        SharedFeatureDefinitions.volumeSafetyWarning.searchEntry(),
         Entry(FeaturePageMode.SystemUiNative, R.string.feature_group_native),
         SharedFeatureDefinitions.nativeLiveUpdate.searchEntry(),
         Entry(FeaturePageMode.SystemUiNative, R.string.feature_native_notify_icon_title, R.string.feature_native_notify_icon_summary),

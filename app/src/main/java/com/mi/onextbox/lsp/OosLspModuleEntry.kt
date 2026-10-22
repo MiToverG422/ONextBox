@@ -167,6 +167,7 @@ class OosLspModuleEntry : XposedModule() {
                 ImmersiveNavigationHooker.hook(classLoader)
                 AospBackPanelHooker.hook(classLoader)
                 AospVolumeHooker.hook(classLoader)
+                VolumeSafetyWarningHooker.hook(classLoader)
                 NativeLiveUpdateHooker.hook(classLoader)
                 C16StackedSignalHooker.hook(classLoader)
                 AssistantHooker.hook(packageName, classLoader)
