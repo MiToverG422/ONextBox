@@ -23,7 +23,7 @@ internal class FluidCloudNotificationMaterial(
     private var nativeApi: NativeApi? = null
     private val backgrounds = WeakHashMap<View, WeakReference<MaterialDrawable>>()
     private val panels = WeakHashMap<View, PanelState>()
-    private val aod = FluidCloudAodMaterial(loader, report)
+    private val aod = FluidCloudAodMaterial(report)
     @Volatile private var blurManager: WeakReference<Any>? = null
     private var revision = 0
 
@@ -101,8 +101,8 @@ internal class FluidCloudNotificationMaterial(
             native.applyAod(config, key.mode, fraction)
         }
         if (refresh || aodChanged) Reflect.callMethod(proxy, "applyBlurConfig")
-        // Interpolation must read the new recipe, not the previous frame's mix config.
-        aod.prepare(view, proxy, revision, rendererActive = true, fraction = fraction)
+        // Preserve the current unified recipe after native effect/geometry updates.
+        aod.prepare(view, proxy, rendererActive = true, fraction = fraction)
         state.aodProgress = fraction
         // Keep native row classification/stacking intact. Only its shader geometry is shared.
         if (fraction == 0f) native.ensureNotificationMetaBall(proxy, key.mode)
@@ -115,7 +115,7 @@ internal class FluidCloudNotificationMaterial(
         val proxy = Reflect.callMethod(extension, "getViewBlurProxy")
         val progress = FluidCloudAodMaterialRules.progress(fraction ?: aod.progress(view))
         if (proxy != null && available(view) && isPanelMaterialActive(proxy)) preparePanel(view, proxy, progress)
-        else aod.prepare(view, proxy, revision, rendererActive = false, fraction = progress)
+        else aod.prepare(view, proxy, rendererActive = false, fraction = progress)
         view.invalidate()
         return aod.active(view)
     }
@@ -137,17 +137,12 @@ internal class FluidCloudNotificationMaterial(
 
     fun hasPanelAodMaterial(extension: Any): Boolean = (Reflect.callMethod(extension, "getBgView") as? View)?.let(aod::active) == true
 
-    fun drawPanelAod(canvas: Canvas, extension: Any, proxy: Any) {
-        val view = Reflect.callMethod(extension, "getBgView") as? View ?: return
-        aod.draw(view, canvas, proxy)
-    }
-
     fun drawPanelColor(canvas: Canvas, extension: Any, proxy: Any) {
         val native = api()
         if (!native.isBP()) return
         val view = Reflect.callMethod(extension, "getBgView") as? View ?: return
-        // Match ordinary rows' live BP tint. A fallback AOD mask must be drawn after it;
-        // if AOD preparation failed, leave the native mask's final compositing untouched.
+        // Retain the live BP material tint during AOD too. If the unified renderer is
+        // unavailable, leave the native mask and its compositing order in charge.
         if (!FluidCloudAodMaterialRules.drawMaterialTint(aod.progress(view), aod.active(view))) return
         val color = native.materialColor()
         if (Color.alpha(color) == 0) return
