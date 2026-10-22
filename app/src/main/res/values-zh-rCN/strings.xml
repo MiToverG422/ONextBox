@@ -640,6 +640,7 @@
     <string name="notification_removal_overlay">移除应用上层通知</string>
     <string name="notification_removal_vpn">移除 VPN 活动通知</string>
     <string name="notification_removal_developer">移除开发者选项通知</string>
+    <string name="notification_removal_extreme_refresh_rate">移除极速高刷提醒</string>
     <string name="notification_removal_charging">移除充电完成通知</string>
     <string name="notification_removal_flashlight">移除手电筒已开启通知</string>
     <string name="notification_removal_consumption">移除应用耗电异常警告</string>

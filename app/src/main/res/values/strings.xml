@@ -642,6 +642,7 @@
     <string name="notification_removal_overlay">Remove overlay notification</string>
     <string name="notification_removal_vpn">Remove VPN active notification</string>
     <string name="notification_removal_developer">Remove developer options notification</string>
+    <string name="notification_removal_extreme_refresh_rate">Remove extreme refresh rate reminder</string>
     <string name="notification_removal_charging">Remove charging completed notification</string>
     <string name="notification_removal_flashlight">Remove flashlight on notification</string>
     <string name="notification_removal_consumption">Remove unusual app battery usage warning</string>

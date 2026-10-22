@@ -569,6 +569,7 @@
     <string name="notification_removal_overlay">Ẩn thông báo hiển thị trên ứng dụng khác</string>
     <string name="notification_removal_vpn">Ẩn thông báo VPN đang hoạt động</string>
     <string name="notification_removal_developer">Ẩn thông báo tùy chọn nhà phát triển</string>
+    <string name="notification_removal_extreme_refresh_rate">Ẩn thông báo tần số quét cực cao</string>
     <string name="notification_removal_charging">Ẩn thông báo sạc hoàn tất</string>
     <string name="notification_removal_flashlight">Ẩn thông báo đèn pin đang bật</string>
     <string name="notification_removal_consumption">Ẩn cảnh báo ứng dụng tiêu hao pin bất thường</string>

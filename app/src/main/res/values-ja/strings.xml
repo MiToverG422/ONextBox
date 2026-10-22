@@ -569,6 +569,7 @@
     <string name="notification_removal_overlay">重ねて表示するアプリの通知を非表示</string>
     <string name="notification_removal_vpn">VPN 接続通知を非表示</string>
     <string name="notification_removal_developer">開発者向けオプションの通知を非表示</string>
+    <string name="notification_removal_extreme_refresh_rate">超高速リフレッシュレートの通知を非表示</string>
     <string name="notification_removal_charging">充電完了通知を非表示</string>
     <string name="notification_removal_flashlight">ライト点灯通知を非表示</string>
     <string name="notification_removal_consumption">アプリの異常な電池消費の警告を非表示</string>

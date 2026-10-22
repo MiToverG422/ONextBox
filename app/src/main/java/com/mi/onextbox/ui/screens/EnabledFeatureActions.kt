@@ -171,6 +171,7 @@ internal class EnabledFeatureActions {
         R.string.notification_removal_overlay to { context, enabled -> LspConfig.setNotificationRemovalEnabled(context, LspConfig.NotificationRemovalFeature.Overlay, enabled) },
         R.string.notification_removal_vpn to { context, enabled -> LspConfig.setNotificationRemovalEnabled(context, LspConfig.NotificationRemovalFeature.Vpn, enabled) },
         R.string.notification_removal_developer to { context, enabled -> LspConfig.setNotificationRemovalEnabled(context, LspConfig.NotificationRemovalFeature.DeveloperMode, enabled) },
+        R.string.notification_removal_extreme_refresh_rate to { context, enabled -> LspConfig.setNotificationRemovalEnabled(context, LspConfig.NotificationRemovalFeature.ExtremeRefreshRate, enabled) },
         R.string.notification_removal_charging to { context, enabled -> LspConfig.setNotificationRemovalEnabled(context, LspConfig.NotificationRemovalFeature.ChargingCompleted, enabled) },
         R.string.notification_removal_flashlight to { context, enabled -> LspConfig.setNotificationRemovalEnabled(context, LspConfig.NotificationRemovalFeature.Flashlight, enabled) },
         R.string.notification_removal_consumption to { context, enabled -> LspConfig.setNotificationRemovalEnabled(context, LspConfig.NotificationRemovalFeature.HighBatteryConsumption, enabled) },

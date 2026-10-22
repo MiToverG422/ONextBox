@@ -205,6 +205,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_overlay),
         Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_vpn),
         Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_developer),
+        Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_extreme_refresh_rate),
         Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_charging),
         Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_flashlight),
         Entry(FeaturePageMode.NotificationRemoval, R.string.notification_removal_consumption),

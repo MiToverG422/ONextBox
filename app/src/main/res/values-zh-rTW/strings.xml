@@ -590,6 +590,7 @@
     <string name="notification_removal_overlay">移除應用程式上層通知</string>
     <string name="notification_removal_vpn">移除 VPN 運作通知</string>
     <string name="notification_removal_developer">移除開發人員選項通知</string>
+    <string name="notification_removal_extreme_refresh_rate">移除極速高更新率提醒</string>
     <string name="notification_removal_charging">移除充電完成通知</string>
     <string name="notification_removal_flashlight">移除手電筒已開啟通知</string>
     <string name="notification_removal_consumption">移除應用程式耗電異常警告</string>

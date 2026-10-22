@@ -569,6 +569,7 @@
     <string name="notification_removal_overlay">다른 앱 위에 표시 알림 숨기기</string>
     <string name="notification_removal_vpn">VPN 활성 알림 숨기기</string>
     <string name="notification_removal_developer">개발자 옵션 알림 숨기기</string>
+    <string name="notification_removal_extreme_refresh_rate">초고속 주사율 알림 숨기기</string>
     <string name="notification_removal_charging">충전 완료 알림 숨기기</string>
     <string name="notification_removal_flashlight">손전등 켜짐 알림 숨기기</string>
     <string name="notification_removal_consumption">앱 배터리 사용 이상 경고 숨기기</string>

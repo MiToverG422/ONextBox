@@ -569,6 +569,7 @@
     <string name="notification_removal_overlay">Скрыть уведомление о наложении</string>
     <string name="notification_removal_vpn">Скрыть уведомление об активном VPN</string>
     <string name="notification_removal_developer">Скрыть уведомление о режиме разработчика</string>
+    <string name="notification_removal_extreme_refresh_rate">Скрыть уведомление об экстремальной частоте обновления</string>
     <string name="notification_removal_charging">Скрыть уведомление о завершении зарядки</string>
     <string name="notification_removal_flashlight">Скрыть уведомление о включённом фонарике</string>
     <string name="notification_removal_consumption">Скрыть предупреждение о расходе заряда</string>

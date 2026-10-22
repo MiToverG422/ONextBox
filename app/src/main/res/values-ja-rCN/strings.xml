@@ -569,6 +569,7 @@
     <string name="notification_removal_overlay">応用上層通知除去</string>
     <string name="notification_removal_vpn">VPN 活動通知除去</string>
     <string name="notification_removal_developer">開発者選項通知除去</string>
+    <string name="notification_removal_extreme_refresh_rate">超高速リフレッシュレート通知除去</string>
     <string name="notification_removal_charging">充電完了通知除去</string>
     <string name="notification_removal_flashlight">懐中電灯開啓通知除去</string>
     <string name="notification_removal_consumption">応用耗電異常警告除去</string>

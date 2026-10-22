@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /** Exact notification identities, never notification text or a whole system channel. */
 internal object NotificationRemovalRules {
-    fun match(pkg: String, channel: String?, id: Int): NotificationRemovalFeature? = when {
+    fun match(pkg: String, channel: String?, id: Int, tag: String? = null): NotificationRemovalFeature? = when {
         pkg == "com.android.systemui" -> when {
             channel == "INS" && id == 10002 -> NotificationRemovalFeature.DeveloperMode
             channel == "FLA" && (id == 10011 || id == 10012) -> NotificationRemovalFeature.Flashlight
@@ -29,6 +29,8 @@ internal object NotificationRemovalRules {
         }
         pkg == "android" && channel == "DurationNotification" && id == 4 ->
             NotificationRemovalFeature.HotspotPowerConsumption
+        pkg == "android" && channel == "DEVELOPER_IMPORTANT" && id == 1024 &&
+            tag == "ExtremeRefreshRate" -> NotificationRemovalFeature.ExtremeRefreshRate
         else -> null
     }
 }
@@ -64,6 +66,7 @@ internal object NotificationRemovalHooker {
                     val n = chain.args[6] as? Notification
                     val feature = NotificationRemovalRules.match(
                         chain.args[0] as? String ?: "", n?.channelId, chain.args[5] as? Int ?: -1,
+                        chain.args[4] as? String,
                     )
                     if (feature != null && enabled(feature)) null else chain.proceed()
                 }
@@ -88,7 +91,7 @@ internal object NotificationRemovalHooker {
                 val notification = chain.args[2] as? Notification
                 val pkg = (contextField.get(chain.thisObject) as? Context)?.packageName ?: ""
                 val feature = NotificationRemovalRules.match(pkg,
-                    notification?.channelId, chain.args[1] as? Int ?: -1)
+                    notification?.channelId, chain.args[1] as? Int ?: -1, chain.args[0] as? String)
                 if (feature != null && enabled(feature)) null else chain.proceed()
             }
             HookLog.i(TAG, "SystemUI notification filter installed")
