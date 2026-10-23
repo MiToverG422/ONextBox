@@ -4,6 +4,19 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FeatureSearchTest {
+    @Test fun sideVolumePercentagesUseTheirIndependentVolumePageAndPropertiesRoute() {
+        val toggle = FeatureSearchIndex.entries.single { it.title == com.mi.onextbox.R.string.side_volume_percentage_title }
+        assertEquals(FeaturePageMode.SystemUiVolume, toggle.page)
+        assertTrue(FeaturePageMode.SystemUiSideVolumePercentageSettings.isNestedPage)
+        for (title in listOf(com.mi.onextbox.R.string.qs_slider_percentage_properties,
+            com.mi.onextbox.R.string.qs_slider_percentage_size, com.mi.onextbox.R.string.qs_slider_percentage_color,
+            com.mi.onextbox.R.string.qs_slider_percentage_offset)) {
+            assertEquals(1, FeatureSearchIndex.entries.count {
+                it.page == FeaturePageMode.SystemUiSideVolumePercentageSettings && it.title == title
+            })
+        }
+    }
+
     @Test fun enhancementThermalSwitchesUseTheInterfaceAndDisplayPage() {
         listOf(com.mi.onextbox.R.string.display_enhancement_sr_thermal_title,
             com.mi.onextbox.R.string.display_enhancement_color_thermal_title).forEach { title ->

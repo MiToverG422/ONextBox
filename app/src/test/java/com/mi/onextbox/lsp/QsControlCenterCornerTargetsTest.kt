@@ -10,20 +10,24 @@ class QsControlCenterCornerTargetsTest {
     @Test fun combinedControlCenterBrightnessAndVolumeLayoutsAreSupported() {
         assertTrue(QsControlCenterCornerTargets.isMainSlider("com.oplus.systemui.qs.widget.OplusQsToggleSliderLayout"))
     }
-    @Test fun detailPopupsAndStandaloneVolumePanelsAreExcluded() {
+    @Test fun detailSliderSharesCornersButIsNotAGridTile() {
+        assertTrue(QsControlCenterCornerTargets.isSlider(QsControlCenterCornerTargets.DETAIL_SLIDER))
+        assertFalse(QsControlCenterCornerTargets.isMainSlider(QsControlCenterCornerTargets.DETAIL_SLIDER))
+        assertEquals(3, QsControlCenterCornerTargets.sliders.size)
+    }
+    @Test fun standaloneVolumePanelsAndUnrelatedSlidersAreExcluded() {
         for (type in listOf(
-            "com.oplus.systemui.qs.slider.OplusQsDetailToggleSliderLayout",
             "com.oplus.systemui.volume.OplusVolumeSeekBar",
             "com.oplus.systemui.qs.widget.OplusToggleSliderView",
             QsControlCenterCornerTargets.BASE_SLIDER,
             QsControlCenterCornerTargets.SEEK_BAR,
-        )) assertFalse(type, QsControlCenterCornerTargets.isMainSlider(type))
+        )) assertFalse(type, QsControlCenterCornerTargets.isSlider(type))
     }
     @Test fun matchingIsExactNotAnUnboundedClassNameSubstring() {
         assertEquals(2, QsControlCenterCornerTargets.mainSliders.size)
-        for (type in QsControlCenterCornerTargets.mainSliders) {
-            assertFalse(QsControlCenterCornerTargets.isMainSlider("$type\$Detail"))
-            assertFalse(QsControlCenterCornerTargets.isMainSlider("${type}Fake"))
+        for (type in QsControlCenterCornerTargets.sliders) {
+            assertFalse(QsControlCenterCornerTargets.isSlider("$type\$Detail"))
+            assertFalse(QsControlCenterCornerTargets.isSlider("${type}Fake"))
         }
     }
 }

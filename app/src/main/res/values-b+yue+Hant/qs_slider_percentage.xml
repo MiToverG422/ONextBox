@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="side_volume_group">側邊音量條</string>
+    <string name="side_volume_percentage_title">百分比顯示</string>
+    <string name="side_volume_percentage_summary">喺音量條顯示百分比，包括多音量調節</string>
+    <string name="side_volume_keep_wide_title">禁止調節時變成幼條</string>
+    <string name="qs_slider_percentage_title">進度條百分比顯示</string>
+    <string name="qs_slider_percentage_summary">喺亮度、音量條顯示百分比，包括二級面板</string>
+    <string name="qs_slider_percentage_properties">百分比屬性設定</string>
+    <string name="qs_slider_percentage_size">文字大小</string>
+    <string name="qs_slider_percentage_color">文字顏色</string>
+    <string name="qs_slider_percentage_offset">縱向位置偏移</string>
+    <string name="settings_color_white">白色</string>
+    <string name="settings_color_black">黑色</string>
+</resources>

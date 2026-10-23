@@ -299,6 +299,9 @@
     <string name="setting_liquid_glass_bottom_bar">LiquidGlass 底栏</string>
     <string name="setting_liquid_glass_bottom_bar_summary">使用 Apple 风格的 LiquidGlass 底栏，需要Android13+</string>
     <string name="feature_group_beautify">状态栏</string>
+    <string name="feature_group_volume">音量</string>
+    <string name="volume_block_hearing_safety_warning_title">屏蔽听力安全提醒</string>
+    <string name="volume_block_hearing_safety_warning_summary">屏蔽提高音量时的听力安全提醒弹窗</string>
     <string name="feature_group_dynamic_color">莫奈动态取色</string>
     <string name="feature_force_tonal_spot_title">Tonal Spot 动态取色修复</string>
     <string name="feature_force_tonal_spot_summary">保留当前主题种子色，强制 SystemUI 使用 TONAL_SPOT 生成系统调色板，修复原生界面背景颜色过度鲜艳的问题</string>
@@ -637,6 +640,7 @@
     <string name="notification_removal_overlay">移除应用上层通知</string>
     <string name="notification_removal_vpn">移除 VPN 活动通知</string>
     <string name="notification_removal_developer">移除开发者选项通知</string>
+    <string name="notification_removal_extreme_refresh_rate">移除极速高刷提醒</string>
     <string name="notification_removal_charging">移除充电完成通知</string>
     <string name="notification_removal_flashlight">移除手电筒已开启通知</string>
     <string name="notification_removal_consumption">移除应用耗电异常警告</string>
@@ -669,6 +673,7 @@
     <string name="feature_system_ui_status_bar_entry_summary">网络显示、图标顺序与指示标记</string>
     <string name="feature_system_ui_notification_center_entry_summary">通知样式与状态栏通知隐藏</string>
     <string name="feature_system_ui_control_center_entry_summary">编辑、设置、更多按钮与运营商显示</string>
+    <string name="feature_system_ui_volume_entry_summary">听力安全提醒</string>
     <string name="feature_system_ui_dynamic_color_entry_summary">取色规范与 Tonal Spot 配色</string>
     <string name="feature_system_ui_native_entry_summary">通知图标、气泡、电源菜单与剪贴板</string>
     <string name="feature_settings_region_entry_summary">国际版设置、Google 入口与国行选项</string>
@@ -1284,8 +1289,10 @@
     <string name="carrier_name_reset">还原运营商名称</string>
     <string name="qs_tile_corner_group">控制中心外观</string>
     <string name="qs_tile_corner_title">自定义控制中心圆角</string>
-    <string name="qs_tile_corner_summary">调节控制中心磁贴、媒体卡片及亮度和音量条的圆角，关闭后恢复系统形状</string>
+    <string name="qs_tile_corner_summary" formatted="false">按尺寸调节圆角百分比，-1 使用系统值，100% 对应磁贴短边的一半</string>
     <string name="qs_tile_corner_radius">圆角半径</string>
+    <string name="qs_tile_corner_settings_title">圆角调节</string>
+    <string name="qs_tile_corner_size_radius">%1$s磁贴圆角半径</string>
     <string name="launcher_group_effects">视觉效果</string>
     <string name="launcher_force_blur_title">强制开启桌面模糊动效</string>
     <string name="launcher_force_blur_summary">尝试解除桌面背景、长按菜单材质及相关模糊动效的机型限制，遵循系统模糊、省电和主题设置；可能增加功耗，固件需保留原生模糊支持，开关后需重启桌面</string>

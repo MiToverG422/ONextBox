@@ -11,6 +11,7 @@ internal class QsCornerViewObservers(
     key: String,
     private val onLayout: ((View) -> Boolean)? = null,
     private val content: (View) -> List<Any?>? = { emptyList() },
+    private val configurationToken: () -> Int? = QsTileCornerSettings::configurationTokenXposed,
     private val update: (View) -> Boolean,
 ) {
     private val guards = WeakHashMap<View, Guard>()
@@ -106,7 +107,7 @@ internal class QsCornerViewObservers(
             if (!HotReloadLifecycle.isRetiring) target.get()?.let { view ->
                 val now = android.os.SystemClock.uptimeMillis()
                 if (now < retryAt) return@let
-                val dp = QsTileCornerSettings.radiusXposed()
+                val dp = configurationToken()
                 if (!schedule.shouldProbe(now, view.isShown, dp, view.width, view.height,
                         System.identityHashCode(view.background), System.identityHashCode(view.parent),
                         view.resources.displayMetrics.density, view.layoutDirection)) return@let

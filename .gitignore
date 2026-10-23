@@ -46,6 +46,7 @@ replay_pid*.log
 *.aab
 *.apks
 *.dex
+/decompile
 
 # Editor / tool caches and temporary files
 .cache/

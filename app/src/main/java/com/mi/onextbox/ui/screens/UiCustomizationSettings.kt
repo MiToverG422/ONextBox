@@ -70,9 +70,10 @@ private fun <T> rememberCustomization(keys: Set<String>, read: (Context) -> T): 
 }
 
 @Composable
-internal fun QsTileCornerSettingsGroup() {
+internal fun QsTileCornerSettingsGroup(onOpenCorners: () -> Unit, onOpenPercentage: () -> Unit) {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(QsTileCornerSettings.keys, QsTileCornerSettings::state)
+    val percentage = rememberCustomization(QsSliderPercentageSettings.keys, QsSliderPercentageSettings::state)
     val value = editor.state
     SettingsSection(title = stringResource(R.string.qs_tile_corner_group))
     FeatureAnimatedGroup(animateChanges = true) {
@@ -84,18 +85,154 @@ internal fun QsTileCornerSettingsGroup() {
                     QsTileCornerSettings.setEnabled(context, enabled)
                 } })
         }
-        row(QsTileCornerSettings.RADIUS, visible = value.enabled) { above, below ->
-            FeatureSliderRow(heading = stringResource(R.string.qs_tile_corner_radius), currentValue = "${value.radius} dp",
-                value = value.radius.toFloat(), valueRange = 0f..QsTileCornerRules.MAX_DP.toFloat(), steps = QsTileCornerRules.MAX_DP - 1,
-                interactionEnabled = editor.savingKey != QsTileCornerSettings.RADIUS,
-                onValueChange = { editor.state = editor.state.copy(radius = it.roundToInt()) },
-                onValueChangeFinished = {
-                    val selected = editor.state
-                    editor.save(QsTileCornerSettings.RADIUS, selected) { QsTileCornerSettings.setRadius(context, selected.radius) }
-                },
-                onReset = { editor.save(QsTileCornerSettings.RADIUS, value.copy(radius = QsTileCornerRules.DEFAULT_DP)) {
-                    QsTileCornerSettings.setRadius(context, QsTileCornerRules.DEFAULT_DP)
-                } }, hasDividerAbove = above, hasDividerBelow = below)
+        row("corner-settings", visible = value.enabled) { above, below ->
+            SettingsCardRow(title = stringResource(R.string.qs_tile_corner_settings_title),
+                summary = "", showArrow = true,
+                hasDividerAbove = above, hasDividerBelow = below, onClick = onOpenCorners)
+        }
+        row(QsSliderPercentageSettings.ENABLED) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.qs_slider_percentage_title),
+                summary = stringResource(R.string.qs_slider_percentage_summary),
+                checked = percentage.state.enabled, interactionEnabled = percentage.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { enabled ->
+                    percentage.save(QsSliderPercentageSettings.ENABLED, percentage.state.copy(enabled = enabled)) {
+                        QsSliderPercentageSettings.setEnabled(context, enabled)
+                    }
+                })
+        }
+        row("percentage-settings", visible = percentage.state.enabled) { above, below ->
+            SettingsCardRow(title = stringResource(R.string.qs_slider_percentage_properties),
+                summary = "", showArrow = true,
+                hasDividerAbove = above, hasDividerBelow = below, onClick = onOpenPercentage)
+        }
+    }
+}
+
+@Composable
+internal fun QsSliderPercentageSettingsPage(sideVolume: Boolean = false) {
+    val context = LocalContext.current.applicationContext
+    val keys = if (sideVolume) SideVolumePercentageSettings.keys else QsSliderPercentageSettings.keys
+    val read = if (sideVolume) SideVolumePercentageSettings::state else QsSliderPercentageSettings::state
+    val sizeKey = if (sideVolume) SideVolumePercentageSettings.SIZE else QsSliderPercentageSettings.SIZE
+    val colorKey = if (sideVolume) SideVolumePercentageSettings.COLOR else QsSliderPercentageSettings.COLOR
+    val offsetKey = if (sideVolume) SideVolumePercentageSettings.OFFSET else QsSliderPercentageSettings.OFFSET
+    val editor = rememberCustomization(keys, read)
+    val value = editor.state
+    fun save(key: String, next: QsSliderPercentageSettings.State) = editor.save(key, next) {
+        if (sideVolume) SideVolumePercentageSettings.save(context, key, next)
+        else QsSliderPercentageSettings.save(context, key, next)
+    }
+    SettingsSection(title = stringResource(if (sideVolume) R.string.side_volume_percentage_title else R.string.qs_slider_percentage_title))
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(sizeKey) { above, below ->
+            FeatureSliderRow(
+                heading = stringResource(R.string.qs_slider_percentage_size),
+                currentValue = stringResource(R.string.feature_slider_current_value, "${value.sizeSp} sp"),
+                value = value.sizeSp.toFloat(),
+                valueRange = QsSliderPercentageRules.MIN_SIZE_SP.toFloat()..QsSliderPercentageRules.MAX_SIZE_SP.toFloat(),
+                steps = QsSliderPercentageRules.MAX_SIZE_SP - QsSliderPercentageRules.MIN_SIZE_SP - 1,
+                interactionEnabled = editor.savingKey == null,
+                onValueChange = { editor.state = editor.state.copy(sizeSp = it.roundToInt()) },
+                onValueChangeFinished = { save(sizeKey, editor.state) },
+                onReset = { save(sizeKey, value.copy(sizeSp = QsSliderPercentageRules.DEFAULT_SIZE_SP)) },
+                hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(colorKey) { above, below ->
+            SettingsColorPicker(
+                title = stringResource(R.string.qs_slider_percentage_color),
+                selectedColor = value.color,
+                onColorChange = { save(colorKey, value.copy(color = it)) },
+                interactionEnabled = editor.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(offsetKey) { above, below ->
+            FeatureSliderRow(
+                heading = stringResource(R.string.qs_slider_percentage_offset),
+                currentValue = stringResource(R.string.feature_slider_current_value, "${value.offset}%"),
+                value = value.offset.toFloat(), valueRange = 0f..100f, steps = 99,
+                interactionEnabled = editor.savingKey == null,
+                onValueChange = { editor.state = editor.state.copy(offset = it.roundToInt()) },
+                onValueChangeFinished = { save(offsetKey, editor.state) },
+                onReset = { save(offsetKey, value.copy(offset = QsSliderPercentageRules.DEFAULT_OFFSET)) },
+                hasDividerAbove = above, hasDividerBelow = below)
+        }
+    }
+}
+
+@Composable
+internal fun SideVolumePercentageSettingsGroup(onOpenProperties: () -> Unit) {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(SideVolumePercentageSettings.keys, SideVolumePercentageSettings::state)
+    val appearance = rememberCustomization(SideVolumeAppearanceSettings.keys, SideVolumeAppearanceSettings::state)
+    val value = editor.state
+    SettingsSection(title = stringResource(R.string.side_volume_group))
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(SideVolumePercentageSettings.ENABLED) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.side_volume_percentage_title),
+                summary = stringResource(R.string.side_volume_percentage_summary),
+                checked = value.enabled, interactionEnabled = editor.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { enabled ->
+                    editor.save(SideVolumePercentageSettings.ENABLED, value.copy(enabled = enabled)) {
+                        SideVolumePercentageSettings.setEnabled(context, enabled)
+                    }
+                })
+        }
+        row("side-volume-properties", visible = value.enabled) { above, below ->
+            SettingsCardRow(title = stringResource(R.string.qs_slider_percentage_properties),
+                summary = "", showArrow = true,
+                hasDividerAbove = above, hasDividerBelow = below, onClick = onOpenProperties)
+        }
+        row(SideVolumeAppearanceSettings.KEEP_WIDE) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.side_volume_keep_wide_title), summary = "",
+                checked = appearance.state.keepWide, interactionEnabled = appearance.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { enabled ->
+                    appearance.save(SideVolumeAppearanceSettings.KEEP_WIDE,
+                        appearance.state.copy(keepWide = enabled)) {
+                        SideVolumeAppearanceSettings.setKeepWide(context, enabled)
+                    }
+                })
+        }
+    }
+}
+
+@Composable
+internal fun QsTileCornerSettingsPage() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(QsTileCornerSettings.keys, QsTileCornerSettings::state)
+    val value = editor.state
+    SettingsSection(title = stringResource(R.string.qs_tile_corner_radius))
+    FeatureAnimatedGroup(animateChanges = true) {
+        QsTileCornerSettings.Size.entries.forEach { size ->
+            row(size.key) { above, below ->
+                val radius = value.radius(size)
+                FeatureSliderRow(
+                    heading = stringResource(R.string.qs_tile_corner_size_radius, size.label),
+                    currentValue = if (radius == QsTileCornerRules.SYSTEM_DEFAULT)
+                        stringResource(R.string.feature_slider_current_default)
+                        else stringResource(R.string.feature_slider_current_value, "$radius%"),
+                    value = radius.toFloat(),
+                    valueRange = QsTileCornerRules.SYSTEM_DEFAULT.toFloat()..QsTileCornerRules.MAX_PERCENT.toFloat(),
+                    steps = QsTileCornerRules.MAX_PERCENT,
+                    enabled = value.enabled,
+                    interactionEnabled = editor.savingKey != size.key,
+                    onValueChange = { editor.state = editor.state.withRadius(size, it.roundToInt()) },
+                    onValueChangeFinished = {
+                        val selected = editor.state
+                        editor.save(size.key, selected) {
+                            QsTileCornerSettings.setRadius(context, size, selected.radius(size))
+                        }
+                    },
+                    onReset = {
+                        editor.save(size.key, value.withRadius(size, QsTileCornerRules.SYSTEM_DEFAULT)) {
+                            QsTileCornerSettings.setRadius(context, size, QsTileCornerRules.SYSTEM_DEFAULT)
+                        }
+                    },
+                    hasDividerAbove = above, hasDividerBelow = below,
+                )
+            }
         }
     }
 }

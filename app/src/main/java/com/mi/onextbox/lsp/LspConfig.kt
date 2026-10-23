@@ -739,6 +739,7 @@ object LspConfig {
         Overlay("notify_remove_overlay"),
         Vpn("notify_remove_vpn"),
         DeveloperMode("notify_remove_developer"),
+        ExtremeRefreshRate("notify_remove_extreme_refresh_rate"),
         ChargingCompleted("notify_remove_charging"),
         Flashlight("notify_remove_flashlight"),
         HighBatteryConsumption("notify_remove_consumption"),
@@ -2746,6 +2747,7 @@ object LspConfig {
             setRoundNotificationClearButtonEnabled(context, false)
             setAospBackPanelEnabled(context, false)
             AospVolumeSettings.set(context, false)
+            VolumeSafetyWarningSettings.set(context, false)
             ScreenCaptureSettings.set(context, false)
             LargeNetworkTypeSettings.set(context, false)
             LargeNetworkTypeSettings.setSystemFont(context, false)

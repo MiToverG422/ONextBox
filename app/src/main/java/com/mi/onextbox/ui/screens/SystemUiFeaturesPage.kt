@@ -119,6 +119,14 @@ internal fun SystemUiFeaturesPage(
                 )
             }
         }
+        FeaturePageMode.SystemUiVolume -> {
+            SideVolumePercentageSettingsGroup {
+                onOpenSubPage(FeaturePageMode.SystemUiSideVolumePercentageSettings)
+            }
+            SettingsGroup {
+                VolumeSafetyWarningSettingsRow()
+            }
+        }
         FeaturePageMode.SystemUiDynamicColor -> {
             SettingsGroup {
                 OptionDropdownRow(
@@ -250,7 +258,10 @@ internal fun SystemUiFeaturesPage(
             }
         }
         FeaturePageMode.SystemUiControlCenter -> {
-            QsTileCornerSettingsGroup()
+            QsTileCornerSettingsGroup(
+                onOpenCorners = { onOpenSubPage(FeaturePageMode.SystemUiCornerSettings) },
+                onOpenPercentage = { onOpenSubPage(FeaturePageMode.SystemUiPercentageSettings) },
+            )
             SettingsGroup {
                 SettingsToggleRow(
                     title = stringResource(R.string.feature_hide_qs_edit_title),

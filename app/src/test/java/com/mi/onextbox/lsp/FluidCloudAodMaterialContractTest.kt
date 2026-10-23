@@ -14,20 +14,17 @@ class FluidCloudAodMaterialContractTest {
         assertFalse(source.contains("changeAodViewColor"))
     }
 
-    @Test fun shaderUsesNativeNotificationInterpolationAndRuntimeColors() {
+    @Test fun aodPreservesLiveShaderRecipeWithoutDarkTargetsOrFallbackLayers() {
         val source = source("FluidCloudAodMaterial.kt")
-        assertTrue(source.contains("access\\\$readBgAodData"))
-        assertTrue(source.contains("access\\\$createBgAodColor"))
-        assertTrue(source.contains("\"writeBgAodData\""))
-        assertTrue(source.contains("\"getColor\", fraction"))
-        assertTrue(source.contains("getIdentifier(name, \"color\", \"com.android.systemui\")"))
-        assertTrue(source.contains("aod_notification_card_\${name}_top_layer"))
-        assertTrue(source.contains("aod_notification_card_\${name}_bottom_layer"))
-        assertFalse(source.contains("Color.parseColor"))
-        assertFalse(source.contains("0xff"))
+        assertTrue(source.contains("\"getCurrentBlurMixConfig\""))
+        assertTrue(source.contains("\"changeBlurColor\", mix, false"))
+        for (removed in listOf("createBgAodColor", "aod_notification_card_", "notification_panoramic_aod_bg",
+            "setPanoramicAodDrawable", "ColorDrawable", "Color.parseColor", "0xff")) {
+            assertFalse(removed, source.contains(removed))
+        }
     }
 
-    @Test fun newMixIsAppliedBeforeAodInterpolationReadsIt() {
+    @Test fun newMixIsAppliedBeforeAodPreservationReadsIt() {
         val source = source("FluidCloudNotificationMaterial.kt")
             .substringAfter("fun preparePanel(").substringBefore("fun updatePanelAod(")
         assertTrue(source.indexOf("\"applyBlurConfig\"") < source.indexOf("aod.prepare("))
@@ -35,21 +32,27 @@ class FluidCloudAodMaterialContractTest {
         assertTrue(source.contains("native.applyAod(config, key.mode, fraction)"))
     }
 
-    @Test fun nativeInverseClearMaskHasIsolatedLayerAndLastDrawOrder() {
-        val source = source("FluidCloudAodMaterial.kt")
-        assertTrue(source.contains("canvas.saveLayer(RectF(mask.bounds), null)"))
-        assertTrue(source.contains("finally { canvas.restoreToCount(save) }"))
+    @Test fun nativeMaskSuppressionIsScopedAndAddsNoDarkFinalDraw() {
         val hook = source("FluidCloudMaterialHooker.kt")
-        assertTrue(hook.indexOf("material.drawPanelColor(") < hook.indexOf("material.drawPanelAod("))
         assertTrue(hook.contains("aodScope.hidesMask(chain.thisObject)"))
         assertTrue(hook.contains("aodScope.duringDraw("))
+        assertTrue(hook.contains("material.hasPanelAodMaterial"))
+        assertTrue(hook.contains("material.drawPanelColor("))
+        assertFalse(hook.contains("material.drawPanelAod("))
+    }
+
+    @Test fun unavailableRendererReleasesStateAndKeepsNativeFallback() {
+        val source = source("FluidCloudAodMaterial.kt")
+        assertTrue(source.contains("fraction, rendererActive"))
+        assertTrue(source.indexOf("release(view)") < source.indexOf("states[view] = state"))
+        val material = source("FluidCloudNotificationMaterial.kt")
+        assertTrue(material.contains("rendererActive = false"))
     }
 
     @Test fun exitDisableAndReloadRestoreOwnedState() {
         val source = source("FluidCloudAodMaterial.kt")
         assertTrue(source.contains("\"setAodState\", false"))
         assertTrue(source.contains("\"changeBlurColor\", origin, true"))
-        assertTrue(source.contains("\"panoramicAodDrawable\") === state.mask"))
         assertTrue(source.indexOf("states[view] = state") < source.indexOf("\"setAodState\", true"))
         val material = source("FluidCloudNotificationMaterial.kt")
         assertTrue(material.contains("aod.capture()"))
@@ -66,6 +69,23 @@ class FluidCloudAodMaterialContractTest {
             for (method in listOf("\"setCardType\"", "\"setDozing\"", "\"setPanoramicAodProgress\"", "\"setForeground\"")) {
                 assertFalse("$file must not call $method", source.contains(method))
             }
+        }
+    }
+
+    @Test fun normalAodKeepsNativeProgressAndCachesWhileOnlyReplacingBackgroundInputs() {
+        val hook = source("FluidCloudMaterialHooker.kt")
+            .substringAfter("private fun installNormalNotificationAod(")
+            .substringBefore("private fun installPanelMaterial(")
+        assertTrue(hook.contains("if (enabled() && getStart.invoke(nativeColor) !== empty) nativeColor else null"))
+        assertTrue(hook.contains("scope.duringUpdate(activeColor) { chain.proceed() }"))
+        assertTrue(hook.contains("scope.preservesColor(chain.thisObject)"))
+        assertTrue(hook.contains("getStart.invoke(chain.thisObject)"))
+        assertTrue(hook.contains("if (!scope.preservesBackground()) return@Hooker chain.proceed()"))
+        assertTrue(hook.contains("args[1] = 0f"))
+        assertTrue(hook.contains("deoptimize(getColor)"))
+        assertTrue(hook.contains("deoptimize(changeBackground)"))
+        for (removed in listOf("preparePanel", "setAodState", "setAodColor", "changeAodEffectAlpha", "changeAodViewColorInternal")) {
+            assertFalse(removed, hook.contains("\"$removed\""))
         }
     }
 

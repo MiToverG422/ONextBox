@@ -28,9 +28,14 @@ fun SettingsThemeKeyColorDropdown(
     onKeyColorChange: (Long?) -> Unit,
     hasDividerAbove: Boolean = false,
     hasDividerBelow: Boolean = false,
+    includeMonochrome: Boolean = false,
 ) {
-    val labels = themeKeyColorOptions.map { stringResource(it.labelRes) }
-    val selectedIndex = themeKeyColorOptions
+    val options = if (includeMonochrome) themeKeyColorOptions + listOf(
+        ThemeKeyColorOption(0xFFFFFFFF, R.string.settings_color_white),
+        ThemeKeyColorOption(0xFF000000, R.string.settings_color_black),
+    ) else themeKeyColorOptions
+    val labels = options.map { stringResource(it.labelRes) }
+    val selectedIndex = options
         .indexOfFirst { it.argb == selectedKeyColor }
         .takeIf { it >= 0 }
         ?: 0
@@ -40,7 +45,7 @@ fun SettingsThemeKeyColorDropdown(
         selectedIndex = selectedIndex,
         title = title,
         onSelectedIndexChange = { index ->
-            onKeyColorChange(themeKeyColorOptions.getOrNull(index)?.argb)
+            onKeyColorChange(options.getOrNull(index)?.argb)
         },
     )
 }

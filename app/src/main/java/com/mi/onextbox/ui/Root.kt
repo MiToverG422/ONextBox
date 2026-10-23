@@ -340,6 +340,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureSystemUiNative : RootRoute
 
     @Serializable
+    data object FeatureSystemUiVolume : RootRoute
+
+    @Serializable
     data object FeatureSystemUiDynamicColor : RootRoute
 
     @Serializable
@@ -359,6 +362,15 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureSystemUiControlCenter : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiCornerSettings : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiPercentageSettings : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiSideVolumePercentageSettings : RootRoute
 
     @Serializable
     data object FeatureSystemUiSmallWindow : RootRoute
@@ -530,6 +542,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.DesktopPages -> RootRoute.FeatureDesktopPages
     FeaturePageMode.SystemUi -> RootRoute.FeatureSystemUi
     FeaturePageMode.SystemUiNative -> RootRoute.FeatureSystemUiNative
+    FeaturePageMode.SystemUiVolume -> RootRoute.FeatureSystemUiVolume
     FeaturePageMode.SystemUiDynamicColor -> RootRoute.FeatureSystemUiDynamicColor
     FeaturePageMode.SystemUiStatusBar -> RootRoute.FeatureSystemUiStatusBar
     FeaturePageMode.SystemUiIconOrder -> RootRoute.FeatureSystemUiIconOrder
@@ -537,6 +550,9 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.SystemUiFluidCloudMediaBlacklist -> RootRoute.FeatureSystemUiFluidCloudMediaBlacklist
     FeaturePageMode.SystemUiNotificationCenter -> RootRoute.FeatureSystemUiNotificationCenter
     FeaturePageMode.SystemUiControlCenter -> RootRoute.FeatureSystemUiControlCenter
+    FeaturePageMode.SystemUiCornerSettings -> RootRoute.FeatureSystemUiCornerSettings
+    FeaturePageMode.SystemUiPercentageSettings -> RootRoute.FeatureSystemUiPercentageSettings
+    FeaturePageMode.SystemUiSideVolumePercentageSettings -> RootRoute.FeatureSystemUiSideVolumePercentageSettings
     FeaturePageMode.SystemUiSmallWindow -> RootRoute.FeatureSystemUiSmallWindow
     FeaturePageMode.SystemUiLockScreen -> RootRoute.FeatureSystemUiLockScreen
     FeaturePageMode.SystemUiNavigationBar -> RootRoute.FeatureSystemUiNavigationBar
@@ -1047,6 +1063,7 @@ fun Root(
                     subclass(RootRoute.FeatureDesktopPages::class)
                     subclass(RootRoute.FeatureSystemUi::class)
                     subclass(RootRoute.FeatureSystemUiNative::class)
+                    subclass(RootRoute.FeatureSystemUiVolume::class)
                     subclass(RootRoute.FeatureSystemUiDynamicColor::class)
                     subclass(RootRoute.FeatureSystemUiStatusBar::class)
                     subclass(RootRoute.FeatureSystemUiIconOrder::class)
@@ -1054,6 +1071,9 @@ fun Root(
                     subclass(RootRoute.FeatureSystemUiFluidCloudMediaBlacklist::class)
                     subclass(RootRoute.FeatureSystemUiNotificationCenter::class)
                     subclass(RootRoute.FeatureSystemUiControlCenter::class)
+                    subclass(RootRoute.FeatureSystemUiCornerSettings::class)
+                    subclass(RootRoute.FeatureSystemUiPercentageSettings::class)
+                    subclass(RootRoute.FeatureSystemUiSideVolumePercentageSettings::class)
                     subclass(RootRoute.FeatureSystemUiSmallWindow::class)
                     subclass(RootRoute.FeatureSystemUiLockScreen::class)
                     subclass(RootRoute.FeatureSystemUiNavigationBar::class)
@@ -2362,6 +2382,9 @@ fun Root(
             entry<RootRoute.FeatureSystemUiNative> {
                 featureEntryContent(FeaturePageMode.SystemUiNative)
             }
+            entry<RootRoute.FeatureSystemUiVolume> {
+                featureEntryContent(FeaturePageMode.SystemUiVolume)
+            }
             entry<RootRoute.FeatureSystemUiDynamicColor> {
                 featureEntryContent(FeaturePageMode.SystemUiDynamicColor)
             }
@@ -2382,6 +2405,15 @@ fun Root(
             }
             entry<RootRoute.FeatureSystemUiControlCenter> {
                 featureEntryContent(FeaturePageMode.SystemUiControlCenter)
+            }
+            entry<RootRoute.FeatureSystemUiCornerSettings> {
+                featureEntryContent(FeaturePageMode.SystemUiCornerSettings)
+            }
+            entry<RootRoute.FeatureSystemUiPercentageSettings> {
+                featureEntryContent(FeaturePageMode.SystemUiPercentageSettings)
+            }
+            entry<RootRoute.FeatureSystemUiSideVolumePercentageSettings> {
+                featureEntryContent(FeaturePageMode.SystemUiSideVolumePercentageSettings)
             }
             entry<RootRoute.FeatureSystemUiSmallWindow> {
                 featureEntryContent(FeaturePageMode.SystemUiSmallWindow)

@@ -23,7 +23,7 @@ class QsControlCenterCornerContractTest {
     @Test fun sliderUpdatesUseNativeSetterAndNeverChangeSystemValuesOrGlobalResources() {
         val slider = source("QsControlCenterSliderCorners")
         assertTrue(source("QsTileCornerHooker").contains("QsControlCenterSliderCorners.hook(loader)"))
-        assertTrue(slider.contains("QsControlCenterCornerTargets.isMainSlider(view.javaClass.name)"))
+        assertTrue(slider.contains("QsControlCenterCornerTargets.isSlider(view.javaClass.name)"))
         assertTrue(slider.contains("\"setCornerRadius\", radius"))
         assertTrue(slider.contains("scope.paint(paintedProgress, paintedBackground)"))
         assertTrue(slider.contains("QsControlCenterCornerTargets.SEEK_BAR"))
@@ -53,12 +53,15 @@ class QsControlCenterCornerContractTest {
         assertTrue(slider.contains("applied.remove(view)"))
         assertTrue(slider.contains("Reflect.setObjectField(seek, name, value)"))
     }
-    @Test fun defaultRadiusAndPreferenceKeysRemainCompatibleWithTheAlreadyInstalledVersion() {
+    @Test fun percentageSettingsKeepTheToggleAndUseNewKeysWithSystemDefaults() {
         val settings = source("QsTileCornerSettings")
         assertTrue(settings.contains("const val ENABLED = \"systemui_qs_tile_corner_enabled\""))
-        assertTrue(settings.contains("const val RADIUS = \"systemui_qs_tile_corner_radius\""))
-        assertTrue(settings.contains("const val DEFAULT_DP = 24"))
-        assertTrue(settings.contains("const val MAX_DP = 64"))
+        assertFalse(settings.contains("const val RADIUS = \"systemui_qs_tile_corner_radius\""))
+        assertTrue(settings.contains("fun radiusXposed(size: Size)"))
+        assertTrue(settings.contains("const val SYSTEM_DEFAULT = -1"))
+        assertTrue(settings.contains("const val MAX_PERCENT = 100"))
+        assertTrue(settings.contains("systemui_qs_tile_corner_radius_percent_"))
+        assertTrue(settings.contains("QsTileCornerRules.customPercent("))
     }
     @Test fun sliderVisualChangesCannotMoveTheNativeTrackOrChangeTouchPadding() {
         val slider = source("QsControlCenterSliderCorners")
@@ -73,6 +76,20 @@ class QsControlCenterCornerContractTest {
         assertTrue(visual.contains("\"getOnRadiusUpdateListener\""))
         assertTrue(visual.contains("\"updateBaseMixColorDrawableRadius\", radius"))
     }
+    @Test fun detailSliderUsesVisualTransitionsWithoutOverridingNativeAnimationEndpoints() {
+        val slider = source("QsControlCenterSliderCorners")
+        assertTrue(slider.contains("QsControlCenterCornerTargets.sliders.forEach"))
+        assertTrue(slider.contains("owner?.let(::paintRadius)"))
+        assertTrue(slider.contains("it.name == \"beginTransition\""))
+        assertTrue(slider.contains("QsSliderDetailCornerTransition.create"))
+        assertTrue(slider.contains("detailTransitions.remove(view)"))
+        val transition = slider.substringAfter("private fun hookDetailTransitions")
+            .substringBefore("private fun detailScale")
+        assertFalse(transition.contains("param.result ="))
+        assertFalse(transition.contains("param.args[1] ="))
+        assertFalse(transition.contains("param.args[2] ="))
+        assertFalse(transition.contains("setObjectField"))
+    }
     @Test fun scenarioTilesAreAdaptedWithoutChangingDetailPopupTilesOrTheirInnerIcons() {
         val hook = source("QsTileCornerHooker")
         assertTrue(hook.contains("com.oplus.systemui.qs.scenario.ui.template.ScenarioTileViewBase"))
@@ -84,19 +101,20 @@ class QsControlCenterCornerContractTest {
         assertTrue(hook.contains("scenarioWide -> Reflect.callMethod(view, \"getTileBg\")"))
         assertFalse(hook.contains("findClassIfExists(\"com.oplus.systemui.qs.slider.detail.widget.QsDetailTileBaseView\""))
     }
-    @Test fun mediaContentIsClippedToTheOwnedOutlineAndRestoredWithTheOriginalClipFlag() {
+    @Test fun mediaRetainsNativeClipFlagsAndUsesTheDrawableOutline() {
         val hook = source("QsTileCornerHooker")
         assertTrue(hook.contains("view.outlineProvider = custom"))
-        assertTrue(hook.contains("view.clipToOutline = true"))
+        assertFalse(hook.contains("view.clipToOutline = true"))
+        assertTrue(hook.contains("if (!view.clipToOutline) return"))
         assertTrue(hook.contains("if (view.outlineProvider === previous.custom)"))
         assertTrue(hook.contains("view.outlineProvider = previous.original"))
         assertTrue(hook.contains("view.clipToOutline = previous.clipped"))
         assertTrue(hook.contains("updateMediaClip(view, drawable)"))
-        assertTrue(hook.contains("QsCornerClipOutline(state.radius, state.weight,"))
-        val clip = source("QsCornerClipOutline")
-        assertTrue(clip.contains("outline.setPath(path)"))
-        assertTrue(clip.contains("\"addSmoothRoundRect\""))
-        assertTrue(clip.contains("width != view.width || height != view.height"))
+        assertTrue(hook.contains("QsCornerDrawableOutline(drawable)"))
+        val clip = source("QsCornerDrawableOutline")
+        assertTrue(clip.contains("\"getPathProvider\""))
+        assertTrue(clip.contains("provider.getOutline(view, outline)"))
+        assertFalse(clip.contains("addRoundRect"))
     }
     @Test fun liveViewCallbacksAreWeakOwnedAndDetachedBeforeModuleRetirement() {
         val observers = source("QsCornerViewObservers")

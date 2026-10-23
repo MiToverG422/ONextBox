@@ -15,58 +15,23 @@ class FluidCloudAodMaterialRulesTest {
         assertEquals(1f, rules.progress(2f), 0f)
     }
 
-    @Test fun fallbackMaskUsesNativeTruncatedAnimationAlpha() {
-        assertEquals(0, rules.alpha(0f))
-        assertEquals(127, rules.alpha(0.5f))
-        assertEquals(255, rules.alpha(1f))
-        assertEquals(0, rules.alpha(-1f))
-        assertEquals(255, rules.alpha(2f))
-        assertEquals(0, rules.alpha(Float.NaN))
-    }
-
-    @Test fun ordinaryCardUsesNormalAodResources() {
-        assertEquals(0, rules.layer(false, 1, false))
-        assertEquals("normal", rules.layerName(0))
-        assertEquals("notification_panoramic_aod_bg", rules.backgroundName(0))
-    }
-
-    @Test fun stackedCardsUseMatchingNativeLayers() {
-        assertEquals(1, rules.layer(true, 1, false))
-        assertEquals(2, rules.layer(true, 2, false))
-        assertEquals("first", rules.layerName(1))
-        assertEquals("second", rules.layerName(2))
-        assertEquals("notification_panoramic_aod_bg_first_stack", rules.backgroundName(1))
-        assertEquals("notification_panoramic_aod_bg_second_stack", rules.backgroundName(2))
-    }
-
-    @Test fun overlayUsesSecondLayerRegardlessOfStackState() {
-        for (stacked in listOf(false, true)) for (type in 0..3) {
-            assertEquals(2, rules.layer(stacked, type, true))
+    @Test fun nativeMasksAreHiddenOnlyForAnActiveUnifiedCustomCardRenderer() {
+        for (enabled in listOf(false, true)) for (custom in listOf(false, true)) {
+            for (renderer in listOf(false, true)) for (fraction in listOf(0f, .5f, 1f)) {
+                assertEquals(enabled && custom && renderer && fraction > 0f,
+                    rules.use(enabled, custom, fraction, renderer))
+            }
         }
+        assertFalse(rules.use(true, true, Float.NaN, true))
     }
 
-    @Test fun unknownStacksFallBackToNormalMaterial() {
-        for (type in listOf(-1, 0, 3, Int.MAX_VALUE)) {
-            assertEquals(0, rules.layer(true, type, false))
-            assertEquals("normal", rules.layerName(type))
-            assertEquals("notification_panoramic_aod_bg", rules.backgroundName(type))
-        }
-    }
-
-    @Test fun featureOffOrdinaryRowsAndAwakeStateNeverMatch() {
-        assertTrue(rules.use(true, true, 1f))
-        assertFalse(rules.use(false, true, 1f))
-        assertFalse(rules.use(true, false, 1f))
-        assertFalse(rules.use(true, true, 0f))
-        assertFalse(rules.use(true, true, Float.NaN))
-    }
-
-    @Test fun unsupportedShaderMixesKeepOpaqueAodFallback() {
+    @Test fun wallpaperAndUnknownMixesKeepTheirRendererWithoutShaderWrites() {
         for (name in listOf("BlurMixSingle", "BlurMixMulti", "BlurMixMultiWithShader")) {
             assertTrue(rules.supportsShaderMix(name))
         }
         for (name in listOf(null, "None", "OverlayColor", "BlurMixSingleWithShader", "UNKNOWN")) {
             assertFalse(rules.supportsShaderMix(name))
+            assertTrue(rules.use(true, true, 1f, true))
         }
     }
 
@@ -89,30 +54,51 @@ class FluidCloudAodMaterialRulesTest {
         assertTrue(rules.needsEffectUpdate(true, 1f, 1f))
     }
 
-    @Test fun nativeMaterialTintIsRetainedUnlessItWouldCoverAnUnhandledMask() {
-        for (handled in listOf(false, true)) {
-            assertTrue(rules.drawMaterialTint(0f, handled))
-        }
-        for (fraction in listOf(0.01f, 0.5f, 1f)) {
-            assertFalse(rules.drawMaterialTint(fraction, false))
-            // Match native shader rows; fallback draws its opaque AOD mask after this tint.
+    @Test fun nativeMaterialTintRemainsVisibleThroughoutUnifiedAodTransition() {
+        for (fraction in listOf(0f, .01f, .5f, 1f)) {
             assertTrue(rules.drawMaterialTint(fraction, true))
         }
+        for (fraction in listOf(.01f, .5f, 1f)) {
+            assertFalse(rules.drawMaterialTint(fraction, false))
+        }
+        assertTrue(rules.drawMaterialTint(0f, false))
     }
 
-    @Test fun rendererSwitchRetainsRealNativeMaskNotPreviousReplacement() {
-        val original = Any()
-        val replacement = Any()
-        assertSame(original, rules.originalMask(replacement, replacement, original))
-        assertNull(rules.originalMask(replacement, replacement, null))
+    @Test fun normalColorScopeIsIdentityBoundAndRestoresAcrossNestedUpdates() {
+        val scope = FluidCloudAodColorScope()
+        val normal = Any()
+        val other = Any()
+        assertFalse(scope.preservesBackground())
+        scope.duringUpdate(normal) {
+            assertTrue(scope.preservesColor(normal))
+            assertFalse(scope.preservesColor(other))
+            assertTrue(scope.preservesBackground())
+            scope.duringUpdate(null) {
+                assertFalse(scope.preservesColor(normal))
+                assertFalse(scope.preservesBackground())
+            }
+            assertTrue(scope.preservesColor(normal))
+            scope.duringUpdate(other) {
+                assertFalse(scope.preservesColor(normal))
+                assertTrue(scope.preservesColor(other))
+            }
+            assertTrue(scope.preservesColor(normal))
+        }
+        assertFalse(scope.preservesBackground())
     }
 
-    @Test fun maskRestorationDoesNotOverrideNewNativeMask() {
-        val oldOriginal = Any()
-        val replacement = Any()
-        val nativeUpdate = Any()
-        assertSame(nativeUpdate, rules.originalMask(nativeUpdate, replacement, oldOriginal))
-        assertNull(rules.originalMask(null, replacement, oldOriginal))
-        assertSame(nativeUpdate, rules.originalMask(nativeUpdate, null, oldOriginal))
+    @Test fun normalColorScopeDoesNotLeakAfterFailureOrAcrossThreads() {
+        val scope = FluidCloudAodColorScope()
+        val normal = Any()
+        scope.duringUpdate(normal) {
+            var visibleOnOtherThread = true
+            val thread = Thread { visibleOnOtherThread = scope.preservesBackground() }
+            thread.start()
+            thread.join()
+            assertFalse(visibleOnOtherThread)
+        }
+        runCatching { scope.duringUpdate(normal) { error("native update failure") } }
+        assertFalse(scope.preservesColor(normal))
+        assertFalse(scope.preservesBackground())
     }
 }

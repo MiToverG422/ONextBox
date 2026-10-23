@@ -12,7 +12,7 @@ import com.mi.onextbox.lsp.compat.ModernReflect as Reflect
 import io.github.libxposed.api.XposedInterface
 import java.util.concurrent.ConcurrentHashMap
 
-/** Changes expanded-card backgrounds only; native layout, controls and transitions stay intact. */
+/** Unifies card backgrounds while preserving native layout, controls and content transitions. */
 internal object FluidCloudMaterialHooker {
     private const val TAG = "ONextBox-FluidMaterial"
     private val installed = ConcurrentHashMap.newKeySet<ClassLoader>()
@@ -34,6 +34,7 @@ internal object FluidCloudMaterialHooker {
         HotReloadLifecycle.registerReplay("fluid-material:expanded-backgrounds",
             capture = { expandedMaterial.captureReloadState() },
             replay = { expandedMaterial.restoreReloadState(it) })
+        installNormalNotificationAod(loader)
         installPanelMaterial(loader)
         installFlashlightMaterial(loader)
         runCatching {
@@ -56,6 +57,50 @@ internal object FluidCloudMaterialHooker {
         }.onFailure { diagnose("Cannot observe Fluid Cloud plugin", it) }
     }
 
+    private fun installNormalNotificationAod(loader: ClassLoader) = runCatching {
+        val scope = FluidCloudAodColorScope()
+        val color = Reflect.findClass("com.oplus.systemui.notification.aod.notification.NormalBgAodColor", loader)
+        val wrapper = Reflect.findClass("com.oplus.systemui.notification.aod.notification.NormalBgAodWrapper", loader)
+        val background = Reflect.findClass("com.oplus.systemui.notification.aod.notification.NotificationAodBackgroundChanger", loader)
+        val row = Reflect.findClass("com.android.systemui.statusbar.notification.row.ExpandableNotificationRow", loader)
+        val update = wrapper.getDeclaredMethod("updateColor", color, Float::class.javaPrimitiveType)
+        val getColor = color.getDeclaredMethod("getColor", Float::class.javaPrimitiveType)
+        val getStart = color.getDeclaredMethod("getStart")
+        val constants = Reflect.findClass("com.oplus.systemui.notification.aod.notification.AodBgConstants", loader)
+        val empty = constants.getDeclaredMethod("getEMPTY").invoke(constants.getField("INSTANCE").get(null))
+        val changeBackground = background.getDeclaredMethod("changeAodViewColor", row, Float::class.javaPrimitiveType)
+        ModernHookRegistry.installFast("$TAG:normal:aodColor", getColor, XposedInterface.Hooker { chain ->
+            // Returning the captured recipe also retains shader parameters without running
+            // the native dark-color interpolation. CustomRowBgAodWrapper is outside this scope.
+            if (scope.preservesColor(chain.thisObject)) getStart.invoke(chain.thisObject) else chain.proceed()
+        })
+        ModernHookRegistry.installFast("$TAG:normal:aodMask", changeBackground, XposedInterface.Hooker { chain ->
+            if (!scope.preservesBackground()) return@Hooker chain.proceed()
+            // Native zero-progress cleanup clears normal, overlay and animated group masks.
+            // This method handles backgrounds only; text/effect progress remains unchanged.
+            val args = chain.args.toTypedArray()
+            args[1] = 0f
+            chain.proceed(args)
+        })
+        ModernHookRegistry.installFast("$TAG:normal:aodUpdate", update, XposedInterface.Hooker { chain ->
+            // Keep the real fraction for setAodState, dirty tracking and native stack caches.
+            // EMPTY is used when no supported native renderer exists; retain its AOD fallback.
+            val nativeColor = chain.getArg(0)
+            val activeColor = if (enabled() && getStart.invoke(nativeColor) !== empty) nativeColor else null
+            scope.duringUpdate(activeColor) { chain.proceed() }
+        })
+        ModernHookRuntime.requireModule().deoptimize(getColor)
+        ModernHookRuntime.requireModule().deoptimize(changeBackground)
+        wrapper.declaredMethods.filter { it.name == "updateColor" }.forEach {
+            ModernHookRuntime.requireModule().deoptimize(it)
+        }
+        val changer = Reflect.findClass("com.oplus.systemui.notification.aod.notification.NotificationDetailColorChanger", loader)
+        changer.declaredMethods.filter { it.name in listOf("changeAodColor", "changeAodViewColor") }.forEach {
+            ModernHookRuntime.requireModule().deoptimize(it)
+        }
+        logged("normal:aod", "Ordinary notification AOD preserves awake background colors with native content/effect fading")
+    }.onFailure { diagnose("Ordinary notification AOD material hook unavailable", it) }
+
     private fun installPanelMaterial(loader: ClassLoader) {
         runCatching {
             val changer = Reflect.findClass("com.oplus.systemui.notification.aod.notification.NotificationDetailColorChanger", loader)
@@ -67,7 +112,7 @@ internal object FluidCloudMaterialHooker {
                     val view = chain.getArg(0) as? View ?: return@runCatching
                     // Removal/idle callbacks may pass zero while the global AOD is still active.
                     val fraction = (chain.getArg(1) as? Number)?.toFloat()
-                    if (material.updatePanelAod(view, fraction)) logged("panel:aod", "Fluid Cloud AOD uses native notification colors and effect fading")
+                    if (material.updatePanelAod(view, fraction)) logged("panel:aod", "Fluid Cloud AOD preserves unified background colors with native content/effect fading")
                 }
                     .onFailure { diagnose("Cannot synchronize Fluid Cloud AOD material", it) }
                 result
@@ -227,7 +272,6 @@ internal object FluidCloudMaterialHooker {
                 }
                 if (use) runCatching {
                     material.drawPanelColor(chain.getArg(0) as Canvas, requireNotNull(extension), requireNotNull(proxy))
-                    material.drawPanelAod(chain.getArg(0) as Canvas, requireNotNull(extension), requireNotNull(proxy))
                 }.onFailure { diagnose("Cannot draw native notification material color", it) }
                 result
             })

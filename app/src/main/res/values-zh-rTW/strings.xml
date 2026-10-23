@@ -112,6 +112,9 @@
     <string name="feature_force_native_clipboard_overlay_title">原生剪貼簿</string>
     <string name="feature_force_native_clipboard_overlay_summary">強制啟用左下角原生剪貼簿</string>
     <string name="feature_group_beautify">狀態列</string>
+    <string name="feature_group_volume">音量</string>
+    <string name="volume_block_hearing_safety_warning_title">封鎖聽力安全提醒</string>
+    <string name="volume_block_hearing_safety_warning_summary">封鎖提高音量時的聽力安全提醒彈窗</string>
     <string name="feature_group_dynamic_color">莫奈動態取色</string>
     <string name="feature_force_tonal_spot_title">Tonal Spot 動態取色修正</string>
     <string name="feature_force_tonal_spot_summary">保留目前的主題種子色，強制 SystemUI 使用 TONAL_SPOT 產生系統調色盤，修正原生介面背景顏色過於鮮豔的問題</string>
@@ -587,6 +590,7 @@
     <string name="notification_removal_overlay">移除應用程式上層通知</string>
     <string name="notification_removal_vpn">移除 VPN 運作通知</string>
     <string name="notification_removal_developer">移除開發人員選項通知</string>
+    <string name="notification_removal_extreme_refresh_rate">移除極速高更新率提醒</string>
     <string name="notification_removal_charging">移除充電完成通知</string>
     <string name="notification_removal_flashlight">移除手電筒已開啟通知</string>
     <string name="notification_removal_consumption">移除應用程式耗電異常警告</string>
@@ -619,6 +623,7 @@
     <string name="feature_system_ui_status_bar_entry_summary">網路顯示、圖示順序與指示標記</string>
     <string name="feature_system_ui_notification_center_entry_summary">通知樣式與狀態列通知隱藏</string>
     <string name="feature_system_ui_control_center_entry_summary">編輯、設定、更多按鈕與電信業者顯示</string>
+    <string name="feature_system_ui_volume_entry_summary">聽力安全提醒</string>
     <string name="feature_system_ui_dynamic_color_entry_summary">取色規範與 Tonal Spot 配色</string>
     <string name="feature_system_ui_native_entry_summary">通知圖示、氣泡、電源選單與剪貼簿</string>
     <string name="feature_settings_region_entry_summary">國際版設定、Google 入口與國行選項</string>
@@ -1234,8 +1239,10 @@
     <string name="carrier_name_reset">還原電信業者名稱</string>
     <string name="qs_tile_corner_group">控制中心外觀</string>
     <string name="qs_tile_corner_title">自訂控制中心圓角</string>
-    <string name="qs_tile_corner_summary">調整控制中心磁貼、媒體卡片及亮度和音量滑桿的圓角，關閉後恢復系統形狀</string>
+    <string name="qs_tile_corner_summary" formatted="false">依尺寸調整圓角百分比，-1 使用系統值，100% 對應磁貼短邊的一半</string>
     <string name="qs_tile_corner_radius">圓角半徑</string>
+    <string name="qs_tile_corner_settings_title">圓角調整</string>
+    <string name="qs_tile_corner_size_radius">%1$s磁貼圓角半徑</string>
     <string name="launcher_group_effects">視覺效果</string>
     <string name="launcher_force_blur_title">強制開啟桌面模糊動效</string>
     <string name="launcher_force_blur_summary">嘗試解除桌面背景、長按選單材質及相關模糊動效的機型限制，遵循系統模糊、省電和主題設定；可能增加耗電，韌體需保留原生模糊支援，切換後需重新啟動桌面</string>

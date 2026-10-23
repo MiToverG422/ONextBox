@@ -163,10 +163,17 @@ class OosLspModuleEntry : XposedModule() {
                 CarrierNameHooker.hook(classLoader)
                 runCatching { QsTileCornerHooker.hook(classLoader) }
                     .onFailure { HookLog.w("ONextBox-QsTileCorner", "Tile corner adapter unavailable", it) }
+                runCatching { QsSliderPercentageHooker.hook(classLoader) }
+                    .onFailure { HookLog.w("ONextBox-QsPercentage", "Slider percentage adapter unavailable", it) }
+                runCatching { SideVolumePercentageHooker.hook(classLoader) }
+                    .onFailure { HookLog.w("ONextBox-SideVolumePercentage", "Volume popup percentage adapter unavailable", it) }
+                runCatching { SideVolumeAppearanceHooker.hook(classLoader) }
+                    .onFailure { HookLog.w("ONextBox-SideVolumeAppearance", "Volume popup appearance adapter unavailable", it) }
                 SideKeySystemUiHooker.hook(classLoader)
                 ImmersiveNavigationHooker.hook(classLoader)
                 AospBackPanelHooker.hook(classLoader)
                 AospVolumeHooker.hook(classLoader)
+                VolumeSafetyWarningHooker.hook(classLoader)
                 NativeLiveUpdateHooker.hook(classLoader)
                 C16StackedSignalHooker.hook(classLoader)
                 AssistantHooker.hook(packageName, classLoader)

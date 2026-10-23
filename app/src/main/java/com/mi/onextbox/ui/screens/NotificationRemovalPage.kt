@@ -31,6 +31,7 @@ internal fun NotificationRemovalPage() {
         Triple(Feature.Overlay, R.string.notification_removal_overlay, 0),
         Triple(Feature.Vpn, R.string.notification_removal_vpn, 0),
         Triple(Feature.DeveloperMode, R.string.notification_removal_developer, 0),
+        Triple(Feature.ExtremeRefreshRate, R.string.notification_removal_extreme_refresh_rate, 0),
         Triple(Feature.ChargingCompleted, R.string.notification_removal_charging, 0),
         Triple(Feature.Flashlight, R.string.notification_removal_flashlight, 0),
         Triple(Feature.HighBatteryConsumption, R.string.notification_removal_consumption, 0),
