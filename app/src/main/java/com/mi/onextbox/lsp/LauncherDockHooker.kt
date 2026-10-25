@@ -17,11 +17,16 @@ internal object LauncherDockHooker {
         if (!LspConfig.isLauncherFeatureEnabledXposed(LauncherFeature.Dock)) return
         val prefix = "$TAG@${System.identityHashCode(loader)}:"
         runCatching {
+            val c16 = SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16
             val hotseat = ModernReflect.findClass("com.android.launcher3.OplusHotseat", loader)
             val setBackground = hotseat.getDeclaredMethod("setDockerBackground").apply { isAccessible = true }
-            val background = hotseat.getDeclaredField("mDockerBackgroundDrawable").apply { isAccessible = true }
+            val background = if (c16) null else hotseat.getDeclaredField("mDockerBackgroundDrawable").apply { isAccessible = true }
+            val shortcuts = if (c16) hotseat.getMethod("getShortcutsAndWidgets") else null
             val screen = ModernReflect.findClass("com.android.common.util.ScreenUtils", loader)
             val blurProperties = ModernReflect.findClass("com.android.launcher3.uioverrides.states.blurdrawable.OplusBlurProperties", loader)
+            val blurOption = if (c16) blurProperties.getDeclaredMethod("isSupportNewBlur", Context::class.java,
+                Boolean::class.javaPrimitiveType)
+            else blurProperties.getDeclaredMethod("isSupportNewBlur", Context::class.java)
             // Size checks in the background method may be inlined.
             if (!ModernHookRuntime.requireModule().deoptimize(setBackground)) {
                 HookLog.w(TAG, "Dock background caller deoptimization unavailable")
@@ -44,7 +49,7 @@ internal object LauncherDockHooker {
                 },
             )
             ModernHookRegistry.installFast(
-                "${prefix}blur-option", blurProperties.getDeclaredMethod("isSupportNewBlur", Context::class.java),
+                "${prefix}blur-option", blurOption,
                 XposedInterface.Hooker { chain ->
                     if (creatingBackground.get() == true && !blurEnabled()) false else chain.proceed()
                 },
@@ -54,7 +59,9 @@ internal object LauncherDockHooker {
                 XposedInterface.Hooker { chain ->
                     if (!LspConfig.isLauncherFeatureEnabledXposed(LauncherFeature.Dock)) return@Hooker chain.proceed()
                     runCatching {
-                        if (background.get(chain.thisObject) == null) setBackground.invoke(chain.thisObject)
+                        val drawable = if (c16) (shortcuts?.invoke(chain.thisObject) as? View)?.background
+                            else background?.get(chain.thisObject)
+                        if (drawable == null) setBackground.invoke(chain.thisObject)
                     }.onFailure { HookLog.w(TAG, "Unable to restore Dock background", it) }
                     null
                 },

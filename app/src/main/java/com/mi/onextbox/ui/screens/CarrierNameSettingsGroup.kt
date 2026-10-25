@@ -1,13 +1,15 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.SharedPreferences
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -19,9 +21,7 @@ import com.mi.onextbox.R
 import com.mi.onextbox.lsp.CarrierNameRules
 import com.mi.onextbox.lsp.CarrierNameSettings
 import com.mi.onextbox.lsp.LspPreferenceStore
-import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.CouiConfirmDialog
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.settings.FeatureSettingWriteQueue
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsSection
@@ -121,11 +121,7 @@ internal fun CarrierNameSettingsGroup() {
         },
         content = {
             val placeholder = stringResource(R.string.carrier_name_original)
-            if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-                OutlinedTextField(state = input, modifier = Modifier.fillMaxWidth().settingsInteractionGate(savingKey == null), inputTransformation = limiter,
-                    readOnly = savingKey != null, lineLimits = TextFieldLineLimits.SingleLine,
-                    placeholder = { Text(placeholder) })
-            } else {
+            run {
                 CouiTextField(state = input, modifier = Modifier.fillMaxWidth().settingsInteractionGate(savingKey == null), backgroundMode = TextFieldMode.Line,
                     label = placeholder, readOnly = savingKey != null, inputTransformation = limiter,
                     lineLimits = TextFieldLineLimits.SingleLine, showClearButton = true)

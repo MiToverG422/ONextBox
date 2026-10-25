@@ -18,18 +18,28 @@ internal object AodScreenshotHooker {
     private fun enabled() = LspConfig.isKeyguardFeatureEnabledXposed(KeyguardFeature.AodScreenshot)
 
     fun hook(loader: ClassLoader) {
+        hook(loader, "com.oplus.screenshot.common.core.ScreenshotRequest",
+            "com.oplus.screenshot.screenshot.task.TaskCapture", "com.oplus.screenshot.common.utils.l")
+    }
+
+    fun hookColorOs16(loader: ClassLoader) {
+        hook(loader, "com.oplus.screenshot.common.core.e",
+            "com.oplus.screenshot.screenshot.task.d", "com.oplus.screenshot.common.utils.p")
+    }
+
+    private fun hook(loader: ClassLoader, requestName: String, captureName: String, screenName: String) {
         if (!enabled()) return
-        runCatching { install(loader) }
+        runCatching { install(loader, requestName, captureName, screenName) }
             .onSuccess { HookLog.i(TAG, "Installed screenshot-service AOD capture gate") }
             .onFailure { HookLog.w(TAG, "Unavailable screenshot-service AOD gate, stock handling retained", it) }
     }
 
-    private fun install(loader: ClassLoader) {
-        val requestClass = Reflect.findClass("com.oplus.screenshot.common.core.ScreenshotRequest", loader)
-        val captureClass = Reflect.findClass("com.oplus.screenshot.screenshot.task.TaskCapture", loader)
-        val screenUtil = Reflect.findClass("com.oplus.screenshot.common.utils.l", loader)
+    private fun install(loader: ClassLoader, requestName: String, captureName: String, screenName: String) {
+        val requestClass = Reflect.findClass(requestName, loader)
+        val captureClass = Reflect.findClass(captureName, loader)
+        val screenUtil = Reflect.findClass(screenName, loader)
         // Runtime class and method names.
-        // Validate the full C17 contract before installing either hook, fail closed on other APKs.
+        // C16 16.15.18 and C17 use the same scoped capture flow with different class names.
         val sourceGetter = requestClass.getDeclaredMethod("V").apply { isAccessible = true }
         val contextGetter = requestClass.getDeclaredMethod("o").apply { isAccessible = true }
         val displayGetter = requestClass.getDeclaredMethod("t").apply { isAccessible = true }
@@ -40,7 +50,7 @@ internal object AodScreenshotHooker {
             displayGetter.returnType == Display::class.java &&
             listOf(sourceGetter, contextGetter, displayGetter, execute).none { Modifier.isStatic(it.modifiers) } &&
             execute.returnType == Void.TYPE && Modifier.isStatic(screenOn.modifiers) &&
-            screenOn.returnType == Boolean::class.javaPrimitiveType) { "Unknown C17 screenshot contract" }
+            screenOn.returnType == Boolean::class.javaPrimitiveType) { "Unknown screenshot contract" }
 
         val scope = CaptureRequestScope<AodRequest>()
         val logged = AtomicBoolean()

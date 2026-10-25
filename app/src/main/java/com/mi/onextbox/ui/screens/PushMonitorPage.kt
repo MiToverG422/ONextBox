@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.os.SystemClock
 import android.text.format.DateUtils
 import androidx.activity.compose.BackHandler
@@ -34,17 +38,13 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -67,14 +67,10 @@ import com.mi.onextbox.push.PushMonitorRules
 import com.mi.onextbox.push.PushMonitorView
 import com.mi.onextbox.push.PushRegistration
 import com.mi.onextbox.push.PushSnapshot
-import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.AppUiTokens
 import com.mi.onextbox.ui.common.ColorOsScrollEntranceHost
 import com.mi.onextbox.ui.common.colorOsScrollEntrance
 import com.mi.onextbox.ui.common.rememberColorOsScrollEntrance
-import com.mi.onextbox.ui.common.LocalAppUiStyle
-import com.mi.onextbox.ui.settings.LocalMaterial3ExpressiveSegmentShapes
-import com.mi.onextbox.ui.settings.Material3ExpressiveAnimatedSegmentPosition
 import com.mi.onextbox.ui.settings.SettingsDivider
 import io.github.suqi8.coui.kmp.basic.Chip
 import io.github.suqi8.coui.kmp.basic.Text as CouiText
@@ -148,7 +144,7 @@ internal fun PushMonitorContent(
     bottomInsets: WindowInsets = WindowInsets.navigationBars
         .union(WindowInsets.mandatorySystemGestures).union(WindowInsets.displayCutout),
 ) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
+
     val search = rememberTextFieldState()
     val query = search.text.toString()
     var filter by rememberSaveable { mutableStateOf(PushFilter.All) }
@@ -197,9 +193,9 @@ internal fun PushMonitorContent(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
                 contentPadding = PaddingValues(
-                    start = 16.dp, end = 16.dp, top = if (material) 2.dp else 0.dp, bottom = bottomPadding,
+                    start = 16.dp, end = 16.dp, top = 0.dp, bottom = bottomPadding,
                 ),
-                verticalArrangement = Arrangement.spacedBy(if (material) 2.dp else 0.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
             ) {
                 if (shown.isEmpty()) item(key = "empty") {
                     PushMonitorText(
@@ -219,7 +215,7 @@ internal fun PushMonitorContent(
                     PushMonitorText(
                         stringResource(R.string.push_monitor_privacy),
                         Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
-                        style = if (material) MaterialTheme.typography.bodySmall else {
+                        style = run {
                             COUITheme.textStyles.footnote1.copy(fontSize = 12.sp, lineHeight = 18.sp)
                         },
                         textAlign = TextAlign.Start,
@@ -238,7 +234,7 @@ private fun PushMonitorFilterChip(
     title: String,
     modifier: Modifier,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.ColorOs) {
+    run {
         Chip(selected = selected, onClick = onClick, label = title, modifier = modifier)
         return
     }
@@ -283,19 +279,8 @@ private fun PushMonitorRow(
     refreshId: String,
     modifier: Modifier,
 ) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    if (material) {
-        Material3ExpressiveAnimatedSegmentPosition(index, count, durationMillis = 280) {
-            SegmentedListItem(
-                onClick = {},
-                modifier = modifier.fillMaxWidth().animateContentSize(),
-                shapes = LocalMaterial3ExpressiveSegmentShapes.current ?: ListItemDefaults.segmentedShapes(index, count),
-                colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
-            ) {
-                PushMonitorRowContent(app, now, refreshId, Modifier.padding(vertical = 4.dp))
-            }
-        }
-    } else {
+
+    run {
         val top by animateDpAsState(
             if (index == 0) AppUiTokens.CardCornerRadius else 0.dp,
             spring(dampingRatio = 0.9f, stiffness = 800f), label = "pushCardTop",
@@ -324,7 +309,7 @@ private fun PushMonitorRow(
 
 @Composable
 private fun PushMonitorRowContent(app: PushApp, now: Long, refreshId: String, modifier: Modifier) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
+
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -332,8 +317,8 @@ private fun PushMonitorRowContent(app: PushApp, now: Long, refreshId: String, mo
         ) {
             PushMonitorText(
                 app.label, Modifier.weight(1f),
-                style = if (material) MaterialTheme.typography.titleMedium else COUITheme.textStyles.headline1,
-                color = if (material) MaterialTheme.colorScheme.onSurface else COUITheme.colorScheme.onSurface,
+                style = COUITheme.textStyles.headline1,
+                color = COUITheme.colorScheme.onSurface,
             )
             AnimatedContent(
                 targetState = app.registration to refreshId,
@@ -349,11 +334,11 @@ private fun PushMonitorRowContent(app: PushApp, now: Long, refreshId: String, mo
                         PushRegistration.Unknown -> R.string.push_monitor_unknown
                         PushRegistration.SystemService -> R.string.push_monitor_system_service
                     }),
-                    style = if (material) MaterialTheme.typography.labelMedium else COUITheme.textStyles.body2,
+                    style = COUITheme.textStyles.body2,
                     color = if (registration == PushRegistration.Registered) {
-                        if (material) MaterialTheme.colorScheme.primary else COUITheme.colorScheme.primary
+                        COUITheme.colorScheme.primary
                     } else {
-                        if (material) MaterialTheme.colorScheme.onSurfaceVariant else COUITheme.colorScheme.onSurfaceVariantSummary
+                        COUITheme.colorScheme.onSurfaceVariantSummary
                     },
                 )
             }
@@ -377,17 +362,11 @@ private fun PushMonitorRowContent(app: PushApp, now: Long, refreshId: String, mo
 private fun PushMonitorText(
     text: String,
     modifier: Modifier = Modifier,
-    style: TextStyle = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        MaterialTheme.typography.bodySmall
-    } else COUITheme.textStyles.body2,
-    color: Color = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    } else COUITheme.colorScheme.onSurfaceVariantSummary,
+    style: TextStyle = COUITheme.textStyles.body2,
+    color: Color = COUITheme.colorScheme.onSurfaceVariantSummary,
     textAlign: TextAlign? = null,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Text(text, modifier, style = style, color = color, textAlign = textAlign)
-    } else {
+    run {
         CouiText(text, modifier, style = style, color = color, textAlign = textAlign)
     }
 }

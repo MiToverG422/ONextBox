@@ -1,5 +1,9 @@
 package com.mi.onextbox
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -10,11 +14,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalContext
@@ -33,7 +35,6 @@ class OnboardingActivity : ComponentActivity() {
     private companion object {
         const val APP_PREFS_NAME = "onextbox_prefs"
         const val PREF_FEATURE_PAGE_NEW_STYLE = "feature_page_new_style"
-        const val PREF_FEATURE_PAGE_VIDEO_HIDDEN = "feature_page_video_hidden"
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -63,9 +64,6 @@ class OnboardingActivity : ComponentActivity() {
             }
             var featurePageNewStyleEnabled by rememberSaveable {
                 mutableStateOf(prefs.getBoolean(PREF_FEATURE_PAGE_NEW_STYLE, true))
-            }
-            var featurePageVideoHidden by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_FEATURE_PAGE_VIDEO_HIDDEN, false))
             }
             val localizedContext = remember(appLanguageTag) {
                 createOnboardingContext(appLanguageTag)
@@ -106,13 +104,6 @@ class OnboardingActivity : ComponentActivity() {
                         featurePageNewStyleEnabled = enabled
                         prefs.edit()
                             .putBoolean(PREF_FEATURE_PAGE_NEW_STYLE, enabled)
-                            .apply()
-                    },
-                    featurePageVideoHidden = featurePageVideoHidden,
-                    onFeaturePageVideoHiddenChange = { hidden ->
-                        featurePageVideoHidden = hidden
-                        prefs.edit()
-                            .putBoolean(PREF_FEATURE_PAGE_VIDEO_HIDDEN, hidden)
                             .apply()
                     },
                     onDestinationPreparationRequested = {},

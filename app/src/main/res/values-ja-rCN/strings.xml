@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="system_adaptation_runtime_restart">対応バージョンを切り替えました。設定は保持されます。完全に適用して以前の変更を解除するには、端末を再起動してください。</string>
-    <string name="developer_allow_hyperos3_title">HyperOS 3 サポートを許可</string>
     <string name="system_adaptation_no_content">この対応バージョンには、まだ機能やツールがありません</string>
+    <string name="setting_bottom_bar_hide_labels">底欄無字</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">一个 COUI 风格之 OPlus 系统自定义工具箱</string>
     <string name="tab_home">主頁</string>
@@ -19,17 +18,10 @@
     <string name="setting_theme_mode">主題方式</string>
     <string name="setting_ui_style">画面様式</string>
     <string name="ui_style_coloros">COUI 17.0</string>
-    <string name="ui_style_material3_expressive">Material 3 Expressive</string>
     <string name="setting_dynamic_color">動態取色</string>
     <string name="setting_dynamic_color_on_summary">使用系統桌布配色</string>
     <string name="setting_dynamic_color_off_summary">使用自選主題顏色</string>
     <string name="setting_theme_palette">主題顏色</string>
-    <string name="setting_material_floating_bottom_bar">懸浮底欄</string>
-    <string name="setting_material_floating_bottom_bar_summary">使用懸浮式底部導覽列</string>
-    <string name="setting_material_haptics">触覚反応</string>
-    <string name="setting_material_haptics_summary">切換底部導覽時提供触覚反応</string>
-    <string name="setting_material_switch_icons">表示切替器図標</string>
-    <string name="setting_material_switch_icons_summary">在切替器滑塊中表示有効化或無効化状態之図標</string>
     <string name="setting_theme_settings">設定</string>
     <string name="theme_mode_system">系統追従</string>
     <string name="theme_mode_light">淺色方式</string>
@@ -53,10 +45,6 @@
     <string name="language_system">系統追従</string>
     <string name="setting_blur_effect">有効化模糊效果</string>
     <string name="setting_feature_page_new_style">機能頁新版樣式</string>
-    <string name="setting_progressive_card_animation">漸進式卡片動畫</string>
-    <string name="setting_progressive_card_animation_summary">卡片隨滑動漸進表示，僅用於機能頁旧版樣式与 OPPO Push 監視器</string>
-    <string name="setting_feature_page_hide_background_video">隱藏機能頁背景影片</string>
-    <string name="setting_feature_page_hide_background_video_summary">在非莫奈深色主題中將背景影片替換為炫彩動態背景</string>
     <string name="setting_pop_follows_swipe_edge">戻方向跟隨滑動邊緣</string>
     <string name="setting_pop_follows_swipe_edge_summary">戻動畫方向跟隨手指滑入之邊緣</string>
     <string name="settings_section_other">其他</string>
@@ -336,8 +324,6 @@
     <string name="about_reference_material_icons_title">Material Icons</string>
     <string name="about_reference_junit_summary">JUnit Team · EPL-1.0</string>
     <string name="about_reference_junit_title">JUnit</string>
-    <string name="about_reference_miuix_summary">compose-miuix-ui · Apache-2.0</string>
-    <string name="about_reference_miuix_title">MIUIX</string>
     <string name="about_reference_oshin_summary">suqi8 · AGPL-3.0</string>
     <string name="about_reference_oshin_title">OShin</string>
     <string name="about_reference_xposed_api_summary">libxposed · Apache-2.0</string>
@@ -429,7 +415,7 @@
     <string name="onboarding_language_title">言語選択</string>
     <string name="onboarding_language_summary">初回設定及 ONextBox 使用言語選択</string>
     <string name="onboarding_appearance_title">画面及主題</string>
-    <string name="onboarding_appearance_summary">選択 ONextBox 之画面様式和主題方式</string>
+    <string name="onboarding_appearance_summary">選択 ONextBox 之主題方式</string>
     <string name="onboarding_appearance_theme_note">僅影響 App 外觀，有効化頁面不受影響</string>
     <string name="onboarding_personalization_title">打造御主之 ONextBox</string>
     <string name="onboarding_personalization_summary">預覽並選択機能頁樣式，之後仍可在設定中修改</string>
@@ -437,11 +423,7 @@
     <string name="onboarding_feature_style_new_summary">沉浸式版面構成与動態背景</string>
     <string name="onboarding_feature_style_classic">經典機能頁</string>
     <string name="onboarding_feature_style_classic_summary">簡潔、熟悉之清単版面構成</string>
-    <string name="onboarding_feature_video_title">ColorOS 17 既定動態桌布</string>
-    <string name="onboarding_feature_video_summary">僅在一般深色方式之新版機能頁中表示</string>
     <string name="onboarding_feature_style_section">機能頁樣式</string>
-    <string name="onboarding_feature_background_section">背景</string>
-    <string name="onboarding_feature_coui_only_note">以上設定僅限 COUI 17.0 支援</string>
     <string name="onboarding_migration_title">移転御主之設定</string>
     <string name="onboarding_migration_summary">從 ONextBox 設定備份復元，或作為新応用続行設定</string>
     <string name="onboarding_migration_preview_source">舊端末備份</string>
@@ -1120,7 +1102,7 @@
     <string name="feature_large_network_lte_summary">カスタムアイコンの 4G・4G+ を LTE・LTE+ に置き換えます</string>
     <string name="wallpaper_motion_group">3D 壁紙</string>
     <string name="wallpaper_motion_title">3D 壁紙感度（實驗性）</string>
-    <string name="wallpaper_motion_summary">調整既有 3D 壁紙之傾斜感度，100% 為原始感度，數值越大反應越明顯，不變更系統角度上限。須於 LSPosed 勾選壁紙與炫彩引擎作用域後重新開啟壁紙</string>
+    <string name="wallpaper_motion_summary"></string>
     <string name="wallpaper_motion_amount">傾斜感度</string>
     <string name="feature_only_data_sim_signal_title">僅顯示數據卡信號</string>
     <string name="feature_only_data_sim_signal_summary">雙卡時僅顯示選定行動數據卡之信號與網路類型，切換數據卡後自動跟隨</string>
@@ -1164,7 +1146,7 @@
     <string name="launcher_icon_label_spacing_offset">間距偏移</string>
     <string name="launcher_swipe_gesture_group">上滑手勢</string>
     <string name="launcher_swipe_top_title">簡化上滑頂部區域</string>
-    <string name="launcher_swipe_top_summary">移除頂部手勢分割畫面入口並隱藏控制項，擴大浮動視窗觸發區域，不影響其他分割畫面入口</string>
+    <string name="launcher_swipe_top_summary">移除頂部手勢分割畫面入口並隱藏控制項，擴大浮動視窗觸發區域</string>
     <string name="launcher_float_trigger_width">浮動視窗觸發區域寬度</string>
     <string name="statusbar_icon_mute">靜音</string>
     <string name="statusbar_icon_network_speed">網路速度</string>
@@ -1223,7 +1205,7 @@
     <string name="qs_tile_corner_size_radius">%1$s磁贴圆角半径</string>
     <string name="launcher_group_effects">視覺效果</string>
     <string name="launcher_force_blur_title">強制開啟桌面模糊動效</string>
-    <string name="launcher_force_blur_summary">嘗試解除桌面背景、長按選單材質及相關模糊動效的機型限制，遵循系統模糊、省電和主題設定；可能增加耗電，韌體需保留原生模糊支援，切換後需重新啟動桌面</string>
+    <string name="launcher_force_blur_summary"></string>
 
     <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
 
@@ -1295,10 +1277,10 @@
     <string name="power_indicator_font">文字サイズ</string>
 
     <string name="rotation_suggestion_hide_title">回転提案ボタンを非表示</string>
-    <string name="rotation_suggestion_hide_summary">画面端の回転提案ボタンを非表示にします。自動回転や画面の向きの設定は変更しません</string>
+    <string name="rotation_suggestion_hide_summary">画面端の回転提案ボタンを非表示にします</string>
 
     <string name="hide_screenshot_floating_title">スクリーンショットからフローティングアプリを除外</string>
-    <string name="hide_screenshot_floating_summary">対応するフローティングウィンドウ、ピクチャーインピクチャー、アプリのオーバーレイを閉じずにシステムのスクリーンショットから除外</string>
+    <string name="hide_screenshot_floating_summary">対応するフローティングウィンドウ、ピクチャーインピクチャー、アプリのオーバーレイをシステムのスクリーンショットから除外</string>
     <string name="power_indicator_hide_discharge_sign">放電負号非表示</string>
     <string name="power_indicator_temperature">双行温度表示</string>
     <string name="power_indicator_temperature_summary">上行功耗表示、下行電池温度表示</string>
@@ -1320,17 +1302,13 @@
     <string name="setting_settings_home_entry_style">アイコンスタイル</string>
     <string name="setting_settings_home_entry_style_system">デフォルト</string>
     <string name="setting_settings_home_entry_style_app">アプリアイコン</string>
-    <string name="settings_section_system_adaptation">系統適配</string>
-    <string name="setting_system_adaptation_version">適配版本</string>
-    <string name="setting_system_adaptation_save_failed">無法保存系統適配版本，請確認 Xposed 框架連接後重試</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_title">LTPO/LTPS の動的な低下を無効化</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_summary">画面点灯中はシステム設定で選択したリフレッシュレートを維持します。有効にすると消費電力が増える場合があります。</string>
     <string name="display_enhancement_group">画质增强</string>
     <string name="display_enhancement_sr_thermal_title">解除画质超清增强温控限制</string>
-    <string name="display_enhancement_sr_thermal_summary">解除画质超清增强自身的温控限制，不解锁硬件能力，可能增加发热与耗电</string>
+    <string name="display_enhancement_sr_thermal_summary">解除画质超清增强自身的温控限制</string>
     <string name="display_enhancement_color_thermal_title">解除视频色彩增强温控限制</string>
-    <string name="display_enhancement_color_thermal_summary">解除视频色彩增强自身的温控限制，可能增加发热与耗电，不影响整机温控保护</string>
-    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="display_enhancement_color_thermal_summary">解除视频色彩增强自身的温控限制</string>
     <string name="settings_home_cleanup_group">設定ホーム</string>
     <string name="settings_home_hide_account_title">上部のアカウント項目を非表示</string>
     <string name="settings_home_hide_account_summary">システム設定ホームのアカウントカードを非表示にします</string>
@@ -1364,4 +1342,21 @@
     <string name="native_live_update_summary">標準のリアルタイム通知チップを使用します。有効にすると Fluid Cloud は表示されず、両方を同時に使用できません。</string>
     <string name="setting_hide_module_icon">モジュールのアプリアイコンを非表示</string>
     <string name="setting_hide_module_icon_failed">アイコンの表示状態を変更できません</string>
+    <string name="side_volume_group">侧边音量条</string>
+    <string name="side_volume_percentage_title">百分比显示</string>
+    <string name="side_volume_percentage_summary">在音量条上显示百分比，包括多音量调节</string>
+    <string name="side_volume_keep_wide_title">禁止调节时变为细条</string>
+    <string name="qs_slider_percentage_title">进度条百分比显示</string>
+    <string name="qs_slider_percentage_summary">在亮度、音量条上显示百分比，包含二级面板</string>
+    <string name="qs_slider_percentage_properties">百分比属性设置</string>
+    <string name="qs_slider_percentage_size">文字大小</string>
+    <string name="qs_slider_percentage_color">文字颜色</string>
+    <string name="qs_slider_percentage_offset">纵向位置偏移</string>
+    <string name="settings_color_white">白色</string>
+    <string name="settings_color_black">黑色</string>
+    <string name="capture_group_screenshot_options">スクリーンショット設定</string>
+    <string name="volume_group_alerts">音量通知</string>
+    <string name="control_center_group_visibility">要素の非表示</string>
+    <string name="launcher_group_app_management">アプリ管理</string>
+    <string name="launcher_group_recent_interaction">表示と操作</string>
 </resources>

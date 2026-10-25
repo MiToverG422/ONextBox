@@ -1,11 +1,15 @@
 package com.mi.onextbox.lsp.compat
 
 import android.content.SharedPreferences
+import com.mi.onextbox.lsp.SystemAdaptationDetector
+import com.mi.onextbox.lsp.SystemAdaptationVersion
 
 internal const val MODERN_PREFERENCES_READY_KEY = "__onextbox_api102_snapshot_ready"
 
 /** Immutable preference snapshot, replaced atomically outside Hook callbacks. */
-internal object HookConfigSnapshot {
+internal object HookConfigSnapshot : HookPreferenceSnapshot(SystemAdaptationDetector::current)
+
+internal open class HookPreferenceSnapshot(private val systemVersion: () -> SystemAdaptationVersion) {
     @Volatile
     private var values: Map<String, Any?>? = null
 
@@ -60,29 +64,31 @@ internal object HookConfigSnapshot {
 
     fun boolean(key: String, defaultValue: Boolean): Boolean? =
         values?.let { snapshot ->
-            if (!AdaptationRuntimePolicy.allowsKey(key, AdaptationRuntimePolicy.selected(snapshot))) false
+            if (!AdaptationRuntimePolicy.allowsFeatureBoolean(adaptationVersion(), key)) false
             else snapshot[key] as? Boolean ?: defaultValue
         }
 
-    fun adaptationVersion() = AdaptationRuntimePolicy.selected(values)
+    fun adaptationVersion() = systemVersion()
 
     fun int(key: String, defaultValue: Int): Int? =
-        values?.let { snapshot -> (snapshot[key] as? Number)?.toInt() ?: defaultValue }
+        values?.let { snapshot -> if (!allowsValue(key)) defaultValue else (snapshot[key] as? Number)?.toInt() ?: defaultValue }
 
     fun float(key: String, defaultValue: Float): Float? =
-        values?.let { snapshot -> (snapshot[key] as? Number)?.toFloat() ?: defaultValue }
+        values?.let { snapshot -> if (!allowsValue(key)) defaultValue else (snapshot[key] as? Number)?.toFloat() ?: defaultValue }
 
     fun long(key: String, defaultValue: Long? = null): Long? =
-        values?.let { snapshot -> (snapshot[key] as? Number)?.toLong() ?: defaultValue }
+        values?.let { snapshot -> if (!allowsValue(key)) defaultValue else (snapshot[key] as? Number)?.toLong() ?: defaultValue }
 
     fun string(key: String, defaultValue: String?): String? =
-        values?.let { snapshot -> snapshot[key] as? String ?: defaultValue }
+        values?.let { snapshot -> if (!allowsValue(key)) defaultValue else snapshot[key] as? String ?: defaultValue }
 
     fun stringSet(key: String, defaultValue: Set<String>): Set<String>? =
         values?.let { snapshot ->
             @Suppress("UNCHECKED_CAST")
-            (snapshot[key] as? Set<String>) ?: defaultValue
+            if (!allowsValue(key)) defaultValue else (snapshot[key] as? Set<String>) ?: defaultValue
         }
+
+    private fun allowsValue(key: String) = AdaptationRuntimePolicy.allowsFeatureValue(adaptationVersion(), key)
 
     private fun refresh(preferences: SharedPreferences) {
         val current = runCatching { preferences.all }.getOrNull() ?: return

@@ -34,7 +34,7 @@ internal val realmeFeatureTitles = listOf(
 )
 
 @Composable
-internal fun SettingsRealmePage() {
+internal fun SettingsRealmePage(availableTitles: Set<Int>? = null) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
     val owner = LocalLifecycleOwner.current
@@ -66,7 +66,8 @@ internal fun SettingsRealmePage() {
     FeatureAnimatedGroup(animateChanges = true) {
         realmeFeatureTitles.forEach { (feature, title) ->
             val ready = dependencies[feature] != false
-            row(feature.key, visible = feature !in SettingsRealmeLaboratory.children || values[SettingsRealmeFeature.Laboratory] == true) { above, below ->
+            row(feature.key, visible = (availableTitles == null || title in availableTitles) &&
+                (feature !in SettingsRealmeLaboratory.children || values[SettingsRealmeFeature.Laboratory] == true)) { above, below ->
                 val dependencySummary = when (feature) {
                     SettingsRealmeFeature.SleepCapsule -> stringResource(R.string.settings_realme_sleep_dependency)
                     SettingsRealmeFeature.HeartRate -> stringResource(R.string.settings_realme_heart_dependency)

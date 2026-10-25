@@ -50,7 +50,10 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_aosp_volume_title, FeaturePageMode.SystemUiNative) { context -> AospVolumeSettings.enabled(context) },
         SharedFeatureDefinitions.stackedSignal.catalogEntry(),
         Entry(R.string.app_errors_enable, FeaturePageMode.AppErrors) { context -> AppErrorTrackingSettings.isEnabled(context) },
-        Entry(R.string.feature_assistant_native_combined_title, FeaturePageMode.Assistant) { context -> LspConfig.isAssistantNativePowerEnabled(context) && LspConfig.isAssistantNativeCircleEnabled(context) },
+        Entry(R.string.feature_assistant_native_combined_title, FeaturePageMode.Assistant) { context ->
+            LspConfig.isAssistantNativePowerEnabled(context) &&
+                (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16 || LspConfig.isAssistantNativeCircleEnabled(context))
+        },
         Entry(R.string.feature_assistant_international_power_chord_title, FeaturePageMode.Assistant, parents = setOf(R.string.feature_assistant_native_combined_title)) { context -> LspConfig.isAssistantInternationalPowerChordEnabled(context) },
         Entry(R.string.feature_assistant_ok_google_compatibility_title, FeaturePageMode.Assistant) { context -> LspConfig.isOkGoogleHotwordCompatibilityEnabled(context) },
         Entry(R.string.feature_assistant_power_title, FeaturePageMode.Assistant) { context -> LspConfig.getAssistantPowerMode(context) != LspConfig.ASSISTANT_POWER_MODE_NONE },
@@ -230,10 +233,12 @@ internal object EnabledFeatureCatalog {
     }
 
     suspend fun configured(context: Context): Set<Int> =
-        entries.filter { it.read(context) }.mapTo(mutableSetOf()) { it.title }
+        (entries + if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16)
+            colorOs16AdditionalCatalogEntries else emptyList()).filter { it.read(context) }.mapTo(mutableSetOf()) { it.title }
 
     internal fun dependenciesActive(title: Int, configured: Set<Int>): Boolean {
-        val entry = entries.firstOrNull { it.title == title } ?: return false
+        val entry = entries.firstOrNull { it.title == title }
+            ?: colorOs16AdditionalCatalogEntries.firstOrNull { it.title == title } ?: return false
         return entry.excludes.none { it in configured } && entry.parents.all { isActive(it, configured) }
     }
 

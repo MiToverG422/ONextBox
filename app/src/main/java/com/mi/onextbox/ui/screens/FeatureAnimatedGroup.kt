@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import androidx.compose.animation.animateBounds
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -12,8 +16,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -21,11 +23,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.unit.dp
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
-import com.mi.onextbox.ui.settings.Material3ExpressiveAnimatedSegmentPosition
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
+
+internal object FeatureExpansionMotion {
+    const val SizeDurationMillis = 280
+    const val FadeDurationMillis = 180
+
+    val Enter = expandVertically(
+        tween(SizeDurationMillis, easing = FastOutSlowInEasing),
+        expandFrom = Alignment.Top,
+    ) + fadeIn(tween(FadeDurationMillis))
+
+    val Exit = shrinkVertically(
+        tween(SizeDurationMillis, easing = FastOutSlowInEasing),
+        shrinkTowards = Alignment.Top,
+    ) + fadeOut(tween(FadeDurationMillis))
+}
 
 internal class FeatureAnimatedGroupScope(private val retainHiddenRows: Boolean = false) {
     internal val rows = mutableListOf<Pair<Any, @Composable (Boolean, Boolean) -> Unit>>()
@@ -39,9 +53,9 @@ internal class FeatureAnimatedGroupScope(private val retainHiddenRows: Boolean =
     }
 }
 
-/** One flat visible list: no empty animation slots or leftover MD3E inter-card gaps. */
+/** One flat visible list without empty animation slots or gaps between joined rows. */
 @Composable
-internal fun FeatureAnimatedGroup(animateChanges: Boolean = false, content: FeatureAnimatedGroupScope.() -> Unit) {
+internal fun FeatureAnimatedGroup(animateChanges: Boolean = true, content: FeatureAnimatedGroupScope.() -> Unit) {
     SettingsGroup { FeatureAnimatedRows(animateChanges = animateChanges, content = content) }
 }
 
@@ -49,7 +63,7 @@ internal fun FeatureAnimatedGroup(animateChanges: Boolean = false, content: Feat
 internal fun FeatureAnimatedRows(
     hasDividerAbove: Boolean = false,
     hasDividerBelow: Boolean = false,
-    animateChanges: Boolean = false,
+    animateChanges: Boolean = true,
     content: FeatureAnimatedGroupScope.() -> Unit,
 ) {
     val scope = FeatureAnimatedGroupScope(retainHiddenRows = animateChanges).apply(content)
@@ -58,22 +72,16 @@ internal fun FeatureAnimatedRows(
         return
     }
     val rows = scope.rows
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
+
     Column(
         modifier = Modifier.animateContentSize(),
-        verticalArrangement = Arrangement.spacedBy(if (material) 2.dp else 0.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         rows.forEachIndexed { index, (identity, row) ->
             key(identity) {
                 val above = index > 0 || hasDividerAbove
                 val below = index < rows.lastIndex || hasDividerBelow
-                if (material) {
-                    Material3ExpressiveAnimatedSegmentPosition(
-                        index + if (hasDividerAbove) 1 else 0,
-                        rows.size + (if (hasDividerAbove) 1 else 0) + (if (hasDividerBelow) 1 else 0),
-                        280,
-                    ) { row(above, below) }
-                } else {
+                run {
                     row(above, below)
                     if (below) SettingsDivider()
                 }
@@ -82,10 +90,10 @@ internal fun FeatureAnimatedRows(
     }
 }
 
-/** Opt-in real entry/exit and keyed placement animations without empty hidden slots. */
+/** Shared entry/exit and keyed placement animations without empty hidden slots. */
 @Composable
 private fun FeatureTransitionRows(scope: FeatureAnimatedGroupScope, hasDividerAbove: Boolean, hasDividerBelow: Boolean) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
+
     val transitions = scope.rows.map { (identity, _) ->
         key(identity) {
             remember { MutableTransitionState(scope.visibility.getValue(identity)) }.apply {
@@ -94,7 +102,7 @@ private fun FeatureTransitionRows(scope: FeatureAnimatedGroupScope, hasDividerAb
         }
     }
     // Exiting content stays composed through the entire animation. Finished hidden
-    // rows have no placement, segment, divider or MD3E gap in the joined card.
+    // rows have no placement, segment, divider or gap in the joined card.
     val rendered = scope.rows.indices.filter { index ->
         val transition = transitions[index]
         transition.currentState || transition.targetState || !transition.isIdle
@@ -111,19 +119,12 @@ private fun FeatureTransitionRows(scope: FeatureAnimatedGroupScope, hasDividerAb
                     // be free to collapse, not fixed by bounds-animation constraints.
                     androidx.compose.animation.AnimatedVisibility(
                         visibleState = transitions[rowIndex],
-                        enter = expandVertically(tween(280, easing = FastOutSlowInEasing), expandFrom = Alignment.Top) + fadeIn(tween(180)),
-                        exit = shrinkVertically(tween(280, easing = FastOutSlowInEasing), shrinkTowards = Alignment.Top) + fadeOut(tween(180)),
+                        enter = FeatureExpansionMotion.Enter,
+                        exit = FeatureExpansionMotion.Exit,
                     ) {
-                        Box(Modifier.animateBounds(lookahead, boundsTransform = { _, _ -> tween(280, easing = FastOutSlowInEasing) })) {
+                        Box(Modifier.animateBounds(lookahead, boundsTransform = { _, _ -> tween(FeatureExpansionMotion.SizeDurationMillis, easing = FastOutSlowInEasing) })) {
                             Column {
-                                if (material) {
-                                    Material3ExpressiveAnimatedSegmentPosition(
-                                        position + if (hasDividerAbove) 1 else 0,
-                                        rendered.size + (if (hasDividerAbove) 1 else 0) + (if (hasDividerBelow) 1 else 0),
-                                        280,
-                                    ) { row(above, below) }
-                                    if (position < rendered.lastIndex) Spacer(Modifier.height(2.dp))
-                                } else {
+                                run {
                                     row(above, below)
                                     if (below) SettingsDivider()
                                 }

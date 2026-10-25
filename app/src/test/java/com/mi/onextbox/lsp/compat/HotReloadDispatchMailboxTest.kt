@@ -1,5 +1,6 @@
 package com.mi.onextbox.lsp.compat
 
+import com.mi.onextbox.lsp.SystemAdaptationVersion
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -18,6 +19,86 @@ class HotReloadDispatchMailboxTest {
         HotReloadDispatchMailbox.bind(mailbox, Consumer { received += it[0] as String })
         HotReloadDispatchMailbox.submit(mailbox, event("third"))
         assertEquals(listOf("first", "second", "third"), received)
+    }
+
+    @Test fun initialEventsWaitForReadyConfigurationBeforeBindingTheColorOs16Profile() {
+        val mailbox = HotReloadDispatchMailbox.create()
+        var ready = false
+        var profileReads = 0
+        val profile = AdaptationProfileGate {
+            profileReads++
+            SystemAdaptationVersion.ColorOs16
+        }
+        val dispatched = hashSetOf<String>()
+        val received = ArrayList<Pair<String, SystemAdaptationVersion>>()
+        lateinit var receiver: Consumer<Array<Any>>
+        receiver = Consumer { row ->
+            if (!ready) HotReloadDispatchMailbox.defer(mailbox, receiver, row)
+            else if (dispatched.add(row[0] as String)) received += row[0] as String to profile.bind()
+        }
+        HotReloadDispatchMailbox.bind(mailbox, receiver)
+        HotReloadDispatchMailbox.submit(mailbox, event("com.android.launcher"))
+        HotReloadDispatchMailbox.bind(mailbox, receiver)
+        assertEquals(0, profileReads)
+        assertTrue(dispatched.isEmpty())
+        assertTrue(received.isEmpty())
+
+        ready = true
+        HotReloadDispatchMailbox.bind(mailbox, receiver)
+        HotReloadDispatchMailbox.bind(mailbox, receiver)
+        HotReloadDispatchMailbox.submit(mailbox, event("com.android.launcher"))
+
+        assertEquals(1, profileReads)
+        assertEquals(listOf("com.android.launcher" to SystemAdaptationVersion.ColorOs16), received)
+    }
+
+    @Test fun unreadyLifecycleEventsSurviveHandoverAndDrainOnlyInTheReadySuccessor() {
+        val parent = HotReloadDispatchMailbox.create()
+        lateinit var oldReceiver: Consumer<Array<Any>>
+        oldReceiver = Consumer { HotReloadDispatchMailbox.defer(parent, oldReceiver, it) }
+        HotReloadDispatchMailbox.bind(parent, oldReceiver)
+        HotReloadDispatchMailbox.submit(parent, event("before-ready"))
+        val child = HotReloadDispatchMailbox.retire(parent)
+        HotReloadDispatchMailbox.submit(parent, event("during-handover"))
+
+        var ready = false
+        val received = ArrayList<String>()
+        lateinit var replacement: Consumer<Array<Any>>
+        replacement = Consumer { row ->
+            if (!ready) HotReloadDispatchMailbox.defer(child, replacement, row)
+            else received += row[0] as String
+        }
+        HotReloadDispatchMailbox.bind(child, replacement)
+        assertTrue(received.isEmpty())
+        ready = true
+        HotReloadDispatchMailbox.bind(child, replacement)
+        HotReloadDispatchMailbox.submit(parent, event("after-ready"))
+        HotReloadDispatchMailbox.bind(child, replacement)
+
+        assertEquals(listOf("before-ready", "during-handover", "after-ready"), received)
+    }
+
+    @Test fun readinessRacingTheDeferredEnqueueCannotStrandTheInitialEvent() {
+        val mailbox = HotReloadDispatchMailbox.create()
+        var ready = false
+        val received = ArrayList<String>()
+        lateinit var receiver: Consumer<Array<Any>>
+        receiver = Consumer { row ->
+            if (!ready) {
+                // The READY notification drains before the unavailable dispatch has enqueued.
+                ready = true
+                HotReloadDispatchMailbox.bind(mailbox, receiver)
+                HotReloadDispatchMailbox.defer(mailbox, receiver, row)
+                // Match the dispatcher's bounded recheck after enqueue.
+                if (ready) HotReloadDispatchMailbox.bind(mailbox, receiver)
+            } else received += row[0] as String
+        }
+        HotReloadDispatchMailbox.bind(mailbox, receiver)
+        HotReloadDispatchMailbox.submit(mailbox, event("initial"))
+
+        assertEquals(listOf("initial"), received)
+        HotReloadDispatchMailbox.bind(mailbox, receiver)
+        assertEquals(listOf("initial"), received)
     }
 
     @Test fun retiredChildExportsOnlyPlatformQueueAndHasNoParentOrOldReceiver() {

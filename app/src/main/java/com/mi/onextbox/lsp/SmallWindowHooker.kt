@@ -51,9 +51,9 @@ internal object SmallWindowHooker {
     }
 
     fun hookSystemUi(loader: ClassLoader) = install(loader, Variant.Zoom)
-    fun hookSystemServer(loader: ClassLoader) {
+    fun hookSystemServer(loader: ClassLoader, colorOs16: Boolean = false) {
         install(loader, Variant.Flexible)
-        SmallWindowPolicyHooker.install(loader)
+        SmallWindowPolicyHooker.install(loader, colorOs16)
     }
 
     private fun enabled(feature: Feature): Boolean = LspConfig.isSmallWindowFeatureEnabledXposed(feature)

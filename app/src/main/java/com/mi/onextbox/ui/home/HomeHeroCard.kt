@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.home
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -15,13 +19,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -34,10 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspStatus
 import com.mi.onextbox.ui.common.AppUiTokens
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.ONextBoxLogo
-import com.mi.onextbox.ui.common.lspStatusText
 import com.mi.onextbox.ui.common.rememberHapticLongPress
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.squircle.squircleSurface
@@ -51,10 +49,7 @@ fun HomeHeroCard(
     lsposedStatus: LspStatus,
     onLongPress: () -> Unit,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveHomeHeroCard(rootGranted, lsposedReady, lsposedStatus, onLongPress)
-        return
-    }
+
     val hapticLongPress = rememberHapticLongPress()
     val appVersionName = rememberAppVersionName()
     val deviceMarketName = rememberDeviceMarketName()
@@ -136,79 +131,6 @@ fun HomeHeroCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun Material3ExpressiveHomeHeroCard(
-    rootGranted: Boolean,
-    lsposedReady: Boolean,
-    lsposedStatus: LspStatus,
-    onLongPress: () -> Unit,
-) {
-    val hapticLongPress = rememberHapticLongPress()
-    val successful = rootGranted && lsposedReady
-    val failed = lsposedStatus != LspStatus.CHECKING &&
-        (!rootGranted || lsposedStatus == LspStatus.DISABLED)
-    val colors = androidx.compose.material3.MaterialTheme.colorScheme
-    val container = when {
-        successful -> colors.secondaryContainer
-        failed -> colors.errorContainer
-        else -> colors.surfaceContainerHigh
-    }
-    val foreground = when {
-        successful -> colors.onSecondaryContainer
-        failed -> colors.onErrorContainer
-        else -> colors.onSurface
-    }
-    val title = when {
-        successful -> stringResource(R.string.onboarding_runtime_ready)
-        lsposedStatus == LspStatus.CHECKING -> stringResource(R.string.app_name)
-        !rootGranted -> stringResource(R.string.home_status_root_missing)
-        else -> lspStatusText(lsposedStatus)
-    }
-    val supporting = stringResource(R.string.about_version, rememberAppVersionName())
-    androidx.compose.material3.Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(onLongPress) {
-                awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false)
-                    val released = withTimeoutOrNull(800L) { waitForUpOrCancellation() }
-                    if (released == null) {
-                        hapticLongPress()
-                        onLongPress()
-                        waitForUpOrCancellation()
-                    }
-                }
-            },
-        shape = androidx.compose.material3.MaterialTheme.shapes.large,
-        color = container,
-        contentColor = foreground,
-    ) {
-        androidx.compose.material3.ListItem(
-            supportingContent = { androidx.compose.material3.Text(supporting) },
-            leadingContent = {
-                androidx.compose.material3.Icon(
-                    imageVector = if (successful) com.mi.onextbox.ui.common.AppIcons.Check else com.mi.onextbox.ui.common.AppIcons.InfoFilled,
-                    contentDescription = null,
-                    modifier = Modifier.rotate(
-                        if (rootGranted && lsposedStatus == LspStatus.MISSING_SCOPE) 180f else 0f,
-                    ),
-                )
-            },
-            colors = androidx.compose.material3.ListItemDefaults.colors(
-                containerColor = container,
-                contentColor = foreground,
-                leadingContentColor = foreground,
-                supportingContentColor = foreground.copy(alpha = 0.7f),
-            ),
-        ) {
-            androidx.compose.material3.Text(
-                text = title,
-                style = androidx.compose.material3.MaterialTheme.typography.titleMediumEmphasized,
-            )
         }
     }
 }

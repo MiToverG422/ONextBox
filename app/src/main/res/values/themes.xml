@@ -3,6 +3,10 @@
 
     <style name="Theme.ONextBox" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/coui_launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/coui_launch_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_splash</item>
+        <item name="android:windowSplashScreenAnimationDuration">500</item>
+        <item name="android:windowSplashScreenBehavior">icon_preferred</item>
         <item name="android:colorAccent">@color/coui_launch_background</item>
         <item name="android:statusBarColor">@color/coui_launch_background</item>
         <item name="android:navigationBarColor">@color/coui_launch_background</item>

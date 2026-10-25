@@ -9,12 +9,10 @@ activityCompose = "1.13.0"
 kotlin = "2.4.10"
 composeBom = "2026.08.00"
 material3Expressive = "1.5.0-alpha27"
-materialKolor = "5.0.1"
 couiCompose = "1.9.3"
 couiComposeWindowSize = "1.9.0"
 couiCapsule = "2.1.1-patch2"
 kyantShapes = "1.2.1"
-miuix = "0.9.4"
 couiAndroidxWindow = "1.5.0"
 libxposed = "102.0.0"
 palette = "1.0.0"
@@ -29,7 +27,6 @@ dynamicAnimation = "1.1.0"
 dexkit = "2.3.0"
 
 [libraries]
-miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -41,7 +38,6 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3Expressive" }
-material-kolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialKolor" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }

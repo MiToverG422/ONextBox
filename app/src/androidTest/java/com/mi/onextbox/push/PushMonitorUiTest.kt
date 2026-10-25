@@ -61,64 +61,32 @@ class PushMonitorUiTest {
         assertJoinedRows(AppUiStyle.ColorOs)
     }
 
-    @Test fun materialRowsKeepNamePackageAndStatusTogetherWithoutSwitch() {
-        assertJoinedRows(AppUiStyle.Material3Expressive)
-    }
-
     @Test fun couiSearchAndUnregisteredFilterExcludeUnknownApps() {
         assertSearchAndFilter(AppUiStyle.ColorOs)
-    }
-
-    @Test fun materialSearchAndUnregisteredFilterExcludeUnknownApps() {
-        assertSearchAndFilter(AppUiStyle.Material3Expressive)
     }
 
     @Test fun couiRefreshAnimatesStatusBeforeRemovingOldText() {
         assertStatusTransition(AppUiStyle.ColorOs)
     }
 
-    @Test fun materialRefreshAnimatesStatusBeforeRemovingOldText() {
-        assertStatusTransition(AppUiStyle.Material3Expressive)
-    }
-
     @Test fun couiSearchClearRestoresRows() {
         assertSearchClear(AppUiStyle.ColorOs)
-    }
-
-    @Test fun materialSearchClearRestoresRows() {
-        assertSearchClear(AppUiStyle.Material3Expressive)
     }
 
     @Test fun couiFooterAlignsWithCardContents() {
         assertFooterAlignment(AppUiStyle.ColorOs)
     }
 
-    @Test fun materialFooterAlignsWithCardContents() {
-        assertFooterAlignment(AppUiStyle.Material3Expressive)
-    }
-
     @Test fun couiSearchAndFiltersStayPinnedWhenScrollingToFooter() {
         assertSearchAndFiltersPinned(AppUiStyle.ColorOs)
-    }
-
-    @Test fun materialSearchAndFiltersStayPinnedWhenScrollingToFooter() {
-        assertSearchAndFiltersPinned(AppUiStyle.Material3Expressive)
     }
 
     @Test fun couiListDrawsBehindBottomInsetButFooterScrollsAboveIt() {
         assertBottomEdgeToEdge(AppUiStyle.ColorOs)
     }
 
-    @Test fun materialListDrawsBehindBottomInsetButFooterScrollsAboveIt() {
-        assertBottomEdgeToEdge(AppUiStyle.Material3Expressive)
-    }
-
     @Test fun couiFiltersReturnToTopOnEveryClick() {
         assertFilterScrollReset(AppUiStyle.ColorOs)
-    }
-
-    @Test fun materialFiltersReturnToTopOnEveryClick() {
-        assertFilterScrollReset(AppUiStyle.Material3Expressive)
     }
 
     private fun assertJoinedRows(style: AppUiStyle) {

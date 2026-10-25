@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="system_adaptation_runtime_restart">対応バージョンを切り替えました。設定は保持されます。完全に適用して以前の変更を解除するには、端末を再起動してください。</string>
-    <string name="developer_allow_hyperos3_title">HyperOS 3 サポートを許可</string>
     <string name="system_adaptation_no_content">この対応バージョンには、まだ機能やツールがありません</string>
+    <string name="setting_bottom_bar_hide_labels">ボトムバーのラベルを非表示</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">OPlus システムをカスタマイズするための COUI スタイルのツールボックス</string>
     <string name="tab_home">ホーム</string>
@@ -19,17 +18,10 @@
     <string name="setting_theme_mode">テーマモード</string>
     <string name="setting_ui_style">インターフェーススタイル</string>
     <string name="ui_style_coloros">COUI 17.0</string>
-    <string name="ui_style_material3_expressive">Material 3 Expressive</string>
     <string name="setting_dynamic_color">ダイナミックカラー</string>
     <string name="setting_dynamic_color_on_summary">システムの壁紙の色を使用します</string>
     <string name="setting_dynamic_color_off_summary">カスタム テーマ カラーを使用する</string>
     <string name="setting_theme_palette">テーマカラー</string>
-    <string name="setting_material_floating_bottom_bar">フローティングボトムバー</string>
-    <string name="setting_material_floating_bottom_bar_summary">フローティングボトムナビゲーションバーを使用する</string>
-    <string name="setting_material_haptics">触覚フィードバック</string>
-    <string name="setting_material_haptics_summary">ナビゲーション タブを切り替えるときに触覚フィードバックを提供します</string>
-    <string name="setting_material_switch_icons">スイッチのアイコンを表示</string>
-    <string name="setting_material_switch_icons_summary">スイッチのつまみにオン・オフの状態アイコンを表示</string>
     <string name="setting_theme_settings">の設定</string>
     <string name="theme_mode_system">システム設定に従う</string>
     <string name="theme_mode_light">ライト</string>
@@ -53,10 +45,6 @@
     <string name="language_system">システム設定に従う</string>
     <string name="setting_blur_effect">ぼかし効果を有効にする</string>
     <string name="setting_feature_page_new_style">新機能ページのスタイル</string>
-    <string name="setting_progressive_card_animation">段階的なカードアニメーション</string>
-    <string name="setting_progressive_card_animation_summary">スクロール中にカードを段階的に表示、機能ページの旧スタイルと OPPO Push モニターにのみ適用</string>
-    <string name="setting_feature_page_hide_background_video">機能ページの背景ビデオを非表示にする</string>
-    <string name="setting_feature_page_hide_background_video_summary">Monet 以外のダークテーマでは、背景ビデオをカラフルなアニメーション背景に置き換えます</string>
     <string name="setting_pop_follows_swipe_edge">ポップはスワイプ エッジに続きます</string>
     <string name="setting_pop_follows_swipe_edge_summary">ポップアニメーションの方向は指のスワイプエッジに従います</string>
     <string name="settings_section_other">その他</string>
@@ -336,8 +324,6 @@
     <string name="about_reference_material_icons_title">マテリアル アイコン</string>
     <string name="about_reference_junit_summary">JUnit チーム · EPL-1.0</string>
     <string name="about_reference_junit_title">JUnit</string>
-    <string name="about_reference_miuix_summary">compose-miuix-ui · Apache-2.0</string>
-    <string name="about_reference_miuix_title">ミウイス</string>
     <string name="about_reference_oshin_summary">スーキ8・AGPL-3.0</string>
     <string name="about_reference_oshin_title">おしん</string>
     <string name="about_reference_xposed_api_summary">libxused · Apache-2.0</string>
@@ -429,7 +415,7 @@
     <string name="onboarding_language_title">言語を選択</string>
     <string name="onboarding_language_summary">初期設定と ONextBox で使う言語を選択します</string>
     <string name="onboarding_appearance_title">画面スタイルとテーマ</string>
-    <string name="onboarding_appearance_summary">ONextBox のインターフェイス スタイルとテーマを選択します</string>
+    <string name="onboarding_appearance_summary">ONextBox のテーマを選択します</string>
     <string name="onboarding_appearance_theme_note">これはアプリのみを変更します。セットアップ画面は影響を受けません</string>
     <string name="onboarding_personalization_title">自分好みにカスタマイズ</string>
     <string name="onboarding_personalization_summary">続行する前に、[機能] ページの外観をプレビューして選択します</string>
@@ -437,11 +423,7 @@
     <string name="onboarding_feature_style_new_summary">アニメーション背景を備えた没入型レイアウト</string>
     <string name="onboarding_feature_style_classic">クラシック機能ページ</string>
     <string name="onboarding_feature_style_classic_summary">シンプルで使い慣れたリスト レイアウト</string>
-    <string name="onboarding_feature_video_title">ColorOS 17 デフォルトのライブ壁紙</string>
-    <string name="onboarding_feature_video_summary">標準ダーク モードの新機能ページにのみ表示されます</string>
     <string name="onboarding_feature_style_section">特集ページのスタイル</string>
-    <string name="onboarding_feature_background_section">背景</string>
-    <string name="onboarding_feature_coui_only_note">これらのオプションは、COUI 17.0 でのみサポートされます</string>
     <string name="onboarding_migration_title">設定を持ち運べます</string>
     <string name="onboarding_migration_summary">ONextBox 構成バックアップを復元するか、新規としてセットアップします</string>
     <string name="onboarding_migration_preview_source">デバイスのバックアップ</string>
@@ -1120,7 +1102,7 @@
     <string name="feature_large_network_lte_summary">カスタムアイコンの 4G・4G+ を LTE・LTE+ に置き換えます</string>
     <string name="wallpaper_motion_group">3D 壁紙</string>
     <string name="wallpaper_motion_title">3D 壁紙の感度（試験的）</string>
-    <string name="wallpaper_motion_summary">既存の 3D 壁紙の傾き感度を調整します。100% が元の感度で、値を上げるほど反応が大きくなります。システムの角度上限は変更しません。LSPosed で壁紙と Colorful Engine を有効にしてから、壁紙を開き直してください</string>
+    <string name="wallpaper_motion_summary"></string>
     <string name="wallpaper_motion_amount">傾き感度</string>
     <string name="feature_only_data_sim_signal_title">データ SIM の電波のみ表示</string>
     <string name="feature_only_data_sim_signal_summary">デュアル SIM 使用時、モバイルデータ用に選択した SIM の電波とネットワーク種別のみ表示します。データ SIM の切り替えに追従します</string>
@@ -1164,7 +1146,7 @@
     <string name="launcher_icon_label_spacing_offset">間隔オフセット</string>
     <string name="launcher_swipe_gesture_group">上スワイプジェスチャー</string>
     <string name="launcher_swipe_top_title">上スワイプの上部領域を簡素化</string>
-    <string name="launcher_swipe_top_summary">上部ジェスチャー領域の画面分割入口と操作表示をなくし、フローティングウィンドウの判定領域を広げます。他の画面分割入口は変更しません</string>
+    <string name="launcher_swipe_top_summary">上部ジェスチャー領域の画面分割入口と操作表示をなくし、フローティングウィンドウの判定領域を広げます</string>
     <string name="launcher_float_trigger_width">フローティングウィンドウの判定幅</string>
     <string name="statusbar_icon_mute">ミュート</string>
     <string name="statusbar_icon_network_speed">通信速度</string>
@@ -1223,7 +1205,7 @@
     <string name="qs_tile_corner_size_radius">%1$sタイルの角丸半径</string>
     <string name="launcher_group_effects">視覚効果</string>
     <string name="launcher_force_blur_title">ホームのぼかし効果を強制的に有効化</string>
-    <string name="launcher_force_blur_summary">ホーム背景、長押しメニュー、ぼかしアニメーションの機種制限の解除を試みます。システムのぼかし、省電力、テーマ設定を尊重します。消費電力が増える場合があり、ファームウェアのネイティブ対応が必要です。変更後はホームを再起動してください</string>
+    <string name="launcher_force_blur_summary"></string>
 
     <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
 
@@ -1232,8 +1214,7 @@
     <string name="feature_c16_stacked_signal_save_failed">設定を保存できませんでした</string>
 
 <!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
-    <string name="corepatch_title">Core Patch (Experimental)</string>
-    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_title">Core Patch</string>
     <string name="corepatch_downgrade">ダウングレードを許可する</string>
     <string name="corepatch_downgrade_summary">アプリのダウングレードを許可します。</string>
     <string name="corepatch_min_sdk">最小 SDK バージョンの制限を回避</string>
@@ -1321,10 +1302,10 @@
     <string name="power_indicator_font">文字サイズ</string>
 
     <string name="rotation_suggestion_hide_title">回転提案ボタンを非表示</string>
-    <string name="rotation_suggestion_hide_summary">画面端の回転提案ボタンを非表示にします。自動回転や画面の向きの設定は変更しません</string>
+    <string name="rotation_suggestion_hide_summary">画面端の回転提案ボタンを非表示にします</string>
 
     <string name="hide_screenshot_floating_title">スクリーンショットからフローティングアプリを除外</string>
-    <string name="hide_screenshot_floating_summary">対応するフローティングウィンドウ、ピクチャーインピクチャー、アプリのオーバーレイを閉じずにシステムのスクリーンショットから除外</string>
+    <string name="hide_screenshot_floating_summary">対応するフローティングウィンドウ、ピクチャーインピクチャー、アプリのオーバーレイをシステムのスクリーンショットから除外</string>
     <string name="power_indicator_hide_discharge_sign">放電時のマイナス記号を非表示</string>
     <string name="power_indicator_temperature">温度を2行で表示</string>
     <string name="power_indicator_temperature_summary">上段に電力、下段にバッテリー温度を表示</string>
@@ -1346,17 +1327,13 @@
     <string name="setting_settings_home_entry_style">アイコンスタイル</string>
     <string name="setting_settings_home_entry_style_system">デフォルト</string>
     <string name="setting_settings_home_entry_style_app">アプリアイコン</string>
-    <string name="settings_section_system_adaptation">システム互換設定</string>
-    <string name="setting_system_adaptation_version">対応システム</string>
-    <string name="setting_system_adaptation_save_failed">対応システムを保存できませんでした。Xposed フレームワークへの接続を確認して再試行してください</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_title">LTPO/LTPS の動的な低下を無効化</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_summary">画面点灯中はシステム設定で選択したリフレッシュレートを維持します。有効にすると消費電力が増える場合があります。</string>
     <string name="display_enhancement_group">画質補正</string>
     <string name="display_enhancement_sr_thermal_title">超解像補正の温度制限を解除</string>
-    <string name="display_enhancement_sr_thermal_summary">超解像補正自体の温度制限を解除します。非対応ハードウェアの機能は有効になりません。発熱や消費電力が増加する場合があります</string>
+    <string name="display_enhancement_sr_thermal_summary">超解像補正自体の温度制限を解除します</string>
     <string name="display_enhancement_color_thermal_title">動画の色彩補正の温度制限を解除</string>
-    <string name="display_enhancement_color_thermal_summary">動画の色彩補正自体の温度制限を解除します。発熱や消費電力が増加する場合があります。端末全体の温度保護には影響しません</string>
-    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="display_enhancement_color_thermal_summary">動画の色彩補正自体の温度制限を解除します</string>
     <string name="settings_home_cleanup_group">設定ホーム</string>
     <string name="settings_home_hide_account_title">上部のアカウント項目を非表示</string>
     <string name="settings_home_hide_account_summary">システム設定ホームのアカウントカードを非表示にします</string>
@@ -1390,4 +1367,21 @@
     <string name="native_live_update_summary">標準のリアルタイム通知チップを使用します。有効にすると Fluid Cloud は表示されず、両方を同時に使用できません。</string>
     <string name="setting_hide_module_icon">モジュールのアプリアイコンを非表示</string>
     <string name="setting_hide_module_icon_failed">アイコンの表示状態を変更できません</string>
+    <string name="side_volume_group">サイド音量バー</string>
+    <string name="side_volume_percentage_title">パーセント表示</string>
+    <string name="side_volume_percentage_summary">各音量バーにパーセントを表示します。複数の音量調整にも適用されます</string>
+    <string name="side_volume_keep_wide_title">音量調整中もバーの太さを維持</string>
+    <string name="qs_slider_percentage_title">スライダーのパーセント表示</string>
+    <string name="qs_slider_percentage_summary">明るさと音量のスライダーにパーセントを表示します。展開パネルにも適用されます</string>
+    <string name="qs_slider_percentage_properties">パーセント表示の設定</string>
+    <string name="qs_slider_percentage_size">文字サイズ</string>
+    <string name="qs_slider_percentage_color">文字色</string>
+    <string name="qs_slider_percentage_offset">縦方向の位置</string>
+    <string name="settings_color_white">白</string>
+    <string name="settings_color_black">黒</string>
+    <string name="capture_group_screenshot_options">スクリーンショット設定</string>
+    <string name="volume_group_alerts">音量通知</string>
+    <string name="control_center_group_visibility">要素の非表示</string>
+    <string name="launcher_group_app_management">アプリ管理</string>
+    <string name="launcher_group_recent_interaction">表示と操作</string>
 </resources>

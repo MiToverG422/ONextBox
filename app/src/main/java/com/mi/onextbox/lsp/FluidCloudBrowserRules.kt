@@ -14,7 +14,6 @@ internal object FluidCloudBrowserRules {
         return null
     }
 
-    @Suppress("UNUSED_PARAMETER") // Metis DeepLinkData does not assign textType; it is not a routing discriminator.
     fun accepts(
         enabled: Boolean,
         textType: Int?,
@@ -27,10 +26,19 @@ internal object FluidCloudBrowserRules {
         componentPackage: String?,
         hasSelector: Boolean,
     ): Boolean = enabled && intentType == 1 && packageName == STOCK_BROWSER &&
-        action == "android.intent.action.VIEW" &&
+        (action == "android.intent.action.VIEW" ||
+            (action == "android.intent.action.WEB_SEARCH" && textType == 29)) &&
         (scheme.equals("http", true) || scheme.equals("https", true)) && !host.isNullOrBlank() &&
         (explicitPackage == null || explicitPackage == STOCK_BROWSER) &&
         (componentPackage == null || componentPackage == STOCK_BROWSER) && !hasSelector
+
+    fun launchUrl(action: String?, data: String?, query: String?, textType: Int?): String? =
+        when (action) {
+            "android.intent.action.VIEW" -> webUrl(data)
+            "android.intent.action.WEB_SEARCH" ->
+                if (textType == 29 && data == null) webUrl(query) else null
+            else -> null
+        }
 
     /** Only unwrap the browser's webpage route, never arbitrary app schemes or search queries. */
     fun webUrl(data: String?): String? {

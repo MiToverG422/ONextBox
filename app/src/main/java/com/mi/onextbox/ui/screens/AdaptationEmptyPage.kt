@@ -5,9 +5,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.mi.onextbox.R
-import com.mi.onextbox.ui.settings.SettingsPageSurface
-import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsCardRow
+import com.mi.onextbox.ui.settings.SettingsGroup
+import com.mi.onextbox.ui.settings.SettingsPageSurface
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
 
 @Composable

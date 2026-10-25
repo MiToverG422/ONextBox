@@ -16,10 +16,10 @@ import java.util.function.Consumer
 import com.mi.onextbox.lsp.compat.ModernReflect as Reflect
 
 internal object AppLockDelaySystemHooker {
-    fun hook(loader: ClassLoader) = runCatching { Session(loader).install() }
+    fun hook(loader: ClassLoader, colorOs16: Boolean = false) = runCatching { Session(loader, colorOs16).install() }
         .onFailure { HookLog.w("ONextBox-AppLock", "Native delay backend unavailable", it) }.let { }
 
-    private class Session(private val loader: ClassLoader) {
+    private class Session(private val loader: ClassLoader, private val colorOs16: Boolean) {
         private val policy = AppLockDelayPolicy()
         private val main = Handler(Looper.getMainLooper())
         private val tasks = hashMapOf<AppLockDelayPolicy.Key, Runnable>()
@@ -36,8 +36,7 @@ internal object AppLockDelaySystemHooker {
             override fun onChange(selfChange: Boolean, uri: Uri?) { requestDrain() }
         }
         private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == null || key in setOf(AppLockDelaySettings.ENABLED, MODERN_PREFERENCES_READY_KEY,
-                SystemAdaptationSettings.KEY, SystemAdaptationSettings.ALLOW_HYPER_OS)) requestDrain()
+            if (key == null || key in setOf(AppLockDelaySettings.ENABLED, MODERN_PREFERENCES_READY_KEY)) requestDrain()
         }
         private val drain = Runnable { HotReloadLifecycle.withHook({}, { if (!retired) service.get()?.let(::drain) }) }
         private fun requestDrain() { if (!retired) { main.removeCallbacks(drain); main.post(drain) } }
@@ -132,7 +131,9 @@ internal object AppLockDelaySystemHooker {
             nativeClear = host.getDeclaredMethod("clearPassPackages", String::class.java, int).apply { isAccessible = true }
             val access = host.getDeclaredMethod("isEncryptPass", String::class.java, int)
             val resumed = host.getDeclaredMethod("interceptResumeActivity", activity, int)
-            val visible = activity.getDeclaredMethod("setVisibilityInner", Boolean::class.javaPrimitiveType)
+            val visible = if (colorOs16) {
+                activity.getDeclaredMethod("setVisibility", Boolean::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
+            } else activity.getDeclaredMethod("setVisibilityInner", Boolean::class.javaPrimitiveType)
             val setVisibility = activity.getDeclaredMethod("setVisibility", Boolean::class.javaPrimitiveType)
             val add = host.getDeclaredMethod("addEncryptPass", String::class.java, int, int)
             val remove = host.getDeclaredMethod("removeAccessControlPassAsUser", String::class.java, int, Boolean::class.javaPrimitiveType)

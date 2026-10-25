@@ -153,6 +153,7 @@ internal fun DesktopFeaturesPage(
     }
 
     if (mode == FeaturePageMode.DesktopRecent) {
+        SettingsSection(title = stringResource(R.string.launcher_group_app_management))
         SettingsGroup {
             com.mi.onextbox.ui.settings.SettingsCardRow(
                 title = stringResource(R.string.hide_recent_apps_title),
@@ -160,6 +161,7 @@ internal fun DesktopFeaturesPage(
                 showArrow = true, onClick = { onOpenSubPage(FeaturePageMode.DesktopHiddenApps) })
         }
         LauncherSwipeTopSettingsGroup()
+        SettingsSection(title = stringResource(R.string.launcher_group_recent_interaction))
         SettingsGroup {
             LauncherFeatureRows(LauncherFeatureItems.recent, hasDividerBelow = true)
             RecentTaskRadiusRow(
@@ -219,6 +221,7 @@ internal fun LauncherSearchBarModeRow(
     onModeChange: (Int) -> Unit,
     hasDividerAbove: Boolean,
     hasDividerBelow: Boolean,
+    interactionEnabled: Boolean = true,
 ) {
     val options = listOf(
         LspConfig.LAUNCHER_SEARCH_BAR_MODE_CHINA to
@@ -239,6 +242,7 @@ internal fun LauncherSearchBarModeRow(
         onValueChange = onModeChange,
         hasDividerAbove = hasDividerAbove,
         hasDividerBelow = hasDividerBelow,
+        interactionEnabled = interactionEnabled,
     )
 }
 

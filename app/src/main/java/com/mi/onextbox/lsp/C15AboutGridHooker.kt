@@ -1,6 +1,8 @@
 package com.mi.onextbox.lsp
 
 import android.content.Context
+import android.graphics.drawable.Drawable
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -33,6 +35,7 @@ internal object C15AboutGridHooker {
         "com.oplus.settings.widget.preference.DeviceInfoSquarePreference"
     private const val COUI_CARD_LAYOUT =
         "com.coui.appcompat.cardlist.COUICardListSelectedItemLayout"
+    private const val VALUE_ROW_TAG = "onextbox_c15_about_square_value"
 
     private val halfWidthKeys = setOf(DEVICE_NAME, DEVICE_STORAGE)
     private val hardwareItemsInC15Order = linkedMapOf(
@@ -54,8 +57,56 @@ internal object C15AboutGridHooker {
     private val hookedSpanClasses = ConcurrentHashMap.newKeySet<Class<*>>()
     private val fragmentBySpanLookup =
         Collections.synchronizedMap(WeakHashMap<Any, WeakReference<Any>>())
+    private val originalHalfCards = WeakHashMap<LinearLayout, HalfCardState>()
+    private val boundHalfCards = WeakHashMap<LinearLayout, HalfCardBinding>()
+
+    private data class HalfCardBinding(
+        val preference: WeakReference<Any>,
+        val holder: WeakReference<Any>,
+        val key: String,
+    )
+
+    private data class LayoutState(
+        val width: Int, val height: Int,
+        val margins: IntArray?, val weight: Float?, val gravity: Int?,
+    )
+
+    private data class ViewState(
+        val view: WeakReference<View>, val layout: LayoutState?, val padding: IntArray,
+        val minimumHeight: Int, val visibility: Int,
+        val orientation: Int?, val gravity: Int?, val textAlignment: Int,
+        val maxLines: Int?, val ellipsize: TextUtils.TruncateAt?, val image: Drawable?,
+    )
+
+    private data class ChildState(
+        val group: WeakReference<ViewGroup>, val children: List<WeakReference<View>>,
+    )
+
+    private data class HalfCardState(
+        val views: List<ViewState>, val groups: List<ChildState>,
+        val marginHorizontal: Int?, val positionInGroup: Int?,
+    )
 
     fun hook(classLoader: ClassLoader) {
+        HotReloadLifecycle.register("settings:c15-square-cards", capture = {
+            boundHalfCards.values.mapNotNull { binding ->
+                val preference = binding.preference.get() ?: return@mapNotNull null
+                val holder = binding.holder.get() ?: return@mapNotNull null
+                arrayOf(preference, holder, binding.key)
+            }.toTypedArray()
+        }, detach = {
+            originalHalfCards.keys.toList().forEach(::restoreHalfCard)
+        }, restore = { state ->
+            if (LspConfig.isSettingsC15AboutLayoutEnabledXposed()) {
+                (state as? Array<*>)?.forEach { item ->
+                    val row = item as? Array<*> ?: return@forEach
+                    val preference = row.getOrNull(0) ?: return@forEach
+                    val holder = row.getOrNull(1) ?: return@forEach
+                    val key = row.getOrNull(2) as? String ?: return@forEach
+                    adaptHalfCard(preference, holder, key)
+                }
+            }
+        })
         HotReloadLifecycle.registerReplay("settings:c15-span", capture = {
             arrayOf<Any>(hookedSpanClasses.toTypedArray(), synchronized(fragmentBySpanLookup) {
                 fragmentBySpanLookup.entries.mapNotNull { (lookup, reference) ->
@@ -126,21 +177,240 @@ internal object C15AboutGridHooker {
                 preferenceClass,
                 "onBindViewHolder",
                 object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        if (!LspConfig.isSettingsC15AboutLayoutEnabledXposed()) return
+                    override fun beforeHookedMethod(param: MethodHookParam) {
                         val holder = param.args.firstOrNull() ?: return
-                        val itemView = runCatching {
-                            XposedHelpers.getObjectField(holder, "itemView") as? View
+                        val card = runCatching {
+                            XposedHelpers.getObjectField(holder, "itemView") as? LinearLayout
                         }.getOrNull() ?: return
-                        runCatching {
-                            if (key == DEVICE_NAME) adaptNameCard(itemView)
-                            else adaptStorageCard(itemView)
-                        }.onFailure { log("adapt About device $key card failed", it) }
+                        restoreHalfCard(card)
+                    }
+
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        if (HotReloadLifecycle.isRetiring ||
+                            !LspConfig.isSettingsC15AboutLayoutEnabledXposed()
+                        ) return
+                        val holder = param.args.firstOrNull() ?: return
+                        val preference = param.thisObject ?: return
+                        adaptHalfCard(preference, holder, key)
                     }
                 },
             )
             if (handles.isEmpty()) log("$className has no onBindViewHolder method")
         }.onFailure { log("hook $className.onBindViewHolder failed", it) }
+    }
+
+    private fun adaptHalfCard(preference: Any, holder: Any, key: String) {
+        val card = runCatching {
+            XposedHelpers.getObjectField(holder, "itemView") as? LinearLayout
+        }.getOrNull() ?: return
+        if (card.javaClass.name != COUI_CARD_LAYOUT) return
+        if (!isModernSquareCard(card, key)) {
+            runCatching {
+                if (key == DEVICE_NAME) adaptNameCard(card) else adaptStorageCard(card)
+            }.onFailure { log("adapt About device $key card failed", it) }
+            return
+        }
+        restoreHalfCard(card)
+        originalHalfCards[card] = captureHalfCard(card)
+        boundHalfCards[card] = HalfCardBinding(WeakReference(preference), WeakReference(holder), key)
+        runCatching {
+            if (key == DEVICE_NAME) adaptModernNameCard(card) else adaptModernStorageCard(card)
+        }.onFailure {
+            restoreHalfCard(card)
+            log("adapt About device $key card failed", it)
+        }
+    }
+
+    private fun isModernSquareCard(card: LinearLayout, key: String): Boolean {
+        if (!C15AboutLayoutProfile.isModern(card.resources)) return false
+        val arrowId = card.resources.getIdentifier("device_storage_jump", "id", "com.android.settings")
+        if (arrowId == 0) return false
+        return when (key) {
+            DEVICE_STORAGE -> card.findViewById<View>(arrowId) is ImageView
+            DEVICE_NAME -> (0 until card.childCount).any {
+                val child = card.getChildAt(it)
+                child.javaClass == View::class.java && child.id == View.NO_ID
+            }
+            else -> false
+        }
+    }
+
+    private fun captureHalfCard(card: LinearLayout): HalfCardState {
+        val views = ArrayList<ViewState>()
+        val groups = ArrayList<ChildState>()
+        fun capture(view: View) {
+            val params = view.layoutParams
+            val margins = params as? ViewGroup.MarginLayoutParams
+            views += ViewState(
+                WeakReference(view),
+                params?.let { LayoutState(it.width, it.height, margins?.let { margin ->
+                    intArrayOf(margin.leftMargin, margin.topMargin, margin.rightMargin,
+                        margin.bottomMargin, margin.marginStart, margin.marginEnd)
+                }, (it as? LinearLayout.LayoutParams)?.weight,
+                    (it as? LinearLayout.LayoutParams)?.gravity) },
+                intArrayOf(view.paddingStart, view.paddingTop, view.paddingEnd, view.paddingBottom),
+                view.minimumHeight, view.visibility,
+                (view as? LinearLayout)?.orientation,
+                when (view) { is LinearLayout -> view.gravity; is TextView -> view.gravity; else -> null },
+                view.textAlignment, (view as? TextView)?.maxLines,
+                (view as? TextView)?.ellipsize, (view as? ImageView)?.drawable,
+            )
+            if (view is ViewGroup) {
+                val children = (0 until view.childCount).map(view::getChildAt)
+                groups += ChildState(WeakReference(view), children.map(::WeakReference))
+                children.forEach(::capture)
+            }
+        }
+        capture(card)
+        val position = runCatching {
+            val top = XposedHelpers.getObjectField(card, "mTopRounded") as Boolean
+            val bottom = XposedHelpers.getObjectField(card, "mBottomRounded") as Boolean
+            when { top && bottom -> 4; top -> 1; bottom -> 3; else -> 2 }
+        }.getOrNull()
+        return HalfCardState(views, groups,
+            runCatching { XposedHelpers.callMethod(card, "getMarginHorizontal") as? Int }.getOrNull(),
+            position)
+    }
+
+    private fun restoreHalfCard(card: LinearLayout) {
+        boundHalfCards.remove(card)
+        val state = originalHalfCards.remove(card) ?: return
+        val views = state.views.mapNotNull { node -> node.view.get()?.let { it to node } }
+        val groups = state.groups.mapNotNull { node ->
+            node.group.get()?.let { it to node.children.mapNotNull(WeakReference<View>::get) }
+        }
+        groups.forEach { (group, children) ->
+            for (index in group.childCount - 1 downTo 0) {
+                if (group.getChildAt(index).tag == VALUE_ROW_TAG) group.removeViewAt(index)
+            }
+            children.forEachIndexed { index, child ->
+                if (child.parent !== group || group.indexOfChild(child) != index) {
+                    (child.parent as? ViewGroup)?.removeView(child)
+                    group.addView(child, index.coerceAtMost(group.childCount))
+                }
+            }
+        }
+        state.marginHorizontal?.let { runCatching { XposedHelpers.callMethod(card, "setMarginHorizontal", it) } }
+        state.positionInGroup?.let { runCatching { XposedHelpers.callMethod(card, "setPositionInGroup", it) } }
+        views.forEach { (view, node) ->
+            node.layout?.let { original ->
+                view.layoutParams?.let { params ->
+                    params.width = original.width
+                    params.height = original.height
+                    if (params is ViewGroup.MarginLayoutParams && original.margins != null) {
+                        val margins = original.margins
+                        params.leftMargin = margins[0]; params.topMargin = margins[1]
+                        params.rightMargin = margins[2]; params.bottomMargin = margins[3]
+                        params.marginStart = margins[4]; params.marginEnd = margins[5]
+                    }
+                    if (params is LinearLayout.LayoutParams) {
+                        original.weight?.let { params.weight = it }
+                        original.gravity?.let { params.gravity = it }
+                    }
+                    view.layoutParams = params
+                }
+            }
+            view.setPaddingRelative(node.padding[0], node.padding[1], node.padding[2], node.padding[3])
+            view.minimumHeight = node.minimumHeight
+            view.visibility = node.visibility
+            view.textAlignment = node.textAlignment
+            if (view is LinearLayout) {
+                node.orientation?.let { view.orientation = it }
+                node.gravity?.let { view.gravity = it }
+            }
+            if (view is TextView) {
+                node.gravity?.let { view.gravity = it }
+                node.maxLines?.let { view.maxLines = it }
+                view.ellipsize = node.ellipsize
+            }
+            if (view is ImageView) view.setImageDrawable(node.image)
+        }
+    }
+
+    private fun adaptModernNameCard(itemView: View) {
+        val card = itemView as? LinearLayout ?: return
+        if (card.layoutParams !is ViewGroup.MarginLayoutParams) return
+        val title = card.findViewById<TextView>(android.R.id.title) ?: return
+        val summary = card.findViewById<TextView>(android.R.id.summary) ?: return
+        val content = title.parent as? LinearLayout ?: return
+        if (summary.parent !== content || content.parent !== card) return
+        val editIcon = card.findViewById<ImageView>(android.R.id.icon)
+            ?.takeIf { it.parent === content }
+
+        if (!applyHalfCardSpacing(card, isLeftCard = true)) return
+        content.orientation = LinearLayout.VERTICAL
+        content.gravity = Gravity.START
+        content.setPaddingRelative(0, 0, 0, 0)
+        content.layoutParams = verticalTextParams()
+        title.layoutParams = verticalTextParams()
+        title.maxLines = 2
+        val errorId = card.resources.getIdentifier("verify_error_icon", "id", "com.android.settings")
+        val errorIcon = card.findViewById<ImageView>(errorId)?.takeIf { it.parent === content }
+        wrapSummary(content, summary, errorIcon, card, 18, 18)
+        summary.gravity = Gravity.START
+        summary.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        for (index in 0 until card.childCount) {
+            val child = card.getChildAt(index)
+            if (child.javaClass == View::class.java && child.id == View.NO_ID) child.visibility = View.GONE
+        }
+
+        if (editIcon != null) {
+            // Reuse ColorOS 17's own phone outline from the original model card.
+            val phoneIcon = card.resources.getIdentifier(
+                "device_market_name_phone_icon", "drawable", "com.android.settings",
+            )
+            if (phoneIcon != 0) editIcon.setImageResource(phoneIcon)
+            if (content.indexOfChild(editIcon) != 0) {
+                content.removeView(editIcon)
+                content.addView(editIcon, 0)
+            }
+            editIcon.layoutParams = LinearLayout.LayoutParams(dp(card, 20), dp(card, 20)).apply {
+                topMargin = dp(card, 6)
+                bottomMargin = dp(card, 6)
+            }
+        }
+    }
+
+    private fun adaptModernStorageCard(itemView: View) {
+        val card = itemView as? LinearLayout ?: return
+        if (card.layoutParams !is ViewGroup.MarginLayoutParams) return
+        val title = card.findViewById<TextView>(android.R.id.title) ?: return
+        val summary = card.findViewById<TextView>(android.R.id.summary) ?: return
+        val content = title.parent as? LinearLayout ?: return
+        if (summary.parent !== content || content.parent !== card) return
+        val barId = card.resources.getIdentifier("card_view", "id", "com.android.settings")
+        if (barId == 0) return
+        val capacityBar = card.findViewById<View>(barId) ?: return
+        if (capacityBar.parent !== card) return
+
+        if (!applyHalfCardSpacing(card, isLeftCard = false)) return
+        if (card.indexOfChild(capacityBar) != 0) {
+            card.removeView(capacityBar)
+            card.addView(capacityBar, 0)
+        }
+        capacityBar.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            dp(card, 10),
+        ).apply {
+            topMargin = dp(card, 11)
+            bottomMargin = dp(card, 11)
+        }
+        content.orientation = LinearLayout.VERTICAL
+        content.gravity = Gravity.START
+        content.setPaddingRelative(0, 0, 0, 0)
+        content.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
+        title.layoutParams = verticalTextParams()
+        title.maxLines = 2
+        val arrowId = card.resources.getIdentifier("device_storage_jump", "id", "com.android.settings")
+        val arrow = card.findViewById<ImageView>(arrowId)?.takeIf { it.parent === content }
+        wrapSummary(content, summary, arrow, card, 12, 24)
+        arrow?.visibility = View.GONE
+        summary.gravity = Gravity.START
+        summary.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        summary.maxLines = 2
     }
 
     private fun adaptNameCard(itemView: View) {
@@ -178,6 +448,7 @@ internal object C15AboutGridHooker {
         }
     }
 
+
     private fun adaptStorageCard(itemView: View) {
         val card = itemView as? LinearLayout ?: return
         if (card.layoutParams !is ViewGroup.MarginLayoutParams) return
@@ -213,6 +484,32 @@ internal object C15AboutGridHooker {
         summary.gravity = Gravity.START
         summary.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
         summary.maxLines = 2
+    }
+
+
+    private fun wrapSummary(
+        content: LinearLayout, summary: TextView, endIcon: ImageView?, card: View,
+        iconWidth: Int, iconHeight: Int,
+    ) {
+        val index = content.indexOfChild(summary)
+        content.removeView(summary)
+        endIcon?.let(content::removeView)
+        val row = LinearLayout(card.context).apply {
+            tag = VALUE_ROW_TAG
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            isBaselineAligned = false
+            layoutParams = verticalTextParams(topMargin = dp(card, 4))
+        }
+        summary.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        row.addView(summary)
+        endIcon?.let {
+            row.addView(it, LinearLayout.LayoutParams(dp(card, iconWidth), dp(card, iconHeight)).apply {
+                marginStart = dp(card, 5)
+                gravity = Gravity.CENTER_VERTICAL
+            })
+        }
+        content.addView(row, index.coerceIn(0, content.childCount))
     }
 
     private fun applyHalfCardSpacing(card: LinearLayout, isLeftCard: Boolean): Boolean {
@@ -276,6 +573,11 @@ internal object C15AboutGridHooker {
         val camera = findPreference(fragment, CAMERA_INFO) ?: return
         val hardwareCategory = XposedHelpers.callMethod(camera, "getParent") ?: return
         if (hardwareCategory === screen) return
+        val context = XposedHelpers.callMethod(fragment, "getContext") as? Context
+        if (context != null && C15AboutLayoutProfile.isModern(context.resources)) {
+            runCatching { XposedHelpers.callMethod(hardwareCategory, "setCustomTopMarginPx", 0) }
+                .onFailure { log("align About device hardware section spacing failed", it) }
+        }
         for ((key, order) in hardwareItemsInC15Order) {
             val preference = findPreference(fragment, key) ?: continue
             runCatching {

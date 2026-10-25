@@ -20,6 +20,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberUpdatedState
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.IntOffset
@@ -86,6 +88,12 @@ internal const val C17_PREDICTIVE_RESET_DAMPING = 1f
 internal enum class FeatureLaunchDirection {
     Opening,
     Closing,
+}
+
+internal enum class FeatureWindowSurface {
+    Icon,
+    Task,
+    Both,
 }
 
 internal data class FeatureLaunchSession(
@@ -370,6 +378,7 @@ internal fun C17FeatureWindowLayer(
     predictiveBackMotion: FeaturePredictiveBackMotion? = null,
     returnOrigin: FeatureLaunchOrigin? = null,
     viewportBounds: Rect,
+    surface: FeatureWindowSurface = FeatureWindowSurface.Both,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -471,7 +480,7 @@ internal fun C17FeatureWindowLayer(
         // changes its alpha while the opaque task is on top. Keeping this node
         // mounted prevents close from having to recreate the icon layer on the
         // first reveal frame, which otherwise looks like a sudden reset.
-        FeatureLaunchIcon(
+        if (surface != FeatureWindowSurface.Task) FeatureLaunchIcon(
             pageMode = session.mode,
             visualSize = animatedIconSizeDp,
             surfaceHeight = animatedIconSurfaceHeightDp,
@@ -491,7 +500,7 @@ internal fun C17FeatureWindowLayer(
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                 },
         )
-        Box(
+        if (surface != FeatureWindowSurface.Icon) Box(
             modifier = Modifier
                 .offset {
                     IntOffset(animatedLeft.roundToInt(), animatedTop.roundToInt())
@@ -504,6 +513,17 @@ internal fun C17FeatureWindowLayer(
                     alpha = boundedTaskSurfaceAlpha
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                 }
+                .then(
+                    if (direction == FeatureLaunchDirection.Closing) {
+                        Modifier.pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                    } else Modifier,
+                )
                 .clip(RoundedCornerShape(cornerRadius))
                 .background(COUITheme.colorScheme.surface),
         ) {
@@ -588,10 +608,11 @@ internal fun C17ClosingFeatureWindowLayer(
     workspaceScale: Float,
     gridPosition: Offset?,
     onFinished: suspend (FeatureLaunchAnimation) -> Unit,
+    surface: FeatureWindowSurface = FeatureWindowSurface.Both,
     content: @Composable () -> Unit,
 ) {
     val latestOnFinished by rememberUpdatedState(onFinished)
-    LaunchedEffect(animation, viewportBounds) {
+    if (surface != FeatureWindowSurface.Task) LaunchedEffect(animation, viewportBounds) {
         if (viewportBounds.width <= 0f || viewportBounds.height <= 0f) {
             return@LaunchedEffect
         }
@@ -617,6 +638,7 @@ internal fun C17ClosingFeatureWindowLayer(
             viewportBounds = viewportBounds,
         ),
         viewportBounds = viewportBounds,
+        surface = surface,
         content = content,
     )
 }
@@ -630,6 +652,7 @@ internal fun FeatureLaunchQueueHitLayer(
     onPressStart: (FeaturePageMode) -> Long,
     onPressEnd: (FeaturePageMode, Long) -> Unit,
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?, Long) -> Unit,
+    excludedBounds: Rect? = null,
     modifier: Modifier = Modifier,
 ) {
     if (viewportBounds.width <= 0f || viewportBounds.height <= 0f) return
@@ -643,39 +666,45 @@ internal fun FeatureLaunchQueueHitLayer(
             val latestOrigin by rememberUpdatedState(origin)
             val restingHitWidth = origin.hitWidth.coerceAtLeast(origin.restingWidth)
             val restingHitHeight = origin.hitHeight.coerceAtLeast(origin.restingHeight)
-            Box(
-                modifier = Modifier
-                    .offset {
-                        IntOffset(
-                            x = (origin.hitLeft - viewportBounds.left).roundToInt(),
-                            y = (origin.hitTop - viewportBounds.top).roundToInt(),
-                        )
-                    }
-                    .size(
-                        width = with(density) { restingHitWidth.toDp() },
-                        height = with(density) { restingHitHeight.toDp() },
-                    )
-                    .scrollable(
-                        state = scrollState,
-                        orientation = Orientation.Vertical,
-                        reverseDirection = true,
-                    )
-                    // Hit targets follow scrolling, not workspace press scaling.
-                    .pointerInput(mode) {
-                        detectTapGestures(
-                            onPress = {
-                                val pressToken = latestOnPressStart(mode)
-                                try {
-                                    if (tryAwaitRelease()) {
-                                        latestOnOpen(mode, latestOrigin, pressToken)
-                                    }
-                                } finally {
-                                    latestOnPressEnd(mode, pressToken)
-                                }
+            val hitBounds = Rect(origin.hitLeft, origin.hitTop,
+                origin.hitLeft + restingHitWidth, origin.hitTop + restingHitHeight)
+            featureLaunchHitRegions(hitBounds, viewportBounds, excludedBounds).forEachIndexed { regionIndex, region ->
+                key(mode, regionIndex) {
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    x = (region.left - viewportBounds.left).roundToInt(),
+                                    y = (region.top - viewportBounds.top).roundToInt(),
+                                )
+                            }
+                            .size(
+                                width = with(density) { region.width.toDp() },
+                                height = with(density) { region.height.toDp() },
+                            )
+                            .scrollable(
+                                state = scrollState,
+                                orientation = Orientation.Vertical,
+                                reverseDirection = true,
+                            )
+                            // Hit targets follow scrolling, not workspace press scaling.
+                            .pointerInput(mode, regionIndex) {
+                                detectTapGestures(
+                                    onPress = {
+                                        val pressToken = latestOnPressStart(mode)
+                                        try {
+                                            if (tryAwaitRelease()) {
+                                                latestOnOpen(mode, latestOrigin, pressToken)
+                                            }
+                                        } finally {
+                                            latestOnPressEnd(mode, pressToken)
+                                        }
+                                    },
+                                )
                             },
-                        )
-                    },
-            )
+                    )
+                }
+            }
         }
     }
 }

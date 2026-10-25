@@ -51,6 +51,8 @@ internal class ColorOsBottomBarMaterialView(
     private var fallbackColor = fallbackColor
     private var nativeBackgroundApplied = false
     private var nativeStrokeApplied = false
+    private var materialInitialized = false
+    private var nativeCornerRadius = Float.NaN
 
     init {
         setWillNotDraw(false)
@@ -66,7 +68,7 @@ internal class ColorOsBottomBarMaterialView(
                 )
             }
         }
-        background = ColorDrawable(fallbackColor)
+        background = ColorDrawable(Color.TRANSPARENT)
     }
 
     fun updateAppearance(darkTheme: Boolean, fallbackColor: Int) {
@@ -87,6 +89,8 @@ internal class ColorOsBottomBarMaterialView(
 
     override fun onDetachedFromWindow() {
         clearBackgroundRenderEffect()
+        materialInitialized = false
+        nativeCornerRadius = Float.NaN
         super.onDetachedFromWindow()
     }
 
@@ -94,7 +98,12 @@ internal class ColorOsBottomBarMaterialView(
         super.onSizeChanged(width, height, oldWidth, oldHeight)
         updateColorOsEdgeShader(width.toFloat(), height.toFloat())
         invalidateOutline()
-        post(::applyColorOsMaterial)
+        if (!materialInitialized) {
+            post(::applyColorOsMaterial)
+        } else {
+            if (nativeStrokeApplied) updateMaterialCorner()
+            invalidate()
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -121,15 +130,13 @@ internal class ColorOsBottomBarMaterialView(
         // RenderEffect. Replacing it afterwards can discard the vendor RenderNode state.
         background = ColorDrawable(Color.TRANSPARENT)
         nativeBackgroundApplied = applyBackgroundRenderEffect()
-        if (!nativeBackgroundApplied) {
-            background = ColorDrawable(fallbackColor)
-        }
         // ColorOS's RenderNode stroke is substantially dimmer than drawing its source alpha
         // directly into a Canvas shader. Prefer the same native path used by MMS; the custom
         // shader remains only as a fallback for non-ColorOS builds.
         nativeStrokeApplied = applyMaterialStrokeAndCorner()
         clipToOutline = !nativeStrokeApplied
         applyBottomBarShadow()
+        materialInitialized = true
         invalidateOutline()
         invalidate()
     }
@@ -137,25 +144,14 @@ internal class ColorOsBottomBarMaterialView(
     private fun applyBackgroundRenderEffect(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
         return runCatching {
-            // COUIMaterialBlurEffect.TYPE_FRAMEWORK_BOTTOM_BAR. Radius is deliberately in raw
-            // render pixels in the ColorOS implementation, rather than density-scaled dp.
-            val colorLayer1: Int
-            val blendModeLayer1: BlendMode
-            val colorLayer2: Int
-            val blendModeLayer2: BlendMode
-            if (darkTheme) {
-                colorLayer1 = Color.parseColor("#80666666")
-                blendModeLayer1 = BlendMode.OVERLAY
-                colorLayer2 = Color.parseColor("#B3262626")
-                blendModeLayer2 = BlendMode.LUMINOSITY
-            } else {
-                colorLayer1 = Color.parseColor("#B3666666")
-                blendModeLayer1 = BlendMode.COLOR_DODGE
-                colorLayer2 = Color.parseColor("#99F5F5F5")
-                blendModeLayer2 = BlendMode.LUMINOSITY
-            }
-
-            val blur = RenderEffect.createBlurEffect(25f, 25f, Shader.TileMode.MIRROR)
+            // Original bottom-bar preset, now also shared by search and toolbar buttons.
+            val colorLayer1 = ColorOsToolbarGlass.firstTint(darkTheme)
+            val blendModeLayer1 = if (darkTheme) BlendMode.OVERLAY else BlendMode.COLOR_DODGE
+            val colorLayer2 = ColorOsToolbarGlass.luminosityTint(darkTheme)
+            val blendModeLayer2 = BlendMode.LUMINOSITY
+            val blur = RenderEffect.createBlurEffect(
+                ColorOsToolbarGlass.BlurRadiusPx, ColorOsToolbarGlass.BlurRadiusPx, Shader.TileMode.MIRROR,
+            )
             val firstLayer = RenderEffect.createColorFilterEffect(
                 BlendModeColorFilter(colorLayer1, blendModeLayer1),
                 blur,
@@ -215,8 +211,28 @@ internal class ColorOsBottomBarMaterialView(
             View::class.java,
             shadowParamsClass,
         ).invoke(null, this, shadowParams)
+        nativeCornerRadius = min(width, height) / 2f
         true
     }.getOrDefault(false)
+
+    private fun updateMaterialCorner() {
+        val radius = min(width, height) / 2f
+        if (radius == nativeCornerRadius) return
+        runCatching {
+            val materialUtilClass = Class.forName("com.oplus.view.material.OplusMaterialUtil")
+            val cornerParamsClass = Class.forName("com.oplus.view.material.OplusMaterialCornerParams")
+            val params = cornerParamsClass.getConstructor(
+                Float::class.javaPrimitiveType,
+                Float::class.javaPrimitiveType,
+            ).newInstance(radius, 1f)
+            materialUtilClass.getMethod(
+                "setCornerParams",
+                View::class.java,
+                cornerParamsClass,
+            ).invoke(null, this, params)
+            nativeCornerRadius = radius
+        }
+    }
 
     private fun updateColorOsEdgeShader(width: Float, height: Float) {
         val shader = colorOsEdgeShader ?: return
@@ -447,15 +463,19 @@ internal class ColorOsBottomBarMaterialView(
 
     private fun drawFallbackMaterial(canvas: Canvas) {
         val radius = min(width, height) / 2f
+        val surfaceColor = Color.argb(
+            ColorOsToolbarGlass.FallbackAlpha,
+            Color.red(fallbackColor), Color.green(fallbackColor), Color.blue(fallbackColor),
+        )
         fallbackPaint.shader = LinearGradient(
             0f,
             0f,
             width.toFloat(),
             height.toFloat(),
             intArrayOf(
-                blendColor(fallbackColor, Color.WHITE, if (darkTheme) 0.035f else 0.12f),
-                fallbackColor,
-                blendColor(fallbackColor, Color.BLACK, if (darkTheme) 0.10f else 0.04f),
+                blendColor(surfaceColor, Color.WHITE, if (darkTheme) 0.035f else 0.12f),
+                surfaceColor,
+                blendColor(surfaceColor, Color.BLACK, if (darkTheme) 0.10f else 0.04f),
             ),
             floatArrayOf(0f, 0.48f, 1f),
             Shader.TileMode.CLAMP,

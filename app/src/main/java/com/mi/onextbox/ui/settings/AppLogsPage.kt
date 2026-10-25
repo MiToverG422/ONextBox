@@ -2,6 +2,10 @@
 
 package com.mi.onextbox.ui.settings
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.widget.Toast
@@ -26,7 +30,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,24 +42,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.DropdownMenuGroup
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenuPopup
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.Icon as MaterialIcon
-import androidx.compose.material3.IconButton as MaterialIconButton
-import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -88,10 +81,8 @@ import com.mi.onextbox.BuildConfig
 import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppLogLevel
 import com.mi.onextbox.ui.common.AppLogStore
-import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.CouiConfirmDialog
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.LogExport
 import com.mi.onextbox.ui.common.LogLevelFilter
 import com.mi.onextbox.ui.common.LogRecord
@@ -215,6 +206,7 @@ internal fun AppLogsRoute(
         blurBackdrop = blurBackdrop,
         bottomContentPadding = bottomContentPadding,
         contentScrollable = false,
+        edgeToEdgeBottom = true,
         actions = {
             LogsTopBarActions(
                 loading = loading,
@@ -233,26 +225,22 @@ internal fun AppLogsRoute(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 8.dp),
+            contentPadding = PaddingValues(bottom = bottomContentPadding + 20.dp),
         ) {
             item(key = "search") { FeatureSearchBar(state = search, hint = stringResource(R.string.logs_search_hint)) }
             item(key = "filters") {
                 SettingsGroup(bottomPadding = 8.dp) {
-                    Material3ExpressiveSegmentPosition(0, 2) {
-                        SettingsWindowDropdownPreference(
+                    run {SettingsWindowDropdownPreference(
                             title = stringResource(R.string.logs_source),
                             items = sourceLabels, selectedIndex = source.ordinal,
                             onSelectedIndexChange = { sourceIndex = it },
-                        )
-                    }
+                        )}
                     SettingsDivider()
-                    Material3ExpressiveSegmentPosition(1, 2) {
-                        SettingsWindowDropdownPreference(
+                    run {SettingsWindowDropdownPreference(
                             title = stringResource(R.string.logs_level),
                             items = levelLabels, selectedIndex = filter.ordinal,
                             onSelectedIndexChange = { levelIndex = it },
-                        )
-                    }
+                        )}
                 }
             }
             item(key = "count") { SettingsSection(stringResource(R.string.logs_count, visibleRecords.size, records.size)) }
@@ -326,25 +314,22 @@ internal fun LogRecordCard(
     onClick: () -> Unit,
     onCopy: () -> Unit,
 ) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val surface = if (material) MaterialTheme.colorScheme.surface else COUITheme.colorScheme.surface
+    val surface = COUITheme.colorScheme.surface
     val dark = surface.luminance() < .5f
-    val secondaryColor = if (material) MaterialTheme.colorScheme.onSurfaceVariant else COUITheme.colorScheme.onSurfaceVariantSummary
+    val secondaryColor = COUITheme.colorScheme.onSurfaceVariantSummary
     val severityColor = when (record.level) {
         AppLogLevel.ERROR -> if (dark) Color(0xFFFFB4AB) else Color(0xFFBA1A1A)
         AppLogLevel.WARN -> if (dark) Color(0xFFFFCC80) else Color(0xFF875000)
-        AppLogLevel.INFO -> if (material) MaterialTheme.colorScheme.primary else COUITheme.colorScheme.primary
+        AppLogLevel.INFO -> COUITheme.colorScheme.primary
         else -> secondaryColor
     }
     var canExpand by remember(record.message) { mutableStateOf(false) }
     val expansionDescription = stringResource(if (expanded) R.string.logs_expanded else R.string.logs_collapsed)
-    val sizeSpec = if (material) MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
-        else spring(dampingRatio = 1f, stiffness = 438.65f)
-    val arrowSpec = if (material) MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-        else spring(dampingRatio = 1f, stiffness = 438.65f)
+    val sizeSpec = spring<IntSize>(dampingRatio = 1f, stiffness = 438.65f)
+    val arrowSpec = spring<Float>(dampingRatio = 1f, stiffness = 438.65f)
     val arrowRotation by animateFloatAsState(if (expanded) 180f else 0f, arrowSpec, label = "logExpandArrow")
-    val enterFade = if (material) MaterialTheme.motionScheme.fastEffectsSpec<Float>() else tween(150, delayMillis = 30)
-    val exitFade = if (material) MaterialTheme.motionScheme.fastEffectsSpec<Float>() else tween(90)
+    val enterFade = tween<Float>(150, delayMillis = 30)
+    val exitFade = tween<Float>(90)
     val content: @Composable () -> Unit = {
         Column(
             Modifier.fillMaxWidth().combinedClickable(
@@ -365,8 +350,7 @@ internal fun LogRecordCard(
                     )
                     if (canExpand) {
                         val arrowModifier = Modifier.size(20.dp).graphicsLayer { rotationZ = arrowRotation }
-                        if (material) MaterialIcon(Icons.Rounded.ExpandMore, null, arrowModifier, tint = secondaryColor)
-                        else Icon(Icons.Rounded.ExpandMore, null, arrowModifier, tint = secondaryColor)
+                        Icon(Icons.Rounded.ExpandMore, null, arrowModifier, tint = secondaryColor)
                     }
                 }
                 if (record.timestamp.isNotEmpty()) {
@@ -396,7 +380,7 @@ internal fun LogRecordCard(
     }
     Box(modifier.clipToBounds()) {
         SettingsGroup(bottomPadding = 10.dp) {
-            if (material) Material3ExpressiveSegmentContentCard(content = content) else content()
+            content()
         }
     }
 }
@@ -413,8 +397,7 @@ internal fun LazyItemScope.logRecordListAnimation(): Modifier = Modifier.animate
 
 @Composable
 internal fun LogLevelBadge(label: String, color: Color, modifier: Modifier = Modifier) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val style = (if (material) MaterialTheme.typography.labelSmall else COUITheme.textStyles.body2).copy(
+    val style = (COUITheme.textStyles.body2).copy(
         fontSize = 11.sp,
         lineHeight = 14.sp,
         fontWeight = FontWeight.Medium,
@@ -427,8 +410,7 @@ internal fun LogLevelBadge(label: String, color: Color, modifier: Modifier = Mod
             .heightIn(min = 24.dp).padding(horizontal = 7.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (material) MaterialText(label, color = color, style = style, maxLines = 1)
-        else Text(label, color = color, style = style, maxLines = 1)
+        Text(label, color = color, style = style, maxLines = 1)
     }
 }
 
@@ -444,18 +426,11 @@ private fun LogText(
     fontWeight: FontWeight = FontWeight.Normal,
     onTextLayout: (TextLayoutResult) -> Unit = {},
 ) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val foreground = color ?: if (material) {
-        if (secondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-    } else {
+    val foreground = color ?: run {
         if (secondary) COUITheme.colorScheme.onSurfaceVariantSummary else COUITheme.colorScheme.onSurface
     }
     val fontFamily = if (monospace) FontFamily.Monospace else FontFamily.Default
-    if (material) {
-        MaterialText(text, modifier, color = foreground, fontSize = fontSize, fontFamily = fontFamily,
-            fontWeight = fontWeight, lineHeight = 19.sp, maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis, onTextLayout = onTextLayout)
-    } else {
+    run {
         Text(text, modifier, color = foreground, fontSize = fontSize, fontFamily = fontFamily,
             fontWeight = fontWeight, lineHeight = 19.sp, maxLines = maxLines,
             overflow = TextOverflow.Ellipsis, onTextLayout = onTextLayout)
@@ -480,23 +455,7 @@ private fun RowScope.LogsTopBarActions(
             add(LogMenuItem(stringResource(R.string.logs_export), exportEnabled, onExport))
             if (showClear) add(LogMenuItem(stringResource(R.string.logs_clear), clearEnabled, onClear))
         }
-        if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-            DropdownMenuPopup(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                DropdownMenuGroup(
-                    shapes = MenuDefaults.groupShape(index = 0, count = 1),
-                    modifier = Modifier.widthIn(min = 200.dp, max = 320.dp),
-                ) {
-                    menuItems.forEachIndexed { index, item ->
-                        DropdownMenuItem(
-                            text = { MaterialText(item.title) },
-                            shape = MenuDefaults.itemShape(index = index, count = menuItems.size).shape,
-                            enabled = item.enabled,
-                            onClick = { menuExpanded = false; item.onClick() },
-                        )
-                    }
-                }
-            }
-        } else {
+        run {
             ColorOsDropdownPopup(
                 show = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
@@ -512,9 +471,7 @@ private data class LogMenuItem(val title: String, val enabled: Boolean, val onCl
 
 @Composable
 private fun LogsToolbarButton(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        MaterialIconButton(onClick = onClick, enabled = enabled) { MaterialIcon(icon, label) }
-    } else {
+    run {
         ColorOsTopBarButton(onClick = { if (enabled) onClick() }, modifier = Modifier
             .alpha(if (enabled) 1f else .38f).semantics { if (!enabled) disabled() }) {
             Icon(icon, label, tint = COUITheme.colorScheme.onSurface, modifier = Modifier.size(24.dp))

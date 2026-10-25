@@ -58,10 +58,12 @@ fun SettingsThemeTextDropdown(
     onSelectedIndexChange: (Int) -> Unit,
     hasDividerAbove: Boolean = false,
     hasDividerBelow: Boolean = false,
+    enabled: Boolean = true,
 ) {
     SettingsWindowDropdownPreference(
         items = labels,
         selectedIndex = selectedIndex.coerceIn(labels.indices),
+        enabled = enabled,
         title = title,
         onSelectedIndexChange = onSelectedIndexChange,
     )

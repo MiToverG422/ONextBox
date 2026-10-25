@@ -26,8 +26,8 @@ class AppLogsContractTest {
         assertTrue(page.contains("contentScrollable = false"))
         assertTrue(page.contains("LazyColumn("))
         assertTrue(page.contains("key = { it.key }"))
-        assertTrue(page.contains("AppUiStyle.Material3Expressive"))
-        assertTrue(page.contains("Material3ExpressiveSegmentContentCard"))
+        assertFalse(page.contains("AppUiStyle.Material3Expressive"))
+        assertTrue(page.contains("SettingsGroup"))
         assertTrue(page.contains("ColorOsTopBarButton("))
         assertTrue(page.contains("ColorOsDropdownPopup("))
         assertTrue(page.contains("CouiConfirmDialog("))
@@ -36,7 +36,7 @@ class AppLogsContractTest {
     @Test fun actionsReuseNativePopupRowsAndProperlyGroupedMaterialShapes() {
         val page = mainFile("java/com/mi/onextbox/ui/settings/AppLogsPage.kt").readText()
             .substringAfter("private fun RowScope.LogsTopBarActions(")
-        assertTrue(page.contains("MenuDefaults.itemShape(index = index, count = menuItems.size).shape"))
+        assertTrue(page.contains("ColorOsDropdownPopup("))
         assertFalse(page.contains("MenuDefaults.standaloneItemShape"))
         assertTrue(page.contains("selectionMenu = false"))
         assertFalse(page.contains("heightIn(min = 48.dp)"))
@@ -52,7 +52,7 @@ class AppLogsContractTest {
             .substringAfter("internal fun LogRecordCard(").substringBefore("private fun RowScope.LogsTopBarActions(")
         assertTrue(page.contains("AnimatedContent("))
         assertTrue(page.contains("SizeTransform(clip = true) { _, _ -> sizeSpec }"))
-        assertTrue(page.contains("MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()"))
+        assertTrue(page.contains("spring<IntSize>("))
         assertTrue(page.contains("fadeIn(enterFade) togetherWith fadeOut(exitFade)"))
         assertTrue(page.contains("animateFloatAsState("))
         assertTrue(page.contains("if (canExpand) onClick()"))
@@ -83,7 +83,7 @@ class AppLogsContractTest {
         assertTrue(badge.contains("PlatformTextStyle(includeFontPadding = false)"))
         assertTrue(badge.contains("LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both"))
         assertTrue(badge.contains(".heightIn(min = 24.dp)"))
-        assertTrue(badge.contains("MaterialTheme.typography.labelSmall"))
+        assertFalse(badge.contains("MaterialTheme.typography.labelSmall"))
         assertTrue(badge.contains("COUITheme.textStyles.body2"))
     }
 

@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="system_adaptation_runtime_restart">Версия переключена, настройки сохранены. Перезагрузите телефон, чтобы применить текущую версию и сбросить эффекты предыдущей.</string>
-    <string name="developer_allow_hyperos3_title">Разрешить поддержку HyperOS 3</string>
     <string name="system_adaptation_no_content">Для этой версии пока нет функций и инструментов</string>
+    <string name="setting_bottom_bar_hide_labels">Скрыть подписи нижней панели</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">Набор инструментов в стиле COUI для настройки систем OPlus</string>
     <string name="tab_home">Главная</string>
@@ -19,17 +18,10 @@
     <string name="setting_theme_mode">Режим темы</string>
     <string name="setting_ui_style">Стиль интерфейса</string>
     <string name="ui_style_coloros">COUI 17.0</string>
-    <string name="ui_style_material3_expressive">Material 3 Expressive</string>
     <string name="setting_dynamic_color">Динамические цвета</string>
     <string name="setting_dynamic_color_on_summary">Использовать цвета системных обоев</string>
     <string name="setting_dynamic_color_off_summary">Использовать собственный цвет темы</string>
     <string name="setting_theme_palette">Цвет темы</string>
-    <string name="setting_material_floating_bottom_bar">Плавающая нижняя планка</string>
-    <string name="setting_material_floating_bottom_bar_summary">Использовать плавающую нижнюю панель навигации</string>
-    <string name="setting_material_haptics">Тактильная обратная связь</string>
-    <string name="setting_material_haptics_summary">Обеспечивает тактильную обратную связь при переключении вкладок навигации</string>
-    <string name="setting_material_switch_icons">Значки переключателей</string>
-    <string name="setting_material_switch_icons_summary">Показывать значки состояния на ползунке переключателя</string>
     <string name="setting_theme_settings">Настройки</string>
     <string name="theme_mode_system">Как в системе</string>
     <string name="theme_mode_light">Светлая тема</string>
@@ -53,10 +45,6 @@
     <string name="language_system">Как в системе</string>
     <string name="setting_blur_effect">Включить эффект размытия</string>
     <string name="setting_feature_page_new_style">Стиль страницы «Новые функции»</string>
-    <string name="setting_progressive_card_animation">Плавное появление карточек</string>
-    <string name="setting_progressive_card_animation_summary">Карточки постепенно появляются при прокрутке, только в классическом оформлении страницы функций и мониторе OPPO Push</string>
-    <string name="setting_feature_page_hide_background_video">Скрыть фоновое видео страницы функций</string>
-    <string name="setting_feature_page_hide_background_video_summary">В темных темах, отличных от Monet, заменяет фоновое видео красочным анимированным фоном</string>
     <string name="setting_pop_follows_swipe_edge">Pop следует за краем смахивания</string>
     <string name="setting_pop_follows_swipe_edge_summary">Направление всплывающей анимации следует за краем пальца</string>
     <string name="settings_section_other">Другое</string>
@@ -336,8 +324,6 @@
     <string name="about_reference_material_icons_title">Значки материалов</string>
     <string name="about_reference_junit_summary">Команда JUnit · EPL-1.0</string>
     <string name="about_reference_junit_title">JUnit</string>
-    <string name="about_reference_miuix_summary">compose-miuix-ui · Apache-2.0</string>
-    <string name="about_reference_miuix_title">MIUIX</string>
     <string name="about_reference_oshin_summary">suqi8 · AGPL-3.0</string>
     <string name="about_reference_oshin_title">Ошин</string>
     <string name="about_reference_xposed_api_summary">libxposed · Apache-2.0</string>
@@ -429,7 +415,7 @@
     <string name="onboarding_language_title">Выбор языка</string>
     <string name="onboarding_language_summary">Выберите язык первоначальной настройки и ONextBox</string>
     <string name="onboarding_appearance_title">Интерфейс и тема</string>
-    <string name="onboarding_appearance_summary">Выберите стиль и тему интерфейса для ONextBox</string>
+    <string name="onboarding_appearance_summary">Выберите тему для ONextBox</string>
     <string name="onboarding_appearance_theme_note">Это изменяет только приложение; экран настройки не затрагивается</string>
     <string name="onboarding_personalization_title">Настройте под себя</string>
     <string name="onboarding_personalization_summary">Предварительный просмотр и выбор внешнего вида страницы «Функции», прежде чем продолжить</string>
@@ -437,11 +423,7 @@
     <string name="onboarding_feature_style_new_summary">Иммерсивный макет с анимированным фоном</string>
     <string name="onboarding_feature_style_classic">Страница  Classic с функциями</string>
     <string name="onboarding_feature_style_classic_summary">Простой, знакомый макет списка</string>
-    <string name="onboarding_feature_video_title">ColorOS 17 живые обои по умолчанию</string>
-    <string name="onboarding_feature_video_summary">Отображается только на новой странице функций в стандартном темном режиме</string>
     <string name="onboarding_feature_style_section">Особенности стиля страницы</string>
-    <string name="onboarding_feature_background_section">Фон</string>
-    <string name="onboarding_feature_coui_only_note">Эти параметры поддерживаются только в COUI 17.0</string>
     <string name="onboarding_migration_title">Возьмите с собой настройки</string>
     <string name="onboarding_migration_summary">Восстановите резервную копию конфигурации ONextBox или настройте ее как новую</string>
     <string name="onboarding_migration_preview_source">Резервное копирование устройства</string>
@@ -1120,7 +1102,7 @@
     <string name="feature_large_network_lte_summary">Заменять значки 4G и 4G+ на LTE и LTE+ в пользовательском наборе</string>
     <string name="wallpaper_motion_group">3D-обои</string>
     <string name="wallpaper_motion_title">Чувствительность 3D-обоев (экспериментально)</string>
-    <string name="wallpaper_motion_summary">Настройка чувствительности существующих 3D-обоев к наклону. 100% — исходная чувствительность; чем выше значение, тем сильнее отклик. Системный предел угла не меняется. Включите «Обои» и Colorful Engine в LSPosed, затем заново откройте обои</string>
+    <string name="wallpaper_motion_summary"></string>
     <string name="wallpaper_motion_amount">Чувствительность к наклону</string>
     <string name="feature_only_data_sim_signal_title">Показывать только сигнал SIM для данных</string>
     <string name="feature_only_data_sim_signal_summary">При использовании двух SIM отображаются только сигнал и тип сети SIM, выбранной для мобильных данных. При смене SIM для данных отображение обновляется</string>
@@ -1164,7 +1146,7 @@
     <string name="launcher_icon_label_spacing_offset">Смещение расстояния</string>
     <string name="launcher_swipe_gesture_group">Жесты смахивания вверх</string>
     <string name="launcher_swipe_top_title">Упростить верхнюю область жеста</string>
-    <string name="launcher_swipe_top_summary">Убрать вход в разделение экрана и скрыть элементы управления в верхней области жеста, расширив зону запуска плавающего окна; другие входы в разделение экрана не меняются</string>
+    <string name="launcher_swipe_top_summary">Убрать вход в разделение экрана и скрыть элементы управления в верхней области жеста, расширив зону запуска плавающего окна</string>
     <string name="launcher_float_trigger_width">Ширина зоны запуска плавающего окна</string>
     <string name="statusbar_icon_mute">Без звука</string>
     <string name="statusbar_icon_network_speed">Скорость сети</string>
@@ -1223,7 +1205,7 @@
     <string name="qs_tile_corner_size_radius">Радиус углов плитки %1$s</string>
     <string name="launcher_group_effects">Визуальные эффекты</string>
     <string name="launcher_force_blur_title">Принудительное размытие рабочего стола</string>
-    <string name="launcher_force_blur_summary">Попытаться снять ограничения модели для фона, меню значков и анимированного размытия, сохраняя системные настройки размытия, энергосбережения и темы; возможно увеличение расхода энергии, нужна встроенная поддержка прошивки; после изменения перезапустите лаунчер</string>
+    <string name="launcher_force_blur_summary"></string>
 
     <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
 
@@ -1232,8 +1214,7 @@
     <string name="feature_c16_stacked_signal_save_failed">Не удалось сохранить настройку</string>
 
 <!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
-    <string name="corepatch_title">Core Patch (Experimental)</string>
-    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_title">Core Patch</string>
     <string name="corepatch_downgrade">Разрешить понижать версию.</string>
     <string name="corepatch_downgrade_summary">Разрешить переустановку приложений на прошлые версии.</string>
     <string name="corepatch_min_sdk">Обойти ограничение минимальной версии SDK</string>
@@ -1323,10 +1304,10 @@
     <string name="power_indicator_font">Размер шрифта</string>
 
     <string name="rotation_suggestion_hide_title">Скрывать кнопку предложения поворота</string>
-    <string name="rotation_suggestion_hide_summary">Скрывать всплывающую кнопку поворота экрана, не меняя автоповорот и настройки ориентации</string>
+    <string name="rotation_suggestion_hide_summary">Скрывать всплывающую кнопку поворота экрана</string>
 
     <string name="hide_screenshot_floating_title">Не показывать плавающие окна на снимках</string>
-    <string name="hide_screenshot_floating_summary">Исключает поддерживаемые плавающие окна, картинку в картинке и наложения приложений из системных снимков, не закрывая окна</string>
+    <string name="hide_screenshot_floating_summary">Исключает поддерживаемые плавающие окна, картинку в картинке и наложения приложений из системных снимков</string>
     <string name="power_indicator_hide_discharge_sign">Скрывать минус при разряде</string>
     <string name="power_indicator_temperature">Температура второй строкой</string>
     <string name="power_indicator_temperature_summary">Сверху — мощность, снизу — температура батареи</string>
@@ -1348,17 +1329,13 @@
     <string name="setting_settings_home_entry_style">Стиль значка</string>
     <string name="setting_settings_home_entry_style_system">По умолчанию</string>
     <string name="setting_settings_home_entry_style_app">Значок приложения</string>
-    <string name="settings_section_system_adaptation">Адаптация к системе</string>
-    <string name="setting_system_adaptation_version">Версия системы</string>
-    <string name="setting_system_adaptation_save_failed">Не удалось сохранить версию системы. Проверьте подключение к фреймворку Xposed и повторите попытку</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_title">Отключить снижение частоты LTPO/LTPS</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_summary">Удерживать выбранную в системе частоту при включённом экране. Включение может увеличить расход энергии.</string>
     <string name="display_enhancement_group">Улучшение изображения</string>
     <string name="display_enhancement_sr_thermal_title">Снять температурный лимит сверхчёткого изображения</string>
-    <string name="display_enhancement_sr_thermal_summary">Снимает температурный лимит улучшения чёткости, не открывая неподдерживаемые аппаратные функции. Может увеличить нагрев и расход энергии</string>
+    <string name="display_enhancement_sr_thermal_summary">Снимает температурный лимит улучшения чёткости</string>
     <string name="display_enhancement_color_thermal_title">Снять температурный лимит улучшения цвета видео</string>
-    <string name="display_enhancement_color_thermal_summary">Снимает температурный лимит улучшения цвета видео. Может увеличить нагрев и расход энергии. Общая тепловая защита системы сохраняется</string>
-    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="display_enhancement_color_thermal_summary">Снимает температурный лимит улучшения цвета видео</string>
     <string name="settings_home_cleanup_group">Главная страница настроек</string>
     <string name="settings_home_hide_account_title">Скрыть аккаунт вверху настроек</string>
     <string name="settings_home_hide_account_summary">Скрывает карточку аккаунта на главной странице системных настроек</string>
@@ -1392,4 +1369,21 @@
     <string name="native_live_update_summary">Использовать системную капсулу Live Update. При включении Fluid Cloud скрывается; совместное использование невозможно.</string>
     <string name="setting_hide_module_icon">Скрыть значок приложения модуля</string>
     <string name="setting_hide_module_icon_failed">Не удалось изменить видимость значка</string>
+    <string name="side_volume_group">Боковой ползунок громкости</string>
+    <string name="side_volume_percentage_title">Показывать проценты</string>
+    <string name="side_volume_percentage_summary">Показывать проценты на ползунках, включая отдельные регуляторы громкости</string>
+    <string name="side_volume_keep_wide_title">Сохранять ширину ползунка при регулировке</string>
+    <string name="qs_slider_percentage_title">Проценты на ползунках</string>
+    <string name="qs_slider_percentage_summary">Показывать проценты на ползунках яркости и громкости, включая развёрнутые панели</string>
+    <string name="qs_slider_percentage_properties">Настройки отображения процентов</string>
+    <string name="qs_slider_percentage_size">Размер текста</string>
+    <string name="qs_slider_percentage_color">Цвет текста</string>
+    <string name="qs_slider_percentage_offset">Смещение по вертикали</string>
+    <string name="settings_color_white">Белый</string>
+    <string name="settings_color_black">Чёрный</string>
+    <string name="capture_group_screenshot_options">Параметры снимков экрана</string>
+    <string name="volume_group_alerts">Уведомления громкости</string>
+    <string name="control_center_group_visibility">Скрытие элементов</string>
+    <string name="launcher_group_app_management">Управление приложениями</string>
+    <string name="launcher_group_recent_interaction">Отображение и взаимодействие</string>
 </resources>

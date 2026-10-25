@@ -72,7 +72,7 @@ class CarrierNameContractTest {
         assertTrue(ui.contains("row(key, visible = state.enabled)"))
         assertTrue(ui.contains("hasDividerAbove = above, hasDividerBelow = below"))
         assertTrue(ui.contains("CouiConfirmDialog("))
-        assertTrue(ui.contains("OutlinedTextField(state = input"))
+        assertFalse(ui.contains("OutlinedTextField(state = input"))
         assertTrue(ui.contains("CouiTextField(state = input"))
         assertTrue(ui.contains("FeatureSettingWriteQueue.application.enqueue(write)"))
         assertTrue(ui.contains("CarrierNameSettings.resetNames(application)"))

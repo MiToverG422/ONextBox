@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -16,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
@@ -27,12 +30,9 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.onFocusChanged
@@ -51,10 +51,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mi.onextbox.R
-import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.ColorOsSearchSurface
-import com.mi.onextbox.ui.common.LocalAppUiStyle
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
+import com.mi.onextbox.ui.common.rememberSystemAdaptationVersion
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsListGroup
@@ -67,11 +65,10 @@ internal fun FeatureSearchBar(
     state: TextFieldState,
     hint: String = stringResource(R.string.feature_search_hint),
 ) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val foreground = if (material) MaterialTheme.colorScheme.onSurface else COUITheme.colorScheme.onSurface
-    val hintColor = if (material) MaterialTheme.colorScheme.onSurfaceVariant else COUITheme.colorScheme.onSurface.copy(alpha = .55f)
-    val background = if (material) MaterialTheme.colorScheme.surfaceContainerHigh else COUITheme.colorScheme.surfaceContainerHigh
-    val accent = if (material) MaterialTheme.colorScheme.primary else COUITheme.colorScheme.primary
+    val foreground = COUITheme.colorScheme.onSurface
+    val hintColor = COUITheme.colorScheme.onSurface.copy(alpha = .55f)
+    val background = COUITheme.colorScheme.surfaceContainerHigh
+    val accent = COUITheme.colorScheme.primary
     val keyboard = LocalSoftwareKeyboardController.current
     val inputFocus = remember { FocusRequester() }
     val capsuleInteraction = remember { MutableInteractionSource() }
@@ -80,15 +77,15 @@ internal fun FeatureSearchBar(
     val empty = state.text.isEmpty()
     val inputStyle = TextStyle(
         color = foreground,
-        fontSize = if (material) 16.sp else 15.sp,
-        lineHeight = if (material) 22.sp else 20.sp,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
         platformStyle = PlatformTextStyle(includeFontPadding = false),
     )
 
     // Search capsule content.
     val searchContent: @Composable BoxScope.() -> Unit = {
         Row(
-            modifier = Modifier.fillMaxSize().then(if (material) Modifier else Modifier.clickable(
+            modifier = Modifier.fillMaxSize().then(Modifier.clickable(
                 interactionSource = capsuleInteraction,
                 indication = null,
             ) {
@@ -98,9 +95,9 @@ internal fun FeatureSearchBar(
             }),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Spacer(Modifier.width(if (material) 16.dp else 4.dp))
+            Spacer(Modifier.width(4.dp))
             Box(
-                Modifier.size(if (material) 28.dp else 36.dp), contentAlignment = Alignment.Center,
+                Modifier.size(36.dp), contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Rounded.Search, contentDescription = null, tint = hintColor, modifier = Modifier.size(22.dp))
             }
@@ -124,16 +121,15 @@ internal fun FeatureSearchBar(
                 },
             )
             if (!empty) {
-                IconButton(onClick = { state.clearText() }, modifier = Modifier.size(if (material) 48.dp else 40.dp)) {
+                IconButton(onClick = { state.clearText() }, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Rounded.Close, stringResource(R.string.feature_search_clear), tint = hintColor, modifier = Modifier.size(20.dp))
                 }
             } else Spacer(Modifier.width(16.dp))
         }
     }
     val surfaceModifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-        .height(if (material) 56.dp else 40.dp)
-    if (material || LocalAppUiStyle.current == AppUiStyle.Miuix) Box(surfaceModifier.background(background, RoundedCornerShape(50)), content = searchContent)
-    else ColorOsSearchSurface(surfaceModifier, background, focused, editorEmpty = empty, content = searchContent)
+        .height(40.dp)
+    ColorOsSearchSurface(surfaceModifier, background, focused, editorEmpty = empty, content = searchContent)
 }
 
 @Composable
@@ -142,8 +138,9 @@ internal fun FeatureSearchResults(query: String, onOpen: (FeaturePageMode) -> Un
     val configuration = LocalConfiguration.current
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    val results = remember(query, configuration, resources) {
-        FeatureSearchIndex.entries.map { entry ->
+    val version = rememberSystemAdaptationVersion()
+    val results = remember(query, configuration, resources, version) {
+        featureSearchEntries(version).map { entry ->
             entry to featureSearchScore(
                 query, resources.getString(entry.title),
                 if (entry.description == 0) "" else resources.getString(entry.description),
@@ -160,8 +157,7 @@ internal fun FeatureSearchResults(query: String, onOpen: (FeaturePageMode) -> Un
         }
     } else {
         SettingsListGroup(results, key = { it.title }) { index, entry ->
-            Material3ExpressiveSegmentPosition(index, results.size) {
-                SettingsCardRow(
+            run {SettingsCardRow(
                     title = stringResource(entry.title),
                     summary = featurePageTitle(entry.page),
                     showArrow = true,
@@ -172,8 +168,7 @@ internal fun FeatureSearchResults(query: String, onOpen: (FeaturePageMode) -> Un
                     },
                     hasDividerAbove = index > 0,
                     hasDividerBelow = index < results.lastIndex,
-                )
-            }
+                )}
         }
     }
 }

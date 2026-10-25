@@ -20,7 +20,7 @@ internal object TrafficManagementHooker {
     private const val TAG = "ONextBox-Traffic"
     private const val MODEL = "com.oplus.trafficmonitor.model.NetworkControlDataModel"
 
-    fun hook(loader: ClassLoader, apkPath: String) {
+    fun hook(loader: ClassLoader, apkPath: String, colorOs16: Boolean = false) {
         val stateKey = "$TAG:targets@${System.identityHashCode(loader)}"
         if (TrafficFeature.entries.none(::enabled) && HotReloadLifecycle.restoredState(stateKey) == null) return
         runCatching {
@@ -28,7 +28,7 @@ internal object TrafficManagementHooker {
             val saved = HotReloadLifecycle.restoredState(stateKey) as? Map<String, Array<Method>>
             val targets = saved ?: run {
                 System.loadLibrary("dexkit")
-                DexKitBridge.create(apkPath).use { TrafficManagementTargets(it).resolve(loader) }
+                DexKitBridge.create(apkPath).use { TrafficManagementTargets(it, colorOs16).resolve(loader) }
             }
             HotReloadLifecycle.register(stateKey, capture = { targets })
             Installer(loader, targets).install()
@@ -97,7 +97,7 @@ internal object TrafficManagementHooker {
                     } else chain.proceed()
                 }
                 hook(TrafficFeature.ShowPreinstalledApps, excludedUid) { -1 }
-                ModernReflect.findClass(MODEL, loader).declaredMethods.forEach {
+                filter.declaringClass.declaredMethods.forEach {
                     runCatching { ModernHookRuntime.requireModule().deoptimize(it) }
                 }
                 ModernReflect.findClass("com.oplus.trafficmonitor.view.datausagelist.appdatausage.OplusAppDataUsage", loader)

@@ -10,6 +10,78 @@ class SoftwareUpdateDownloadLinksTest {
     private val zip = SoftwareUpdateLinkResponse(206, mediaType = "application/zip", totalBytes = 1234,
         prefix = byteArrayOf(0x50, 0x4b, 0x03, 0x04))
 
+    @Test fun internationalDownloadEndpointsResolveWithoutRewritingSignedParameters() {
+        for (host in listOf("component-ota-in.allawnos.com", "component-ota-eu.allawnos.com",
+            "component-ota-cn.allawntech.com")) {
+            val link = "https://$host/download?p=keep%2Bencoded&s=signed&gkaReq=2&mode=1"
+            val target = "https://cdn.allawnos.com/package.zip?token=keep%2Bencoded"
+            assertTrue(SoftwareUpdateDownloadLinks.isCheckUrl(link))
+            assertTrue(SoftwareUpdateDownloadLinks.trustedCheckUrl(link))
+            val calls = arrayListOf<Pair<String, Boolean>>()
+            val result = SoftwareUpdateDownloadLinks.resolve(link, 1234) { url, auth ->
+                calls += url to auth
+                if (url == link) SoftwareUpdateLinkResponse(302, location = target) else zip
+            }
+            assertEquals(target, result.url)
+            assertEquals(listOf(link to true, target to false), calls)
+        }
+    }
+
+    @Test fun explicitAuthenticationModeTakesPrecedenceWithoutRewritingTheLink() {
+        for (path in listOf("download", "downloadCheck")) {
+            val base = "https://component-ota-in.allawnos.com/$path"
+            for (mode in 0..2) {
+                assertEquals(mode, SoftwareUpdateDownloadLinks.authenticationMode("$base?gkaReq=$mode&s=keep%2Btoken", 0))
+                assertEquals(mode, SoftwareUpdateDownloadLinks.authenticationMode("$base?s=keep%2Btoken", mode))
+            }
+            assertEquals(2, SoftwareUpdateDownloadLinks.authenticationMode("$base?gka%52eq=%32", 0))
+            assertNull(SoftwareUpdateDownloadLinks.authenticationMode(base, 3))
+            for (query in listOf("gkaReq=3", "gkaReq=-1", "gkaReq=", "gkaReq", "gkaReq=wrong",
+                "gkaReq=2&gkaReq=0", "gkaReq=2&gkaReq=2", "gkaReq=%ZZ")) {
+                assertNull(query, SoftwareUpdateDownloadLinks.authenticationMode("$base?$query", 0))
+            }
+        }
+        assertNull(SoftwareUpdateDownloadLinks.authenticationMode("https://example.test/download?gkaReq=2", 2))
+        assertNull(SoftwareUpdateDownloadLinks.authenticationMode(cdn, 2))
+    }
+
+    @Test fun downloadCanRedirectToDownloadCheckButCdnNeverReceivesDeviceHeaders() {
+        val download = "https://component-ota-in.allawnos.com/download?gkaReq=2&s=signed"
+        val checkLink = "https://component-ota-in.allawnos.com/downloadCheck?s=other"
+        val calls = arrayListOf<Pair<String, Boolean>>()
+        val result = SoftwareUpdateDownloadLinks.resolve(download, 1234) { url, auth ->
+            calls += url to auth
+            when (url) {
+                download -> SoftwareUpdateLinkResponse(302, location = checkLink)
+                checkLink -> SoftwareUpdateLinkResponse(307, location = cdn)
+                else -> zip
+            }
+        }
+        assertEquals(cdn, result.url)
+        assertEquals(listOf(download to true, checkLink to true, cdn to false), calls)
+    }
+
+    @Test fun internationalJsonErrorIsNotExportedAsADownloadLink() {
+        val result = SoftwareUpdateDownloadLinks.resolve("https://component-ota-in.allawnos.com/download?gkaReq=2", 1234) { _, _ ->
+            SoftwareUpdateLinkResponse(200, mediaType = "application/json", serverCode = 2301)
+        }
+        assertNull(result.url)
+        assertEquals(SoftwareUpdateLinkFailure(SoftwareUpdateLinkProblem.Server, 2301), result.failure)
+    }
+
+    @Test fun internationalDownloadAuthenticationIsRestrictedToOfficialComponentHosts() {
+        for (link in listOf("https://component-ota-in.allawnos.com.evil.test/download",
+            "https://other.allawnos.com/download", "http://component-ota-in.allawnos.com/download",
+            "https://user@component-ota-in.allawnos.com/download", "https://component-ota-in.allawnos.com:8443/download",
+            "https://component-ota-in.allawnos.com/download#fragment")) {
+            assertFalse(link, SoftwareUpdateDownloadLinks.trustedCheckUrl(link))
+            assertNull(SoftwareUpdateDownloadLinks.resolve(link, 1234) { _, _ -> fail("Unexpected request"); zip }.url)
+        }
+        assertFalse(SoftwareUpdateDownloadLinks.isCheckUrl("https://cdn.allawnos.com/package.zip?next=/download"))
+        assertFalse(SoftwareUpdateDownloadLinks.isCheckUrl("https://component-ota-in.allawnos.com/downloadExtra"))
+        assertTrue(SoftwareUpdateDownloadLinks.isCheckUrl("https://component-ota-in.allawnos.com/DOWNLOAD/"))
+    }
+
     @Test fun authenticatedRedirectResolvesToAnUnauthenticatedSizeMatchedZip() {
         val calls = arrayListOf<Pair<String, Boolean>>()
         val result = SoftwareUpdateDownloadLinks.resolve(check, 1234) { url, auth ->

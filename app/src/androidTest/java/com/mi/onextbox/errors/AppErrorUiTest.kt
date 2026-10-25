@@ -27,9 +27,8 @@ import org.junit.runner.RunWith
 class AppErrorUiTest {
     @get:Rule val compose = createComposeRule()
     @Test fun couiCardOpensAndCopies() = assertCard(AppUiStyle.ColorOs)
-    @Test fun expressiveCardOpensAndCopies() = assertCard(AppUiStyle.Material3Expressive)
+
     @Test fun couiDetailsShowMetadataAndAllActions() = assertDetails(AppUiStyle.ColorOs)
-    @Test fun expressiveDetailsShowMetadataAndAllActions() = assertDetails(AppUiStyle.Material3Expressive)
 
     private fun assertDetails(style: AppUiStyle) {
         var copies = 0

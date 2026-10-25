@@ -2,65 +2,29 @@
 
 package com.mi.onextbox.ui.settings
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.os.Build
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -71,173 +35,31 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.mi.onextbox.R
-import com.mi.onextbox.lsp.LsposedScopeRequester
-import com.mi.onextbox.ui.common.AppLocale
-import com.mi.onextbox.ui.common.AppIcons
 import com.mi.onextbox.ui.common.AppUiTokens
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.LocalColorOsDialogContent
 import com.mi.onextbox.ui.common.ColorOsDialogChoice
-import com.mi.onextbox.ui.common.rememberHapticClick
-import com.mi.onextbox.ui.common.bottomTabs
-import com.mi.onextbox.ui.common.readCachedRootAccessInfo
 import io.github.suqi8.coui.kmp.basic.Card
-import io.github.suqi8.coui.kmp.basic.CardDefaults
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.HorizontalDivider
-import io.github.suqi8.coui.kmp.basic.TopAppBarDefaults
-import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.SmallTitle
-import io.github.suqi8.coui.kmp.basic.TopAppBar
-import io.github.suqi8.coui.kmp.basic.ListPopup
-import io.github.suqi8.coui.kmp.basic.NavigationBar
-import io.github.suqi8.coui.kmp.basic.NavigationItem
-import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
-import io.github.suqi8.coui.kmp.basic.Switch
 import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
-import io.github.suqi8.coui.kmp.icon.extended.Ok
-import io.github.suqi8.coui.kmp.icon.extended.Back
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.darkColorScheme
-import io.github.suqi8.coui.kmp.theme.lightColorScheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material3.Icon as MaterialIcon
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.ListItemShapes
-import androidx.compose.material3.SegmentedListItem
-import androidx.compose.material3.Surface as MaterialSurface
-import androidx.compose.material3.Text as MaterialText
-import io.github.suqi8.coui.kmp.utils.COUIPopupUtils.Companion.COUIPopupHost
-import io.github.suqi8.coui.kmp.utils.PressFeedbackType
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.Locale
 import kotlin.math.max
 
-internal val LocalMaterial3ExpressiveSegmentShapes = compositionLocalOf<ListItemShapes?> { null }
 
-@Composable
-internal fun Material3ExpressiveSegmentPosition(
-    index: Int,
-    count: Int,
-    content: @Composable () -> Unit,
-) {
-    val defaults = ListItemDefaults.segmentedShapes(index, count)
-    val shapes = if (count == 1) defaults.copy(shape = MaterialTheme.shapes.large) else defaults
-    CompositionLocalProvider(LocalMaterial3ExpressiveSegmentShapes provides shapes, content = content)
-}
-
-@Composable
-internal fun Material3ExpressiveInferredSegmentPosition(
-    hasDividerAbove: Boolean,
-    hasDividerBelow: Boolean,
-    content: @Composable () -> Unit,
-) {
-    if (LocalMaterial3ExpressiveSegmentShapes.current != null) {
-        content()
-        return
-    }
-    val index = if (hasDividerAbove) 1 else 0
-    val count = 1 + (if (hasDividerAbove) 1 else 0) + (if (hasDividerBelow) 1 else 0)
-    Material3ExpressiveSegmentPosition(index, count, content)
-}
-
-@Composable
-@Suppress("UNUSED_PARAMETER")
-internal fun Material3ExpressiveAnimatedSegmentPosition(
-    index: Int,
-    count: Int,
-    durationMillis: Int,
-    content: @Composable () -> Unit,
-) {
-    val target = ListItemDefaults.segmentedShapes(index, count)
-    val cornerSpring = spring<Dp>(dampingRatio = 0.9f, stiffness = 800f)
-    val topCorner by animateDpAsState(
-        targetValue = if (index == 0) 16.dp else 4.dp,
-        animationSpec = cornerSpring,
-        label = "material3ExpressiveSegmentTopCorner",
-    )
-    val bottomCorner by animateDpAsState(
-        targetValue = if (index == count - 1) 16.dp else 4.dp,
-        animationSpec = cornerSpring,
-        label = "material3ExpressiveSegmentBottomCorner",
-    )
-    val shape = RoundedCornerShape(
-        topStart = topCorner,
-        topEnd = topCorner,
-        bottomStart = bottomCorner,
-        bottomEnd = bottomCorner,
-    )
-    CompositionLocalProvider(
-        LocalMaterial3ExpressiveSegmentShapes provides target.copy(shape = shape),
-        content = content,
-    )
-}
-
-@Composable
-internal fun Material3ExpressiveSegmentContentCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    MaterialSurface(
-        modifier = modifier.fillMaxWidth(),
-        shape = LocalMaterial3ExpressiveSegmentShapes.current?.shape ?: MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceBright,
-        content = content,
-    )
-}
 
 @Composable
 fun SettingsSection(title: String) {
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-        top.yukonga.miuix.kmp.basic.SmallTitle(text = title)
-        return
-    }
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        MaterialText(
-            text = title,
-            modifier = Modifier
-                .padding(horizontal = 32.dp, vertical = 8.dp)
-                .heightIn(min = 16.dp),
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-            ),
-            color = MaterialTheme.colorScheme.primary,
-        )
-        return
-    }
+
+
     SmallTitle(text = title)
 }
 
@@ -246,25 +68,8 @@ fun SettingsGroup(
     bottomPadding: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-        top.yukonga.miuix.kmp.basic.Card(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = if (bottomPadding == 16.dp) 12.dp else bottomPadding),
-            content = content,
-        )
-        return
-    }
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        val expressiveBottomPadding = if (bottomPadding == 16.dp) 13.dp else bottomPadding
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = expressiveBottomPadding),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-            content = content,
-        )
-        return
-    }
+
+
     Card(
         modifier = Modifier
             .padding(horizontal = 16.dp)
@@ -296,10 +101,8 @@ internal object SettingsTokens {
 
 @Composable
 fun SettingsDivider() {
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) return
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        return
-    }
+
+
     val dividerColor = if (COUITheme.colorScheme.background.luminance() < 0.5f) {
         Color(0x33FFFFFF)
     } else {
@@ -313,53 +116,7 @@ fun SettingsDivider() {
 }
 
 @Composable
-internal fun Material3ExpressivePreferenceRow(
-    title: String,
-    summary: String?,
-    modifier: Modifier = Modifier,
-    startAction: (@Composable () -> Unit)? = null,
-    endActions: (@Composable RowScope.() -> Unit)? = null,
-    bottomAction: (@Composable () -> Unit)? = null,
-    enabled: Boolean = true,
-    onClick: (() -> Unit)? = null,
-    role: Role? = null,
-) {
-    val shape = LocalMaterial3ExpressiveSegmentShapes.current?.shape ?: MaterialTheme.shapes.large
-    val row: @Composable () -> Unit = {
-        SegmentedListItem(
-            onClick = onClick ?: {},
-            modifier = modifier.fillMaxWidth(),
-            enabled = enabled,
-            shapes = LocalMaterial3ExpressiveSegmentShapes.current
-                ?: ListItemDefaults.segmentedShapes(0, 1).copy(shape = shape),
-            colors = ListItemDefaults.segmentedColors(
-                containerColor = MaterialTheme.colorScheme.surfaceBright,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceBright,
-                supportingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-            leadingContent = startAction,
-            supportingContent = summary?.takeIf { it.isNotBlank() }?.let { supporting ->
-                { MaterialText(supporting) }
-            },
-            trailingContent = endActions?.let { trailing ->
-                { Row(verticalAlignment = Alignment.CenterVertically) { trailing() } }
-            },
-            verticalAlignment = Alignment.CenterVertically,
-        ) { MaterialText(title) }
-    }
-    // A conditional outer wrapper recreated the row (including its switch) when an auxiliary
-    // control appeared. Keep one composition path; only the auxiliary content enters/exits.
-    MaterialSurface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceBright,
-    ) {
-        Column {
-            row()
-            bottomAction?.invoke()
-        }
-    }
-}
+
 
 private fun Modifier.settingsRowHighlight(
     progress: Float,
@@ -456,57 +213,8 @@ fun SettingsCardRow(
     hasDividerBelow: Boolean = false,
     leadingContent: (@Composable () -> Unit)? = null,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-        top.yukonga.miuix.kmp.basic.BasicComponent(
-            startAction = leadingContent, onClick = onClick,
-        ) {
-            MiuixPreferenceValueLayout(title = title, summary = summary, value = trailing, enabled = true,
-                endAction = if (showArrow || showExpandArrow) ({
-                    MaterialIcon(
-                        imageVector = if (showExpandArrow) {
-                            if (expandArrowExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore
-                        } else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions,
-                    )
-                }) else null,
-            )
-        }
-        return
-    }
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveInferredSegmentPosition(hasDividerAbove, hasDividerBelow) {
-        Material3ExpressivePreferenceRow(
-            title = title,
-            summary = summary,
-            startAction = leadingContent,
-            onClick = onClick,
-            endActions = {
-                trailing?.let {
-                    MaterialText(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (showArrow || showExpandArrow) {
-                    MaterialIcon(
-                        imageVector = if (showExpandArrow) {
-                            if (expandArrowExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore
-                        } else {
-                            Icons.AutoMirrored.Rounded.KeyboardArrowRight
-                        },
-                        contentDescription = null,
-                        modifier = Modifier.padding(start = 8.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            },
-        )
-        }
-        return
-    }
+
+
 
     val rowSummary = summary.takeIf { it.isNotBlank() }
     if (LocalColorOsDialogContent.current && onClick != null && trailing == null &&
@@ -710,22 +418,7 @@ internal fun SettingsRowTextContent(
     summary: String?,
     enabled: Boolean = true,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        MaterialText(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-        )
-        if (summary != null) {
-            MaterialText(
-                text = summary,
-                modifier = Modifier.padding(top = 2.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.38f),
-            )
-        }
-        return
-    }
+
     Text(
         text = title,
         fontSize = COUITheme.textStyles.headline1.fontSize,

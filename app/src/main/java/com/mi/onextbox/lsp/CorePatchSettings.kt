@@ -19,6 +19,9 @@ internal object CorePatchSettings {
         Block("bypass_block", R.string.corepatch_block, R.string.corepatch_block_summary),
     }
     private fun key(option: Option) = "corepatch_${option.key}"
+    fun availableOptions(version: SystemAdaptationVersion): List<Option> = Option.entries.filter {
+        version != SystemAdaptationVersion.ColorOs16 || it != Option.Block
+    }
     fun enabled(context: Context, option: Option) = LspPreferenceStore.prefs(context).getBoolean(key(option), false)
     fun set(context: Context, option: Option, value: Boolean) {
         check(LspPreferenceStore.prefs(context).edit().putBoolean(key(option), value).commit())

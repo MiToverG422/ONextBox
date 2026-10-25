@@ -72,11 +72,15 @@ fun ColorOsSwitch(
         label = "colorOsSwitchTrackColor",
     )
     val thumbColor by animateColorAsState(
-        targetValue = when {
-            enabled -> Color.White
-            darkTheme -> Color(0x29FFFFFF)
-            else -> Color(0x8AFFFFFF)
-        },
+        targetValue = colorOsSwitchThumbColor(
+            monet = LocalColorOsMonetEnabled.current,
+            checked = checked,
+            enabled = enabled,
+            darkTheme = darkTheme,
+            onPrimary = colorScheme.onPrimary,
+            onSurface = colorScheme.onSurfaceVariantSummary,
+        ),
+        animationSpec = tween(durationMillis = 450, easing = easing),
         label = "colorOsSwitchThumbColor",
     )
     val overlayColor by animateColorAsState(
@@ -143,6 +147,23 @@ fun ColorOsSwitch(
                 .background(thumbColor, CircleShape),
         )
     }
+}
+
+internal fun colorOsSwitchThumbColor(
+    monet: Boolean,
+    checked: Boolean,
+    enabled: Boolean,
+    darkTheme: Boolean,
+    onPrimary: Color,
+    onSurface: Color,
+): Color {
+    if (!monet) return when {
+        enabled -> Color.White
+        darkTheme -> Color(0x29FFFFFF)
+        else -> Color(0x8AFFFFFF)
+    }
+    val color = if (checked) onPrimary else onSurface
+    return if (enabled) color else color.copy(alpha = color.alpha * .38f)
 }
 
 private val TrackWidth = 44.dp

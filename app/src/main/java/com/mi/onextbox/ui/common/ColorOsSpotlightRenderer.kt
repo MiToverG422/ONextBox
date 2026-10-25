@@ -108,6 +108,12 @@ internal class ColorOsSpotlightRenderer(
     fun onUp(x: Float, y: Float) {
         moveLightTo(x, y)
         extinguishing = true
+        if (style == Style.TopBarButton) {
+            // A short tap must fade from its current brightness, not keep accelerating in.
+            progressAnimation.cancel()
+            progressAnimation.setStartValue(progress)
+            progressAnimation.setStartVelocity(0f)
+        }
         animateProgress(
             target = 0f,
             stiffness = ExtinguishStiffness,
@@ -132,8 +138,13 @@ internal class ColorOsSpotlightRenderer(
         }
 
         val params = parameters()
-        val radius = params.startRadius + (params.endRadius - params.startRadius) * progress +
-            if (extinguishing) params.endRadius * 2f * (1f - progress) else 0f
+        // Expanding a partially lit small circle on release causes a visible brightness jump.
+        val radius = colorOsSpotlightRadius(
+            startRadius = params.startRadius,
+            endRadius = params.endRadius,
+            progress = progress,
+            expandOnRelease = extinguishing && style != Style.TopBarButton,
+        )
         val intensity = params.endIntensity * progress
 
         runtimeShader.setFloatUniform(

@@ -9,14 +9,22 @@ import java.lang.reflect.Modifier
 
 internal object HideScreenshotFloatingHooker {
     fun hook(loader: ClassLoader) {
+        hook(loader, "com.oplus.screenshot.common.util.WindowExcludeUtils", "f", "k6.e", "n")
+    }
+
+    fun hookColorOs16(loader: ClassLoader) {
+        hook(loader, "com.oplus.screenshot.common.util.o0", "e", "q5.c", "m")
+    }
+
+    private fun hook(loader: ClassLoader, utilsName: String, methodName: String, callerName: String, callerMethod: String) {
         runCatching {
-            val utils = ModernReflect.findClass("com.oplus.screenshot.common.util.WindowExcludeUtils", loader)
+            val utils = ModernReflect.findClass(utilsName, loader)
             val info = ModernReflect.findClass("com.oplus.app.OplusWindowInfo", loader)
             val surface = info.getField("mSurfaceControl")
             val mode = info.getField("windowingMode")
             val windowType = info.getField("type")
             val pkg = info.getField("packageName")
-            val method = utils.getDeclaredMethod("f", String::class.java, List::class.java)
+            val method = utils.getDeclaredMethod(methodName, String::class.java, List::class.java)
             require(Modifier.isStatic(method.modifiers) && method.returnType == Array<SurfaceControl>::class.java)
             ModernHookRegistry.installCompat("ONextBox-Capture:exclude-floating", method, object : ModernMethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
@@ -35,8 +43,8 @@ internal object HideScreenshotFloatingHooker {
                     if (merged.size != original.size) param.result = merged.toTypedArray()
                 }
             })
-            // Verified display-capture caller in C17; best-effort deopt for vendor inlining.
-            ModernReflect.findClassIfExists("k6.e", loader)?.declaredMethods?.filter { it.name == "n" }?.forEach {
+            // Only the audited display-capture caller is deoptimized for vendor inlining.
+            ModernReflect.findClassIfExists(callerName, loader)?.declaredMethods?.filter { it.name == callerMethod }?.forEach {
                 runCatching { ModernHookRuntime.requireModule().deoptimize(it) }
             }
             HookLog.i("ONextBox-Capture", "Floating-window layer exclusion installed")

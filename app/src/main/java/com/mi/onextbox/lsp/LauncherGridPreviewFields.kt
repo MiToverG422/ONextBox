@@ -4,9 +4,12 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 
 internal object LauncherGridPreviewFields {
-    fun resolve(owner: Class<*>, referenced: List<Field>): Array<Field> {
+    fun resolve(owner: Class<*>, referenced: List<Field>, colorOs16: Boolean = false): Array<Field> {
         val fields = referenced.distinct().filter { it.declaringClass == owner }
-        return listOf("t", "u", "c", "d", "p", "o", "n").mapIndexed { index, name ->
+        val names = if (colorOs16) listOf("mColumn", "mRow", "mPreviewCellWidth", "mPreviewCellHeight",
+            "mPreviewCellRadius", "mPreviewPaddingStart", "mPreviewPaddingTop")
+        else listOf("t", "u", "c", "d", "p", "o", "n")
+        return names.mapIndexed { index, name ->
             val field = fields.singleOrNull { it.name == name }
                 ?: throw NoSuchFieldException("Native layout preview draw field is missing: $name")
             require(field.type == Int::class.javaPrimitiveType && !Modifier.isStatic(field.modifiers)) {

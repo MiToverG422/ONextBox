@@ -47,7 +47,6 @@ import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsCardRow
-import com.mi.onextbox.ui.settings.LocalMaterial3ExpressiveSegmentShapes
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -62,54 +61,25 @@ class NotificationBatchUiTest {
     private val app = NotificationBatchApp(NotificationAppTarget("com.test.notifications", 10123), "Test app")
 
     @Test fun couiSelectionOnlyChangesSelection() = selection(AppUiStyle.ColorOs)
-    @Test fun materialSelectionOnlyChangesSelection() = selection(AppUiStyle.Material3Expressive)
+
     @Test fun couiProtectedAppsCannotBeSelected() = protected(AppUiStyle.ColorOs)
-    @Test fun materialProtectedAppsCannotBeSelected() = protected(AppUiStyle.Material3Expressive)
+
     @Test fun couiFloatingActionsDoNotCutOffTheListViewport() = actionsLayout(AppUiStyle.ColorOs)
-    @Test fun materialFloatingActionsDoNotCutOffTheListViewport() = actionsLayout(AppUiStyle.Material3Expressive)
+
     @Test fun couiLargeFontsKeepTheLastAppAboveFloatingActions() = actionsLayout(AppUiStyle.ColorOs, 1.8f)
-    @Test fun materialLargeFontsKeepTheLastAppAboveFloatingActions() = actionsLayout(AppUiStyle.Material3Expressive, 1.8f)
+
     @Test fun couiExpansionDoesNotOverlapFollowingCards() = expansion(AppUiStyle.ColorOs, false)
-    @Test fun materialExpansionDoesNotOverlapFollowingCards() = expansion(AppUiStyle.Material3Expressive, false)
+
     @Test fun couiRapidExpansionReversalsDoNotOverlap() = expansion(AppUiStyle.ColorOs, true)
-    @Test fun materialRapidExpansionReversalsDoNotOverlap() = expansion(AppUiStyle.Material3Expressive, true)
+
     @Test fun couiSelectAllCanBeClearedWithoutApplyingChanges() = selectAll(AppUiStyle.ColorOs)
-    @Test fun materialSelectAllCanBeClearedWithoutApplyingChanges() = selectAll(AppUiStyle.Material3Expressive)
+
     @Test fun couiActionsAreDisabledWhenNoPermissionIsChosen() = noPermissions(AppUiStyle.ColorOs)
-    @Test fun materialActionsAreDisabledWhenNoPermissionIsChosen() = noPermissions(AppUiStyle.Material3Expressive)
+
     @Test fun couiNativeButtonsDispatchTheChosenAction() = actionsClick(AppUiStyle.ColorOs)
-    @Test fun materialButtonsDispatchTheChosenAction() = actionsClick(AppUiStyle.Material3Expressive)
+
     @Test fun couiDisabledButtonsDoNotRevealContentBehindThem() = opaqueDisabledActions(AppUiStyle.ColorOs, false)
     @Test fun couiDarkDisabledButtonsDoNotRevealContentBehindThem() = opaqueDisabledActions(AppUiStyle.ColorOs, true)
-    @Test fun materialDisabledButtonsDoNotRevealContentBehindThem() = opaqueDisabledActions(AppUiStyle.Material3Expressive, false)
-    @Test fun materialDarkDisabledButtonsDoNotRevealContentBehindThem() = opaqueDisabledActions(AppUiStyle.Material3Expressive, true)
-    @Test fun materialCornerRecoveryStartsWithCollapseRatherThanAfterIt() {
-        val visible = MutableTransitionState(true)
-        var bottomCorner = 0f
-        compose.setContent {
-            TestTheme(AppUiStyle.Material3Expressive) {
-                val transition = rememberTransition(visible)
-                NotificationBatchHeaderSegment(transition, 3) {
-                    val shape = requireNotNull(LocalMaterial3ExpressiveSegmentShapes.current).shape
-                    val outline = shape.createOutline(Size(320f, 80f), LayoutDirection.Ltr, Density(1f)) as Outline.Rounded
-                    SideEffect { bottomCorner = outline.roundRect.bottomLeftCornerRadius.x }
-                    SettingsCardRow("Permissions", "Selected permissions")
-                }
-            }
-        }
-        compose.waitForIdle()
-        compose.mainClock.autoAdvance = false
-        compose.runOnIdle { assertEquals(4f, bottomCorner, .01f); visible.targetState = false }
-        repeat(4) { compose.mainClock.advanceTimeByFrame() }
-        compose.runOnIdle { assertTrue("Corners must begin recovering while the card is still collapsing", bottomCorner > 4.1f) }
-        repeat(45) { compose.mainClock.advanceTimeByFrame() }
-        compose.runOnIdle { assertEquals(16f, bottomCorner, .1f) }
-        compose.runOnIdle { visible.targetState = true }
-        repeat(3) { compose.mainClock.advanceTimeByFrame() }
-        compose.runOnIdle { visible.targetState = false }
-        repeat(45) { compose.mainClock.advanceTimeByFrame() }
-        compose.runOnIdle { assertEquals(16f, bottomCorner, .1f) }
-    }
 
     private fun actionsLayout(style: AppUiStyle, fontScale: Float = 1f) {
         val apps = (1..12).map { NotificationBatchApp(NotificationAppTarget("com.test.app$it", 10100 + it), "Long application name number $it") }

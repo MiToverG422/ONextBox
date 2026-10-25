@@ -51,7 +51,7 @@ internal object MobileNetworkHooker {
 
     private val hookedLoaders = ConcurrentHashMap.newKeySet<Int>()
 
-    fun hook(classLoader: ClassLoader) {
+    fun hook(classLoader: ClassLoader, colorOs16: Boolean = false) {
         if (!hookedLoaders.add(System.identityHashCode(classLoader))) return
 
         var hookCount = 0
@@ -179,7 +179,7 @@ internal object MobileNetworkHooker {
                     XposedBridge.hookAllMethods(
                         simInfoFragment,
                         methodName,
-                        forceCarrierVisibilityCallback(visibleArgumentIndex = 1),
+                        forceCarrierVisibilityCallback(visibleArgumentIndex = 1, colorOs16 = colorOs16),
                     )
                     hookCount++
                 }.onFailure { log("hook $className.$methodName failed", it) }
@@ -192,6 +192,7 @@ internal object MobileNetworkHooker {
                         forceCarrierVisibilityCallback(
                             visibleArgumentIndex = 2,
                             restoreVoiceOverNrAfter = methodName == "j",
+                            colorOs16 = colorOs16,
                         ),
                     )
                     hookCount++
@@ -200,11 +201,13 @@ internal object MobileNetworkHooker {
         }
 
         log("Mobile network entry hooks: $hookCount")
+        if (colorOs16) installColorOs16InlineNumberMask()
     }
 
     private fun forceCarrierVisibilityCallback(
         visibleArgumentIndex: Int,
         restoreVoiceOverNrAfter: Boolean = false,
+        colorOs16: Boolean = false,
     ) =
         object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
@@ -222,17 +225,17 @@ internal object MobileNetworkHooker {
                 // C17 refreshes VoNR/Vo5G first, then its VoLTE visibility callback removes
                 // both entries again. Restore only the variant selected by the OEM feature
                 // route; the matching preference already owns the original listener/state.
-                param.thisObject?.let(::ensureVoiceOverNrOption)
+                param.thisObject?.let { ensureVoiceOverNrOption(it, colorOs16) }
             }
         }
 
-    private fun ensureVoiceOverNrOption(fragment: Any) {
+    private fun ensureVoiceOverNrOption(fragment: Any, colorOs16: Boolean) {
         runCatching {
             val controller = XposedHelpers.getObjectField(fragment, "A") ?: return@runCatching
-            val featureRouter = XposedHelpers.getObjectField(fragment, "L") ?: return@runCatching
-            val slotId = XposedHelpers.callMethod(controller, "r") as? Int ?: return@runCatching
-            val useVonr = XposedHelpers.callMethod(featureRouter, "l", slotId) as? Boolean ?: false
-            val category = listOf("f6444f", "f6478f")
+            val featureRouter = XposedHelpers.getObjectField(fragment, if (colorOs16) "M" else "L") ?: return@runCatching
+            val slotId = XposedHelpers.callMethod(controller, if (colorOs16) "w" else "r") as? Int ?: return@runCatching
+            val useVonr = XposedHelpers.callMethod(featureRouter, if (colorOs16) "o" else "l", slotId) as? Boolean ?: false
+            val category = (if (colorOs16) listOf("f") else listOf("f6444f", "f6478f"))
                 .firstNotNullOfOrNull { fieldName ->
                     runCatching { XposedHelpers.getObjectField(fragment, fieldName) }.getOrNull()
                 } ?: return@runCatching
@@ -240,9 +243,26 @@ internal object MobileNetworkHooker {
             val vo5g = XposedHelpers.getObjectField(fragment, "K")
             val selected = if (useVonr) vonr else vo5g
             val unselected = if (useVonr) vo5g else vonr
-            if (unselected != null) XposedHelpers.callMethod(category, "i", unselected)
+            if (unselected != null) XposedHelpers.callMethod(category, if (colorOs16) "j" else "i", unselected)
             if (selected != null) XposedHelpers.callMethod(category, "e", selected)
         }.onFailure { log("restore VoNR/Vo5G option failed", it) }
+    }
+
+    /** C16's inline SIM adapter is shaded differently; target its semantic TextView ID. */
+    private fun installColorOs16InlineNumberMask() {
+        XposedBridge.hookAllMethods(TextView::class.java, "setText", object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                if (!LspConfig.isMobileNetworkHidePhoneNumberEnabledXposed()) return
+                val view = param.thisObject as? TextView ?: return
+                if (view.context.packageName != "com.android.phone" || view.id == View.NO_ID) return
+                val entry = runCatching { view.resources.getResourceEntryName(view.id) }.getOrNull()
+                if (entry in setOf(KEY_SIM_NUMBER, "simsetting_summary1", "simsetting_summary2") &&
+                    isLikelyPhoneNumber(param.args.firstOrNull() as? CharSequence)) {
+                    param.args[0] = MASKED_PHONE_NUMBER
+                    view.contentDescription = MASKED_PHONE_NUMBER
+                }
+            }
+        })
     }
 
     private fun maskPhoneNumbers(holder: Any) {

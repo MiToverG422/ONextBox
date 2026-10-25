@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="system_adaptation_runtime_restart">Đã chuyển phiên bản tương thích và giữ nguyên lựa chọn. Khởi động lại điện thoại để áp dụng đầy đủ và xóa tác động còn lại của phiên bản trước.</string>
-    <string name="developer_allow_hyperos3_title">Cho phép hỗ trợ HyperOS 3</string>
     <string name="system_adaptation_no_content">Chưa có tính năng hoặc công cụ cho phiên bản tương thích này</string>
+    <string name="setting_bottom_bar_hide_labels">Ẩn nhãn thanh dưới</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">Hộp công cụ kiểu COUI để tùy chỉnh hệ thống OPlus</string>
     <string name="tab_home">Trang chủ</string>
@@ -19,17 +18,10 @@
     <string name="setting_theme_mode">Chế độ chủ đề</string>
     <string name="setting_ui_style">Kiểu giao diện</string>
     <string name="ui_style_coloros">COUI 17.0</string>
-    <string name="ui_style_material3_expressive">Material 3 Expressive</string>
     <string name="setting_dynamic_color">Màu sắc năng động</string>
     <string name="setting_dynamic_color_on_summary">Sử dụng màu từ hình nền hệ thống</string>
     <string name="setting_dynamic_color_off_summary">Sử dụng màu chủ đề tùy chỉnh</string>
     <string name="setting_theme_palette">Màu chủ đề</string>
-    <string name="setting_material_floating_bottom_bar">Thanh điều hướng nổi</string>
-    <string name="setting_material_floating_bottom_bar_summary">Sử dụng thanh điều hướng phía dưới nổi</string>
-    <string name="setting_material_haptics">Phản hồi xúc giác</string>
-    <string name="setting_material_haptics_summary">Cung cấp phản hồi xúc giác khi chuyển tab điều hướng</string>
-    <string name="setting_material_switch_icons">Hiện biểu tượng công tắc</string>
-    <string name="setting_material_switch_icons_summary">Hiện biểu tượng bật hoặc tắt trên nút gạt của công tắc</string>
     <string name="setting_theme_settings">Cài đặt</string>
     <string name="theme_mode_system">Theo hệ thống</string>
     <string name="theme_mode_light">Giao diện sáng</string>
@@ -53,10 +45,6 @@
     <string name="language_system">Theo hệ thống</string>
     <string name="setting_blur_effect">Kích hoạt hiệu ứng làm mờ</string>
     <string name="setting_feature_page_new_style">Kiểu trang tính năng mới</string>
-    <string name="setting_progressive_card_animation">Hiệu ứng thẻ xuất hiện dần</string>
-    <string name="setting_progressive_card_animation_summary">Thẻ xuất hiện dần khi cuộn, chỉ áp dụng cho bố cục Tính năng cổ điển và Trình giám sát OPPO Push</string>
-    <string name="setting_feature_page_hide_background_video">Ẩn video nền của trang Tính năng</string>
-    <string name="setting_feature_page_hide_background_video_summary">Trong các chủ đề tối không phải Monet, thay thế video nền bằng nền hoạt hình đầy màu sắc</string>
     <string name="setting_pop_follows_swipe_edge">Pop theo sau Vuốt cạnh</string>
     <string name="setting_pop_follows_swipe_edge_summary">Hướng hoạt ảnh pop theo cạnh vuốt ngón tay</string>
     <string name="settings_section_other">Khác</string>
@@ -336,8 +324,6 @@
     <string name="about_reference_material_icons_title">Biểu tượng vật liệu</string>
     <string name="about_reference_junit_summary">Nhóm JUnit  · EPL-1.0</string>
     <string name="about_reference_junit_title">JUnit</string>
-    <string name="about_reference_miuix_summary">soạn-miuix-ui · Apache-2.0</string>
-    <string name="about_reference_miuix_title">MIUIX</string>
     <string name="about_reference_oshin_summary">suqi8 · AGPL-3.0</string>
     <string name="about_reference_oshin_title">OShin</string>
     <string name="about_reference_xposed_api_summary">libxpose · Apache-2.0</string>
@@ -429,7 +415,7 @@
     <string name="onboarding_language_title">Chọn ngôn ngữ</string>
     <string name="onboarding_language_summary">Chọn ngôn ngữ cho quá trình thiết lập và ONextBox</string>
     <string name="onboarding_appearance_title">Giao diện và chủ đề</string>
-    <string name="onboarding_appearance_summary">Chọn kiểu và chủ đề giao diện cho ONextBox</string>
+    <string name="onboarding_appearance_summary">Chọn chủ đề cho ONextBox</string>
     <string name="onboarding_appearance_theme_note">Điều này chỉ thay đổi ứng dụng; màn hình thiết lập không bị ảnh hưởng</string>
     <string name="onboarding_personalization_title">Cá nhân hóa theo ý bạn</string>
     <string name="onboarding_personalization_summary">Xem trước và chọn giao diện của trang Tính năng trước khi bạn tiếp tục</string>
@@ -437,11 +423,7 @@
     <string name="onboarding_feature_style_new_summary">Bố cục sống động với nền động</string>
     <string name="onboarding_feature_style_classic">Trang tính năng cổ điển của</string>
     <string name="onboarding_feature_style_classic_summary">Bố cục danh sách đơn giản, quen thuộc</string>
-    <string name="onboarding_feature_video_title">Hình nền động mặc định  ColorOS 17</string>
-    <string name="onboarding_feature_video_summary">Chỉ hiển thị trên trang Tính năng mới ở chế độ tối tiêu chuẩn</string>
     <string name="onboarding_feature_style_section">Tính năng kiểu trang</string>
-    <string name="onboarding_feature_background_section">Nền</string>
-    <string name="onboarding_feature_coui_only_note">Các tùy chọn này chỉ được hỗ trợ trong COUI 17.0</string>
     <string name="onboarding_migration_title">Mang theo các cài đặt của bạn</string>
     <string name="onboarding_migration_summary">Khôi phục bản sao lưu cấu hình ONextBox hoặc thiết lập như mới</string>
     <string name="onboarding_migration_preview_source">Sao lưu thiết bị</string>
@@ -1120,7 +1102,7 @@
     <string name="feature_large_network_lte_summary">Thay biểu tượng 4G và 4G+ bằng LTE và LTE+ trong bộ tùy chỉnh</string>
     <string name="wallpaper_motion_group">Hình nền 3D</string>
     <string name="wallpaper_motion_title">Độ nhạy hình nền 3D (thử nghiệm)</string>
-    <string name="wallpaper_motion_summary">Điều chỉnh độ nhạy khi nghiêng của hình nền 3D hiện có. 100% là độ nhạy gốc; giá trị càng cao, phản hồi càng rõ. Không thay đổi giới hạn góc của hệ thống. Bật Hình nền và Colorful Engine trong LSPosed, rồi mở lại hình nền</string>
+    <string name="wallpaper_motion_summary"></string>
     <string name="wallpaper_motion_amount">Độ nhạy khi nghiêng</string>
     <string name="feature_only_data_sim_signal_title">Chỉ hiển thị tín hiệu SIM dữ liệu</string>
     <string name="feature_only_data_sim_signal_summary">Khi dùng hai SIM, chỉ hiển thị tín hiệu và loại mạng của SIM được chọn cho dữ liệu di động. Tự cập nhật khi đổi SIM dữ liệu</string>
@@ -1164,7 +1146,7 @@
     <string name="launcher_icon_label_spacing_offset">Độ lệch khoảng cách</string>
     <string name="launcher_swipe_gesture_group">Cử chỉ vuốt lên</string>
     <string name="launcher_swipe_top_title">Đơn giản hóa vùng vuốt lên phía trên</string>
-    <string name="launcher_swipe_top_summary">Xóa lối vào chia đôi màn hình và ẩn điều khiển ở vùng cử chỉ phía trên, mở rộng vùng kích hoạt cửa sổ nổi; các lối vào chia đôi màn hình khác không đổi</string>
+    <string name="launcher_swipe_top_summary">Xóa lối vào chia đôi màn hình và ẩn điều khiển ở vùng cử chỉ phía trên, mở rộng vùng kích hoạt cửa sổ nổi</string>
     <string name="launcher_float_trigger_width">Chiều rộng vùng kích hoạt cửa sổ nổi</string>
     <string name="statusbar_icon_mute">Tắt tiếng</string>
     <string name="statusbar_icon_network_speed">Tốc độ mạng</string>
@@ -1223,7 +1205,7 @@
     <string name="qs_tile_corner_size_radius">Bán kính góc ô %1$s</string>
     <string name="launcher_group_effects">Hiệu ứng hình ảnh</string>
     <string name="launcher_force_blur_title">Buộc bật hiệu ứng làm mờ màn hình chính</string>
-    <string name="launcher_force_blur_summary">Thử gỡ giới hạn thiết bị cho nền màn hình chính, menu nhấn giữ và hoạt ảnh làm mờ, vẫn tuân theo cài đặt làm mờ hệ thống, tiết kiệm pin và chủ đề; có thể tăng tiêu thụ pin và cần firmware hỗ trợ sẵn; khởi động lại trình khởi chạy sau khi thay đổi</string>
+    <string name="launcher_force_blur_summary"></string>
 
     <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
 
@@ -1295,10 +1277,10 @@
     <string name="power_indicator_font">Cỡ chữ</string>
 
     <string name="rotation_suggestion_hide_title">Ẩn nút đề xuất xoay màn hình</string>
-    <string name="rotation_suggestion_hide_summary">Ẩn nút đề xuất xoay ở cạnh màn hình, không thay đổi tự động xoay hay cài đặt hướng màn hình</string>
+    <string name="rotation_suggestion_hide_summary">Ẩn nút đề xuất xoay ở cạnh màn hình</string>
 
     <string name="hide_screenshot_floating_title">Ẩn cửa sổ nổi trong ảnh chụp màn hình</string>
-    <string name="hide_screenshot_floating_summary">Loại cửa sổ nổi, hình trong hình và lớp phủ ứng dụng được hỗ trợ khỏi ảnh chụp hệ thống mà không đóng cửa sổ</string>
+    <string name="hide_screenshot_floating_summary">Loại cửa sổ nổi, hình trong hình và lớp phủ ứng dụng được hỗ trợ khỏi ảnh chụp hệ thống</string>
     <string name="power_indicator_hide_discharge_sign">Ẩn dấu trừ khi xả pin</string>
     <string name="power_indicator_temperature">Hiển thị nhiệt độ trên hai dòng</string>
     <string name="power_indicator_temperature_summary">Dòng trên hiển thị công suất, dòng dưới hiển thị nhiệt độ pin</string>
@@ -1320,17 +1302,13 @@
     <string name="setting_settings_home_entry_style">Kiểu biểu tượng</string>
     <string name="setting_settings_home_entry_style_system">Mặc định</string>
     <string name="setting_settings_home_entry_style_app">Biểu tượng ứng dụng</string>
-    <string name="settings_section_system_adaptation">Tương thích hệ thống</string>
-    <string name="setting_system_adaptation_version">Phiên bản tương thích</string>
-    <string name="setting_system_adaptation_save_failed">Không thể lưu phiên bản tương thích. Hãy kiểm tra kết nối với Xposed rồi thử lại</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_title">Tắt hạ tần số động LTPO/LTPS</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_summary">Giữ tần số quét đã chọn trong cài đặt hệ thống khi màn hình bật. Bật tính năng này có thể tăng mức tiêu thụ điện.</string>
     <string name="display_enhancement_group">Nâng cao chất lượng hình ảnh</string>
     <string name="display_enhancement_sr_thermal_title">Bỏ giới hạn nhiệt của tăng cường siêu nét</string>
-    <string name="display_enhancement_sr_thermal_summary">Bỏ giới hạn nhiệt riêng của tính năng tăng cường siêu nét, không mở khóa phần cứng không hỗ trợ. Có thể tăng nhiệt và tiêu thụ điện</string>
+    <string name="display_enhancement_sr_thermal_summary">Bỏ giới hạn nhiệt riêng của tính năng tăng cường siêu nét</string>
     <string name="display_enhancement_color_thermal_title">Bỏ giới hạn nhiệt của tăng cường màu video</string>
-    <string name="display_enhancement_color_thermal_summary">Bỏ giới hạn nhiệt riêng của tính năng tăng cường màu video. Có thể tăng nhiệt và tiêu thụ điện; giữ nguyên bảo vệ nhiệt toàn hệ thống</string>
-    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="display_enhancement_color_thermal_summary">Bỏ giới hạn nhiệt riêng của tính năng tăng cường màu video</string>
     <string name="settings_home_cleanup_group">Trang chủ Cài đặt</string>
     <string name="settings_home_hide_account_title">Ẩn mục tài khoản ở trên cùng</string>
     <string name="settings_home_hide_account_summary">Ẩn thẻ tài khoản trên trang chủ Cài đặt hệ thống</string>
@@ -1364,4 +1342,21 @@
     <string name="native_live_update_summary">Sử dụng viên thông báo trực tiếp gốc. Khi bật, Fluid Cloud sẽ bị ẩn; không thể sử dụng cả hai cùng lúc.</string>
     <string name="setting_hide_module_icon">Ẩn biểu tượng ứng dụng mô-đun</string>
     <string name="setting_hide_module_icon_failed">Không thể thay đổi trạng thái hiển thị biểu tượng</string>
+    <string name="side_volume_group">Thanh âm lượng bên</string>
+    <string name="side_volume_percentage_title">Hiển thị phần trăm</string>
+    <string name="side_volume_percentage_summary">Hiển thị phần trăm trên thanh âm lượng, bao gồm các điều khiển âm lượng riêng</string>
+    <string name="side_volume_keep_wide_title">Giữ độ rộng thanh khi điều chỉnh âm lượng</string>
+    <string name="qs_slider_percentage_title">Hiển thị phần trăm thanh trượt</string>
+    <string name="qs_slider_percentage_summary">Hiển thị phần trăm trên thanh độ sáng và âm lượng, bao gồm bảng mở rộng</string>
+    <string name="qs_slider_percentage_properties">Cài đặt thuộc tính phần trăm</string>
+    <string name="qs_slider_percentage_size">Cỡ chữ</string>
+    <string name="qs_slider_percentage_color">Màu chữ</string>
+    <string name="qs_slider_percentage_offset">Điều chỉnh vị trí dọc</string>
+    <string name="settings_color_white">Trắng</string>
+    <string name="settings_color_black">Đen</string>
+    <string name="capture_group_screenshot_options">Tùy chọn ảnh chụp màn hình</string>
+    <string name="volume_group_alerts">Thông báo âm lượng</string>
+    <string name="control_center_group_visibility">Ẩn thành phần</string>
+    <string name="launcher_group_app_management">Quản lý ứng dụng</string>
+    <string name="launcher_group_recent_interaction">Hiển thị và tương tác</string>
 </resources>

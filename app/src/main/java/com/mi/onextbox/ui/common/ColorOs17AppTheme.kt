@@ -2,6 +2,8 @@ package com.mi.onextbox.ui.common
 
 import android.view.WindowManager
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
@@ -11,9 +13,15 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowInsetsControllerCompat
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
+internal val LocalColorOsMonetEnabled = staticCompositionLocalOf { false }
+
 @Composable
-internal fun ColorOs17AppTheme(nativeAccent: Boolean, content: @Composable () -> Unit) {
-    val base = COUITheme.colorScheme
+internal fun ColorOs17AppTheme(
+    nativeAccent: Boolean,
+    monetColors: io.github.suqi8.coui.kmp.theme.Colors? = null,
+    content: @Composable () -> Unit,
+) {
+    val base = monetColors ?: COUITheme.colorScheme
     val colors = if (nativeAccent && base.surface.luminance() > .5f) {
         base.copy(
             primary = Color(0xFF0080FF),
@@ -26,7 +34,9 @@ internal fun ColorOs17AppTheme(nativeAccent: Boolean, content: @Composable () ->
             onTertiaryContainer = Color(0xFF0080FF),
         )
     } else base
-    COUITheme(colors = colors, content = content)
+    CompositionLocalProvider(LocalColorOsMonetEnabled provides !nativeAccent) {
+        COUITheme(colors = colors, content = content)
+    }
 }
 
 @Composable

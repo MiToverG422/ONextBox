@@ -35,8 +35,6 @@ class SettingsInteractionUiTest {
     @get:Rule val compose = createComposeRule()
 
     @Test fun colorOsPendingWriteDoesNotFlashControls() = assertStablePendingWrite(AppUiStyle.ColorOs)
-    @Test fun materialPendingWriteDoesNotFlashControls() = assertStablePendingWrite(AppUiStyle.Material3Expressive)
-    @Test fun miuixPendingWriteDoesNotFlashControls() = assertStablePendingWrite(AppUiStyle.Miuix)
 
     private fun assertStablePendingWrite(style: AppUiStyle) {
         val pending = mutableStateOf(false)
@@ -77,12 +75,12 @@ class SettingsInteractionUiTest {
         compose.runOnIdle { assertEquals(1, callbacks) }
     }
 
-    @Test fun auxiliaryControlsDoNotRecreateTheMaterialSwitch() {
+    @Test fun auxiliaryControlsDoNotRecreateTheCouiSwitch() {
         val expanded = mutableStateOf(false)
         var mounts = 0
         var disposals = 0
         compose.setContent {
-            Theme(AppUiStyle.Material3Expressive) {
+            Theme(AppUiStyle.ColorOs) {
                 val auxiliary: (@Composable () -> Unit)? = if (expanded.value) ({ Text("Extra option") }) else null
                 SettingsSwitchPreference(
                     checked = true, onCheckedChange = {}, title = "Stable feature", bottomAction = auxiliary,
@@ -105,7 +103,7 @@ class SettingsInteractionUiTest {
         var mounts = 0
         var disposals = 0
         compose.setContent {
-            Theme(AppUiStyle.Material3Expressive) {
+            Theme(AppUiStyle.ColorOs) {
                 FeatureAnimatedGroup(animateChanges = true) {
                     row("parent") { _, _ -> Text("Parent") }
                     row("extra", visible = expanded.value) { _, _ -> Text("Extra option") }

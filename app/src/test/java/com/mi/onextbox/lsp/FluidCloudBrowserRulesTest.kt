@@ -35,6 +35,55 @@ class FluidCloudBrowserRulesTest {
     }
 
     @Test
+    fun recognizedWebDataCanCarryTheUrlInItsSearchQuery() {
+        val url = "https://example.com/a?q=a%2Bb&x=1#part"
+        assertEquals(url, FluidCloudBrowserRules.launchUrl(
+            "android.intent.action.WEB_SEARCH", null, url, 29,
+        ))
+        assertTrue(accepts(action = "android.intent.action.WEB_SEARCH", textType = 29))
+        assertEquals(url, FluidCloudBrowserRules.launchUrl(
+            "android.intent.action.VIEW", url, null, null,
+        ))
+    }
+
+    @Test
+    fun webDataQueryCanUseTheStockBrowserWebpageWrapper() {
+        assertEquals("https://example.com/?x=%2B", FluidCloudBrowserRules.launchUrl(
+            "android.intent.action.WEB_SEARCH", null,
+            "heytapbrowser://webpage?url=https%3A%2F%2Fexample.com%2F%3Fx%3D%252B", 29,
+        ))
+    }
+
+    @Test
+    fun textSearchesAndOtherQueryTypesKeepTheirOriginalRoute() {
+        listOf(null, "", "weather tomorrow", "example.com", "weixin://scan", "javascript:alert(1)")
+            .forEach { query ->
+                assertEquals(null, FluidCloudBrowserRules.launchUrl(
+                    "android.intent.action.WEB_SEARCH", null, query, 29,
+                ))
+            }
+        listOf(null, 2, 4).forEach { type ->
+            assertEquals(null, FluidCloudBrowserRules.launchUrl(
+                "android.intent.action.WEB_SEARCH", null, "https://example.com/", type,
+            ))
+            assertFalse(accepts(action = "android.intent.action.WEB_SEARCH", textType = type))
+        }
+    }
+
+    @Test
+    fun conflictingOrUnrelatedIntentPayloadsAreNotTreatedAsWebData() {
+        assertEquals(null, FluidCloudBrowserRules.launchUrl(
+            "android.intent.action.WEB_SEARCH", "https://other.example/", "https://example.com/", 29,
+        ))
+        assertEquals(null, FluidCloudBrowserRules.launchUrl(
+            "android.intent.action.SEND", "https://example.com/", "https://example.com/", 29,
+        ))
+        assertEquals(null, FluidCloudBrowserRules.launchUrl(
+            "android.intent.action.VIEW", null, "https://example.com/", 29,
+        ))
+    }
+
+    @Test
     fun disablingTheFeatureLeavesAnExistingStockCardUnchanged() {
         assertFalse(accepts(enabled = false))
     }

@@ -15,7 +15,6 @@ import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,9 +22,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.R
-import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.CouiConfirmDialog
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.screens.ColorOsSettingsSliderRow
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
@@ -52,9 +49,7 @@ internal fun SettingsColorPicker(
             interactionEnabled = interactionEnabled,
             hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow,
             titleAction = {
-                val tint = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive)
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                else COUITheme.colorScheme.onSurfaceVariantActions
+                val tint = COUITheme.colorScheme.onSurfaceVariantActions
                 CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                     IconButton(onClick = { onColorChange(null) }, enabled = interactionEnabled,
                         modifier = Modifier.size(32.dp)) {
@@ -77,16 +72,11 @@ internal fun SettingsColorPicker(
         },
         content = {
             // The dialog body already scrolls and measures custom content with unbounded height.
-            // Bound this viewport before adding scrolling so every dialog style can measure it.
+            // Bound this viewport before adding scrolling so the dialog can measure it.
             Column(Modifier.fillMaxWidth().heightIn(max = 360.dp)
                 .verticalScroll(rememberScrollState()).padding(vertical = 12.dp)) {
-                if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-                    top.yukonga.miuix.kmp.basic.ColorPicker(
-                        color = draft, onColorChanged = { draft = it }, modifier = Modifier.fillMaxWidth())
-                } else {
-                    io.github.suqi8.coui.kmp.basic.ColorPicker(
-                        color = draft, onColorChanged = { draft = it }, modifier = Modifier.fillMaxWidth())
-                }
+                io.github.suqi8.coui.kmp.basic.ColorPicker(
+                    color = draft, onColorChanged = { draft = it }, modifier = Modifier.fillMaxWidth())
             }
         },
     )

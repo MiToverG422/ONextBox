@@ -699,10 +699,7 @@ object AssistantHooker {
             val key = "systemui:native-assistant-route-scope"
             if (installedHooks.add(key)) {
                 runCatching {
-                    XposedBridge.hookAllMethods(
-                        assistManagerClass,
-                        "startAssist\$1",
-                        object : XC_MethodHook() {
+                    val routeHook = object : XC_MethodHook() {
                             override fun beforeHookedMethod(param: MethodHookParam) {
                                 val enabled = isEnabledNativeInvocation(param.args.firstOrNull())
                                 val frames = nativeAssistantRouteFrames.get()
@@ -730,8 +727,12 @@ object AssistantHooker {
                                     nativeAssistantRouteDepth.remove()
                                 }
                             }
-                        },
-                    )
+                        }
+                    if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16) {
+                        val entry = assistManagerClass.getDeclaredMethod("startAssist", Bundle::class.java)
+                        check(entry.returnType == Void.TYPE)
+                        XposedBridge.hookMethod(entry, routeHook)
+                    } else XposedBridge.hookAllMethods(assistManagerClass, "startAssist\$1", routeHook)
                     log("Hooked the ColorOS 17 SystemUI native assistant route")
                 }.onFailure {
                     installedHooks.remove(key)

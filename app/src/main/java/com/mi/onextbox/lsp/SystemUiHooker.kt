@@ -89,7 +89,14 @@ object SystemUiHooker {
     @Volatile private var nativePowerMenuDialog: Any? = null
     @Volatile private var observedNativePowerMenuDialog: Any? = null
 
-    fun hook(packageName: String, classLoader: ClassLoader?) {
+    fun hookColorOs16(classLoader: ClassLoader) = hook(SYSTEM_UI_RESOURCE_PACKAGE, classLoader, colorOs16 = true)
+
+    fun hook(packageName: String, classLoader: ClassLoader?, colorOs16: Boolean = false) {
+        fun install(label: String, action: () -> Unit) {
+            if (colorOs16) runCatching(action).onFailure {
+                HookLog.w(TAG, "C16 $label unavailable; remaining features retained", it)
+            } else action()
+        }
         HotReloadLifecycle.register("systemui:views",
             capture = { arrayOf(synchronized(guardedWifiActivityRoots) { guardedWifiActivityRoots.keys.toTypedArray() },
                 nativePowerMenuProvider, nativePowerMenuDialog, observedNativePowerMenuDialog) },
@@ -121,25 +128,29 @@ object SystemUiHooker {
                 }
             })
         if (LspConfig.isSystemUiInternationalNetworkDisplayEnabledXposed()) {
-            hookInternationalNetworkDisplayResource()
+            install("network-display") { hookInternationalNetworkDisplayResource() }
         }
         if (LspConfig.isSystemUiHideMobileRoamingIndicatorEnabledXposed()) {
-            hookHideMobileRoamingIndicator(classLoader)
+            install("roaming") {
+                if (colorOs16) ColorOs16SignalPresentationHooks.hookRoaming(requireNotNull(classLoader))
+                else hookHideMobileRoamingIndicator(classLoader)
+            }
         }
         if (LspConfig.isSystemUiHideNetworkActivityIndicatorEnabledXposed()) {
-            hookHideNetworkActivityIndicator(classLoader)
+            install("network-activity") { hookHideNetworkActivityIndicator(classLoader) }
+            if (colorOs16) install("mobile-activity") { ColorOs16SignalPresentationHooks.hookActivity(requireNotNull(classLoader)) }
         }
         if (LspConfig.isSystemUiNativePowerMenuEnabledXposed()) {
-            hookNativePowerMenu(classLoader)
+            install("power-menu") { hookNativePowerMenu(classLoader) }
         }
         if (LspConfig.isSystemUiInternationalNotificationStyleEnabledXposed()) {
-            hookInternationalNotificationStyle(classLoader)
+            install("notification-style") { hookInternationalNotificationStyle(classLoader) }
         }
         if (LspConfig.isSystemUiForceTonalSpotEnabledXposed()) {
-            hookForceTonalSpotStyle(classLoader)
+            install("tonal-spot") { hookForceTonalSpotStyle(classLoader) }
         }
         val monetColorSpecMode = LspConfig.getSystemUiMonetColorSpecModeXposed()
-        if (monetColorSpecMode != LspConfig.SYSTEMUI_MONET_COLOR_SPEC_OFF) {
+        if (!colorOs16 && monetColorSpecMode != LspConfig.SYSTEMUI_MONET_COLOR_SPEC_OFF) {
             hookForceMonetColorSpec(classLoader, monetColorSpecMode)
         }
 
@@ -147,26 +158,26 @@ object SystemUiHooker {
         val hideQsSettings = LspConfig.isSystemUiHideQsSettingsEnabledXposed()
         val hideQsMore = LspConfig.isSystemUiHideQsMoreEnabledXposed()
         if (hideQsEdit || hideQsMore) {
-            hookControlCenterMenuVisibility(classLoader)
+            install("qs-menu") { hookControlCenterMenuVisibility(classLoader) }
         }
         if (hideQsEdit || hideQsSettings || hideQsMore) {
-            hookControlCenterQuickEntranceVisibility(classLoader)
+            install("qs-entrance") { hookControlCenterQuickEntranceVisibility(classLoader) }
         }
         if (LspConfig.isSystemUiHideQsTopCarrierEnabledXposed()) {
-            hookControlCenterTopCarrier(classLoader)
+            install("qs-carrier") { hookControlCenterTopCarrier(classLoader) }
         }
         if (LspConfig.isSystemUiForceNativeClipboardOverlayEnabledXposed()) {
-            hookForceNativeClipboardOverlay(classLoader)
+            install("clipboard-overlay") { hookForceNativeClipboardOverlay(classLoader) }
         }
         if (LspConfig.isNativeNotifyIconEnabledXposed()) {
-            SystemUiNotificationIconHooker.hook(classLoader, packageName)
+            install("notification-icons") { SystemUiNotificationIconHooker.hook(classLoader, packageName) }
         }
         if (
             LspConfig.isAodEnhanceEnabledXposed() ||
             LspConfig.isAodAllDayUnlockEnabledXposed() ||
             LspConfig.isAodSingleClickBlockEnabledXposed()
         ) {
-            SystemUiAodHooker.hook(classLoader, packageName)
+            install("aod") { SystemUiAodHooker.hook(classLoader, packageName) }
         }
         log("SystemUI hooked in $packageName")
     }

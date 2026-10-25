@@ -2,11 +2,14 @@
 
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Transition
-import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -23,7 +26,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
@@ -51,27 +53,16 @@ import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.Button as MaterialButton
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox as MaterialCheckbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.Text as MaterialText
-import androidx.compose.material3.TriStateCheckbox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -80,7 +71,6 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -101,7 +91,6 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -113,13 +102,8 @@ import com.mi.onextbox.notifications.NotificationBatchIssue
 import com.mi.onextbox.notifications.NotificationMutationResult
 import com.mi.onextbox.notifications.NotificationOperationState
 import com.mi.onextbox.notifications.NotificationPermissionKind
-import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.ColorOs17Button
-import com.mi.onextbox.ui.common.LocalAppUiStyle
-import com.mi.onextbox.ui.settings.Material3ExpressiveAnimatedSegmentPosition
-import com.mi.onextbox.ui.settings.LocalMaterial3ExpressiveSegmentShapes
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentContentCard
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
@@ -201,13 +185,11 @@ internal fun NotificationBatchLayout(
                     ) {
                         NotificationPermissionKind.entries.forEachIndexed { index, kind ->
                             NotificationBatchSegmentDivider(index)
-                            Material3ExpressiveAnimatedSegmentPosition(index + 1, 4, 240) {
-                                SettingsSwitchPreference(
+                            run {SettingsSwitchPreference(
                                     checked = kind in ui.types, enabled = !ui.busy,
                                     title = stringResource(notificationPermissionLabel(kind)),
                                     onCheckedChange = { enabled -> onTypesChange(if (enabled) ui.types + kind else ui.types - kind) },
-                                )
-                            }
+                                )}
                         }
                     }
                 }
@@ -288,9 +270,7 @@ internal fun NotificationBatchExpandableCard(
     val visibility = remember { MutableTransitionState(expanded) }
     visibility.targetState = expanded
     val transition = rememberTransition(visibility, label = "batchCardExpansion")
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val sizeSpec = if (material) MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
-        else spring<IntSize>(dampingRatio = 1f, stiffness = 438.65f)
+    val sizeSpec = spring<IntSize>(dampingRatio = 1f, stiffness = 438.65f)
     Box(Modifier.clipToBounds().testTag(tag)) {
         SettingsGroup {
             NotificationBatchHeaderSegment(transition, childCount) {
@@ -311,27 +291,12 @@ internal fun NotificationBatchExpandableCard(
 internal fun NotificationBatchHeaderSegment(
     transition: Transition<Boolean>, childCount: Int, content: @Composable () -> Unit,
 ) {
-    if (LocalAppUiStyle.current != AppUiStyle.Material3Expressive) {
-        content()
-        return
-    }
-    val cornerSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Dp>()
-    val bottom by transition.animateDp(transitionSpec = { cornerSpec }, label = "batchHeaderBottomCorner") {
-        if (it) 4.dp else 16.dp
-    }
-    val shapes = ListItemDefaults.segmentedShapes(0, if (transition.targetState) childCount + 1 else 1)
-    CompositionLocalProvider(
-        LocalMaterial3ExpressiveSegmentShapes provides shapes.copy(shape = RoundedCornerShape(
-            topStart = 16.dp, topEnd = 16.dp, bottomStart = bottom, bottomEnd = bottom,
-        )), content = content,
-    )
+    content()
 }
 
 @Composable
 private fun NotificationBatchSegmentDivider(index: Int) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        if (index > 0) Spacer(Modifier.height(2.dp))
-    } else SettingsDivider()
+    SettingsDivider()
 }
 
 @Composable
@@ -339,12 +304,10 @@ private fun NotificationBatchFailures(failures: List<NotificationMutationResult>
     val labels = remember(apps) { apps.associate { it.target to it.label } }
     val row: @Composable (Int, NotificationMutationResult) -> Unit = { index, result ->
         NotificationBatchSegmentDivider(index)
-        Material3ExpressiveAnimatedSegmentPosition(index + 1, failures.size + 1, 240) {
-            SettingsCardRow(
+        run {SettingsCardRow(
                 title = labels[result.mutation.target] ?: result.mutation.target.packageName,
                 summary = "${stringResource(notificationPermissionLabel(result.mutation.kind))} · ${batchIssueText(requireNotNull(result.issue))}",
-            )
-        }
+            )}
     }
     if (failures.size <= 4) failures.forEachIndexed { index, result -> row(index, result) }
     else LazyColumn(Modifier.fillMaxWidth().height(320.dp).clipToBounds()) {
@@ -409,17 +372,13 @@ internal fun NotificationBatchAppRow(
 
 @Composable
 private fun BatchSegmentSurface(content: @Composable () -> Unit) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) Material3ExpressiveSegmentContentCard(content = content)
-    else content()
+    content()
 }
 
 @Composable
 private fun BatchCheckbox(state: ToggleableState, enabled: Boolean) {
     val modifier = Modifier.clearAndSetSemantics { }
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        if (state == ToggleableState.Indeterminate) TriStateCheckbox(state, onClick = null, modifier = modifier, enabled = enabled)
-        else MaterialCheckbox(state == ToggleableState.On, onCheckedChange = null, modifier = modifier, enabled = enabled)
-    } else CouiCheckbox(state = state, onClick = null, modifier = modifier.alpha(if (enabled) 1f else .38f))
+    CouiCheckbox(state = state, onClick = null, modifier = modifier.alpha(if (enabled) 1f else .38f))
 }
 
 @Composable
@@ -458,18 +417,7 @@ internal fun NotificationBatchActions(
 
 @Composable
 private fun BatchButton(label: String, enabled: Boolean, modifier: Modifier, onClick: () -> Unit, secondary: Boolean = false, tag: String) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        val disabledContainer = notificationBatchDisabledContainerColor(
-            MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.surface,
-        )
-        if (secondary) FilledTonalButton(onClick, modifier.heightIn(min = 48.dp).testTag(tag), enabled = enabled,
-            colors = ButtonDefaults.filledTonalButtonColors(disabledContainerColor = disabledContainer)) {
-            MaterialText(label, textAlign = TextAlign.Center)
-        } else MaterialButton(onClick, modifier.heightIn(min = 48.dp).testTag(tag), enabled = enabled,
-            colors = ButtonDefaults.buttonColors(disabledContainerColor = disabledContainer)) {
-            MaterialText(label, textAlign = TextAlign.Center)
-        }
-    } else {
+    run {
         Box(modifier.background(COUITheme.colorScheme.surface.copy(alpha = 1f), CircleShape)) {
             ColorOs17Button(label, primary = !secondary, onClick = onClick, modifier = Modifier.fillMaxWidth(), minimumHeight = 48.dp,
                 enabled = enabled, buttonModifier = Modifier.testTag(tag))
@@ -477,13 +425,9 @@ private fun BatchButton(label: String, enabled: Boolean, modifier: Modifier, onC
     }
 }
 
-internal fun notificationBatchDisabledContainerColor(onSurface: Color, surface: Color): Color =
-    onSurface.copy(alpha = .12f).compositeOver(surface.copy(alpha = 1f))
-
 @Composable
 private fun BatchToolbarButton(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) IconButton(onClick, enabled = enabled) { Icon(icon, label) }
-    else ColorOsTopBarButton(onClick = { if (enabled) onClick() }, modifier = Modifier.alpha(if (enabled) 1f else .38f).semantics { if (!enabled) disabled() }) {
+    ColorOsTopBarButton(onClick = { if (enabled) onClick() }, modifier = Modifier.alpha(if (enabled) 1f else .38f).semantics { if (!enabled) disabled() }) {
         Icon(icon, label, Modifier.size(22.dp), tint = batchForeground())
     }
 }
@@ -493,23 +437,19 @@ private fun BatchText(
     text: String, modifier: Modifier = Modifier, secondary: Boolean = false, fontSize: Int = 14,
     maxLines: Int = Int.MAX_VALUE, weight: FontWeight = FontWeight.Normal, color: Color = batchForeground(secondary), centered: Boolean = false,
 ) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val base = if (material) MaterialTheme.typography.bodyMedium else COUITheme.textStyles.body2
+    val base = COUITheme.textStyles.body2
     val style: TextStyle = base.copy(fontSize = fontSize.sp, lineHeight = (fontSize + 5).sp, fontWeight = weight,
         textAlign = if (centered) TextAlign.Center else TextAlign.Start,
         platformStyle = PlatformTextStyle(includeFontPadding = false),
         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both))
-    if (material) MaterialText(text, modifier, color = color, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
-    else CouiText(text, modifier, color = color, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+    CouiText(text, modifier, color = color, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
-private fun batchForeground(secondary: Boolean = false): Color = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-    if (secondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-} else if (secondary) COUITheme.colorScheme.onSurfaceVariantSummary else COUITheme.colorScheme.onSurface
+private fun batchForeground(secondary: Boolean = false): Color = if (secondary) COUITheme.colorScheme.onSurfaceVariantSummary else COUITheme.colorScheme.onSurface
 
 @Composable
-private fun batchPrimary(): Color = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) MaterialTheme.colorScheme.primary else COUITheme.colorScheme.primary
+private fun batchPrimary(): Color = COUITheme.colorScheme.primary
 
 internal fun notificationPermissionLabel(kind: NotificationPermissionKind): Int = when (kind) {
     NotificationPermissionKind.Notifications -> R.string.notification_batch_notifications

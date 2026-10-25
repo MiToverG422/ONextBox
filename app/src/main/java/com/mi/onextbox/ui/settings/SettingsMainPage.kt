@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.settings
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -17,7 +21,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -25,7 +28,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -33,12 +35,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -55,13 +55,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -69,7 +65,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,11 +86,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -109,7 +101,6 @@ import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppIcons
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.ConfigBackup
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.ColorOsPopup
@@ -122,36 +113,18 @@ import com.mi.onextbox.ui.onboarding.OnboardingPreferences
 import com.mi.onextbox.ui.home.rememberDeviceMarketName
 import com.mi.onextbox.ui.home.rememberAppVersionName
 import com.mi.onextbox.ui.platform.findActivity
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenuGroup
-import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.Icon as MaterialIcon
-import androidx.compose.material3.IconButton as MaterialIconButton
-import androidx.compose.material3.Surface as MaterialSurface
-import androidx.compose.material3.Text as MaterialText
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Button
 import io.github.suqi8.coui.kmp.basic.ButtonDefaults
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.icon.COUIIcons
-import io.github.suqi8.coui.kmp.icon.extended.ChevronForward
 import io.github.suqi8.coui.kmp.icon.extended.Ok
 import io.github.suqi8.coui.kmp.squircle.squircleBackground
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.theme.ThemeColorSpec
+import com.mi.onextbox.ui.common.CouiColorSpec as ThemeColorSpec
 import io.github.suqi8.coui.kmp.theme.ThemePaletteStyle
 import io.github.suqi8.coui.kmp.blur.isRuntimeShaderSupported
-import com.mi.onextbox.ui.common.material3ExpressiveColorScheme
-import com.mi.onextbox.ui.common.MaterialColorSpec
-import com.mi.onextbox.ui.common.LocalAppAppearanceTransition
-import com.mi.onextbox.ui.common.rememberMaterialColorSpec
-import com.mi.onextbox.ui.common.setMaterialColorSpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -170,6 +143,7 @@ private const val ZOPULUS_PROFILE_URL = "https://github.com/zopulus"
 private const val CONCERROX_PROFILE_URL = "https://github.com/ConcerroX"
 private const val FISHCPY_PROFILE_URL = "https://github.com/fishcpy"
 private const val HEHEJUICE_PROFILE_URL = "https://github.com/HeheJuice"
+private const val XIEFEI_PROFILE_URL = "https://github.com/xiefei-github"
 private const val GITHUB_REPOSITORY_URL = "https://github.com/MiToverG422/ONextBox"
 private const val TELEGRAM_CHANNEL_URL = "https://t.me/ONextBox"
 private const val SOFTWARE_UPDATE_CHECK_DELAY_MS = 2_000L
@@ -182,8 +156,8 @@ private const val ZOPULUS_AVATAR_URL = "https://github.com/zopulus.png?size=160"
 private const val CONCERROX_AVATAR_URL = "https://github.com/ConcerroX.png?size=160"
 private const val FISHCPY_AVATAR_URL = "https://github.com/fishcpy.png?size=160"
 private const val HEHEJUICE_AVATAR_URL = "https://github.com/HeheJuice.png?size=160"
+private const val XIEFEI_AVATAR_URL = "https://github.com/xiefei-github.png?size=160"
 private const val COUI_REPOSITORY_URL = "https://github.com/suqi8/coui"
-private const val MIUIX_REPOSITORY_URL = "https://github.com/compose-miuix-ui/miuix"
 private const val OSHIN_REPOSITORY_URL = "https://github.com/suqi8/OShin"
 private const val LIBSU_REPOSITORY_URL = "https://github.com/topjohnwu/libsu"
 private const val LUCKYTOOL_REPOSITORY_URL = "https://github.com/luckyzyx/LuckyTool"
@@ -377,15 +351,6 @@ private fun AboutAppCard() {
         }
     }
 
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveAboutAppCard(
-            versionName = versionName,
-            versionCode = versionCode,
-            showDetails = showDetails,
-            onVersionTap = onVersionTap,
-        )
-        return
-    }
 
     SettingsGroup {
         Column(
@@ -444,86 +409,6 @@ private fun AboutAppCard() {
     }
 }
 
-@Composable
-private fun Material3ExpressiveAboutAppCard(
-    versionName: String,
-    versionCode: String,
-    showDetails: Boolean,
-    onVersionTap: () -> Unit,
-) {
-    SettingsGroup {
-        Material3ExpressiveSegmentContentCard {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_onextbox_logo),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                )
-                ONextBoxLogo(
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                MaterialText(
-                    text = stringResource(R.string.about_version, versionName),
-                    modifier = Modifier.clickable { onVersionTap() },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                MaterialSurface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                ) {
-                    MaterialText(
-                        text = if (BuildConfig.DEBUG) "Debug" else "Release",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                AnimatedVisibility(
-                    visible = showDetails,
-                    enter = expandVertically(tween(260)) + fadeIn(tween(180)),
-                    exit = shrinkVertically(tween(220)) + fadeOut(tween(140)),
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        val details = listOf(
-                            "${stringResource(R.string.info_version)}: $versionName ($versionCode)",
-                            "Build: ${BuildConfig.BUILD_TYPE}",
-                            "${stringResource(R.string.info_package_name)}: ${BuildConfig.APPLICATION_ID}",
-                            "${stringResource(R.string.about_detail_build_time)}: ${BuildConfig.APP_BUILD_TIME}",
-                            "${stringResource(R.string.about_detail_build_timestamp)}: ${BuildConfig.APP_BUILD_TIMESTAMP}",
-                            "${stringResource(R.string.about_reference_xposed_api_title)}: ${BuildConfig.LIBXPOSED_API_VERSION}",
-                        )
-                        details.forEach { detail ->
-                            MaterialText(
-                                text = detail,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-                }
-                MaterialText(
-                    text = stringResource(R.string.about_description_material3_expressive),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun AboutVersionDetails(
@@ -1229,49 +1114,6 @@ fun SoftwareUpdateReleaseNotesPage(state: SoftwareUpdateUiState) {
     }
 }
 
-@Composable
-private fun Material3ExpressiveExpandableCard(
-    title: String,
-    summary: String,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    bottomPadding: Dp = 16.dp,
-    content: @Composable () -> Unit,
-) {
-    val bodyVisible = remember { MutableTransitionState(expanded) }
-    bodyVisible.targetState = expanded
-    SettingsGroup(bottomPadding = bottomPadding) {
-        Material3ExpressiveAnimatedSegmentPosition(
-            index = 0,
-            count = if (expanded) 2 else 1,
-            durationMillis = if (expanded) 280 else 240,
-        ) {
-            SettingsCardRow(
-                title = title,
-                summary = summary,
-                onClick = onToggle,
-                showExpandArrow = true,
-                expandArrowExpanded = expanded,
-                hasDividerBelow = expanded,
-            )
-        }
-        AnimatedVisibility(
-            visibleState = bodyVisible,
-            enter = expandVertically(
-                animationSpec = spring(dampingRatio = 0.9f, stiffness = 800f),
-                expandFrom = Alignment.Top,
-            ) + fadeIn(animationSpec = spring(dampingRatio = 0.9f, stiffness = 800f)),
-            exit = shrinkVertically(
-                animationSpec = spring(dampingRatio = 0.9f, stiffness = 800f),
-                shrinkTowards = Alignment.Top,
-            ) + fadeOut(animationSpec = spring(dampingRatio = 0.9f, stiffness = 800f)),
-        ) {
-            Material3ExpressiveSegmentPosition(index = 1, count = 2) {
-                Material3ExpressiveSegmentContentCard(content = content)
-            }
-        }
-    }
-}
 
 @Composable
 private fun SoftwareUpdateReleaseNotesGroup(
@@ -1280,23 +1122,7 @@ private fun SoftwareUpdateReleaseNotesGroup(
     bottomPadding: Dp = 16.dp,
 ) {
     var releaseNotesExpanded by rememberSaveable(stateKey) { mutableStateOf(true) }
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveExpandableCard(
-            title = stringResource(R.string.software_update_release_notes_title),
-            summary = "",
-            expanded = releaseNotesExpanded,
-            onToggle = { releaseNotesExpanded = !releaseNotesExpanded },
-            bottomPadding = bottomPadding,
-        ) {
-            MaterialText(
-                text = releaseNotesText,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        return
-    }
+
     SettingsGroup(bottomPadding = bottomPadding) {
         Column(modifier = Modifier.fillMaxWidth()) {
             SettingsCardRow(
@@ -1406,32 +1232,7 @@ fun SoftwareUpdateTopBarActions(
     val expanded = remember { mutableStateOf(false) }
 
     Box {
-        if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-            MaterialIconButton(onClick = { expanded.value = true }) {
-                MaterialIcon(
-                    imageVector = Icons.Rounded.MoreVert,
-                    contentDescription = stringResource(R.string.software_update_auto_settings),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            DropdownMenuPopup(
-                expanded = expanded.value,
-                onDismissRequest = { expanded.value = false },
-            ) {
-                DropdownMenuGroup(shapes = MenuDefaults.groupShape(index = 0, count = 1)) {
-                    DropdownMenuItem(
-                        text = { MaterialText(stringResource(R.string.software_update_auto_settings)) },
-                        // A single action should follow its enclosing expressive menu contour.
-                        shape = MenuDefaults.standaloneGroupShape,
-                        onClick = {
-                            expanded.value = false
-                            onOpenAutoUpdateSettings()
-                        },
-                    )
-                }
-            }
-            return@Box
-        }
+
         ColorOsTopBarButton(
             onClick = { expanded.value = true },
         ) {
@@ -1499,18 +1300,15 @@ fun SoftwareUpdateAutoSettingsPage(
     }
 
     SettingsGroup {
-        Material3ExpressiveSegmentPosition(index = 0, count = 4) {
-            SettingsToggleRow(
+        run {SettingsToggleRow(
                 title = stringResource(R.string.setting_auto_silent_update),
                 summary = stringResource(R.string.setting_auto_silent_update_summary),
                 checked = state.automaticSilentUpdate,
                 onCheckedChange = state.onAutomaticSilentUpdateChange,
                 hasDividerBelow = true,
-            )
-        }
+            )}
         SettingsDivider()
-        Material3ExpressiveSegmentPosition(index = 1, count = 4) {
-            SettingsToggleRow(
+        run {SettingsToggleRow(
                 title = stringResource(R.string.setting_update_notifications),
                 summary = stringResource(R.string.setting_update_notifications_summary),
                 checked = state.updateNotificationsEnabled && notificationPermissionGranted,
@@ -1523,21 +1321,17 @@ fun SoftwareUpdateAutoSettingsPage(
                 },
                 hasDividerAbove = true,
                 hasDividerBelow = true,
-            )
-        }
+            )}
         SettingsDivider()
-        Material3ExpressiveSegmentPosition(index = 2, count = 4) {
-            SettingsCardRow(
+        run {SettingsCardRow(
                 title = stringResource(R.string.update_build_type_title),
                 summary = stringResource(if (state.buildType == UpdateBuildType.Debug)
                     R.string.update_build_type_debug else R.string.update_build_type_release),
                 hasDividerAbove = true,
                 hasDividerBelow = true,
-            )
-        }
+            )}
         SettingsDivider()
-        Material3ExpressiveSegmentPosition(index = 3, count = 4) {
-            SettingsToggleRow(
+        run {SettingsToggleRow(
                 title = stringResource(R.string.update_beta_plan_title),
                 summary = stringResource(R.string.update_beta_plan_summary),
                 checked = state.betaPlanEnabled,
@@ -1546,8 +1340,7 @@ fun SoftwareUpdateAutoSettingsPage(
                 onCheckedChange = { enabled ->
                     if (enabled) showBetaConfirmation = true else state.onBetaPlanEnabledChange(false)
                 },
-            )
-        }
+            )}
     }
     ColorOs17ConfirmDialog(
         show = showBetaConfirmation,
@@ -1751,6 +1544,12 @@ fun AboutContributorsPage() {
             url = HEHEJUICE_PROFILE_URL,
             leadingContent = { GitHubAuthorAvatar(HEHEJUICE_AVATAR_URL) },
         ),
+        AboutLinkItem(
+            titleRes = R.string.about_contributor_xiefei_title,
+            summaryRes = R.string.about_contributor_xiefei_summary,
+            url = XIEFEI_PROFILE_URL,
+            leadingContent = { GitHubAuthorAvatar(XIEFEI_AVATAR_URL) },
+        ),
     )
     AboutLinkGroup(items = items)
 }
@@ -1767,11 +1566,6 @@ fun AboutReferencesPage() {
             titleRes = R.string.about_reference_coui_title,
             summaryRes = R.string.about_reference_coui_summary,
             url = COUI_REPOSITORY_URL,
-        ),
-        AboutLinkItem(
-            titleRes = R.string.about_reference_miuix_title,
-            summaryRes = R.string.about_reference_miuix_summary,
-            url = MIUIX_REPOSITORY_URL,
         ),
         AboutLinkItem(
             titleRes = R.string.about_reference_material_icons_title,
@@ -1952,21 +1746,7 @@ private fun AboutAgreementsSection() {
                 .bufferedReader(Charsets.UTF_8)
                 .use { reader -> reader.readText().trim() }
         }
-        if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-            Material3ExpressiveExpandableCard(
-                title = stringResource(item.titleRes),
-                summary = stringResource(item.summaryRes),
-                expanded = expanded,
-                onToggle = { expandedAgreement = agreementKey.takeUnless { expanded } },
-            ) {
-                MaterialText(
-                    text = body,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
+        run {
         SettingsGroup {
             SettingsCardRow(
                 title = stringResource(item.titleRes),
@@ -2109,14 +1889,12 @@ private fun GitHubAuthorAvatar(
 private fun AboutRowIcon(
     @DrawableRes iconRes: Int,
 ) {
-    val isMaterial = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val tint = if (isMaterial) {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    } else {
+    val isMaterial = false
+    val tint = run {
         COUITheme.colorScheme.onSurface
     }
     Box(
-        modifier = Modifier.size(if (isMaterial) 32.dp else 24.dp),
+        modifier = Modifier.size(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Image(
@@ -2132,14 +1910,12 @@ private fun AboutRowIcon(
 private fun AboutVectorIcon(
     imageVector: ImageVector,
 ) {
-    val isMaterial = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val tint = if (isMaterial) {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    } else {
+    val isMaterial = false
+    val tint = run {
         COUITheme.colorScheme.onSurface
     }
     Box(
-        modifier = Modifier.size(if (isMaterial) 32.dp else 24.dp),
+        modifier = Modifier.size(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Image(
@@ -2181,10 +1957,6 @@ fun AppSettingsPage(
     onBlurEffectEnabledChange: (Boolean) -> Unit,
     featurePageNewStyleEnabled: Boolean,
     onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
-    progressiveCardAnimationEnabled: Boolean,
-    onProgressiveCardAnimationEnabledChange: (Boolean) -> Unit,
-    featurePageVideoHidden: Boolean,
-    onFeaturePageVideoHiddenChange: (Boolean) -> Unit,
     appLanguageTag: String,
     onAppLanguageChange: (String) -> Unit,
     appThemeMode: AppThemeMode,
@@ -2199,23 +1971,12 @@ fun AppSettingsPage(
     onAppThemeColorSpecChange: (Int) -> Unit,
     liquidGlassBottomBarEnabled: Boolean,
     onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
-    materialFloatingBottomBarEnabled: Boolean,
-    onMaterialFloatingBottomBarEnabledChange: (Boolean) -> Unit,
-    materialHapticsEnabled: Boolean,
-    onMaterialHapticsEnabledChange: (Boolean) -> Unit,
-    materialSwitchIconsEnabled: Boolean,
-    onMaterialSwitchIconsEnabledChange: (Boolean) -> Unit,
+    bottomBarHideLabels: Boolean,
+    onBottomBarHideLabelsChange: (Boolean) -> Unit,
     onOpenDeveloperOptions: () -> Unit,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
-    val systemInDarkTheme = isSystemInDarkTheme()
-    val featurePageVideoAvailable = featurePageNewStyleEnabled &&
-        !appThemeMode.isMonet &&
-        (
-            appThemeMode == AppThemeMode.Dark ||
-                (appThemeMode == AppThemeMode.System && systemInDarkTheme)
-            )
     val scope = rememberCoroutineScope()
     var showClearConfigConfirm by rememberSaveable { mutableStateOf(false) }
     var isClearingConfig by remember { mutableStateOf(false) }
@@ -2324,33 +2085,9 @@ fun AppSettingsPage(
         },
     )
 
-    SettingsSystemAdaptationGroup()
-
     SettingsSection(title = stringResource(R.string.settings_section_display))
-    if (appUiStyle == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveAppearanceSettingsGroup(
-            appUiStyle = appUiStyle,
-            onAppUiStyleChange = onAppUiStyleChange,
-            appLanguageTag = appLanguageTag,
-            onAppLanguageChange = onAppLanguageChange,
-            appThemeMode = appThemeMode,
-            onAppThemeModeChange = onAppThemeModeChange,
-            appThemeKeyColor = appThemeKeyColor,
-            onAppThemeKeyColorChange = onAppThemeKeyColorChange,
-            materialFloatingBottomBarEnabled = materialFloatingBottomBarEnabled,
-            onMaterialFloatingBottomBarEnabledChange = onMaterialFloatingBottomBarEnabledChange,
-            materialHapticsEnabled = materialHapticsEnabled,
-            onMaterialHapticsEnabledChange = onMaterialHapticsEnabledChange,
-            materialSwitchIconsEnabled = materialSwitchIconsEnabled,
-            onMaterialSwitchIconsEnabledChange = onMaterialSwitchIconsEnabledChange,
-        )
-    } else {
+    run {
     SettingsGroup {
-        SettingsUiStyleDropdown(
-            selectedStyle = appUiStyle,
-            onStyleChange = onAppUiStyleChange,
-        )
-        SettingsDivider()
         SettingsThemeModeDropdown(
             title = stringResource(R.string.setting_theme_mode),
             selectedMode = appThemeMode,
@@ -2379,7 +2116,7 @@ fun AppSettingsPage(
             }
         }
         AnimatedVisibility(
-            visible = appThemeMode.isMonet && appThemeKeyColor != null,
+            visible = appThemeMode.isMonet,
             enter = expandVertically(
                 animationSpec = tween(260, easing = FastOutSlowInEasing),
             ) + fadeIn(animationSpec = tween(180)),
@@ -2390,8 +2127,9 @@ fun AppSettingsPage(
             Column {
                 SettingsThemeTextDropdown(
                     title = stringResource(R.string.setting_theme_palette_style),
-                    labels = ThemePaletteStyle.entries.map { it.name },
-                    selectedIndex = appThemePaletteStyle,
+                    labels = if (appThemeColorSpec == ThemeColorSpec.Spec2026.ordinal) listOf("CMF") else ThemePaletteStyle.entries.map { it.name },
+                    selectedIndex = if (appThemeColorSpec == ThemeColorSpec.Spec2026.ordinal) 0 else appThemePaletteStyle,
+                    enabled = appThemeColorSpec != ThemeColorSpec.Spec2026.ordinal,
                     onSelectedIndexChange = onAppThemePaletteStyleChange,
                     hasDividerAbove = true,
                     hasDividerBelow = true,
@@ -2399,7 +2137,7 @@ fun AppSettingsPage(
                 SettingsDivider()
                 SettingsThemeTextDropdown(
                     title = stringResource(R.string.setting_theme_color_spec),
-                    labels = ThemeColorSpec.entries.map { it.name },
+                    labels = ThemeColorSpec.entries.map { it.label },
                     selectedIndex = appThemeColorSpec,
                     onSelectedIndexChange = onAppThemeColorSpecChange,
                     hasDividerAbove = true,
@@ -2418,7 +2156,7 @@ fun AppSettingsPage(
         )
         SettingsDivider()
         AnimatedVisibility(
-            visible = appUiStyle == AppUiStyle.ColorOs && isRuntimeShaderSupported(),
+            visible = isRuntimeShaderSupported(),
             enter = expandVertically(
                 animationSpec = tween(260, easing = FastOutSlowInEasing),
             ) + fadeIn(animationSpec = tween(180)),
@@ -2438,31 +2176,12 @@ fun AppSettingsPage(
                 SettingsDivider()
             }
         }
-        if (appUiStyle == AppUiStyle.ColorOs) {
+        run {
         SettingsToggleRow(
             title = stringResource(R.string.setting_feature_page_new_style),
             summary = "",
             checked = featurePageNewStyleEnabled,
             onCheckedChange = onFeaturePageNewStyleEnabledChange,
-            hasDividerAbove = true,
-            hasDividerBelow = true,
-        )
-        SettingsDivider()
-        SettingsToggleRow(
-            title = stringResource(R.string.setting_feature_page_hide_background_video),
-            summary = stringResource(R.string.setting_feature_page_hide_background_video_summary),
-            checked = featurePageVideoHidden,
-            onCheckedChange = onFeaturePageVideoHiddenChange,
-            hasDividerAbove = true,
-            hasDividerBelow = true,
-            enabled = featurePageVideoAvailable,
-        )
-        SettingsDivider()
-        SettingsToggleRow(
-            title = stringResource(R.string.setting_progressive_card_animation),
-            summary = stringResource(R.string.setting_progressive_card_animation_summary),
-            checked = progressiveCardAnimationEnabled,
-            onCheckedChange = onProgressiveCardAnimationEnabledChange,
             hasDividerAbove = true,
             hasDividerBelow = true,
         )
@@ -2479,6 +2198,15 @@ fun AppSettingsPage(
             hasDividerAbove = true,
             hasDividerBelow = true,
             enabled = liquidGlassBottomBarSupported,
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = stringResource(R.string.setting_bottom_bar_hide_labels),
+            summary = "",
+            checked = bottomBarHideLabels,
+            onCheckedChange = onBottomBarHideLabelsChange,
+            hasDividerAbove = true,
+            hasDividerBelow = false,
         )
         }
     }
@@ -2526,218 +2254,6 @@ fun AppSettingsPage(
     }
 }
 
-@Composable
-private fun Material3ExpressiveAppearanceSettingsGroup(
-    appUiStyle: AppUiStyle,
-    onAppUiStyleChange: (AppUiStyle) -> Unit,
-    appLanguageTag: String,
-    onAppLanguageChange: (String) -> Unit,
-    appThemeMode: AppThemeMode,
-    onAppThemeModeChange: (AppThemeMode) -> Unit,
-    appThemeKeyColor: Long?,
-    onAppThemeKeyColorChange: (Long?) -> Unit,
-    materialFloatingBottomBarEnabled: Boolean,
-    onMaterialFloatingBottomBarEnabledChange: (Boolean) -> Unit,
-    materialHapticsEnabled: Boolean,
-    onMaterialHapticsEnabledChange: (Boolean) -> Unit,
-    materialSwitchIconsEnabled: Boolean,
-    onMaterialSwitchIconsEnabledChange: (Boolean) -> Unit,
-) {
-    val materialColorSpec = rememberMaterialColorSpec()
-    val context = LocalContext.current
-    val appearanceTransition = LocalAppAppearanceTransition.current
-    val appearanceScope = rememberCoroutineScope()
-    val paletteVisible = remember { MutableTransitionState(!appThemeMode.isMonet) }
-    paletteVisible.targetState = !appThemeMode.isMonet
-    val hasPaletteSlot = paletteVisible.currentState || paletteVisible.targetState || !paletteVisible.isIdle
-    val interactionStartIndex = if (hasPaletteSlot) 6 else 5
-    val segmentCount = interactionStartIndex + 3
-    SettingsGroup {
-        Material3ExpressiveSegmentPosition(index = 0, count = segmentCount) {
-            SettingsUiStyleDropdown(
-                selectedStyle = appUiStyle,
-                onStyleChange = onAppUiStyleChange,
-            )
-        }
-        Material3ExpressiveSegmentPosition(index = 1, count = segmentCount) {
-            SettingsLanguageDropdown(
-                title = stringResource(R.string.setting_app_language),
-                summary = "",
-                selectedLanguageTag = appLanguageTag,
-                onLanguageChange = onAppLanguageChange,
-                hasDividerAbove = true,
-                hasDividerBelow = true,
-            )
-        }
-        Material3ExpressiveSegmentPosition(index = 2, count = segmentCount) {
-            Material3ExpressiveThemeModeDropdown(
-                title = stringResource(R.string.setting_theme_mode),
-                selectedMode = appThemeMode,
-                onModeChange = onAppThemeModeChange,
-            )
-        }
-        Material3ExpressiveSegmentPosition(index = 3, count = segmentCount) {
-            SettingsThemeTextDropdown(
-                title = stringResource(R.string.setting_theme_color_spec),
-                labels = MaterialColorSpec.entries.map { it.name },
-                selectedIndex = MaterialColorSpec.entries.indexOf(materialColorSpec),
-                onSelectedIndexChange = { index ->
-                    MaterialColorSpec.entries.getOrNull(index)?.let { spec ->
-                        if (spec != materialColorSpec && appearanceTransition?.isChanging != true) {
-                            if (appearanceTransition == null) {
-                                setMaterialColorSpec(context, spec)
-                            } else {
-                                appearanceScope.launch {
-                                    appearanceTransition.change { setMaterialColorSpec(context, spec) }
-                                }
-                            }
-                        }
-                    }
-                },
-                hasDividerAbove = true,
-                hasDividerBelow = true,
-            )
-        }
-        Material3ExpressiveAnimatedSegmentPosition(
-            index = 4,
-            count = segmentCount,
-            durationMillis = if (appThemeMode.isMonet) 240 else 280,
-        ) {
-            SettingsToggleRow(
-                title = stringResource(R.string.setting_dynamic_color),
-                summary = stringResource(
-                    if (appThemeMode.isMonet) R.string.setting_dynamic_color_on_summary
-                    else R.string.setting_dynamic_color_off_summary,
-                ),
-                checked = appThemeMode.isMonet,
-                onCheckedChange = { enabled ->
-                    onAppThemeModeChange(appThemeMode.withMaterial3ExpressiveDynamicColor(enabled))
-                },
-            )
-        }
-        AnimatedVisibility(
-            visibleState = paletteVisible,
-            enter = expandVertically(
-                animationSpec = spring(dampingRatio = 0.9f, stiffness = 800f),
-                expandFrom = Alignment.Top,
-            ) + fadeIn(animationSpec = spring(dampingRatio = 0.9f, stiffness = 800f)),
-            exit = shrinkVertically(
-                animationSpec = spring(dampingRatio = 0.9f, stiffness = 800f),
-                shrinkTowards = Alignment.Top,
-            ) + fadeOut(animationSpec = spring(dampingRatio = 0.9f, stiffness = 800f)),
-        ) {
-            Material3ExpressiveSegmentPosition(index = 5, count = segmentCount) {
-                Material3ExpressiveSegmentContentCard {
-                    Material3ExpressiveThemeColorPicker(
-                        appThemeMode = appThemeMode,
-                        selectedKeyColor = appThemeKeyColor,
-                        onKeyColorChange = onAppThemeKeyColorChange,
-                    )
-                }
-            }
-        }
-        Material3ExpressiveSegmentPosition(index = interactionStartIndex, count = segmentCount) {
-            SettingsToggleRow(
-                title = stringResource(R.string.setting_material_floating_bottom_bar),
-                summary = stringResource(R.string.setting_material_floating_bottom_bar_summary),
-                checked = materialFloatingBottomBarEnabled,
-                onCheckedChange = onMaterialFloatingBottomBarEnabledChange,
-            )
-        }
-        Material3ExpressiveSegmentPosition(index = interactionStartIndex + 1, count = segmentCount) {
-            SettingsToggleRow(
-                title = stringResource(R.string.setting_material_haptics),
-                summary = stringResource(R.string.setting_material_haptics_summary),
-                checked = materialHapticsEnabled,
-                onCheckedChange = onMaterialHapticsEnabledChange,
-            )
-        }
-        Material3ExpressiveSegmentPosition(index = interactionStartIndex + 2, count = segmentCount) {
-            SettingsToggleRow(
-                title = stringResource(R.string.setting_material_switch_icons),
-                summary = stringResource(R.string.setting_material_switch_icons_summary),
-                checked = materialSwitchIconsEnabled,
-                onCheckedChange = onMaterialSwitchIconsEnabledChange,
-            )
-        }
-    }
-}
-
-@Composable
-private fun Material3ExpressiveThemeColorPicker(
-    appThemeMode: AppThemeMode,
-    selectedKeyColor: Long?,
-    onKeyColorChange: (Long?) -> Unit,
-) {
-    val materialColorSpec = rememberMaterialColorSpec()
-    val expressiveSeedColors = listOf(
-        0xFFF44336L, 0xFFE91E63L, 0xFF9C27B0L, 0xFF673AB7L, 0xFF3F51B5L,
-        0xFF2196F3L, 0xFF00BCD4L, 0xFF009688L, 0xFF4FAF50L, 0xFFFFEB3BL,
-        0xFFFFC107L, 0xFFFF9800L, 0xFF795548L, 0xFF607D8FL, 0xFFFF9CA8L,
-    )
-    val colors = if (selectedKeyColor != null && selectedKeyColor !in expressiveSeedColors) {
-        listOf(selectedKeyColor) + expressiveSeedColors
-    } else {
-        expressiveSeedColors
-    }
-    val selectedColor = selectedKeyColor ?: 0xFF2196F3L
-    val systemDark = isSystemInDarkTheme()
-    val dark = when (appThemeMode.material3ExpressiveBrightness()) {
-        AppThemeMode.Dark -> true
-        AppThemeMode.Light -> false
-        else -> systemDark
-    }
-    val paletteLabel = stringResource(R.string.setting_theme_palette)
-    Column(modifier = Modifier.padding(vertical = 16.dp)) {
-        MaterialText(
-            text = paletteLabel,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        LazyRow(
-            state = rememberLazyListState(colors.indexOf(selectedColor).coerceAtLeast(0)),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-        ) {
-            itemsIndexed(colors, key = { _, color -> color }) { _, option ->
-                val swatch = remember(option, dark, materialColorSpec) {
-                    material3ExpressiveColorScheme(Color(option), dark, spec = materialColorSpec)
-                }
-                val chosen = selectedColor == option
-                MaterialSurface(
-                    onClick = { onKeyColorChange(option.takeUnless { it == 0xFF2196F3L }) },
-                    modifier = Modifier
-                        .size(72.dp)
-                        .semantics {
-                            role = Role.RadioButton
-                            selected = chosen
-                            contentDescription = "$paletteLabel #${option.toString(16).takeLast(6).uppercase()}"
-                        },
-                    shape = RoundedCornerShape(20.dp),
-                    color = swatch.surfaceContainer,
-                    border = if (chosen) BorderStroke(2.dp, swatch.primary) else null,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Canvas(Modifier.size(48.dp)) {
-                            drawArc(swatch.primaryContainer, 180f, 180f, true)
-                            drawArc(swatch.tertiaryContainer, 0f, 180f, true)
-                        }
-                        if (chosen) {
-                            MaterialIcon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = swatch.onPrimaryContainer,
-                            )
-                        } else {
-                            Canvas(Modifier.size(18.dp)) { drawCircle(swatch.primary) }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun DeveloperOptionsPage(
@@ -2745,7 +2261,6 @@ fun DeveloperOptionsPage(
     onShowFpsMonitorChange: (Boolean) -> Unit,
 ) {
     DeveloperActivationEntry()
-    DeveloperHyperOsSupportGroup()
     SettingsSection(title = stringResource(R.string.settings_section_display))
     SettingsGroup {
         SettingsToggleRow(
@@ -2758,7 +2273,7 @@ fun DeveloperOptionsPage(
         )
     }
 
-    if (LocalAppUiStyle.current != AppUiStyle.Material3Expressive) {
+    run {
         SettingsSection(title = stringResource(R.string.settings_section_other))
         SettingsGroup {
             SettingsToggleRow(

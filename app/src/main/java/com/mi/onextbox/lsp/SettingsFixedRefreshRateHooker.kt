@@ -48,6 +48,9 @@ internal object SettingsFixedRefreshRateHooker {
     private var access: Access? = null
     private val pickingPrimaryDisplay = ThreadLocal<Boolean>()
 
+    /** Independent C16 owner; no dependency on the C17 extreme-mode adapter. */
+    fun hookColorOs16(loader: ClassLoader): Int = ColorOs16FixedRefreshOwner.hook(loader)
+
     fun hook(loader: ClassLoader): Int {
         val installed = ArrayList<String>()
         return runCatching {
@@ -142,7 +145,7 @@ internal object SettingsFixedRefreshRateHooker {
     }
 
     /** Called by the existing policy owner on selection, resolution, toggle and power changes. */
-    fun updatePolicy(policy: Any, context: Context): Boolean {
+    fun updatePolicy(policy: Any, context: Context, colorOs16: Boolean = false): Boolean {
         val previous = state
         state = runCatching {
             val fields = access ?: return@runCatching null
@@ -150,8 +153,9 @@ internal object SettingsFixedRefreshRateHooker {
             if (fields.displayId.getInt(policy) != Display.DEFAULT_DISPLAY ||
                 Settings.Global.getInt(resolver, SettingsFixedRefreshRateRules.TOGGLE_KEY, 0) != 1 ||
                 Settings.Global.getInt(resolver, "low_power", 0) != 0) return@runCatching null
-            val rate = SettingsFixedRefreshRateRules.selectedHertz(
-                Settings.Secure.getInt(resolver, "oplus_customize_screen_refresh_rate", -1),
+            val mode = Settings.Secure.getInt(resolver, "oplus_customize_screen_refresh_rate", -1)
+            val rate = if (colorOs16) SettingsFixedRefreshRateRules.selectedHertzColorOs16(mode)
+            else SettingsFixedRefreshRateRules.selectedHertz(mode,
                 Settings.Secure.getInt(resolver, "choice_mode_rate", -1))
             val info = fields.displayInfo.get(policy) ?: return@runCatching null
             val service = fields.service.get(policy) ?: return@runCatching null

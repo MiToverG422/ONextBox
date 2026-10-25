@@ -65,13 +65,14 @@ internal object LauncherGestureHooker {
         HookLog.i(TAG, "Native secondary-menu grouping hook installed")
     }
     private fun hookTop(loader: ClassLoader) {
+        val c16 = SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16
         val prefix = "com.oplus.quickstep.rapidreaction."
         val base = ModernReflect.findClass("${prefix}panelparams.TriggerPanelParams", loader)
         val options = ModernReflect.findClass("${base.name}\$SelectionOptions", loader)
         val enums = requireNotNull(options.enumConstants).associateBy { (it as Enum<*>).name }
         val floating = requireNotNull(enums["FLOATING_WINDOW"])
         val none = requireNotNull(enums["NONE"])
-        val axisFor = base.getDeclaredMethod("c", options).apply { isAccessible = true }
+        val axisFor = base.getDeclaredMethod(if (c16) "getEntranceAxisCode" else "c", options).apply { isAccessible = true }
         val widths = WeakHashMap<Any, Int>()
         fun restoreWidths(state: Any?) {
             (state as? List<*>)?.forEach { entry ->
@@ -86,13 +87,16 @@ internal object LauncherGestureHooker {
             capture = { synchronized(widths) { widths.entries.map { listOf(it.key, it.value) } } },
             detach = { synchronized(widths) { widths.clear() } }, restore = ::restoreWidths)
         HotReloadLifecycle.restoredState(ownerKey)?.let(::restoreWidths)
-        listOf("a", "b").forEach { name ->
+        (if (c16) listOf("SplitFloatParams", "SplitCapsuleFloatParams") else listOf("a", "b")).forEach { name ->
             val type = ModernReflect.findClass("${prefix}panelparams.$name", loader)
             check(base.isAssignableFrom(type))
-            val update = type.getDeclaredMethod("l", Context::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
-            val select = type.getDeclaredMethod("a", Float::class.javaPrimitiveType, Int::class.javaPrimitiveType,
+            val update = type.getDeclaredMethod(if (c16) "updateParams" else "l", Context::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+            val select = if (c16) type.getDeclaredMethod("calculateSelectArea", Float::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
-            val decode = type.getDeclaredMethod("d", Int::class.javaPrimitiveType)
+            else type.getDeclaredMethod("a", Float::class.javaPrimitiveType, Int::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+            val decode = type.getDeclaredMethod(if (c16) "getEntranceType" else "d", Int::class.javaPrimitiveType)
             ModernHookRegistry.installCompat("$TAG:bounds:$name", update, object : ModernMethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val owner = param.thisObject ?: return
@@ -121,7 +125,8 @@ internal object LauncherGestureHooker {
                     }
                 }
             })
-            deopt(type, setOf("a", "c", "d", "l"))
+            deopt(type, if (c16) setOf("calculateSelectArea", "getEntranceAxisCode", "getEntranceType", "updateParams")
+                else setOf("a", "c", "d", "l"))
         }
         val panel = ModernReflect.findClass("${prefix}widget.MultiTriggerPanelView", loader)
         // Suppress ONLY this panel's child rendering, not visibility/alpha/progress or

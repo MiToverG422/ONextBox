@@ -1,6 +1,7 @@
 package com.mi.onextbox.lsp
 
 import java.net.URI
+import java.net.URLDecoder
 
 internal enum class SoftwareUpdateLinkProblem { Authentication, Network, Timeout, Server, InvalidResponse }
 internal data class SoftwareUpdateLinkFailure(val problem: SoftwareUpdateLinkProblem, val code: Int? = null)
@@ -16,7 +17,9 @@ internal data class SoftwareUpdateLinkResponse(
 
 internal object SoftwareUpdateDownloadLinks {
     fun isCheckUrl(value: String): Boolean = runCatching {
-        URI(value).path.trimEnd('/').equals("/downloadCheck", ignoreCase = true)
+        URI(value).path.trimEnd('/').let { path ->
+            path.equals("/downloadCheck", ignoreCase = true) || path.equals("/download", ignoreCase = true)
+        }
     }.getOrDefault(false)
 
     // Device credentials stay on official check endpoints, never on CDN hops.
@@ -25,11 +28,28 @@ internal object SoftwareUpdateDownloadLinks {
         val host = uri.host?.lowercase().orEmpty()
         value.length <= 65_536 && uri.scheme.equals("https", ignoreCase = true) && uri.userInfo == null &&
             uri.fragment == null && uri.port in setOf(-1, 443) &&
-            listOf("allawntech.com", "allawnfs.com").any { host == it || host.endsWith(".$it") }
+            listOf("allawntech.com", "allawnfs.com", "allawnos.com").any { host == it || host.endsWith(".$it") }
     }.getOrDefault(false)
 
     fun trustedCheckUrl(value: String): Boolean = trustedUrl(value) && isCheckUrl(value) &&
-        URI(value).host.lowercase().matches(Regex("component-ota(?:-[a-z0-9]+)*\\.allawntech\\.com"))
+        URI(value).host.lowercase().matches(Regex("component-ota(?:-[a-z0-9]+)*\\.(?:allawntech|allawnos)\\.com"))
+
+    // A signed URL may specify a different mode from the last OTA query on this device.
+    // Decode only for inspection: the original URL must remain unchanged for signing/requesting.
+    fun authenticationMode(value: String, sessionMode: Int): Int? = runCatching {
+        if (!trustedCheckUrl(value)) return null
+        val modes = URI(value).rawQuery.orEmpty().split('&').mapNotNull { part ->
+            val pair = part.split('=', limit = 2)
+            if (URLDecoder.decode(pair[0], "UTF-8") == "gkaReq") {
+                URLDecoder.decode(pair.getOrElse(1) { "" }, "UTF-8")
+            } else null
+        }
+        when {
+            modes.isEmpty() -> sessionMode.takeIf { it in 0..2 }
+            modes.size == 1 && modes.single() in listOf("0", "1", "2") -> modes.single().toInt()
+            else -> null
+        }
+    }.getOrNull()
 
     fun packageResponse(response: SoftwareUpdateLinkResponse, expectedBytes: Long): Boolean {
         val type = response.mediaType.orEmpty().lowercase()

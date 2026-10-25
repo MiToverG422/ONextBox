@@ -141,6 +141,9 @@ internal class EnabledFeatureActions {
         R.string.feature_mobile_network_hide_ai_link_boost_title to { context, enabled -> LspConfig.setMobileNetworkHideAiLinkBoostEnabled(context, enabled) },
         R.string.feature_mobile_network_hide_roaming_service_title to { context, enabled -> LspConfig.setMobileNetworkHideRoamingServiceEnabled(context, enabled) },
         R.string.feature_mobile_network_hide_high_data_sim_card_title to { context, enabled -> LspConfig.setMobileNetworkHideHighDataSimCardEnabled(context, enabled) },
+        R.string.feature_mobile_network_hide_smart_cloud_acceleration_title to { context, enabled -> LspConfig.setMobileNetworkHideSmartCloudAccelerationEnabled(context, enabled) },
+        R.string.feature_permission_export_pages_title to { context, enabled -> LspConfig.setPermissionFeatureEnabled(context, LspConfig.PermissionFeature.ExportPermissionPages, enabled) },
+        R.string.feature_permission_native_dialogs_title to { context, enabled -> LspConfig.setPermissionFeatureEnabled(context, LspConfig.PermissionFeature.NativePermissionDialogs, enabled) },
         R.string.feature_system_root_detection_title to { context, enabled -> LspConfig.setSystemRootDetectionBlocked(context, enabled) },
         R.string.feature_native_notify_icon_title to { context, enabled -> LspConfig.setNativeNotifyIconEnabled(context, enabled) },
         R.string.feature_native_notification_bubbles_title to { context, enabled -> LspConfig.setNativeNotificationBubblesEnabled(context, enabled) },
@@ -196,7 +199,12 @@ internal class EnabledFeatureActions {
         R.string.feature_aosp_volume_title to { context, enabled -> AospVolumeSettings.set(context, enabled) },
         SharedFeatureDefinitions.stackedSignal.action(),
         R.string.app_errors_enable to { context, enabled -> AppErrorTrackingSettings.setEnabled(context, enabled) },
-        R.string.feature_assistant_native_combined_title to { context, enabled -> LspConfig.setAssistantNativePowerEnabled(context, enabled); LspConfig.setAssistantNativeCircleEnabled(context, enabled) },
+        R.string.feature_assistant_native_combined_title to { context, enabled ->
+            LspConfig.setAssistantNativePowerEnabled(context, enabled)
+            if (SystemAdaptationDetector.current() != SystemAdaptationVersion.ColorOs16) {
+                LspConfig.setAssistantNativeCircleEnabled(context, enabled)
+            }
+        },
         R.string.feature_launcher_layout_unlock_title to { context, enabled -> check(applyLauncherLayoutUnlocked(enabled).success) },
         R.string.feature_permission_monitor_title to { context, enabled -> check(applyPermissionMonitorVisibility(enabled).success) },
         R.string.fluid_media_blacklist_title to { context, enabled -> FluidCloudMediaSettings.setEnabled(context, enabled) },

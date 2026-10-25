@@ -117,6 +117,8 @@ fun BottomNavigationBar(
     mode: NavigationBarDisplayMode = NavigationBarDisplayMode.IconAndText,
     selectedIcons: List<ImageVector>? = null,
     unselectedIcons: List<ImageVector>? = null,
+    hideLabels: Boolean = false,
+    startupRevealProgress: () -> Float = { 1f },
 ) {
     ColorOs17BottomNavigationBar(
         items = items,
@@ -125,6 +127,8 @@ fun BottomNavigationBar(
         modifier = modifier,
         selectedIcons = selectedIcons,
         unselectedIcons = unselectedIcons,
+        hideLabels = hideLabels,
+        startupRevealProgress = startupRevealProgress,
     )
 }
 

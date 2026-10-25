@@ -3,7 +3,6 @@ package com.mi.onextbox.lsp
 /** Scope eligibility is separate from the resource owners' runtime readiness checks. */
 internal object ModuleHotReloadPolicy {
     val supportedPackages: Set<String> = setOf(
-        "com.xiaomi.touchservice", "com.miui.securitycenter",
         "system", "com.android.systemui", "com.oplus.screenshot", "com.oplus.screenrecorder",
         "com.android.settings", "com.oplus.securitypermission", "com.oplus.safecenter", "com.android.permissioncontroller",
         "com.coloros.phonemanager", "com.coloros.colordirectservice", "com.oplus.metis", "com.oplus.ota", "com.oplus.sau",

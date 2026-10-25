@@ -1,8 +1,7 @@
 package com.mi.onextbox.ui
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
+import androidx.compose.runtime.setValue
+
 import android.os.Build
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.BackHandler
@@ -27,9 +26,9 @@ import androidx.savedstate.serialization.SavedStateConfiguration
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -38,28 +37,15 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
@@ -72,128 +58,74 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.movableContentOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.mi.onextbox.R
-import com.mi.onextbox.lsp.LsposedScopeRequester
 import com.mi.onextbox.ui.layout.BottomNavigationBar
-import com.mi.onextbox.ui.layout.Material3ExpressiveBottomNavigationBar
-import com.mi.onextbox.ui.layout.MiuixBottomNavigationBar
-import com.mi.onextbox.ui.layout.BlurredChromeBar
-import com.mi.onextbox.ui.layout.LocalChromeNativeBlurEnabled
 import com.mi.onextbox.ui.layout.LiquidGlassBottomNavigationBar
 import com.mi.onextbox.ui.layout.Page
 import com.mi.onextbox.ui.layout.rememberChromeBlurBackdrop
+import com.mi.onextbox.ui.layout.rememberBottomBarStartupProgress
 import com.mi.onextbox.ui.platform.findActivity
 import com.mi.onextbox.ui.screens.FeatureMainRoute
 import com.mi.onextbox.ui.screens.ToolsMainRoute
-import com.mi.onextbox.ui.screens.FeatureLaunchIcon
 import com.mi.onextbox.ui.screens.FeatureLaunchOrigin
 import com.mi.onextbox.ui.screens.FeaturePageAuroraBackground
-import com.mi.onextbox.ui.screens.FeaturePageVideoBackground
 import com.mi.onextbox.ui.screens.FeaturePageMode
 import com.mi.onextbox.ui.screens.FeatureSubRoute
-import com.mi.onextbox.ui.screens.rememberFeatureBackgroundPlaybackState
 import com.mi.onextbox.ui.settings.AboutMainRoute
 import com.mi.onextbox.ui.settings.AboutPageMode
 import com.mi.onextbox.ui.settings.AboutSubRoute
 import com.mi.onextbox.ui.settings.SoftwareUpdateUiState
 import com.mi.onextbox.ui.settings.rememberSoftwareUpdateUiState
-import com.mi.onextbox.ui.common.AppLocale
 import com.mi.onextbox.ui.common.appearanceChangeBottomBar
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.Material3ExpressiveAppTheme
 import com.mi.onextbox.ui.common.AppUiStyleAppTheme
 import com.mi.onextbox.ui.common.ColorOs17AppTheme
 import com.mi.onextbox.ui.common.LocalAppUiStyle
-import com.mi.onextbox.ui.common.LocalColorOsProgressiveCardAnimationEnabled
-import com.mi.onextbox.ui.common.LocalMaterialSwitchIconsEnabled
 import com.mi.onextbox.ui.common.isMonet
-import com.mi.onextbox.ui.common.AppIcons
 import com.mi.onextbox.ui.common.AssistantScreenOption
 import com.mi.onextbox.ui.common.BottomTab
 import com.mi.onextbox.ui.common.FpsMonitorOverlay
 import com.mi.onextbox.ui.common.bottomTabs
-import com.mi.onextbox.ui.common.readCachedRootAccessInfo
 import com.mi.onextbox.ui.common.rememberHapticClick
 import com.kyant.backdrop.backdrops.LayerBackdrop as LiquidLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop as liquidLayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberLiquidLayerBackdrop
-import io.github.suqi8.coui.kmp.basic.Card
-import io.github.suqi8.coui.kmp.basic.CardDefaults
-import io.github.suqi8.coui.kmp.basic.TopAppBarDefaults
-import io.github.suqi8.coui.kmp.basic.Icon
-import io.github.suqi8.coui.kmp.basic.TopAppBar
-import io.github.suqi8.coui.kmp.basic.ListPopup
-import io.github.suqi8.coui.kmp.basic.NavigationBar
 import io.github.suqi8.coui.kmp.basic.NavigationBarDisplayMode
 import io.github.suqi8.coui.kmp.basic.NavigationItem
-import io.github.suqi8.coui.kmp.basic.PopupPositionProvider
 import io.github.suqi8.coui.kmp.basic.Scaffold
-import io.github.suqi8.coui.kmp.basic.Switch
-import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
-import io.github.suqi8.coui.kmp.icon.COUIIcons
-import io.github.suqi8.coui.kmp.icon.extended.ChevronForward
-import io.github.suqi8.coui.kmp.icon.extended.Ok
-import io.github.suqi8.coui.kmp.icon.extended.Back
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.ThemeColorSpec
 import io.github.suqi8.coui.kmp.theme.ThemeController
 import io.github.suqi8.coui.kmp.theme.ThemePaletteStyle
 import io.github.suqi8.coui.kmp.utils.COUIPopupUtils.Companion.COUIPopupHost
-import io.github.suqi8.coui.kmp.utils.PressFeedbackType
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -206,9 +138,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
-import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.max
 import kotlin.math.roundToInt
 
 @Stable
@@ -504,8 +434,6 @@ private sealed interface RootRoute : NavKey {
     data object FeatureAssistant : RootRoute
 
 
-
-
     @Serializable
     data object AppSettings : RootRoute
 
@@ -616,20 +544,17 @@ private data class RootUiState(
     val rootGranted: Boolean,
     val blurEffectEnabled: Boolean,
     val featurePageNewStyleEnabled: Boolean,
-    val progressiveCardAnimationEnabled: Boolean,
-    val featurePageVideoHidden: Boolean,
-    val featurePageVideoActive: Boolean,
+    val featurePageDynamicBackgroundActive: Boolean,
+    val bottomBarStartupProgress: () -> Float,
     val hiddenFeatureSourceModes: Set<FeaturePageMode>,
     val featureExternalIconScales: Map<FeaturePageMode, () -> Float>,
     val popDirectionFollowsSwipeEdge: Boolean,
     val showFpsMonitor: Boolean,
     val liquidGlassBottomBarEnabled: Boolean,
+    val bottomBarHideLabels: Boolean,
     val appLanguageTag: String,
     val appThemeMode: AppThemeMode,
     val appUiStyle: AppUiStyle,
-    val materialFloatingBottomBarEnabled: Boolean,
-    val materialHapticsEnabled: Boolean,
-    val materialSwitchIconsEnabled: Boolean,
     val appThemeKeyColor: Long?,
     val appThemePaletteStyle: Int,
     val appThemeColorSpec: Int,
@@ -675,17 +600,13 @@ private data class RootActions(
     val onTabChange: (Int) -> Unit,
     val onBlurEffectEnabledChange: (Boolean) -> Unit,
     val onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
-    val onProgressiveCardAnimationEnabledChange: (Boolean) -> Unit,
-    val onFeaturePageVideoHiddenChange: (Boolean) -> Unit,
     val onPopDirectionFollowsSwipeEdgeChange: (Boolean) -> Unit,
     val onShowFpsMonitorChange: (Boolean) -> Unit,
     val onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
+    val onBottomBarHideLabelsChange: (Boolean) -> Unit,
     val onAppLanguageChange: (String) -> Unit,
     val onAppThemeModeChange: (AppThemeMode) -> Unit,
     val onAppUiStyleChange: (AppUiStyle) -> Unit,
-    val onMaterialFloatingBottomBarEnabledChange: (Boolean) -> Unit,
-    val onMaterialHapticsEnabledChange: (Boolean) -> Unit,
-    val onMaterialSwitchIconsEnabledChange: (Boolean) -> Unit,
     val onAppThemeKeyColorChange: (Long?) -> Unit,
     val onAppThemePaletteStyleChange: (Int) -> Unit,
     val onAppThemeColorSpecChange: (Int) -> Unit,
@@ -719,6 +640,7 @@ private data class RootActions(
     val onAssistantNativePowerEnabledChange: (Boolean) -> Unit,
     val onAssistantNativeCircleEnabledChange: (Boolean) -> Unit,
     val onBottomNavigationHeightChange: (Int) -> Unit,
+    val onBottomChromeBoundsChange: (Boolean, Rect) -> Unit,
     val onHapticClick: () -> Unit,
     val popRootRoute: () -> Unit,
     val popToMainRoute: () -> Unit,
@@ -834,6 +756,91 @@ private fun RootFeatureEntry(
 }
 
 @Composable
+private fun RootBottomChrome(visible: Boolean, liquidOnly: Boolean) {
+    val ui = LocalRootUiState.current
+    val actions = LocalRootActions.current
+    val mainPagerState = LocalMainPagerState.current
+    val liquidBackdrop = ui.liquidBackdrop
+    val liquidGlassActive = ui.liquidGlassBottomBarEnabled && liquidBackdrop != null
+    val liquidGlassVisible = visible && liquidOnly && liquidGlassActive
+    AnimatedVisibility(
+        visible = liquidGlassVisible,
+        modifier = Modifier.appearanceChangeBottomBar(),
+        enter = slideInVertically(initialOffsetY = { it }),
+        exit = slideOutVertically(targetOffsetY = { it }),
+    ) {
+        liquidBackdrop?.let { backdrop ->
+            LiquidGlassBottomNavigationBar(
+                hideLabels = ui.bottomBarHideLabels,
+                startupRevealProgress = ui.bottomBarStartupProgress,
+                tabs = ui.visibleTabs,
+                selectedIndex = ui.selectedIndex,
+                pagerState = mainPagerState.pagerState,
+                backdrop = backdrop,
+                onCapsuleBoundsChanged = { actions.onBottomChromeBoundsChange(true, it) },
+                onTabSelected = { index ->
+                    actions.onHapticClick()
+                    actions.popToMainRoute()
+                    mainPagerState.animateToPage(index)
+                    actions.onTabChange(ui.visibleTabs[index].screenIndex)
+                },
+                modifier = Modifier
+                    .onGloballyPositioned { coordinates ->
+                        actions.onBottomNavigationHeightChange(coordinates.size.height)
+                    },
+            )
+        }
+    }
+    AnimatedVisibility(
+        visible = visible && !liquidOnly && !liquidGlassActive,
+        modifier = Modifier.appearanceChangeBottomBar(),
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+    ) {
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                DisposableEffect(Unit) {
+                    onDispose { actions.onBottomChromeBoundsChange(false, Rect.Zero) }
+                }
+                BottomNavigationBar(
+                    hideLabels = ui.bottomBarHideLabels,
+                    startupRevealProgress = ui.bottomBarStartupProgress,
+                    items = ui.visibleTabs.mapIndexed { index, tab ->
+                        NavigationItem(
+                            label = stringResource(tab.titleRes),
+                            icon = if (index == ui.selectedIndex) tab.selectedIcon else tab.unselectedIcon,
+                        )
+                    },
+                    selectedIndex = ui.selectedIndex,
+                    onItemSelected = { index ->
+                        actions.onHapticClick()
+                        actions.popToMainRoute()
+                        mainPagerState.animateToPage(index)
+                        actions.onTabChange(ui.visibleTabs[index].screenIndex)
+                    },
+                    color = Color.Transparent,
+                    showDivider = false,
+                    mode = NavigationBarDisplayMode.IconAndText,
+                    selectedIcons = ui.visibleTabs.map { it.selectedIcon },
+                    unselectedIcons = ui.visibleTabs.map { it.unselectedIcon },
+                    modifier = Modifier
+                        .onGloballyPositioned { coordinates ->
+                            actions.onBottomNavigationHeightChange(coordinates.size.height)
+                            actions.onBottomChromeBoundsChange(false, coordinates.boundsInWindow())
+                        },
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun RootAboutEntry(pageMode: AboutPageMode) {
     val ui = LocalRootUiState.current
     val actions = LocalRootActions.current
@@ -846,28 +853,20 @@ private fun RootAboutEntry(pageMode: AboutPageMode) {
         onBlurEffectEnabledChange = actions.onBlurEffectEnabledChange,
         featurePageNewStyleEnabled = ui.featurePageNewStyleEnabled,
         onFeaturePageNewStyleEnabledChange = actions.onFeaturePageNewStyleEnabledChange,
-        progressiveCardAnimationEnabled = ui.progressiveCardAnimationEnabled,
-        onProgressiveCardAnimationEnabledChange = actions.onProgressiveCardAnimationEnabledChange,
-        featurePageVideoHidden = ui.featurePageVideoHidden,
-        onFeaturePageVideoHiddenChange = actions.onFeaturePageVideoHiddenChange,
         popDirectionFollowsSwipeEdge = ui.popDirectionFollowsSwipeEdge,
         onPopDirectionFollowsSwipeEdgeChange = actions.onPopDirectionFollowsSwipeEdgeChange,
         showFpsMonitor = ui.showFpsMonitor,
         onShowFpsMonitorChange = actions.onShowFpsMonitorChange,
         liquidGlassBottomBarEnabled = ui.liquidGlassBottomBarEnabled,
         onLiquidGlassBottomBarEnabledChange = actions.onLiquidGlassBottomBarEnabledChange,
+        bottomBarHideLabels = ui.bottomBarHideLabels,
+        onBottomBarHideLabelsChange = actions.onBottomBarHideLabelsChange,
         appLanguageTag = ui.appLanguageTag,
         onAppLanguageChange = actions.onAppLanguageChange,
         appThemeMode = ui.appThemeMode,
         onAppThemeModeChange = actions.onAppThemeModeChange,
         appUiStyle = ui.appUiStyle,
         onAppUiStyleChange = actions.onAppUiStyleChange,
-        materialFloatingBottomBarEnabled = ui.materialFloatingBottomBarEnabled,
-        onMaterialFloatingBottomBarEnabledChange = actions.onMaterialFloatingBottomBarEnabledChange,
-        materialHapticsEnabled = ui.materialHapticsEnabled,
-        onMaterialHapticsEnabledChange = actions.onMaterialHapticsEnabledChange,
-        materialSwitchIconsEnabled = ui.materialSwitchIconsEnabled,
-        onMaterialSwitchIconsEnabledChange = actions.onMaterialSwitchIconsEnabledChange,
         appThemeKeyColor = ui.appThemeKeyColor,
         onAppThemeKeyColorChange = actions.onAppThemeKeyColorChange,
         appThemePaletteStyle = ui.appThemePaletteStyle,
@@ -886,6 +885,8 @@ private fun RootAboutEntry(pageMode: AboutPageMode) {
 
 @Composable
 fun Root(
+    bottomBarStartupReady: Boolean = true,
+    animateBottomBarStartup: Boolean = false,
     openSoftwareUpdateRequest: Int = 0,
     currentTab: Int,
     onTabChange: (Int) -> Unit,
@@ -894,28 +895,20 @@ fun Root(
     onBlurEffectEnabledChange: (Boolean) -> Unit,
     featurePageNewStyleEnabled: Boolean,
     onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
-    progressiveCardAnimationEnabled: Boolean,
-    onProgressiveCardAnimationEnabledChange: (Boolean) -> Unit,
-    featurePageVideoHidden: Boolean,
-    onFeaturePageVideoHiddenChange: (Boolean) -> Unit,
     popDirectionFollowsSwipeEdge: Boolean,
     onPopDirectionFollowsSwipeEdgeChange: (Boolean) -> Unit,
     showFpsMonitor: Boolean,
     onShowFpsMonitorChange: (Boolean) -> Unit,
     liquidGlassBottomBarEnabled: Boolean,
     onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
+    bottomBarHideLabels: Boolean,
+    onBottomBarHideLabelsChange: (Boolean) -> Unit,
     appLanguageTag: String,
     onAppLanguageChange: (String) -> Unit,
     appThemeMode: AppThemeMode,
     onAppThemeModeChange: (AppThemeMode) -> Unit,
     appUiStyle: AppUiStyle,
     onAppUiStyleChange: (AppUiStyle) -> Unit,
-    materialFloatingBottomBarEnabled: Boolean,
-    onMaterialFloatingBottomBarEnabledChange: (Boolean) -> Unit,
-    materialHapticsEnabled: Boolean,
-    onMaterialHapticsEnabledChange: (Boolean) -> Unit,
-    materialSwitchIconsEnabled: Boolean,
-    onMaterialSwitchIconsEnabledChange: (Boolean) -> Unit,
     appThemeKeyColor: Long?,
     onAppThemeKeyColorChange: (Long?) -> Unit,
     appThemePaletteStyle: Int,
@@ -981,31 +974,48 @@ fun Root(
     assistantNativeCircleEnabled: Boolean,
     onAssistantNativeCircleEnabledChange: (Boolean) -> Unit,
 ) {
+    val bottomBarStartupProgress = rememberBottomBarStartupProgress(
+        ready = bottomBarStartupReady,
+        animate = animateBottomBarStartup,
+    )
     val systemInDarkTheme = isSystemInDarkTheme()
-    val themeController = remember(appThemeMode, appThemeKeyColor, appThemePaletteStyle, appThemeColorSpec) {
+    val resolvedKeyColor = com.mi.onextbox.ui.common.rememberMonetSeedColor(
+        enabled = appThemeMode.isMonet,
+        selectedColor = appThemeKeyColor,
+    )
+    val themeController = remember(appThemeMode, resolvedKeyColor, appThemePaletteStyle, appThemeColorSpec) {
         val paletteStyle = ThemePaletteStyle.entries.getOrNull(appThemePaletteStyle)
             ?: ThemePaletteStyle.TonalSpot
         val colorSpec = ThemeColorSpec.entries.getOrNull(appThemeColorSpec)
             ?: ThemeColorSpec.Spec2021
         ThemeController(
             colorSchemeMode = appThemeMode.toColorSchemeMode(),
-            keyColor = if (appThemeMode.isMonet) appThemeKeyColor?.let { Color(it) } else null,
+            keyColor = resolvedKeyColor,
             paletteStyle = paletteStyle,
             colorSpec = colorSpec,
         )
     }
+    val monet2026Dark = when (appThemeMode) {
+        AppThemeMode.MonetDark -> true
+        AppThemeMode.MonetLight -> false
+        else -> systemInDarkTheme
+    }
+    val monet2026Colors = remember(appThemeMode, appThemeColorSpec, resolvedKeyColor, monet2026Dark) {
+        if (appThemeMode.isMonet && appThemeColorSpec == com.mi.onextbox.ui.common.CouiColorSpec.Spec2026.ordinal && resolvedKeyColor != null) {
+            com.mi.onextbox.ui.common.coui2026Colors(resolvedKeyColor, monet2026Dark)
+        } else null
+    }
     COUITheme(controller = themeController) {
-        ColorOs17AppTheme(nativeAccent = appUiStyle == AppUiStyle.ColorOs && !appThemeMode.isMonet) {
+        ColorOs17AppTheme(nativeAccent = !appThemeMode.isMonet, monetColors = monet2026Colors) {
         CompositionLocalProvider(
             LocalAppUiStyle provides appUiStyle,
-            LocalMaterialSwitchIconsEnabled provides materialSwitchIconsEnabled,
         ) {
             AppUiStyleAppTheme(style = appUiStyle, mode = appThemeMode, keyColor = appThemeKeyColor,
                 paletteStyle = appThemePaletteStyle, colorSpec = appThemeColorSpec) {
         val colors = COUITheme.colorScheme
-        val blurBackdrop = rememberChromeBlurBackdrop(blurEffectEnabled && appUiStyle == AppUiStyle.ColorOs)
+        val blurBackdrop = rememberChromeBlurBackdrop(blurEffectEnabled)
         val liquidBottomBarSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        val liquidBackdrop = if (appUiStyle == AppUiStyle.ColorOs && liquidBottomBarSupported && liquidGlassBottomBarEnabled) {
+        val liquidBackdrop = if (liquidBottomBarSupported && liquidGlassBottomBarEnabled) {
             rememberLiquidLayerBackdrop()
         } else {
             null
@@ -1181,59 +1191,44 @@ fun Root(
             }
         }
         var rootViewportBounds by remember { mutableStateOf(Rect.Zero) }
+        val bottomChromeBounds = remember { mutableStateMapOf<Boolean, Rect>() }
         val subPageActive = rootBackStack.size > 1
         val softwareUpdateState = rememberSoftwareUpdateUiState(aboutAutoCheckUpdateRequest)
         val currentRootRoute = navigator.current() as? RootRoute ?: RootRoute.Main
         val featurePagerIndex = visibleTabs.indexOfFirst { it.screenIndex == 1 }
-        val featureBackgroundPlaybackState = rememberFeatureBackgroundPlaybackState()
-        var previousTopLevelTab by remember { mutableIntStateOf(currentTab) }
-        LaunchedEffect(currentTab) {
-            if (currentTab == 1 && previousTopLevelTab != 1) {
-                // A new top-level visit is the only event that restarts the one-shot
-                // background. Child routes deliberately keep the same generation.
-                featureBackgroundPlaybackState.restart()
-            }
-            previousTopLevelTab = currentTab
-        }
-        var featurePageVideoActive by remember(featurePagerIndex) {
+        var featurePageDynamicBackgroundActive by remember(featurePagerIndex) {
             mutableStateOf(featurePagerIndex >= 0 && selectedPagerIndex == featurePagerIndex)
         }
-        // Child routes intentionally do not participate in this state. The stable base-scene
-        // TextureView must remain mounted behind them so its decoder and completed frame survive.
         LaunchedEffect(
             selectedPagerIndex,
             mainPagerState.isNavigating,
             featurePagerIndex,
         ) {
-            featurePageVideoActive = when {
+            featurePageDynamicBackgroundActive = when {
                 featurePagerIndex < 0 -> false
                 selectedPagerIndex == featurePagerIndex -> true
-                mainPagerState.isNavigating -> featurePageVideoActive
+                mainPagerState.isNavigating -> featurePageDynamicBackgroundActive
                 else -> false
             }
         }
         val featurePageIsDark =
             appThemeMode == AppThemeMode.Dark ||
                 (appThemeMode == AppThemeMode.System && systemInDarkTheme)
-        val featurePageVideoVisible =
-            appUiStyle == AppUiStyle.ColorOs &&
-            featurePageNewStyleEnabled &&
-                !appThemeMode.isMonet &&
-                featurePageIsDark &&
-                !featurePageVideoHidden &&
-                featurePageVideoActive
         val featurePageAuroraVisible =
-            appUiStyle == AppUiStyle.ColorOs &&
             featurePageNewStyleEnabled &&
                 !appThemeMode.isMonet &&
-                (!featurePageIsDark || featurePageVideoHidden) &&
-                featurePageVideoActive
-        val featurePageDynamicBackgroundVisible =
-            featurePageVideoVisible || featurePageAuroraVisible
+                featurePageDynamicBackgroundActive
+        val featurePageDynamicBackgroundVisible = featurePageAuroraVisible
         var bottomNavigationHeightPx by remember { mutableIntStateOf(0) }
         val density = LocalDensity.current
         val bottomNavigationHeight = with(density) {
-            if (bottomNavigationHeightPx > 0) bottomNavigationHeightPx.toDp() else 96.dp
+            if (bottomNavigationHeightPx > 0) {
+                bottomNavigationHeightPx.toDp()
+            } else if (liquidGlassBottomBarEnabled && liquidBackdrop != null) {
+                80.dp
+            } else {
+                88.dp
+            }
         }
 
         LaunchedEffect(currentRootRoute) {
@@ -1332,6 +1327,13 @@ fun Root(
             ) {
                 featureQueuePressTokens.remove(session.mode)
             }
+        }
+
+        suspend fun finishOutgoingFeatureAnimation(finished: FeatureLaunchAnimation) {
+            if (outgoingFeatureAnimations.none { it === finished }) return
+            prepareFeatureIconHandoff(finished.session)
+            finished.predictiveBackMotion?.progressJob?.cancel()
+            outgoingFeatureAnimations.remove(finished)
         }
 
         fun releaseCompletedIconPress(session: FeatureLaunchSession) {
@@ -1970,9 +1972,8 @@ fun Root(
             rootGranted = rootGranted,
             blurEffectEnabled = blurEffectEnabled,
             featurePageNewStyleEnabled = featurePageNewStyleEnabled,
-            progressiveCardAnimationEnabled = progressiveCardAnimationEnabled,
-            featurePageVideoHidden = featurePageVideoHidden,
-            featurePageVideoActive = featurePageDynamicBackgroundVisible,
+            featurePageDynamicBackgroundActive = featurePageDynamicBackgroundVisible,
+            bottomBarStartupProgress = bottomBarStartupProgress,
             hiddenFeatureSourceModes = buildSet {
                 featureLaunchSession?.mode?.let(::add)
                 outgoingFeatureAnimations.forEach { add(it.session.mode) }
@@ -1981,12 +1982,10 @@ fun Root(
             popDirectionFollowsSwipeEdge = popDirectionFollowsSwipeEdge,
             showFpsMonitor = showFpsMonitor,
             liquidGlassBottomBarEnabled = liquidGlassBottomBarEnabled && liquidBackdrop != null,
+            bottomBarHideLabels = bottomBarHideLabels,
             appLanguageTag = appLanguageTag,
             appThemeMode = appThemeMode,
             appUiStyle = appUiStyle,
-            materialFloatingBottomBarEnabled = materialFloatingBottomBarEnabled,
-            materialHapticsEnabled = materialHapticsEnabled,
-            materialSwitchIconsEnabled = materialSwitchIconsEnabled,
             appThemeKeyColor = appThemeKeyColor,
             appThemePaletteStyle = appThemePaletteStyle,
             appThemeColorSpec = appThemeColorSpec,
@@ -2033,17 +2032,13 @@ fun Root(
             onTabChange = onTabChange,
             onBlurEffectEnabledChange = onBlurEffectEnabledChange,
             onFeaturePageNewStyleEnabledChange = onFeaturePageNewStyleEnabledChange,
-            onProgressiveCardAnimationEnabledChange = onProgressiveCardAnimationEnabledChange,
-            onFeaturePageVideoHiddenChange = onFeaturePageVideoHiddenChange,
             onPopDirectionFollowsSwipeEdgeChange = onPopDirectionFollowsSwipeEdgeChange,
             onShowFpsMonitorChange = onShowFpsMonitorChange,
             onLiquidGlassBottomBarEnabledChange = onLiquidGlassBottomBarEnabledChange,
+            onBottomBarHideLabelsChange = onBottomBarHideLabelsChange,
             onAppLanguageChange = onAppLanguageChange,
             onAppThemeModeChange = onAppThemeModeChange,
             onAppUiStyleChange = onAppUiStyleChange,
-            onMaterialFloatingBottomBarEnabledChange = onMaterialFloatingBottomBarEnabledChange,
-            onMaterialHapticsEnabledChange = onMaterialHapticsEnabledChange,
-            onMaterialSwitchIconsEnabledChange = onMaterialSwitchIconsEnabledChange,
             onAppThemeKeyColorChange = onAppThemeKeyColorChange,
             onAppThemePaletteStyleChange = onAppThemePaletteStyleChange,
             onAppThemeColorSpecChange = onAppThemeColorSpecChange,
@@ -2081,6 +2076,7 @@ fun Root(
             onAssistantNativePowerEnabledChange = onAssistantNativePowerEnabledChange,
             onAssistantNativeCircleEnabledChange = onAssistantNativeCircleEnabledChange,
             onBottomNavigationHeightChange = { bottomNavigationHeightPx = it },
+            onBottomChromeBoundsChange = { liquid, bounds -> bottomChromeBounds[liquid] = bounds },
             onHapticClick = hapticClick,
             popRootRoute = { popRootRoute() },
             popToMainRoute = ::popToMainRoute,
@@ -2093,109 +2089,14 @@ fun Root(
             requestAboutAutoCheckUpdate = { aboutAutoCheckUpdateRequest += 1 },
         )
 
+        val liquidBottomChrome = remember {
+            movableContentOf<Boolean> { visible -> RootBottomChrome(visible, liquidOnly = true) }
+        }
+        val standardBottomChrome = remember {
+            movableContentOf<Boolean> { visible -> RootBottomChrome(visible, liquidOnly = false) }
+        }
         val bottomChrome: @Composable (Boolean, Boolean) -> Unit = { visible, liquidOnly ->
-        val ui = LocalRootUiState.current
-        val actions = LocalRootActions.current
-        val mainPagerState = LocalMainPagerState.current
-            val liquidBackdrop = ui.liquidBackdrop
-            val liquidGlassActive = ui.appUiStyle == AppUiStyle.ColorOs &&
-                ui.liquidGlassBottomBarEnabled && liquidBackdrop != null
-            val liquidGlassVisible = visible && liquidOnly && liquidGlassActive
-            AnimatedVisibility(
-                visible = liquidGlassVisible,
-                modifier = Modifier.appearanceChangeBottomBar(),
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it }),
-            ) {
-                liquidBackdrop?.let { backdrop ->
-                    LiquidGlassBottomNavigationBar(
-                        tabs = ui.visibleTabs,
-                        selectedIndex = ui.selectedIndex,
-                        pagerState = mainPagerState.pagerState,
-                        backdrop = backdrop,
-                        onTabSelected = { index ->
-                            actions.onHapticClick()
-                            actions.popToMainRoute()
-                            mainPagerState.animateToPage(index)
-                            actions.onTabChange(ui.visibleTabs[index].screenIndex)
-                        },
-                        modifier = Modifier
-                            .onGloballyPositioned { coordinates ->
-                                actions.onBottomNavigationHeightChange(coordinates.size.height)
-                            },
-                    )
-                }
-            }
-            AnimatedVisibility(
-                visible = visible && !liquidOnly && !liquidGlassActive,
-                modifier = Modifier.appearanceChangeBottomBar(),
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically(),
-            ) {
-                AnimatedVisibility(
-                    visible = true,
-                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        if (ui.appUiStyle == AppUiStyle.Miuix) {
-                            MiuixBottomNavigationBar(
-                                tabs = ui.visibleTabs,
-                                selectedIndex = ui.selectedIndex,
-                                onTabSelected = { index ->
-                                    actions.onHapticClick()
-                                    actions.popToMainRoute()
-                                    mainPagerState.animateToPage(index)
-                                    actions.onTabChange(ui.visibleTabs[index].screenIndex)
-                                },
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    actions.onBottomNavigationHeightChange(coordinates.size.height)
-                                },
-                            )
-                        } else if (ui.appUiStyle == AppUiStyle.Material3Expressive) {
-                            Material3ExpressiveBottomNavigationBar(
-                                tabs = ui.visibleTabs,
-                                selectedIndex = ui.selectedIndex,
-                                floating = ui.materialFloatingBottomBarEnabled,
-                                onTabSelected = { index ->
-                                    if (ui.materialHapticsEnabled) actions.onHapticClick()
-                                    actions.popToMainRoute()
-                                    mainPagerState.animateToPage(index)
-                                    actions.onTabChange(ui.visibleTabs[index].screenIndex)
-                                },
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    actions.onBottomNavigationHeightChange(coordinates.size.height)
-                                },
-                            )
-                        } else BottomNavigationBar(
-                            items = ui.visibleTabs.mapIndexed { index, tab ->
-                                NavigationItem(
-                                    label = stringResource(tab.titleRes),
-                                    icon = if (index == ui.selectedIndex) tab.selectedIcon else tab.unselectedIcon,
-                                )
-                            },
-                            selectedIndex = ui.selectedIndex,
-                            onItemSelected = { index ->
-                                actions.onHapticClick()
-                                actions.popToMainRoute()
-                                mainPagerState.animateToPage(index)
-                                actions.onTabChange(ui.visibleTabs[index].screenIndex)
-                            },
-                            color = Color.Transparent,
-                            showDivider = false,
-                            mode = NavigationBarDisplayMode.IconAndText,
-                            selectedIcons = ui.visibleTabs.map { it.selectedIcon },
-                            unselectedIcons = ui.visibleTabs.map { it.unselectedIcon },
-                            modifier = Modifier
-                                .onGloballyPositioned { coordinates ->
-                                    actions.onBottomNavigationHeightChange(coordinates.size.height)
-                                },
-                        )
-                    }
-                }
-            }
+            if (liquidOnly) liquidBottomChrome(visible) else standardBottomChrome(visible)
         }
         val featureEntryContent: @Composable (FeaturePageMode) -> Unit = { mode ->
             val animation = featureLaunchAnimation
@@ -2231,13 +2132,10 @@ fun Root(
                         val actions = LocalRootActions.current
                         val mainPagerState = LocalMainPagerState.current
                         val mainSceneContainerColor = if (
-                            ui.appUiStyle == AppUiStyle.ColorOs &&
-                            ui.featurePageNewStyleEnabled && ui.featurePageVideoActive
+                            ui.featurePageNewStyleEnabled && ui.featurePageDynamicBackgroundActive
                         ) {
                             Color.Transparent
-                        } else if (ui.appUiStyle == AppUiStyle.Material3Expressive) {
-                            androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer
-                        } else {
+                        } else run {
                             COUITheme.colorScheme.surface
                         }
                         Scaffold(
@@ -2246,7 +2144,11 @@ fun Root(
                                 .background(mainSceneContainerColor),
                             containerColor = mainSceneContainerColor,
                             popupHost = {},
-                            bottomBar = { bottomChrome(true, false) },
+                            bottomBar = {
+                                if (!ui.liquidGlassBottomBarEnabled || ui.liquidBackdrop == null) {
+                                    Box(Modifier.fillMaxWidth().height(ui.bottomNavigationHeight))
+                                }
+                            },
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 HorizontalPager(
@@ -2260,12 +2162,11 @@ fun Root(
                                         1 -> FeatureMainRoute(
                                             modifier = Modifier.fillMaxSize(),
                                             subPageBottomExtension = ui.bottomNavigationHeight,
-                                            blurBackdrop = if (ui.appUiStyle == AppUiStyle.Material3Expressive) null else ui.blurBackdrop,
-                                            newStyleEnabled = ui.appUiStyle == AppUiStyle.ColorOs &&
-                                                ui.featurePageNewStyleEnabled,
+                                            blurBackdrop = ui.blurBackdrop,
+                                            newStyleEnabled = ui.featurePageNewStyleEnabled,
                                             scrollResetKey = mainPagerState.scrollResetGeneration,
                                             externalScrollState = if (
-                                                ui.appUiStyle == AppUiStyle.ColorOs && ui.featurePageNewStyleEnabled
+                                                ui.featurePageNewStyleEnabled
                                             ) featureLauncherScrollState else null,
                                             onGridPositionChanged = { position ->
                                                 val transformActive = featureLaunchAnimation != null ||
@@ -2301,9 +2202,7 @@ fun Root(
                                                 }
                                             },
                                             onOpen = { mode, origin ->
-                                                if (ui.appUiStyle == AppUiStyle.Material3Expressive) {
-                                                    actions.openFeatureSubPage(mode)
-                                                } else {
+                                                run {
                                                     val gridPosition = featureLauncherGridPosition ?: Offset.Zero
                                                     actions.openFeatureSubPageFromMain(
                                                         mode,
@@ -2318,13 +2217,13 @@ fun Root(
                                         2 -> ToolsMainRoute(
                                             modifier = Modifier.fillMaxSize(),
                                             bottomContentPadding = ui.bottomNavigationHeight,
-                                            blurBackdrop = if (ui.appUiStyle == AppUiStyle.Material3Expressive) null else ui.blurBackdrop,
+                                            blurBackdrop = ui.blurBackdrop,
                                             scrollResetKey = mainPagerState.scrollResetGeneration,
                                             onOpen = actions.openFeatureSubPage,
                                         )
                                         3 -> AboutMainRoute(
                                             modifier = Modifier.fillMaxSize(),
-                                            blurBackdrop = if (ui.appUiStyle == AppUiStyle.Material3Expressive) null else ui.blurBackdrop,
+                                            blurBackdrop = ui.blurBackdrop,
                                             bottomContentPadding = ui.bottomNavigationHeight,
                                             scrollResetKey = mainPagerState.scrollResetGeneration,
                                             onOpenAppSettings = { actions.openAboutSubPage(AboutPageMode.AppSettings) },
@@ -2346,7 +2245,7 @@ fun Root(
                                                 actions.openAboutSubPage(AboutPageMode.Update)
                                                 actions.requestAboutAutoCheckUpdate()
                                             },
-                                            blurBackdrop = if (ui.appUiStyle == AppUiStyle.Material3Expressive) null else ui.blurBackdrop,
+                                            blurBackdrop = ui.blurBackdrop,
                                             scrollResetKey = mainPagerState.scrollResetGeneration,
                                         )
                                     }
@@ -2579,7 +2478,7 @@ fun Root(
                 // COUI detail pages draw through the status bar. Clipping the
                 // entire navigation scene rounds off and cuts that top strip
                 // while a nested page slides in or out.
-                enableCornerClip = appUiStyle == AppUiStyle.Material3Expressive,
+                enableCornerClip = false,
                 dimAmount = 0.5f,
                 // Block only outgoing scenes; the incoming page can interrupt navigation.
                 blockInputDuringTransition = true,
@@ -2597,7 +2496,6 @@ fun Root(
             LocalMainPagerState provides mainPagerState,
             LocalRootUiState provides rootUiState,
             LocalRootActions provides rootActions,
-            LocalColorOsProgressiveCardAnimationEnabled provides progressiveCardAnimationEnabled,
         ) {
             Box(
                 modifier = Modifier
@@ -2627,33 +2525,11 @@ fun Root(
                             .fillMaxSize()
                             .background(colors.surface),
                     ) {
-                        // This sibling is outside NavDisplay, so replacing Main with a child entry
-                        // cannot dispose its TextureView. Top-level pager visibility is still
-                        // allowed to remove it because the next visit starts a new generation.
                         if (featurePageAuroraVisible) {
                             FeaturePageAuroraBackground(
                                 isDarkTheme = featurePageIsDark,
                                 surfaceColor = colors.surface,
                                 modifier = Modifier.fillMaxSize(),
-                            )
-                        } else if (featurePageVideoVisible) {
-                            FeaturePageVideoBackground(
-                                playbackState = featureBackgroundPlaybackState,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        }
-                        if (
-                            currentRootRoute != RootRoute.Main &&
-                            featureLaunchSession == null &&
-                            featurePageDynamicBackgroundVisible
-                        ) {
-                            // Nested feature pages use NavDisplay's slide transition.
-                            // Cover the main feature page's aurora/video where both
-                            // transitioning pages leave a transparent edge.
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(colors.surface),
                             )
                         }
                         RootNavDisplay(
@@ -2675,12 +2551,6 @@ fun Root(
                             animate = !suppressRootTransition,
                             transitionEffects = rootTransitionEffects,
                         )
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.BottomCenter,
-                        ) {
-                            bottomChrome(currentRootRoute == RootRoute.Main, true)
-                        }
                     }
                 }
 
@@ -2693,48 +2563,97 @@ fun Root(
                     baseScene()
                 }
 
-                outgoingFeatureAnimations.toList().forEach { outgoingAnimation ->
-                    key(outgoingAnimation) {
+                val closingWindows = outgoingFeatureAnimations.toList()
+                val activeReturnOrigin = activeAnimation?.returnOrigin
+                    ?.atGridPosition(featureLauncherGridPosition)
+                    ?.toReturnOrigin(
+                        workspaceScale = workspaceVisualScale,
+                        viewportBounds = rootViewportBounds,
+                    )
+                closingWindows.forEach { outgoingAnimation ->
+                    key("icon", outgoingAnimation) {
                         C17ClosingFeatureWindowLayer(
                             animation = outgoingAnimation,
                             viewportBounds = rootViewportBounds,
                             workspaceScale = workspaceVisualScale,
                             gridPosition = featureLauncherGridPosition,
-                            onFinished = onFinished@{ finished ->
-                                if (outgoingFeatureAnimations.none { it === finished }) {
-                                    return@onFinished
-                                }
-                                prepareFeatureIconHandoff(finished.session)
-                                finished.predictiveBackMotion?.progressJob?.cancel()
-                                outgoingFeatureAnimations.remove(finished)
-                            },
-                        ) {
-                            movableFeatureEntries
-                                .getValue(outgoingAnimation.session.mode)
-                                .invoke()
-                        }
+                            onFinished = ::finishOutgoingFeatureAnimation,
+                            surface = FeatureWindowSurface.Icon,
+                        ) {}
                     }
                 }
-
                 if (activeSession != null) {
                     C17FeatureWindowLayer(
                         session = activeSession,
-                        direction = activeAnimation?.direction
-                            ?: FeatureLaunchDirection.Opening,
+                        direction = activeAnimation?.direction ?: FeatureLaunchDirection.Opening,
                         motion = activeAnimation?.motion,
-                        predictiveBackMotion = activeAnimation?.predictiveBackMotion
-                            ?: handFollowMotion,
-                        returnOrigin = activeAnimation?.returnOrigin
-                            ?.atGridPosition(featureLauncherGridPosition)
-                            ?.toReturnOrigin(
-                                workspaceScale = workspaceVisualScale,
-                                viewportBounds = rootViewportBounds,
-                            ),
+                        predictiveBackMotion = activeAnimation?.predictiveBackMotion ?: handFollowMotion,
+                        returnOrigin = activeReturnOrigin,
                         viewportBounds = rootViewportBounds,
+                        surface = FeatureWindowSurface.Icon,
+                    ) {}
+                }
+                val retainFeatureChrome = activeSession != null ||
+                    parkedFeatureLaunchSession != null || closingWindows.isNotEmpty() || handFollowMotion != null
+                val chromeRouteVisibility by animateFloatAsState(
+                    targetValue = if (currentRootRoute == RootRoute.Main || retainFeatureChrome) 1f else 0f,
+                    animationSpec = tween(220),
+                    label = "Bottom chrome route visibility",
+                )
+                val bottomChromeHideDistancePx = with(density) {
+                    (rootUiState.bottomNavigationHeight + 48.dp).toPx()
+                }
+                C17StableChromeSceneLayer(
+                    transformActive = activeAnimation != null || handFollowMotion != null,
+                    workspaceScaleProgress = launchWorkspaceScaleProgress,
+                    workspaceAlphaProgress = launchWorkspaceAlphaProgress,
+                    hidden = currentRootRoute != RootRoute.Main &&
+                        (retainFeatureChrome || chromeRouteVisibility == 0f),
+                    routeVisibility = chromeRouteVisibility,
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().then(
+                            if (rootUiState.liquidGlassBottomBarEnabled && rootUiState.liquidBackdrop != null) {
+                                Modifier
+                            } else Modifier.imePadding(),
+                        ).graphicsLayer {
+                            alpha = 1f
+                            translationY = (1f - chromeRouteVisibility) * bottomChromeHideDistancePx
+                            compositingStrategy = CompositingStrategy.ModulateAlpha
+                        },
+                        contentAlignment = Alignment.BottomCenter,
                     ) {
-                        movableFeatureEntries
-                            .getValue(activeSession.mode)
-                            .invoke()
+                        bottomChrome(
+                            true,
+                            rootUiState.liquidGlassBottomBarEnabled && rootUiState.liquidBackdrop != null,
+                        )
+                    }
+                }
+                closingWindows.forEach { outgoingAnimation ->
+                    key("task", outgoingAnimation) {
+                        C17ClosingFeatureWindowLayer(
+                            animation = outgoingAnimation,
+                            viewportBounds = rootViewportBounds,
+                            workspaceScale = workspaceVisualScale,
+                            gridPosition = featureLauncherGridPosition,
+                            onFinished = ::finishOutgoingFeatureAnimation,
+                            surface = FeatureWindowSurface.Task,
+                        ) {
+                            movableFeatureEntries.getValue(outgoingAnimation.session.mode).invoke()
+                        }
+                    }
+                }
+                if (activeSession != null) {
+                    C17FeatureWindowLayer(
+                        session = activeSession,
+                        direction = activeAnimation?.direction ?: FeatureLaunchDirection.Opening,
+                        motion = activeAnimation?.motion,
+                        predictiveBackMotion = activeAnimation?.predictiveBackMotion ?: handFollowMotion,
+                        returnOrigin = activeReturnOrigin,
+                        viewportBounds = rootViewportBounds,
+                        surface = FeatureWindowSurface.Task,
+                    ) {
+                        movableFeatureEntries.getValue(activeSession.mode).invoke()
                     }
                 }
 
@@ -2747,6 +2666,11 @@ fun Root(
                         viewportBounds = rootViewportBounds,
                         gridPosition = featureLauncherGridPosition,
                         scrollState = featureLauncherScrollState,
+                        excludedBounds = bottomChromeBounds[
+                            rootUiState.liquidGlassBottomBarEnabled && rootUiState.liquidBackdrop != null
+                        ]?.takeIf {
+                            currentRootRoute == RootRoute.Main && it.width > 0f && it.height > 0f
+                        },
                         onPressStart = { mode ->
                             // Monotonic ownership prevents a completed old leash
                             // from mistaking a newer press for its own token.

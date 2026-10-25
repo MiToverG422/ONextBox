@@ -12,7 +12,11 @@ import java.lang.reflect.Modifier
 internal object OShareVisibilityHooker {
     private const val TAG = "ONextBox-OShare"
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = install(loader, colorOs16 = false)
+
+    fun hookColorOs16(loader: ClassLoader) = install(loader, colorOs16 = true)
+
+    private fun install(loader: ClassLoader, colorOs16: Boolean) {
         val key = "$TAG:visibility-timeout@${System.identityHashCode(loader)}"
         val keys = mutableListOf<String>()
         runCatching {
@@ -21,8 +25,10 @@ internal object OShareVisibilityHooker {
             val method = receiver.getDeclaredMethod("onReceive", Context::class.java, Intent::class.java)
             require(method.returnType == Void.TYPE && !Modifier.isStatic(method.modifiers))
             val countdowns = listOf(
-                resolveCountdown(loader, "com.oplus.oshare.ui.ShareSettingsFragment", "d", "Y"),
-                resolveCountdown(loader, "com.oplus.oshare.OShareSysUiInlineViewService", "f", "Q"),
+                resolveCountdown(loader, "com.oplus.oshare.ui.ShareSettingsFragment",
+                    if (colorOs16) "e" else "d", if (colorOs16) "Z" else "Y"),
+                resolveCountdown(loader, "com.oplus.oshare.OShareSysUiInlineViewService", "f",
+                    if (colorOs16) "P" else "Q"),
             )
             keys += key
             ModernHookRegistry.installFast(key, method, XposedInterface.Hooker { chain ->
@@ -47,7 +53,7 @@ internal object OShareVisibilityHooker {
                 })
             }
             HookLog.i(TAG, "Everyone visibility hooks installed: alarm, settings countdown, inline countdown")
-            installLabelHook(loader, key)
+            installLabelHook(loader, key, colorOs16)
         }.onFailure {
             keys.forEach(ModernHookRegistry::unhook)
             HookLog.w(TAG, "Visibility timeout hook unavailable; stock behavior retained", it)
@@ -73,10 +79,10 @@ internal object OShareVisibilityHooker {
         return Countdown(run, ownerField, clear)
     }
 
-    private fun installLabelHook(loader: ClassLoader, key: String) {
+    private fun installLabelHook(loader: ClassLoader, key: String, colorOs16: Boolean) {
         val labelKeys = mutableListOf<String>()
         runCatching {
-            val strings = Class.forName("com.oplus.oshare.x", false, loader)
+            val strings = Class.forName(if (colorOs16) "com.oplus.oshare.f0" else "com.oplus.oshare.x", false, loader)
             val allId = strings.getDeclaredField("reception_range_all").getInt(null)
             labelKeys += "$key:label"
             ModernHookRegistry.installFast("$key:label", Resources::class.java.getDeclaredMethod("getText", Int::class.javaPrimitiveType),

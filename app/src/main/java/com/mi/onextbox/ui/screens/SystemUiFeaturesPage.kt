@@ -123,6 +123,7 @@ internal fun SystemUiFeaturesPage(
             SideVolumePercentageSettingsGroup {
                 onOpenSubPage(FeaturePageMode.SystemUiSideVolumePercentageSettings)
             }
+            SettingsSection(title = stringResource(R.string.volume_group_alerts))
             SettingsGroup {
                 VolumeSafetyWarningSettingsRow()
             }
@@ -262,6 +263,7 @@ internal fun SystemUiFeaturesPage(
                 onOpenCorners = { onOpenSubPage(FeaturePageMode.SystemUiCornerSettings) },
                 onOpenPercentage = { onOpenSubPage(FeaturePageMode.SystemUiPercentageSettings) },
             )
+            SettingsSection(title = stringResource(R.string.control_center_group_visibility))
             SettingsGroup {
                 SettingsToggleRow(
                     title = stringResource(R.string.feature_hide_qs_edit_title),

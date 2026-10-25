@@ -15,7 +15,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.lsp.LspConfig.KeyguardFeature
-import com.mi.onextbox.ui.settings.SettingsGroup
+import com.mi.onextbox.ui.settings.SettingsSection
 import com.mi.onextbox.ui.settings.SettingsToggleRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,23 +44,30 @@ internal fun CaptureFeaturesPage(feature: KeyguardFeature) {
     }
     val screenshot = feature == KeyguardFeature.AodScreenshot
     if (screenshot) {
-        SettingsGroup { HideScreenshotFloatingSettingsRow(false, false) }
+        SettingsSection(title = stringResource(R.string.capture_group_screenshot_options))
     }
-    SettingsGroup {
-        SettingsToggleRow(
-            title = stringResource(if (screenshot) R.string.keyguard_aod_screenshot_title else R.string.keyguard_screen_off_recording_title),
-            summary = stringResource(if (screenshot) R.string.keyguard_aod_screenshot_summary else R.string.keyguard_screen_off_recording_summary),
-            checked = enabled,
-            onCheckedChange = { checked ->
-                enabled = checked
-                scope.launch {
-                    writeLock.withLock {
-                        withContext(Dispatchers.IO) {
-                            LspConfig.setKeyguardFeatureEnabled(context, feature, checked)
+    FeatureAnimatedGroup {
+        row("floating-windows", visible = screenshot) { above, below ->
+            HideScreenshotFloatingSettingsRow(above, below)
+        }
+        row(feature) { above, below ->
+            SettingsToggleRow(
+                title = stringResource(if (screenshot) R.string.keyguard_aod_screenshot_title else R.string.keyguard_screen_off_recording_title),
+                summary = stringResource(if (screenshot) R.string.keyguard_aod_screenshot_summary else R.string.keyguard_screen_off_recording_summary),
+                checked = enabled,
+                onCheckedChange = { checked ->
+                    enabled = checked
+                    scope.launch {
+                        writeLock.withLock {
+                            withContext(Dispatchers.IO) {
+                                LspConfig.setKeyguardFeatureEnabled(context, feature, checked)
+                            }
                         }
                     }
-                }
-            },
-        )
+                },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
+        }
     }
 }

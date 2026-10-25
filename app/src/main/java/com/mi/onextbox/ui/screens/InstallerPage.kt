@@ -2,14 +2,16 @@
 
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -17,16 +19,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import io.github.suqi8.coui.kmp.basic.Text as CouiText
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.lsp.InstallerRoutingPolicy
 import com.mi.onextbox.lsp.LspConfig.InstallerFeature as Feature
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.CouiConfirmDialog
 import com.mi.onextbox.ui.settings.*
 import kotlinx.coroutines.Dispatchers
@@ -140,10 +138,7 @@ internal fun InstallerPage() {
     }
     val restartHint = stringResource(R.string.installer_restart_hint)
     val hintModifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp)
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Text(restartHint, modifier = hintModifier, style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-    } else {
+    run {
         CouiText(restartHint, modifier = hintModifier,
             style = COUITheme.textStyles.footnote1.copy(fontSize = 12.sp, lineHeight = 18.sp),
             color = COUITheme.colorScheme.onSurfaceVariantSummary)
@@ -155,18 +150,16 @@ internal fun InstallerPage() {
         onDismissRequest = { if (!saving) showChooser = false },
         onPositive = { saveTarget("") },
         content = {
-            val material3 = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
+            val material3 = false
             Column(
                 modifier = Modifier.fillMaxWidth().then(
-                    if (material3) Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()) else Modifier),
-                verticalArrangement = Arrangement.spacedBy(if (material3) 2.dp else 0.dp),
+                    Modifier),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
             ) {
                 if (choices.isEmpty()) SettingsCardRow(title = stringResource(R.string.installer_no_choices), summary = "")
                 choices.forEachIndexed { index, choice ->
-                    Material3ExpressiveSegmentPosition(index, choices.size) {
-                        SettingsCardRow(title = choice.label, summary = choice.packageName,
-                            onClick = { saveTarget(choice.packageName) })
-                    }
+                    run {SettingsCardRow(title = choice.label, summary = choice.packageName,
+                            onClick = { saveTarget(choice.packageName) })}
                 }
             }
         },

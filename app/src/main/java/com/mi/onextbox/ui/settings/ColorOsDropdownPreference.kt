@@ -263,11 +263,12 @@ internal fun ColorOsDropdownPopup(
     val viewConfiguration = LocalViewConfiguration.current
     val dragHaptic = LocalHapticFeedback.current
     val maskAnimationScope = rememberCoroutineScope()
-    var pressedIndex by remember(entry.items) { mutableIntStateOf(-1) }
-    var maskAnimationJob by remember(entry.items) { mutableStateOf<Job?>(null) }
-    val sharedMaskOffset = remember(entry.items) { Animatable(0f) }
+    val gestureItems = entry.items.map { Triple(it.text, it.enabled, it.selected) }
+    var pressedIndex by remember(gestureItems) { mutableIntStateOf(-1) }
+    var maskAnimationJob by remember { mutableStateOf<Job?>(null) }
+    val sharedMaskOffset = remember(gestureItems) { Animatable(0f) }
     val currentOnItemClick by rememberUpdatedState(onItemClick)
-    val currentItems by rememberUpdatedState(entry.items)
+    val currentGestureItems by rememberUpdatedState(gestureItems)
     val currentShow by rememberUpdatedState(show)
     val rowHeightPx = with(density) { 40.dp.roundToPx().toFloat() }
     val pressProgress by animateFloatAsState(
@@ -313,7 +314,7 @@ internal fun ColorOsDropdownPopup(
             )
             Column(
                 modifier = Modifier
-                .pointerInput(show, entry.items, scrollState, rowHeightPx) {
+                .pointerInput(show, gestureItems, scrollState, rowHeightPx) {
                     if (!show) return@pointerInput
                     awaitEachGesture {
                         fun enabledIndexAt(position: Offset): Int {
@@ -352,7 +353,7 @@ internal fun ColorOsDropdownPopup(
                                 val event = awaitPointerEvent(PointerEventPass.Main)
                                 val change = event.changes.firstOrNull { it.id == down.id }
                                 if (change == null || event.changes.size > 1 || change.isConsumed ||
-                                    !currentShow || currentItems !== entry.items
+                                    !currentShow || currentGestureItems != gestureItems
                                 ) return@awaitEachGesture
                                 if (scrollable && (
                                     (change.position - down.position).getDistance() > viewConfiguration.touchSlop ||

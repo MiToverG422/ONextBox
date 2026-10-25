@@ -24,8 +24,16 @@ internal object SideVolumePercentageHooker {
         drawings.getOrPut(view) { Drawing(view).also { it.style.refresh() } }
     }
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = hook(loader, inheritedDraw = false)
+
+    fun hookColorOs16(loader: ClassLoader) = hook(loader, inheritedDraw = true)
+
+    private fun hook(loader: ClassLoader, inheritedDraw: Boolean) {
         val type = Reflect.findClassIfExists(SEEK, loader) ?: return
+        // C16's subclass inherits COUIVerticalSeekBar.onDraw; C17 overrides it.
+        val drawType = if (inheritedDraw) generateSequence(type as Class<*>?) { it.superclass }
+            .firstOrNull { owner -> owner.declaredMethods.any { it.name == "onDraw" &&
+                it.parameterTypes.contentEquals(arrayOf(Canvas::class.java)) } } ?: return else type
         val observers = QsCornerViewObservers("volume:percentage-views",
             content = { drawing(it).style.refresh() },
             configurationToken = SideVolumePercentageSettings::configurationTokenXposed,
@@ -38,17 +46,18 @@ internal object SideVolumePercentageHooker {
                     }
                 })
         }
-        type.declaredMethods.filter { it.name == "onDraw" && it.parameterTypes.contentEquals(arrayOf(Canvas::class.java)) }
+        drawType.declaredMethods.filter { it.name == "onDraw" && it.parameterTypes.contentEquals(arrayOf(Canvas::class.java)) }
             .forEach { method ->
                 ModernHookRegistry.installCompat("$TAG:draw", method, object : ModernMethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         if (param.throwable != null || HotReloadLifecycle.isRetiring) return
+                        if (!type.isInstance(param.thisObject)) return
                         val state = SideVolumePercentageSettings.stateXposed()
                         if (!state.enabled) return
                         val view = param.thisObject as? View ?: return
                         observers.watch(view)
                         val canvas = param.args.firstOrNull() as? Canvas ?: return
-                        runCatching { draw(view, canvas, state) }.onFailure {
+                        runCatching { draw(view, canvas, state, inheritedDraw) }.onFailure {
                             if (!reported) { reported = true; HookLog.w(TAG, "Volume popup percentage unavailable", it) }
                         }
                     }
@@ -56,7 +65,7 @@ internal object SideVolumePercentageHooker {
             }
     }
 
-    private fun draw(view: View, canvas: Canvas, state: QsSliderPercentageSettings.State) {
+    private fun draw(view: View, canvas: Canvas, state: QsSliderPercentageSettings.State, inheritedDraw: Boolean) {
         if (!SideVolumePercentageVisibility.shouldDraw(state.enabled,
                 (Reflect.callMethod(view, "getThickType") as Number).toInt(),
                 Reflect.callMethod(view, "getHasEnlarge") == true,
@@ -67,7 +76,8 @@ internal object SideVolumePercentageHooker {
             (Reflect.callMethod(view, "getMin") as Number).toInt(),
             (Reflect.callMethod(view, "getMax") as Number).toInt()) ?: return
         val drawing = drawing(view)
-        Reflect.callMethod(view, "copyBackgroundRect", drawing.track)
+        if (inheritedDraw) drawing.track.set(Reflect.getObjectField(view, "mBackgroundRect") as Rect)
+        else Reflect.callMethod(view, "copyBackgroundRect", drawing.track)
         val track = drawing.track
         if (track.isEmpty) return
         val paint = drawing.style.paint

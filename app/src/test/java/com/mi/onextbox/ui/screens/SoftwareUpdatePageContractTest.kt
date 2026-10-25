@@ -75,13 +75,13 @@ class SoftwareUpdatePageContractTest {
         assertEquals("阻止夜间定时安装，不中断已经开始的安装", strings("values-zh-rCN")["ota_disable_night_summary"])
     }
 
-    @Test fun updateSettingsSingleActionUsesExpressiveContainerCorners() {
+    @Test fun updateSettingsSingleActionUsesCouiPopup() {
         val source = file("main/java/com/mi/onextbox/ui/settings/SettingsMainPage.kt").readText()
         val action = source.substringAfter("fun SoftwareUpdateTopBarActions(")
             .substringBefore("return@Box")
-        assertTrue(action.contains("AppUiStyle.Material3Expressive"))
-        assertTrue(action.contains("MenuDefaults.groupShape(index = 0, count = 1)"))
-        assertTrue(action.contains("shape = MenuDefaults.standaloneGroupShape"))
+        assertFalse(action.contains("AppUiStyle.Material3Expressive"))
+        assertTrue(action.contains("ColorOsPopup("))
+        assertTrue(action.contains("ColorOsTopBarButton("))
         assertFalse(action.contains("shape = MenuDefaults.standaloneItemShape"))
     }
 

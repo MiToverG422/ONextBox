@@ -1,21 +1,21 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -28,15 +28,12 @@ import com.mi.onextbox.lsp.EsimDiagnosticsSnapshot
 import com.mi.onextbox.lsp.EsimDiagnosticsStore
 import com.mi.onextbox.lsp.EsimProfileDiagnostic
 import com.mi.onextbox.lsp.LspConfig
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsSection
 import com.mi.onextbox.ui.settings.SettingsTokens
 import com.mi.onextbox.ui.settings.SettingsToggleRow
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentContentCard
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.Dispatchers
@@ -82,27 +79,7 @@ internal fun EsimFeaturesPage(onOpenSubPage: (FeaturePageMode) -> Unit) {
     }
 
     SettingsGroup {
-        if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-            Material3ExpressiveSegmentContentCard {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                ) {
-                    MaterialText(
-                        text = stringResource(R.string.feature_esim_legal_warning_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    MaterialText(
-                        text = stringResource(R.string.feature_esim_legal_warning_summary),
-                        modifier = Modifier.padding(top = 4.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        } else {
+        run {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

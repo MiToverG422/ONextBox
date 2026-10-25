@@ -46,12 +46,11 @@ ONextBox 是由 **MiToverG422 主导开发与维护** 的个人项目。项目�
 
 ## ✨ 不止一个开关
 
-### 🎨 两种界面，一份工具箱
+### 🎨 COUI 17.0 界面
 
 | 界面风格 | 体验方向 |
 | --- | --- |
 | **COUI 17.0** | 以 ColorOS 风格为方向，提供圆润卡片、拼接列表、顶栏模糊与细腻的交互动效 |
-| **Material 3 Expressive** | 使用 Material 3 Expressive 组件与主题，呈现另一套布局和交互体验 |
 
 > 💡 激活流程使用独立的视觉样式，选择 App 的主题模式不会改变激活页面的颜色。「激活」是首次设置流程，不是收费授权。
 
@@ -112,7 +111,7 @@ ONextBox 会为兼容性检查和功能运行读取必要的设备、系统、Ro
 | Gradle Wrapper | **9.3.1** |
 | Android Gradle Plugin | **9.1.0** |
 | Kotlin | **2.4.10** |
-| 界面 | Jetpack Compose、COUI、Material 3 Expressive |
+| 界面 | Jetpack Compose、COUI 17.0 |
 | 模块 API | libxposed **102.0.0** |
 
 以 [版本目录](gradle/libs.versions.toml)、[App 构建配置](app/build.gradle.kts) 和 [Gradle Wrapper](gradle/wrapper/gradle-wrapper.properties) 为准。
@@ -165,7 +164,6 @@ chmod +x gradlew
 | --- | --- |
 | **ONextBox COUI 17.0** | [MiToverG422](https://github.com/MiToverG422) · GPL-3.0 |
 | [COUI](https://github.com/suqi8/coui) | suqi8 及贡献者 · Apache-2.0 |
-| [Miuix](https://github.com/compose-miuix-ui/miuix) | YuKongA 及贡献者 · Apache-2.0 |
 | [Jetpack Compose / Material 3](https://developer.android.com/jetpack/compose) | Google、AndroidX 贡献者 · Apache-2.0 |
 | [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) | Kyant0 及贡献者 · Apache-2.0 |
 | [Capsule](https://github.com/Kyant0/Capsule) | Kyant0 及贡献者 · Apache-2.0 |

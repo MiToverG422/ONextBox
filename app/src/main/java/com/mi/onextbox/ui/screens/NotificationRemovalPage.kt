@@ -1,18 +1,19 @@
 package com.mi.onextbox.ui.screens
 
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+
 import androidx.compose.runtime.getValue
+
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.lsp.LspConfig.NotificationRemovalFeature as Feature
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsToggleRow
@@ -48,7 +49,7 @@ internal fun NotificationRemovalPage() {
                 mutableStateOf(LspConfig.isNotificationRemovalEnabled(context, feature))
             }
             if (index > 0) SettingsDivider()
-            Material3ExpressiveSegmentPosition(index = index, count = options.size) {
+            run {
                 SettingsToggleRow(
                     title = stringResource(title),
                     summary = if (summary == 0) "" else stringResource(summary),
@@ -64,7 +65,7 @@ internal fun NotificationRemovalPage() {
                     hasDividerAbove = index > 0,
                     hasDividerBelow = index < options.lastIndex,
                 )
-            }
+}
         }
     }
 }

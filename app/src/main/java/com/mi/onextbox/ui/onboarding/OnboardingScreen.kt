@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.onboarding
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,7 +49,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -67,12 +70,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -155,7 +156,6 @@ import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Back
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandMore
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.theme.ColorSchemeMode
@@ -265,8 +265,6 @@ fun OnboardingScreen(
     onAppThemeModeChange: (AppThemeMode) -> Unit,
     featurePageNewStyleEnabled: Boolean,
     onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
-    featurePageVideoHidden: Boolean,
-    onFeaturePageVideoHiddenChange: (Boolean) -> Unit,
     onDestinationPreparationRequested: () -> Unit,
     onActivationCommitted: (rootGranted: Boolean) -> Unit,
     onExitFinished: () -> Unit,
@@ -547,14 +545,8 @@ fun OnboardingScreen(
                             onBack = pageAction(page) { moveTo(DraftStep.Language) },
                         )
                         DraftStep.Personalization -> PersonalizationPage(
-                            appUiStyle = appUiStyle,
-                            appThemeMode = appThemeMode,
                             newStyleEnabled = featurePageNewStyleEnabled,
                             onNewStyleEnabledChange = onFeaturePageNewStyleEnabledChange,
-                            videoBackgroundEnabled = !featurePageVideoHidden,
-                            onVideoBackgroundEnabledChange = { enabled ->
-                                onFeaturePageVideoHiddenChange(!enabled)
-                            },
                             onNext = pageAction(page) { moveTo(DraftStep.Migration) },
                             onBack = pageAction(page) { moveTo(DraftStep.Appearance) },
                         )
@@ -1022,11 +1014,6 @@ private fun AppearancePage(
     onNext: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val uiStyles = listOf(
-        AppUiStyle.ColorOs to stringResource(R.string.ui_style_coloros),
-        AppUiStyle.Material3Expressive to stringResource(R.string.ui_style_material3_expressive),
-        AppUiStyle.Miuix to stringResource(R.string.ui_style_miuix),
-    )
     val themeModes = listOf(
         AppThemeMode.System to stringResource(R.string.theme_mode_system),
         AppThemeMode.Light to stringResource(R.string.theme_mode_light),
@@ -1047,11 +1034,10 @@ private fun AppearancePage(
         )
         Spacer(modifier = Modifier.height(12.dp))
         AppearanceStylePreview(
-            uiStyle = selectedUiStyle,
             themeMode = selectedThemeMode,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(194.dp),
+                .height(224.dp),
         )
         Spacer(modifier = Modifier.height(10.dp))
         Column(
@@ -1060,31 +1046,6 @@ private fun AppearancePage(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text(
-                text = stringResource(R.string.setting_ui_style),
-                color = ActivationMutedInk,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-            )
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = AppUiTokens.CardCornerRadius,
-            ) {
-                uiStyles.forEachIndexed { index, (style, label) ->
-                    if (index > 0) SettingsDivider()
-                    BasicComponent(
-                        title = label,
-                        summary = null,
-                        insideMargin = SettingsTokens.RowInsideMargin,
-                        endActions = {
-                            C17RadioIndicator(selected = selectedUiStyle == style)
-                        },
-                        onClick = { onUiStyleSelected(style) },
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = stringResource(R.string.setting_theme_mode),
                 color = ActivationMutedInk,
@@ -1131,7 +1092,6 @@ private fun AppearancePage(
 
 @Composable
 private fun AppearanceStylePreview(
-    uiStyle: AppUiStyle,
     themeMode: AppThemeMode,
     modifier: Modifier = Modifier,
 ) {
@@ -1141,72 +1101,59 @@ private fun AppearanceStylePreview(
         else -> isSystemInDarkTheme()
     }
     AnimatedContent(
-        targetState = uiStyle,
+        targetState = OnboardingAppearance.brightnessOf(themeMode) to dark,
         modifier = modifier.clip(RoundedCornerShape(28.dp)),
         transitionSpec = {
             (fadeIn(tween(300)) + scaleIn(tween(300), initialScale = 0.96f)) togetherWith
                 (fadeOut(tween(250)) + scaleOut(tween(250), targetScale = 1.03f))
         },
-        label = "activationUiStylePreview",
-    ) { style ->
-        MiniAppearanceSettings(style = style, dark = dark, themeMode = themeMode)
+        label = "activationThemePreview",
+    ) { (previewMode, previewDark) ->
+        MiniAppearanceSettings(dark = previewDark, themeMode = previewMode)
     }
 }
 
 @Composable
 private fun MiniAppearanceSettings(
-    style: AppUiStyle,
     dark: Boolean,
     themeMode: AppThemeMode,
 ) {
-    val material = style == AppUiStyle.Material3Expressive
     val background = when {
-        material && dark -> Color(0xFF19151F)
-        material -> Color(0xFFF4EFF7)
         dark -> Color(0xFF09090B)
         else -> Color(0xFFF2F3F5)
     }
     val surface = when {
-        material && dark -> Color(0xFF312B38)
-        material -> Color(0xFFE7E0EB)
         dark -> Color(0xFF1E1E20)
         else -> Color.White
     }
     val menuSurface = when {
-        material && dark -> Color(0xFF40364B)
-        material -> Color(0xFFF0E8F4)
         dark -> Color(0xFF19191B)
         else -> Color(0xFFFDFDFE)
     }
     val foreground = if (dark) Color(0xFFF7F5F8) else ActivationInk
     val secondary = if (dark) Color(0xFFB8B2BE) else ActivationMutedInk
-    val accent = if (material) {
-        if (dark) Color(0xFFD5BBFF) else Color(0xFF6750A4)
-    } else {
+    val accent = run {
         if (dark) Color(0xFF78AAFF) else ActivationBlue
     }
-    // These are the same spring targets used by ColorOsPopup and Material 3's
-    // DropdownMenuPopupContent. The preview is clipped to its miniature screen,
+    // These are the same spring targets used by ColorOsPopup. The preview is clipped to its miniature screen,
     // so it cannot mount a real platform Popup window here.
-    val closedScale = if (material) 0.8f else 0f
-    val menuScale = remember(style) { Animatable(closedScale) }
-    val menuAlpha = remember(style) { Animatable(0f) }
-    LaunchedEffect(style) {
+    val closedScale = 0f
+    val menuScale = remember { Animatable(closedScale) }
+    val menuAlpha = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
         while (isActive) {
             delay(850)
             coroutineScope {
                 launch {
                     menuScale.animateTo(
                         1f,
-                        if (material) spring(dampingRatio = 0.6f, stiffness = 800f)
-                        else spring(dampingRatio = 0.8f, stiffness = 322.27f),
+                        spring(dampingRatio = 0.8f, stiffness = 322.27f),
                     )
                 }
                 launch {
                     menuAlpha.animateTo(
                         1f,
-                        if (material) spring(dampingRatio = 1f, stiffness = 3800f)
-                        else spring(dampingRatio = 0.8f, stiffness = 322.27f),
+                        spring(dampingRatio = 0.8f, stiffness = 322.27f),
                     )
                 }
             }
@@ -1215,15 +1162,13 @@ private fun MiniAppearanceSettings(
                 launch {
                     menuScale.animateTo(
                         closedScale,
-                        if (material) spring(dampingRatio = 0.6f, stiffness = 800f)
-                        else spring(dampingRatio = 1f, stiffness = 438.65f),
+                        spring(dampingRatio = 1f, stiffness = 438.65f),
                     )
                 }
                 launch {
                     menuAlpha.animateTo(
                         0f,
-                        if (material) spring(dampingRatio = 1f, stiffness = 3800f)
-                        else spring(dampingRatio = 1f, stiffness = 631.65f),
+                        spring(dampingRatio = 1f, stiffness = 631.65f),
                     )
                 }
             }
@@ -1240,22 +1185,22 @@ private fun MiniAppearanceSettings(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    start = if (material) 3.dp else 11.dp,
-                    end = if (material) 3.dp else 11.dp,
-                    top = if (material) 6.dp else 9.dp,
+                    start = 11.dp,
+                    end = 11.dp,
+                    top = 9.dp,
                 ),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(if (material) 38.dp else 35.dp),
+                    .height(35.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     modifier = Modifier
-                        .size(if (material) 32.dp else 27.dp)
+                        .size(27.dp)
                         .then(
-                            if (material) Modifier else Modifier
+                            Modifier
                                 .clip(CircleShape)
                                 .background(
                                     Brush.verticalGradient(
@@ -1279,90 +1224,59 @@ private fun MiniAppearanceSettings(
                         imageVector = COUIIcons.Back,
                         contentDescription = null,
                         tint = foreground,
-                        modifier = Modifier.size(if (material) 19.dp else 16.dp),
+                        modifier = Modifier.size(16.dp),
                     )
                 }
                 Text(
                     text = stringResource(R.string.tab_settings),
                     modifier = Modifier.padding(start = 7.dp),
                     color = foreground,
-                    fontSize = if (material) 16.sp else 17.sp,
-                    fontWeight = if (material) FontWeight.SemiBold else FontWeight(550),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight(550),
                 )
             }
-            Spacer(modifier = Modifier.height(if (material) 5.dp else 7.dp))
+            Spacer(modifier = Modifier.height(7.dp))
             Text(
                 text = stringResource(R.string.settings_section_display),
                 color = secondary,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(start = if (material) 14.dp else 12.dp),
+                modifier = Modifier.padding(start = 12.dp),
             )
             Spacer(modifier = Modifier.height(6.dp))
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (material) Modifier.padding(horizontal = 7.dp) else Modifier)
-                    .then(
-                        if (material) Modifier else Modifier
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(surface)
-                    ),
-                verticalArrangement = if (material) Arrangement.spacedBy(2.dp) else Arrangement.Top,
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(surface),
+                verticalArrangement = Arrangement.Top,
             ) {
                 MiniAppearanceRow(
-                    title = stringResource(R.string.setting_ui_style),
-                    value = stringResource(
-                        when (style) {
-                            AppUiStyle.Material3Expressive -> R.string.ui_style_material3_expressive
-                            AppUiStyle.Miuix -> R.string.ui_style_miuix
-                            AppUiStyle.ColorOs -> R.string.ui_style_coloros
-                        },
-                    ),
-                    material = material,
-                    surface = surface,
-                    foreground = foreground,
-                    secondary = secondary,
-                    index = 0,
-                )
-                if (!material) MiniAppearanceDivider(dark)
-                MiniAppearanceRow(
                     title = stringResource(
-                        if (material) R.string.setting_app_language else R.string.setting_theme_mode,
+                        R.string.setting_theme_mode,
                     ),
-                    summary = if (material) stringResource(R.string.setting_app_language_summary) else null,
-                    value = if (material) stringResource(R.string.language_system) else
-                        stringResource(
+                    summary = null,
+                    value = stringResource(
                             when (OnboardingAppearance.brightnessOf(themeMode)) {
                                 AppThemeMode.Light -> R.string.theme_mode_light
                                 AppThemeMode.Dark -> R.string.theme_mode_dark
                                 else -> R.string.theme_mode_system
                             },
                         ),
-                    material = material,
-                    surface = surface,
+
                     foreground = foreground,
                     secondary = secondary,
-                    index = 1,
                 )
-                if (!material) MiniAppearanceDivider(dark)
+                MiniAppearanceDivider(dark)
                 MiniAppearanceRow(
                     title = stringResource(
-                        if (material) R.string.setting_theme_mode else R.string.setting_app_language,
+                        R.string.setting_app_language,
                     ),
-                    summary = if (material) null else stringResource(R.string.setting_app_language_summary),
-                    value = if (material) stringResource(
-                        when (OnboardingAppearance.brightnessOf(themeMode)) {
-                            AppThemeMode.Light -> R.string.theme_mode_light
-                            AppThemeMode.Dark -> R.string.theme_mode_dark
-                            else -> R.string.theme_mode_system
-                        },
-                    ) else stringResource(R.string.language_system),
-                    material = material,
-                    surface = surface,
+                    summary = stringResource(R.string.setting_app_language_summary),
+                    value = stringResource(R.string.language_system),
+
                     foreground = foreground,
                     secondary = secondary,
-                    index = 2,
                 )
             }
         }
@@ -1370,22 +1284,21 @@ private fun MiniAppearanceSettings(
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                // The real COUI popup touches the style row's lower edge; Material 3
-                // anchors below the press position inside that row.
-                .padding(end = 13.dp, top = if (material) 94.dp else 104.dp)
-                .width(if (material) 194.dp else 168.dp)
+                // Align the COUI popup with the theme row's lower edge.
+                .padding(end = 13.dp, top = 104.dp)
+                .width(168.dp)
                 .graphicsLayer {
                     alpha = menuAlpha.value
                     scaleX = menuScale.value
                     scaleY = menuScale.value
                     transformOrigin = TransformOrigin(0.5f, 0f)
                     shadowElevation = 8.dp.toPx() * menuAlpha.value
-                    shape = if (material) RoundedCornerShape(18.dp) else ColorOsPopupPreviewShape
+                    shape = ColorOsPopupPreviewShape
                     clip = true
                 }
                 .background(menuSurface),
         ) {
-            if (!material) {
+            run {
                 ColorOsPopupMiniatureMaterial(
                     darkTheme = dark,
                     modifier = Modifier.matchParentSize(),
@@ -1394,66 +1307,40 @@ private fun MiniAppearanceSettings(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = if (material) 3.dp else 6.dp, vertical = if (material) 3.dp else 5.dp),
-                verticalArrangement = if (material) Arrangement.spacedBy(2.dp) else Arrangement.Top,
+                    .padding(horizontal = 6.dp, vertical = 5.dp),
+                verticalArrangement = Arrangement.Top,
             ) {
             val options = listOf(
-                AppUiStyle.ColorOs to stringResource(R.string.ui_style_coloros),
-                AppUiStyle.Material3Expressive to stringResource(R.string.ui_style_material3_expressive),
-                AppUiStyle.Miuix to stringResource(R.string.ui_style_miuix),
+                AppThemeMode.System to stringResource(R.string.theme_mode_system),
+                AppThemeMode.Light to stringResource(R.string.theme_mode_light),
+                AppThemeMode.Dark to stringResource(R.string.theme_mode_dark),
             )
-            options.forEachIndexed { index, (option, label) ->
+            options.forEach { (option, label) ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(if (material) 34.dp else 30.dp)
-                        .then(
-                            if (!material) Modifier else Modifier
-                                .clip(
-                                    RoundedCornerShape(
-                                        topStart = if (index == 0) 15.dp else 4.dp,
-                                        topEnd = if (index == 0) 15.dp else 4.dp,
-                                        bottomStart = if (index == options.lastIndex) 15.dp else 4.dp,
-                                        bottomEnd = if (index == options.lastIndex) 15.dp else 4.dp,
-                                    ),
-                                )
-                                .background(
-                                    if (option == style) accent.copy(alpha = if (dark) 0.17f else 0.13f)
-                                    else surface,
-                                )
-                        )
+                        .height(30.dp)
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (material) {
-                        Box(modifier = Modifier.width(22.dp)) {
-                            if (option == style) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = null,
-                                    tint = accent,
-                                    modifier = Modifier.size(15.dp),
-                                )
-                            }
-                        }
-                    }
+
                     Text(
                         text = label,
-                        color = if (!material && option == style) accent else foreground,
+                        color = if (option == OnboardingAppearance.brightnessOf(themeMode)) accent else foreground,
                         fontSize = 11.sp,
-                        fontWeight = if (option == style) FontWeight.SemiBold else FontWeight.Medium,
+                        fontWeight = if (option == OnboardingAppearance.brightnessOf(themeMode)) FontWeight.SemiBold else FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    if (!material && option == style) {
+                    if (option == OnboardingAppearance.brightnessOf(themeMode)) {
                         Canvas(modifier = Modifier.size(16.dp)) {
                             val x = size.width / 24f
                             val y = size.height / 24f
                             val check = Path().apply {
-                                moveTo(9f * x, 12.435f * y)
-                                lineTo(13.388f * x, 17f * y)
-                                lineTo(23f * x, 7f * y)
+                                moveTo(5f * x, 12.435f * y)
+                                lineTo(9.388f * x, 17f * y)
+                                lineTo(19f * x, 7f * y)
                             }
                             drawPath(
                                 path = check,
@@ -1478,29 +1365,13 @@ private fun MiniAppearanceRow(
     title: String,
     value: String?,
     summary: String? = null,
-    material: Boolean,
-    surface: Color,
     foreground: Color,
     secondary: Color,
-    index: Int,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(if (summary == null) 36.dp else 44.dp)
-            .then(
-                if (material) Modifier
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = if (index == 0) 16.dp else 4.dp,
-                            topEnd = if (index == 0) 16.dp else 4.dp,
-                            bottomStart = if (index == 2) 16.dp else 4.dp,
-                            bottomEnd = if (index == 2) 16.dp else 4.dp,
-                        ),
-                    )
-                    .background(surface)
-                else Modifier
-            )
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1532,7 +1403,12 @@ private fun MiniAppearanceRow(
             )
             Spacer(modifier = Modifier.width(5.dp))
         }
-        Text(text = "⌄", color = secondary, fontSize = 14.sp)
+        androidx.compose.material3.Icon(
+            imageVector = Icons.Filled.ExpandMore,
+            contentDescription = null,
+            tint = secondary,
+            modifier = Modifier.size(14.dp),
+        )
     }
 }
 
@@ -1549,23 +1425,11 @@ private fun MiniAppearanceDivider(dark: Boolean) {
 
 @Composable
 private fun PersonalizationPage(
-    appUiStyle: AppUiStyle,
-    appThemeMode: AppThemeMode,
     newStyleEnabled: Boolean,
     onNewStyleEnabledChange: (Boolean) -> Unit,
-    videoBackgroundEnabled: Boolean,
-    onVideoBackgroundEnabledChange: (Boolean) -> Unit,
     onNext: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val systemInDarkTheme = isSystemInDarkTheme()
-    val videoBackgroundAvailable = appUiStyle == AppUiStyle.ColorOs &&
-        newStyleEnabled &&
-        !appThemeMode.isMonet &&
-        (
-            appThemeMode == AppThemeMode.Dark ||
-                (appThemeMode == AppThemeMode.System && systemInDarkTheme)
-            )
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1580,7 +1444,6 @@ private fun PersonalizationPage(
         Spacer(modifier = Modifier.height(16.dp))
         FeatureStylePreview(
             newStyleEnabled = newStyleEnabled,
-            videoBackgroundEnabled = videoBackgroundEnabled && videoBackgroundAvailable,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(230.dp),
@@ -1618,47 +1481,6 @@ private fun PersonalizationPage(
                     onClick = { onNewStyleEnabledChange(false) },
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = stringResource(R.string.onboarding_feature_background_section),
-                color = ActivationMutedInk,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-            )
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = AppUiTokens.CardCornerRadius,
-            ) {
-                BasicComponent(
-                    title = stringResource(R.string.onboarding_feature_video_title),
-                    summary = stringResource(R.string.onboarding_feature_video_summary),
-                    insideMargin = SettingsTokens.RowInsideMargin,
-                    enabled = videoBackgroundAvailable,
-                    endActions = {
-                        Checkbox(
-                            state = ToggleableState(videoBackgroundAvailable && videoBackgroundEnabled),
-                            onClick = {
-                                if (videoBackgroundAvailable) {
-                                    onVideoBackgroundEnabledChange(!videoBackgroundEnabled)
-                                }
-                            },
-                        )
-                    },
-                    onClick = {
-                        if (videoBackgroundAvailable) {
-                            onVideoBackgroundEnabledChange(!videoBackgroundEnabled)
-                        }
-                    },
-                )
-            }
-            Text(
-                text = stringResource(R.string.onboarding_feature_coui_only_note),
-                color = ActivationMutedInk,
-                fontSize = 12.sp,
-                lineHeight = 17.sp,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
-            )
         }
         ActivationCapsuleButton(
             label = stringResource(R.string.onboarding_next),
@@ -1675,7 +1497,6 @@ private fun PersonalizationPage(
 @Composable
 private fun FeatureStylePreview(
     newStyleEnabled: Boolean,
-    videoBackgroundEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val workspaceProgress = remember { Animatable(0f) }
@@ -1844,34 +1665,19 @@ private fun FeatureStylePreview(
                     }
                     .blur((18f * workspaceProgress.value.coerceIn(0f, 1f)).dp),
             ) {
-                if (videoBackgroundEnabled) {
-                    BootregVideoPlayer(
-                        videoResId = R.raw.feature_page_background,
-                        playCount = Int.MAX_VALUE,
-                        scaleMode = BootregVideoScaleMode.Crop,
-                        backgroundColor = Color(0xFF202126),
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.18f)),
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        Color(0xFF4169E1),
-                                        Color(0xFF9E5BE8),
-                                        Color(0xFFE97883),
-                                    ),
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0xFF4169E1),
+                                    Color(0xFF9E5BE8),
+                                    Color(0xFFE97883),
                                 ),
                             ),
-                    )
-                }
+                        ),
+                )
                 FeaturePreviewGrid(
                     hiddenModes = hiddenModes,
                     captureOrigins = hiddenModes.isEmpty(),

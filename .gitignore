@@ -27,6 +27,7 @@ keystore.properties
 signing.properties
 secrets.properties
 .ci-signing/
+/PROJECT_HANDOFF.md
 
 # Local analysis, extracted apps, device backups and design iterations
 /_external/

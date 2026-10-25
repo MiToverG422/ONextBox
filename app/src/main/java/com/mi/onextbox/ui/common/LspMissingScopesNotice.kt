@@ -4,10 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,7 +55,7 @@ internal fun LspMissingScopesNotice(
 ) {
     if (!shouldShowLspMissingScopes(status, missingScopes)) return
     val context = LocalContext.current
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
+
     val scopes = remember(missingScopes) { orderedLspMissingScopes(missingScopes) }
     val labels by produceState<Map<String, String>>(emptyMap(), context, scopes) {
         value = withContext(Dispatchers.IO) {
@@ -113,27 +110,7 @@ internal fun LspMissingScopesNotice(
             if (scopes.size > 3) {
                 MissingScopeText(stringResource(R.string.lsp_missing_scopes_more, scopes.size - 3), 13.sp)
             }
-            if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-                top.yukonga.miuix.kmp.basic.TextButton(
-                    text = stringResource(R.string.onboarding_open_lsposed),
-                    onClick = onOpen, enabled = !opening, modifier = Modifier.fillMaxWidth(),
-                )
-            } else if (material) {
-                androidx.compose.material3.TextButton(
-                    onClick = onOpen,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                    enabled = !opening,
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                        disabledContentColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = .38f),
-                    ),
-                ) {
-                    androidx.compose.material3.Text(
-                        stringResource(R.string.onboarding_open_lsposed),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            } else {
+            run {
                 Button(
                     onClick = onOpen,
                     modifier = Modifier.fillMaxWidth(),
@@ -154,17 +131,7 @@ internal fun LspMissingScopesNotice(
             }
         }
     }
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-        top.yukonga.miuix.kmp.basic.Card(modifier = modifier.fillMaxWidth()) { content() }
-    } else if (material) {
-        Surface(
-            modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-            content = content,
-        )
-    } else {
+    run {
         Card(
             modifier = modifier.fillMaxWidth(),
             cornerRadius = AppUiTokens.CardCornerRadius,
@@ -181,20 +148,7 @@ private fun MissingScopeText(
     fontWeight: FontWeight = FontWeight.Normal,
     maxLines: Int = Int.MAX_VALUE,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-        top.yukonga.miuix.kmp.basic.Text(
-            text = text, fontSize = fontSize, fontWeight = fontWeight, maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis,
-        )
-    } else if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        androidx.compose.material3.Text(
-            text = text,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis,
-        )
-    } else {
+    run {
         Text(
             text = text,
             fontSize = fontSize,

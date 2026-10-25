@@ -16,6 +16,16 @@ internal object SettingsFixedRefreshRateRules {
         else -> 0f // Auto and unknown firmware modes stay native.
     }
 
+    /** C16 stores the native mode directly and has no C17 high-gear choice setting. */
+    fun selectedHertzColorOs16(mode: Int): Float = when (mode) {
+        1 -> 90f
+        2 -> 60f
+        3 -> 120f
+        4 -> 144f
+        7 -> 165f
+        else -> 0f
+    }
+
     fun isSupported(hertz: Float, supported: FloatArray): Boolean =
         hertz.isFinite() && hertz >= 30f && supported.any { abs(it - hertz) < 0.5f }
 

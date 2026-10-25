@@ -307,14 +307,6 @@ fun ColorOsPopup(
     anchorCenterX: Float? = null,
     content: @Composable () -> Unit,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-        top.yukonga.miuix.kmp.window.WindowListPopup(
-            show = show, onDismissRequest = onDismissRequest,
-            popupModifier = modifier.widthIn(min = minWidth, max = maxWidth),
-            minWidth = minWidth, maxHeight = maxHeight, content = content,
-        )
-        return
-    }
     var popupMounted by remember { mutableStateOf(show) }
     val scaleProgress = remember { Animatable(0f) }
     val alphaProgress = remember { Animatable(0f) }
@@ -414,7 +406,7 @@ fun ColorOsPopup(
     }
 }
 
-/** Reuses the native popup material and edge shader inside the clipped activation preview. */
+/** Keeps the edge shader, but paints the preview's own theme instead of sampling the host window. */
 @Composable
 internal fun ColorOsPopupMiniatureMaterial(
     darkTheme: Boolean,
@@ -429,14 +421,10 @@ internal fun ColorOsPopupMiniatureMaterial(
                     darkTheme = darkTheme,
                     cornerRadiusDp = 19f,
                 ).also { view ->
-                    view.post {
-                        applyOplusPopupBlur(
-                            view = view,
-                            darkTheme = darkTheme,
-                            density = density.density,
-                            cornerRadiusDp = 19f,
-                        )
-                    }
+                    view.isForceDarkAllowed = false
+                    view.setBackgroundColor(
+                        if (darkTheme) 0xFF19191B.toInt() else 0xFFFDFDFE.toInt(),
+                    )
                 }
             },
             modifier = modifier,

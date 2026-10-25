@@ -38,16 +38,8 @@ class AppLogsUiTest {
         assertNoOverlap(AppUiStyle.ColorOs, interrupt = false)
     }
 
-    @Test fun materialExpansionAndCollapseKeepFollowingRowsOutsideTheCardEveryFrame() {
-        assertNoOverlap(AppUiStyle.Material3Expressive, interrupt = false)
-    }
-
     @Test fun couiRapidExpansionReversalsDoNotOverlap() {
         assertNoOverlap(AppUiStyle.ColorOs, interrupt = true)
-    }
-
-    @Test fun materialRapidExpansionReversalsDoNotOverlap() {
-        assertNoOverlap(AppUiStyle.Material3Expressive, interrupt = true)
     }
 
     @Test fun couiInfoBadgeCentersItsText() = assertCenteredBadge("信息", 1f)

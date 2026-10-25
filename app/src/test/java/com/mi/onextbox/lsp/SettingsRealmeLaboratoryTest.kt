@@ -91,7 +91,8 @@ class SettingsRealmeLaboratoryTest {
             assertTrue(child.name, page.indexOf("SettingsRealmeFeature.${child.name} to") > parentPosition)
         }
         assertTrue(page.contains("FeatureAnimatedGroup(animateChanges = true)"))
-        assertTrue(page.contains("visible = feature !in SettingsRealmeLaboratory.children || values[SettingsRealmeFeature.Laboratory] == true"))
+        assertTrue(page.contains("availableTitles == null || title in availableTitles"))
+        assertTrue(page.contains("(feature !in SettingsRealmeLaboratory.children || values[SettingsRealmeFeature.Laboratory] == true)"))
     }
 
     @Test fun otherRealmeFeaturesAreNotControlledByLaboratory() {

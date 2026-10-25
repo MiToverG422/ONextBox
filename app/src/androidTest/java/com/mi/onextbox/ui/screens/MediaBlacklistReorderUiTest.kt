@@ -39,11 +39,10 @@ class MediaBlacklistReorderUiTest {
     private val moving = "com.test.zeta"
 
     @Test fun couiSelectionAndRemovalMoveThroughIntermediatePositions() = assertTransition(AppUiStyle.ColorOs, false)
-    @Test fun materialSelectionAndRemovalMoveThroughIntermediatePositions() = assertTransition(AppUiStyle.Material3Expressive, false)
+
     @Test fun couiRapidSelectionReversalDoesNotSnap() = assertTransition(AppUiStyle.ColorOs, true)
-    @Test fun materialRapidSelectionReversalDoesNotSnap() = assertTransition(AppUiStyle.Material3Expressive, true)
+
     @Test fun couiReorderKeepsTheViewportInsteadOfFollowingTheMovedKey() = assertViewport(AppUiStyle.ColorOs)
-    @Test fun materialReorderKeepsTheViewportInsteadOfFollowingTheMovedKey() = assertViewport(AppUiStyle.Material3Expressive)
 
     private fun assertTransition(style: AppUiStyle, reverseEarly: Boolean) {
         val selected = mutableStateOf(emptySet<String>())

@@ -37,9 +37,6 @@ class DropdownSelectionUiTest {
 
     @Test fun couiTapsTheVisibleOptionAfterScrolling() = assertSelectionAfterScroll(AppUiStyle.ColorOs)
 
-    @Test fun materialTapsTheVisibleOptionAfterScrolling() =
-        assertSelectionAfterScroll(AppUiStyle.Material3Expressive)
-
     @Test fun couiScrollingDoesNotSelectAnOption() {
         val selections = mutableListOf<Int>()
         showMenu(AppUiStyle.ColorOs, selections)
@@ -77,12 +74,36 @@ class DropdownSelectionUiTest {
     @Test fun couiReplacingOptionsCancelsTheCurrentPress() =
         assertReplacingOptionsCancelsPress(AppUiStyle.ColorOs)
 
-    @Test fun materialReplacingOptionsCancelsTheCurrentPress() =
-        assertReplacingOptionsCancelsPress(AppUiStyle.Material3Expressive)
+    @Test fun actionMenuRefreshDoesNotInterruptDragAndUsesLatestCallback() {
+        val revision = mutableStateOf(0)
+        val selections = mutableListOf<Pair<Int, Int>>()
+        compose.setContent {
+            COUITheme {
+                val currentRevision = revision.value
+                Box(Modifier.fillMaxSize().padding(24.dp)) {
+                    ColorOsDropdownPopup(
+                        show = true,
+                        selectionMenu = false,
+                        entry = DropdownEntry((0..2).map { DropdownItem(text = "Action $it") }),
+                        onDismissRequest = {},
+                        onItemClick = { selections += currentRevision to it },
+                    )
+                }
+            }
+        }
+        compose.onNodeWithText("Action 0").performTouchInput { down(center) }
+        compose.runOnIdle { revision.value++ }
+        compose.onNodeWithText("Action 0").performTouchInput {
+            moveTo(center + Offset(0f, height * 2f))
+            up()
+        }
+        compose.waitForIdle()
+        assertEquals(listOf(1 to 2), selections)
+    }
 
-    @Test fun materialDisabledOptionsCannotBeChosen() {
+    @Test fun couiDisabledOptionsCannotBeChosen() {
         val selections = mutableListOf<Int>()
-        showMenu(AppUiStyle.Material3Expressive, selections, count = 3, disabledIndex = 1)
+        showMenu(AppUiStyle.ColorOs, selections, count = 3, disabledIndex = 1)
         compose.onNodeWithText("Option 1").assertIsNotEnabled()
             .performTouchInput { click() }
         compose.waitForIdle()

@@ -20,6 +20,30 @@ class LauncherGridPreviewFieldsTest {
         @JvmField var f14741u = 7
     }
 
+    class ColorOs16Preview {
+        @JvmField var mColumn = 5
+        @JvmField var mRow = 9
+        @JvmField var mPreviewCellWidth = 12
+        @JvmField var mPreviewCellHeight = 12
+        @JvmField var mPreviewCellRadius = 3
+        @JvmField val mPreviewPaddingStart = 8
+        @JvmField val mPreviewPaddingTop = 10
+    }
+
+    @Test fun colorOs16NamedFieldsResolveWithoutAcceptingTheC17FieldLayout() {
+        val type = ColorOs16Preview::class.java
+        val fields = LauncherGridPreviewFields.resolve(type, type.declaredFields.reversed(), colorOs16 = true)
+        val preview = ColorOs16Preview()
+        assertEquals(5, fields[0].getInt(preview))
+        assertEquals(9, fields[1].getInt(preview))
+        fields[2].setInt(preview, 7)
+        assertEquals(7, preview.mPreviewCellWidth)
+        assertEquals(8, fields[5].getInt(preview))
+        assertThrows(NoSuchFieldException::class.java) {
+            LauncherGridPreviewFields.resolve(type, type.declaredFields.toList())
+        }
+    }
+
     class WrongTypePreview {
         @JvmField var t = 4f
     }

@@ -83,6 +83,19 @@ internal object LauncherNotificationDotShadowHooker {
         val dotSize = (ModernReflect.getObjectField(renderer, "mDotSize") as? Number)?.toInt() ?: return
         if (dotSize <= 0) return
         val offset = (ModernReflect.getObjectField(renderer, "mNumBadgeBGOffsetByDesign") as? Number)?.toInt() ?: 0
+        if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16) {
+            val loader = launcherClassLoader ?: return
+            val iconUtils = ModernReflect.findClass("com.android.common.util.IconUtils", loader)
+            // C16 uses fixed dp offsets for round/oval icons. Reuse its own center calculation.
+            val position = ModernReflect.callStaticMethod(iconUtils, "getPositionForDot", bounds,
+                canvas.clipBounds, dotSize / 2, offset, !leftAlign) as? Rect ?: return
+            val host = ModernReflect.getObjectField(renderer, "drawDotView")
+            val fallenX = (ModernReflect.callMethod(renderer, "adjustDotOffestForFallen", true, host) as? Number)?.toFloat() ?: 0f
+            val fallenY = (ModernReflect.callMethod(renderer, "adjustDotOffestForFallen", false, host) as? Number)?.toFloat() ?: 0f
+            val scale = (ModernReflect.getObjectField(drawParams, "scale") as? Number)?.toFloat() ?: 1f
+            paintShadow(canvas, position.exactCenterX() + fallenX, position.exactCenterY() + fallenY, dotSize, scale, centeredScale)
+            return
+        }
 
         // ColorOS nudges the dot inward based on the icon radius type: radiusType==2 subtracts 2dp
         // from x and adds 2dp to y, radiusType==1 does 1dp. offset is always 3dp, so derive the

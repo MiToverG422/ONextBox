@@ -1,17 +1,6 @@
 <resources>
-    <string name="system_adaptation_runtime_restart">Profile switched; saved choices are preserved. Restart the phone to fully apply this profile and clear changes from the previous one.</string>
-    <string name="developer_allow_hyperos3_title">Allow HyperOS 3 support</string>
-    <string name="hyperos_performance_notice_title">Compatibility and restart</string>
-    <string name="hyperos_performance_notice">Only songyuan, Android 16, OS3.0.310.0.WGNCNXM is supported. Other devices cannot enable these options. Enable the system framework, Xiaomi Touch Service and Security scopes in LSPosed. Restart the phone after enabling or disabling; disabling and restarting restores system behavior. Active vendor locks require a restart for module updates and cannot be hot-reloaded.</string>
-    <string name="hyperos_performance_group">Display and touch</string>
-    <string name="hyperos_refresh_title">Global 185 Hz</string>
-    <string name="hyperos_refresh_summary">Force the verified 185 Hz display mode, including the lock screen and AOD. Disables AOD panel low-power mode and increases power use; does not guarantee app frame rates.</string>
-    <string name="hyperos_idle_title">Disable LTPS</string>
-    <string name="hyperos_idle_summary">Disable idle refresh-rate reduction through the native idle timer. Does not change the panel type or select 185 Hz by itself; may increase power use.</string>
-    <string name="hyperos_touch_title">High touch report rate</string>
-    <string name="hyperos_touch_summary">Use this ROM’s existing 480 Hz touch profile globally. Does not change the display refresh rate; may increase power use and change touch response.</string>
-    <string name="hyperos_reboot_required">Saved. Restart the phone to apply or restore.</string>
     <string name="system_adaptation_no_content">No features or tools are available for this adaptation yet</string>
+    <string name="setting_bottom_bar_hide_labels">Hide bottom bar labels</string>
     <string name="feature_search_hint">Search features</string>
     <string name="feature_search_clear">Clear search</string>
     <string name="feature_search_results">Results (%1$d)</string>
@@ -44,17 +33,10 @@
     <string name="setting_theme_mode">Theme mode</string>
     <string name="setting_ui_style">Interface style</string>
     <string name="ui_style_coloros">COUI 17.0</string>
-    <string name="ui_style_material3_expressive">Material 3 Expressive</string>
     <string name="setting_dynamic_color">Dynamic colors</string>
     <string name="setting_dynamic_color_on_summary">Use colors from the system wallpaper</string>
     <string name="setting_dynamic_color_off_summary">Use a custom theme color</string>
     <string name="setting_theme_palette">Theme color</string>
-    <string name="setting_material_floating_bottom_bar">Floating bottom bar</string>
-    <string name="setting_material_floating_bottom_bar_summary">Use a floating bottom navigation bar</string>
-    <string name="setting_material_haptics">Haptic feedback</string>
-    <string name="setting_material_haptics_summary">Provide haptic feedback when switching navigation tabs</string>
-    <string name="setting_material_switch_icons">Show switch icons</string>
-    <string name="setting_material_switch_icons_summary">Show an on or off state icon inside the switch thumb</string>
 
 <string name="setting_theme_settings">Settings</string>
 
@@ -85,10 +67,6 @@
 
 <string name="setting_blur_effect">Enable Blur Effect</string>
 <string name="setting_feature_page_new_style">New Features page style</string>
-    <string name="setting_progressive_card_animation">Progressive card animation</string>
-    <string name="setting_progressive_card_animation_summary">Cards enter progressively while scrolling, only in the classic Features layout and OPPO Push Monitor</string>
-    <string name="setting_feature_page_hide_background_video">Hide Features page background video</string>
-    <string name="setting_feature_page_hide_background_video_summary">In non-Monet dark themes, replaces the background video with the colorful animated background</string>
     <string name="setting_pop_follows_swipe_edge">Pop Follows Swipe Edge</string>
     <string name="setting_pop_follows_swipe_edge_summary">Pop animation direction follows the finger swipe edge</string>
     <string name="settings_section_other">Other</string>
@@ -392,8 +370,6 @@
     <string name="about_reference_material_icons_title">Material Icons</string>
     <string name="about_reference_junit_summary">JUnit Team · EPL-1.0</string>
     <string name="about_reference_junit_title">JUnit</string>
-    <string name="about_reference_miuix_summary">compose-miuix-ui · Apache-2.0</string>
-    <string name="about_reference_miuix_title">MIUIX</string>
     <string name="about_reference_oshin_summary">suqi8 · AGPL-3.0</string>
     <string name="about_reference_oshin_title">OShin</string>
     <string name="about_reference_xposed_api_summary">libxposed · Apache-2.0</string>
@@ -496,7 +472,7 @@
     <string name="onboarding_language_title">Select language</string>
     <string name="onboarding_language_summary">Choose the language used during setup and in ONextBox</string>
     <string name="onboarding_appearance_title">Interface and theme</string>
-    <string name="onboarding_appearance_summary">Choose the interface style and theme for ONextBox</string>
+    <string name="onboarding_appearance_summary">Choose the theme for ONextBox</string>
     <string name="onboarding_appearance_theme_note">This changes the app only; the setup screen is unaffected</string>
     <string name="onboarding_personalization_title">Make it yours</string>
     <string name="onboarding_personalization_summary">Preview and choose how the Features page looks before you continue</string>
@@ -504,11 +480,7 @@
     <string name="onboarding_feature_style_new_summary">Immersive layout with animated backgrounds</string>
     <string name="onboarding_feature_style_classic">Classic Features page</string>
     <string name="onboarding_feature_style_classic_summary">Simple, familiar list layout</string>
-    <string name="onboarding_feature_video_title">ColorOS 17 default live wallpaper</string>
-    <string name="onboarding_feature_video_summary">Shown only on the new Features page in standard dark mode</string>
     <string name="onboarding_feature_style_section">Features page style</string>
-    <string name="onboarding_feature_background_section">Background</string>
-    <string name="onboarding_feature_coui_only_note">These options are supported only in COUI 17.0</string>
     <string name="onboarding_migration_title">Bring your settings with you</string>
     <string name="onboarding_migration_summary">Restore an ONextBox configuration backup, or set up as new</string>
     <string name="onboarding_migration_preview_source">Device backup</string>
@@ -1196,7 +1168,7 @@
     <string name="enabled_features_save_failed">Could not save. The actual configuration will be reloaded</string>
     <string name="wallpaper_motion_group">3D wallpaper</string>
     <string name="wallpaper_motion_title">3D wallpaper sensitivity (experimental)</string>
-    <string name="wallpaper_motion_summary">Adjust tilt sensitivity for existing 3D wallpapers. 100% uses the original sensitivity; higher values produce a stronger response. System angle limits are unchanged. Requires Wallpapers and Colorful Engine enabled in LSPosed, then reopening the wallpaper</string>
+    <string name="wallpaper_motion_summary"></string>
     <string name="wallpaper_motion_amount">Tilt sensitivity</string>
     <string name="feature_only_data_sim_signal_title">Only show the data SIM signal</string>
     <string name="feature_only_data_sim_signal_summary">With two SIMs, only show the signal and network type of the SIM selected for mobile data. Follows data SIM changes</string>
@@ -1240,7 +1212,7 @@
     <string name="launcher_icon_label_spacing_offset">Spacing offset</string>
     <string name="launcher_swipe_gesture_group">Swipe-up gestures</string>
     <string name="launcher_swipe_top_title">Simplify the swipe-up top area</string>
-    <string name="launcher_swipe_top_summary">Remove the split-screen entry and hide controls in the top gesture area, with a wider floating-window trigger area; other split-screen entries are unchanged</string>
+    <string name="launcher_swipe_top_summary">Remove the split-screen entry and hide controls in the top gesture area, with a wider floating-window trigger area</string>
     <string name="launcher_float_trigger_width">Floating-window trigger width</string>
     <string name="statusbar_icon_mute">Mute</string>
     <string name="statusbar_icon_network_speed">Network speed</string>
@@ -1299,13 +1271,15 @@
     <string name="qs_tile_corner_size_radius">%1$s tile corner radius</string>
     <string name="launcher_group_effects">Visual effects</string>
     <string name="launcher_force_blur_title">Force launcher blur effects</string>
-    <string name="launcher_force_blur_summary">Try to unlock native desktop, icon menu and animated blur on restricted models while respecting system blur, power saving and theme settings; may increase power use and requires native firmware support; restart the launcher after changing</string>
+    <string name="launcher_force_blur_summary"></string>
 
     <string name="about_contributor_concerrox_title" translatable="false">ConcerroX</string>
     <string name="about_contributor_concerrox_summary" translatable="false">GitHub@ConcerroX</string>
     <string name="about_contributor_fishcpy_title" translatable="false">fishcpy</string>
     <string name="about_contributor_fishcpy_summary" translatable="false">GitHub@fishcpy</string>
     <string name="about_contributor_hehejuice_title" translatable="false">HeheJuice</string>
+    <string name="about_contributor_xiefei_title" translatable="false">xiefei-github</string>
+    <string name="about_contributor_xiefei_summary" translatable="false">GitHub@xiefei-github</string>
     <string name="about_reference_capsule_title" translatable="false">Capsule</string>
     <string name="about_reference_capsule_summary" translatable="false">Kyant0 · Apache-2.0</string>
     <string name="about_reference_liquid_glass_title" translatable="false">AndroidLiquidGlass</string>
@@ -1325,8 +1299,7 @@
     <string name="feature_c16_stacked_signal_save_failed">Could not save the setting</string>
 
 <!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
-    <string name="corepatch_title">Core Patch (Experimental)</string>
-    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_title">Core Patch</string>
     <string name="corepatch_downgrade">Bypass downgrade</string>
     <string name="corepatch_downgrade_summary">Allow installing an older version over a newer version.</string>
     <string name="corepatch_min_sdk">Bypass minimum SDK version check</string>
@@ -1401,10 +1374,10 @@
     <string name="power_indicator_font">Font size</string>
 
     <string name="rotation_suggestion_hide_title">Hide rotation suggestion button</string>
-    <string name="rotation_suggestion_hide_summary">Hide the floating screen-rotation suggestion without changing auto-rotate or orientation settings</string>
+    <string name="rotation_suggestion_hide_summary">Hide the floating screen-rotation suggestion</string>
 
     <string name="hide_screenshot_floating_title">Exclude floating apps from screenshots</string>
-    <string name="hide_screenshot_floating_summary">Exclude supported floating app windows and picture-in-picture layers from system screenshots without closing them</string>
+    <string name="hide_screenshot_floating_summary">Exclude supported floating app windows and picture-in-picture layers from system screenshots</string>
     <string name="power_indicator_hide_discharge_sign">Hide discharge minus sign</string>
     <string name="power_indicator_temperature">Show temperature on two lines</string>
     <string name="power_indicator_temperature_summary">Show power on the first line and battery temperature on the second</string>
@@ -1426,17 +1399,13 @@
     <string name="setting_settings_home_entry_style">Icon style</string>
     <string name="setting_settings_home_entry_style_system">Default</string>
     <string name="setting_settings_home_entry_style_app">App icon</string>
-    <string name="settings_section_system_adaptation">System adaptation</string>
-    <string name="setting_system_adaptation_version">Adaptation version</string>
-    <string name="setting_system_adaptation_save_failed">Could not save the system adaptation version. Check the Xposed framework connection and try again</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_title">Disable LTPO/LTPS downclocking</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_summary">Keep the refresh rate selected in system settings while the screen is on. Enabling this may increase power consumption.</string>
     <string name="display_enhancement_group">Picture enhancement</string>
     <string name="display_enhancement_sr_thermal_title">Remove Ultra-clear enhancement thermal limit</string>
-    <string name="display_enhancement_sr_thermal_summary">Remove the thermal limit specific to Ultra-clear enhancement without unlocking unsupported hardware. May increase heat and power consumption.</string>
+    <string name="display_enhancement_sr_thermal_summary">Remove the thermal limit specific to Ultra-clear enhancement</string>
     <string name="display_enhancement_color_thermal_title">Remove video color enhancement thermal limit</string>
-    <string name="display_enhancement_color_thermal_summary">Remove the thermal limit specific to video color enhancement. May increase heat and power consumption; system-wide thermal protection is unchanged.</string>
-    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="display_enhancement_color_thermal_summary">Remove the thermal limit specific to video color enhancement</string>
     <string name="settings_home_cleanup_group">Settings home</string>
     <string name="settings_home_hide_account_title">Hide top account entry</string>
     <string name="settings_home_hide_account_summary">Hide the account card on the system Settings home page</string>
@@ -1470,4 +1439,21 @@
     <string name="native_live_update_summary">Use native Live Update chips. Enabling this hides Fluid Cloud; the two cannot be used together.</string>
     <string name="setting_hide_module_icon">Hide module App icon</string>
     <string name="setting_hide_module_icon_failed">Unable to change launcher icon visibility</string>
+    <string name="side_volume_group">Side volume slider</string>
+    <string name="side_volume_percentage_title">Show percentage</string>
+    <string name="side_volume_percentage_summary">Show percentages on volume sliders, including multiple volume controls</string>
+    <string name="side_volume_keep_wide_title">Keep the slider wide while adjusting volume</string>
+    <string name="qs_slider_percentage_title">Slider percentage</string>
+    <string name="qs_slider_percentage_summary">Show percentages on brightness and volume sliders, including expanded panels</string>
+    <string name="qs_slider_percentage_properties">Percentage properties</string>
+    <string name="qs_slider_percentage_size">Text size</string>
+    <string name="qs_slider_percentage_color">Text color</string>
+    <string name="qs_slider_percentage_offset">Vertical position offset</string>
+    <string name="settings_color_white">White</string>
+    <string name="settings_color_black">Black</string>
+    <string name="capture_group_screenshot_options">Screenshot options</string>
+    <string name="volume_group_alerts">Volume alerts</string>
+    <string name="control_center_group_visibility">Hidden elements</string>
+    <string name="launcher_group_app_management">App management</string>
+    <string name="launcher_group_recent_interaction">Display and interaction</string>
 </resources>

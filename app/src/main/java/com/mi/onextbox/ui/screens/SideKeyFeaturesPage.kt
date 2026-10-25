@@ -1,26 +1,21 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.Intent
 import android.content.SharedPreferences
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -37,10 +32,6 @@ import com.mi.onextbox.lsp.SideKeyGesture
 import com.mi.onextbox.lsp.SideKeyRules
 import com.mi.onextbox.lsp.SideKeySettings
 import com.mi.onextbox.lsp.SideKeyState
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
-import com.mi.onextbox.ui.settings.Material3ExpressiveAnimatedSegmentPosition
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsSection
@@ -172,16 +163,15 @@ internal fun SideKeyFeaturesPage() {
     }
     SettingsSection(title = stringResource(R.string.side_key_bindings))
     SettingsGroup {
-        val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
+
         SideKeyGesture.entries.forEachIndexed { index, gesture -> key(gesture) {
             val binding = config.binding(gesture)
             val choices = SideKeyFeatureItems.actionsFor(gesture)
             val hasApp = binding.action == SideKeyAction.App
             val selectedTitle = choices.firstOrNull { it.first == binding.action }?.second ?: R.string.side_key_none
             if (index > 0) SettingsDivider()
-            Column(verticalArrangement = Arrangement.spacedBy(if (material) 2.dp else 0.dp)) {
-                Material3ExpressiveAnimatedSegmentPosition(index, if (config.long.action == SideKeyAction.App) 4 else 3, 220) {
-                    SettingsWindowDropdownPreference(
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                run {SettingsWindowDropdownPreference(
                         title = stringResource(when (gesture) {
                             SideKeyGesture.Single -> R.string.side_key_single
                             SideKeyGesture.Double -> R.string.side_key_double
@@ -194,12 +184,9 @@ internal fun SideKeyFeaturesPage() {
                                 onClick = { persist { state -> updateBinding(state, gesture) { it.copy(action = action) } } })
                         }),
                         maxHeight = 400.dp,
-                    )
-                }
-                AnimatedVisibility(
+                    )}
+                FeatureExpandableVisibility(
                     visible = hasApp,
-                    enter = expandVertically(tween(220), expandFrom = Alignment.Top) + fadeIn(tween(160)),
-                    exit = shrinkVertically(tween(180), shrinkTowards = Alignment.Top) + fadeOut(tween(120)),
                 ) {
                     Column {
                         SettingsDivider()
@@ -209,8 +196,7 @@ internal fun SideKeyFeaturesPage() {
                         val duplicateLabels = remember(installed) {
                             installed.groupingBy { it.label }.eachCount().filterValues { it > 1 }.keys
                         }
-                        Material3ExpressiveSegmentPosition(if (gesture == SideKeyGesture.Long) 2 else 1, 3) {
-                            SettingsWindowDropdownPreference(
+                        run {SettingsWindowDropdownPreference(
                                 title = selectedApp?.label ?: stringResource(R.string.side_key_select_app),
                                 summary = selectedApp?.packageName,
                                 showValue = false,
@@ -227,8 +213,7 @@ internal fun SideKeyFeaturesPage() {
                                     )
                                 }),
                                 maxHeight = 400.dp,
-                            )
-                        }
+                            )}
                     }
                 }
             }
@@ -236,19 +221,16 @@ internal fun SideKeyFeaturesPage() {
     }
     SettingsSection(title = stringResource(R.string.side_key_timing))
     SettingsGroup {
-        Material3ExpressiveSegmentPosition(0, 2) {
-            SettingsWindowDropdownPreference(
+        run {SettingsWindowDropdownPreference(
                 title = stringResource(R.string.side_key_long_threshold),
                 entry = DropdownEntry(items = SideKeyRules.longIntervals.map { millis ->
                     DropdownItem(text = stringResource(R.string.side_key_milliseconds, millis),
                         selected = millis.toLong() == config.longMillis,
                         onClick = { persist { it.copy(config = it.config.copy(longMillis = millis.toLong())) } })
                 }),
-            )
-        }
+            )}
         SettingsDivider()
-        Material3ExpressiveSegmentPosition(1, 2) {
-            SettingsWindowDropdownPreference(
+        run {SettingsWindowDropdownPreference(
                 title = stringResource(R.string.side_key_double_interval),
                 summary = stringResource(R.string.side_key_double_summary),
                 entry = DropdownEntry(items = SideKeyRules.doubleIntervals.map { millis ->
@@ -257,7 +239,6 @@ internal fun SideKeyFeaturesPage() {
                         onClick = { persist { it.copy(config = it.config.copy(doubleMillis = millis.toLong())) } })
                 }),
                 enabled = config.double.action != SideKeyAction.None,
-            )
-        }
+            )}
     }
 }

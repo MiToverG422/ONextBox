@@ -11,8 +11,8 @@ class LspMissingScopesNoticeUiContractTest {
         File("app/src/main/java/com/mi/onextbox/ui/common/LspMissingScopesNotice.kt"),
     ).first { it.isFile }.readText()
 
-    @Test fun materialActionRetainsNativeTextButtonPaddingAndPressFeedback() {
-        val action = source.substringAfter("androidx.compose.material3.TextButton(").substringBefore("} else {")
+    @Test fun couiActionRetainsNativeButtonPaddingAndPressFeedback() {
+        val action = source.substringAfter("Button(").substringBefore("if (openFailed)")
         assertTrue(action.contains("onClick = onOpen"))
         assertTrue(action.contains("enabled = !opening"))
         assertFalse(action.contains("contentPadding ="))
@@ -20,9 +20,9 @@ class LspMissingScopesNoticeUiContractTest {
         assertFalse(action.contains("pointerInput"))
     }
 
-    @Test fun materialActionUsesTheNoticeCardContentColor() {
-        val action = source.substringAfter("androidx.compose.material3.TextButton(").substringBefore("} else {")
-        assertTrue(action.contains("ButtonDefaults.textButtonColors("))
-        assertTrue(action.contains("contentColor = MaterialTheme.colorScheme.onTertiaryContainer"))
+    @Test fun noticeUsesCouiCardAndTextColors() {
+        assertTrue(source.contains("import io.github.suqi8.coui.kmp.basic.Button"))
+        assertTrue(source.contains("cornerRadius = AppUiTokens.CardCornerRadius"))
+        assertTrue(source.contains("color = COUITheme.colorScheme.onSurface"))
     }
 }

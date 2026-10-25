@@ -1,20 +1,19 @@
 package com.mi.onextbox.ui.screens
 
+import com.mi.onextbox.lsp.SystemAdaptationVersion
+import com.mi.onextbox.ui.common.rememberSystemAdaptationVersion
+
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
@@ -22,8 +21,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -32,7 +29,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,30 +41,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material3.Button as MaterialButton
-import androidx.compose.material3.Checkbox as MaterialCheckbox
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon as MaterialIcon
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton as MaterialRadioButton
-import androidx.compose.material3.SegmentedListItem
-import androidx.compose.material3.Slider as MaterialSlider
-import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,37 +60,28 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import com.mi.onextbox.R
-import com.mi.onextbox.lsp.EsimDiagnosticsSnapshot
-import com.mi.onextbox.lsp.EsimDiagnosticsStore
-import com.mi.onextbox.lsp.EsimProfileDiagnostic
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.lsp.PhoneManagerSettings
 import com.mi.onextbox.lsp.ThemeStoreSettings
@@ -119,55 +91,24 @@ import com.mi.onextbox.lsp.OShareSettings
 import com.mi.onextbox.lsp.SoftwareUpdateSettings
 import com.mi.onextbox.lsp.FluidCloudBrowserSettings
 import com.mi.onextbox.ui.common.AssistantScreenOption
-import com.mi.onextbox.ui.common.ColorOs17SettingsSlider
 import com.mi.onextbox.ui.common.CouiConfirmDialog
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.rememberSystemAdaptationVersion
-import com.mi.onextbox.lsp.SystemAdaptationVersion
-import com.mi.onextbox.ui.common.LocalAppUiStyle
-import com.mi.onextbox.ui.common.rememberColorOsHapticTick
-import com.mi.onextbox.ui.common.rememberHapticClick
-import com.mi.onextbox.ui.common.rememberHapticToggle
 import com.mi.onextbox.ui.common.restartScopePackages
 import com.mi.onextbox.ui.settings.SettingsCardRow
-import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsListGroup
 import com.mi.onextbox.ui.settings.SettingsPageSurface
-import com.mi.onextbox.ui.settings.SettingsSection
-import com.mi.onextbox.ui.settings.SettingsTokens
-import com.mi.onextbox.ui.settings.SettingsToggleRow
-import com.mi.onextbox.ui.settings.SettingsRowTextContent
-import com.mi.onextbox.ui.settings.SettingsWindowDropdownPreference
-import com.mi.onextbox.ui.settings.Material3ExpressiveAnimatedSegmentPosition
-import com.mi.onextbox.ui.settings.Material3ExpressiveInferredSegmentPosition
-import com.mi.onextbox.ui.settings.Material3ExpressivePreferenceRow
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentContentCard
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
-import com.mi.onextbox.ui.settings.LocalMaterial3ExpressiveSegmentShapes
-import com.mi.onextbox.ui.settings.settingsInteractiveRowHighlight
-import io.github.suqi8.coui.kmp.basic.BasicComponent
-import io.github.suqi8.coui.kmp.basic.Button
 import io.github.suqi8.coui.kmp.basic.Checkbox
 import io.github.suqi8.coui.kmp.basic.Icon
-import io.github.suqi8.coui.kmp.basic.RadioButton
-import io.github.suqi8.coui.kmp.basic.Switch
 import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.basic.TextField
-import io.github.suqi8.coui.kmp.basic.TextFieldMode
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
 import io.github.suqi8.coui.kmp.icon.COUIIcons
-import io.github.suqi8.coui.kmp.icon.extended.Ok
 import io.github.suqi8.coui.kmp.icon.extended.Refresh
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import java.text.DateFormat
-import java.util.Date
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
@@ -270,21 +211,28 @@ fun FeatureMainRoute(
     onLaunchOriginChanged: (FeaturePageMode, FeatureLaunchOrigin) -> Unit = { _, _ -> },
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
 ) {
-    if (rememberSystemAdaptationVersion() == SystemAdaptationVersion.HyperOs3) {
-        HyperOsPerformancePage(
-            modifier = modifier.fillMaxSize(),
-            bottomContentPadding = subPageBottomExtension,
-            blurBackdrop = blurBackdrop,
-        )
-        return
-    }
-    if (!rememberSystemAdaptationVersion().hasColorOs17Pages) {
-        AdaptationEmptyPage(
+    if (rememberSystemAdaptationVersion() == SystemAdaptationVersion.ColorOs16) {
+        val searchState = rememberTextFieldState()
+        val searchQuery = searchState.text.toString()
+        androidx.activity.compose.BackHandler(enabled = searchQuery.isNotBlank()) {
+            searchState.clearText()
+        }
+        SettingsPageSurface(
             title = stringResource(R.string.tab_features),
             modifier = modifier.fillMaxSize(),
-            bottomContentPadding = subPageBottomExtension,
             blurBackdrop = blurBackdrop,
-        )
+            bottomContentPadding = subPageBottomExtension,
+            scrollResetKey = scrollResetKey,
+            externalScrollState = externalScrollState,
+            actions = { EnabledFeaturesAction { onOpen(FeaturePageMode.EnabledFeatures, null) } },
+        ) {
+            FeatureSearchBar(state = searchState)
+            if (searchQuery.isNotBlank()) {
+                FeatureSearchResults(query = searchQuery, onOpen = { onOpen(it, null) })
+            } else {
+                ColorOs16FeatureEntry { onOpen(it, null) }
+            }
+        }
         return
     }
     var showRestartConfirm by remember { mutableStateOf(false) }
@@ -413,7 +361,10 @@ fun FeatureSubRoute(
     onOpenSubPage: (FeaturePageMode) -> Unit,
     onOpenAppErrorDetail: (Long) -> Unit,
 ) {
-    if (!rememberSystemAdaptationVersion().hasColorOs17Pages) {
+    val adaptationVersion = rememberSystemAdaptationVersion()
+    if (adaptationVersion == SystemAdaptationVersion.ColorOs16 &&
+        !isColorOs16FeaturePageAvailable(pageMode)
+    ) {
         AdaptationEmptyPage(
             title = featurePageTitle(pageMode),
             modifier = modifier.fillMaxSize(),
@@ -455,7 +406,7 @@ fun FeatureSubRoute(
     }
     var restartConfirmMode by remember { mutableStateOf<FeaturePageMode?>(null) }
     var pushMonitorRefresh by remember { mutableStateOf(0) }
-    val restartTargets = featureRestartPackages(pageMode)
+    val restartTargets = featureRestartPackages(pageMode, adaptationVersion)
     // The monitor owns its scroll padding and stays within the actual window size.
     val pageBottomExtension = if (pageMode == FeaturePageMode.SystemMessages) 0.dp else subPageBottomExtension
 
@@ -574,7 +525,7 @@ fun FeatureSubRoute(
     FeatureRestartConfirmDialog(
         show = modeToRestart != null,
         title = stringResource(R.string.feature_restart_scope_confirm_title),
-        targets = modeToRestart?.let(::featureRestartPackages).orEmpty(),
+        targets = modeToRestart?.let { featureRestartPackages(it, adaptationVersion) }.orEmpty(),
         onDismissRequest = { restartConfirmMode = null },
     )
 }
@@ -750,15 +701,7 @@ private fun FeatureRestartActionButton(
     contentDescription: String,
     onClick: () -> Unit,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        androidx.compose.material3.IconButton(onClick = onClick) {
-            androidx.compose.material3.Icon(
-                imageVector = COUIIcons.Refresh,
-                contentDescription = contentDescription,
-            )
-        }
-        return
-    }
+
     ColorOsTopBarButton(
         onClick = onClick,
     ) {
@@ -846,7 +789,7 @@ private fun FeatureRestartConfirmDialog(
             }
         },
         content = {
-            val isMaterial3Expressive = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -868,7 +811,7 @@ private fun FeatureRestartConfirmDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = if (isMaterial3Expressive) 48.dp else 32.dp)
+                        .heightIn(min = 32.dp)
                         .toggleable(
                             value = restartSystem,
                             interactionSource = null,
@@ -878,14 +821,7 @@ private fun FeatureRestartConfirmDialog(
                         ),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (isMaterial3Expressive) {
-                        MaterialCheckbox(checked = restartSystem, onCheckedChange = null)
-                        MaterialText(
-                            text = stringResource(R.string.feature_restart_system_option),
-                            modifier = Modifier.padding(start = 8.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    } else {
+                    run {
                         Checkbox(
                             state = ToggleableState(restartSystem),
                             onClick = null,
@@ -905,9 +841,7 @@ private fun FeatureRestartConfirmDialog(
 
 @Composable
 private fun FeatureRestartDialogText(text: String, modifier: Modifier = Modifier) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        MaterialText(text = text, modifier = modifier, style = MaterialTheme.typography.bodyMedium)
-    } else {
+    run {
         Text(
             text = text,
             modifier = modifier,
@@ -928,10 +862,6 @@ private fun FeatureMainPage(
 ) {
     val entries = remember { colorOs17FeatureMainEntries() }
 
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveFeatureMainPage(entries = entries, onOpen = onOpen)
-        return
-    }
 
     if (newStyleEnabled) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -957,12 +887,7 @@ private fun FeatureMainPage(
 @Composable
 internal fun ToolsMainPage(onOpen: (FeaturePageMode) -> Unit) {
     val entries = remember { colorOs17ToolsMainEntries() }
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveFeatureMainPage(
-            entries = entries,
-            onOpen = { mode, _ -> onOpen(mode) },
-        )
-    } else {
+    run {
         ClassicMainEntryList(entries = entries, onOpen = onOpen)
     }
 }
@@ -984,26 +909,6 @@ private fun ClassicMainEntryList(
     }
 }
 
-@Composable
-private fun Material3ExpressiveFeatureMainPage(
-    entries: List<FeatureMainEntry>,
-    onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
-) {
-    SettingsGroup {
-        entries.forEachIndexed { index, entry ->
-            Material3ExpressiveSegmentPosition(index, entries.size) {
-                FeatureEntryRow(
-                    title = stringResource(entry.titleRes),
-                    iconPackages = entry.iconPackages,
-                    iconGlyph = entry.iconGlyph,
-                    onClick = { onOpen(entry.pageMode, null) },
-                    hasDividerAbove = index > 0,
-                    hasDividerBelow = index < entries.lastIndex,
-                )
-            }
-        }
-    }
-}
 
 private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         add(
@@ -1518,6 +1423,11 @@ private fun FeatureSubPage(
     onOpenSubPage: (FeaturePageMode) -> Unit,
     pushMonitorRefresh: Int,
 ) {
+    if (rememberSystemAdaptationVersion() == SystemAdaptationVersion.ColorOs16 &&
+        mode != FeaturePageMode.Aod && mode != FeaturePageMode.SystemMessages) {
+        ColorOs16Features(mode, onOpenSubPage)
+        return
+    }
     when (mode) {
         FeaturePageMode.Desktop -> DesktopCategoriesPage(onOpenSubPage)
         FeaturePageMode.DesktopLayout,
@@ -1672,47 +1582,7 @@ private fun FeatureEntryRow(
     hasDividerAbove: Boolean = false,
     hasDividerBelow: Boolean = false,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        SegmentedListItem(
-            onClick = onClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 76.dp),
-            shapes = LocalMaterial3ExpressiveSegmentShapes.current
-                ?: ListItemDefaults.segmentedShapes(0, 1),
-            colors = ListItemDefaults.segmentedColors(
-                containerColor = MaterialTheme.colorScheme.surfaceBright,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceBright,
-            ),
-            leadingContent = {
-                FeatureIcon(
-                    packageNames = iconPackages,
-                    iconGlyph = iconGlyph,
-                    containerSize = 50.dp,
-                    appIconSize = 44.dp,
-                    fallbackIconSize = 29.dp,
-                    cornerRadius = 12.dp,
-                    shadowRadius = 0.dp,
-                )
-            },
-            trailingContent = {
-                MaterialIcon(
-                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            MaterialText(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        return
-    }
+
 
     SettingsCardRow(
         title = title,
@@ -1740,15 +1610,11 @@ private fun FeatureIcon(
     extendPlate: Boolean = false,
 ) {
     if (iconGlyph != null) {
-        val isMaterial3Expressive = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-        val iconBackground = if (isMaterial3Expressive) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
+
+        val iconBackground = run {
             COUITheme.colorScheme.primary
         }
-        val iconForeground = if (isMaterial3Expressive) {
-            MaterialTheme.colorScheme.onPrimaryContainer
-        } else {
+        val iconForeground = run {
             Color.White
         }
         Box(
@@ -1769,7 +1635,7 @@ private fun FeatureIcon(
                     .size(appIconSize)
                     .drawColoredShadow(
                         color = iconBackground,
-                        alpha = if (isMaterial3Expressive) 0f else 0.7f,
+                        alpha = 0.7f,
                         borderRadius = cornerRadius,
                         shadowRadius = shadowRadius,
                         roundedRect = false,
@@ -1777,14 +1643,7 @@ private fun FeatureIcon(
                     .clip(RoundedCornerShape(cornerRadius))
                     .background(iconBackground),
             ) {
-                if (isMaterial3Expressive) {
-                    MaterialIcon(
-                        imageVector = iconGlyph,
-                        contentDescription = null,
-                        tint = iconForeground,
-                        modifier = Modifier.size(fallbackIconSize),
-                    )
-                } else {
+                run {
                     Icon(
                         imageVector = iconGlyph,
                         contentDescription = null,
@@ -1811,12 +1670,13 @@ private fun FeatureIcon(
         if (appIconInfo == null) {
             appIconInfo = withContext(Dispatchers.IO) {
                 featureAppIconLoadSemaphore.withPermit {
-                    featureAppIconCache[cacheKey] ?: (packageNames + context.packageName)
+                    featureAppIconCache[cacheKey] ?: packageNames
                         .distinct()
                         .firstNotNullOfOrNull { packageName ->
                             loadPackageIconInfo(context, packageName, fallbackColor)
                         }
-                        ?.also { loaded ->
+                        .let { loaded -> loaded ?: loadDefaultFeatureIconInfo(context, fallbackColor) }
+                        .also { loaded ->
                             featureAppIconCache[cacheKey] = loaded
                         }
                 }
@@ -1911,6 +1771,15 @@ private data class AppIconInfo(
 
 private val featureAppIconCache = ConcurrentHashMap<String, AppIconInfo>()
 private val featureAppIconLoadSemaphore = Semaphore(permits = 2)
+
+private fun loadDefaultFeatureIconInfo(context: Context, defaultColor: Color): AppIconInfo {
+    val targetPixels = (64f * context.resources.displayMetrics.density)
+        .roundToInt().coerceIn(128, 256)
+    val bitmap = context.packageManager.defaultActivityIcon.toBitmap(
+        width = targetPixels, height = targetPixels,
+    )
+    return AppIconInfo(bitmap, bitmap.extractPlateColor(defaultColor))
+}
 
 private fun loadPackageIconInfo(
     context: Context,
