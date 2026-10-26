@@ -11,6 +11,7 @@ enum class UpdateBuildType {
 object AppUpdatePreferences {
     private const val PREFS_NAME = "onextbox_prefs"
     private const val KEY_BETA_PLAN = "update_beta_plan"
+    private const val KEY_FEATURE_UPDATES_SEEN = "feature_updates_seen"
     private const val KEY_UPDATE_NOTIFICATIONS = "update_notifications"
     private const val KEY_AUTO_SILENT_UPDATE = "auto_silent_update"
     private const val KEY_LAST_AUTO_SILENT_UPDATE_CHECK = "last_auto_silent_update_check"
@@ -18,6 +19,15 @@ object AppUpdatePreferences {
 
     val currentBuildType: UpdateBuildType
         get() = AppUpdateRules.buildType(BuildConfig.BUILD_TYPE)
+
+    internal fun preferences(context: Context) = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    internal fun hasSeenFeatureUpdates(context: Context, edition: String): Boolean =
+        preferences(context).getString(KEY_FEATURE_UPDATES_SEEN, null) == edition
+
+    internal fun markFeatureUpdatesSeen(context: Context, edition: String) {
+        preferences(context).edit().putString(KEY_FEATURE_UPDATES_SEEN, edition).apply()
+    }
 
     fun getBetaPlanEnabled(context: Context): Boolean = context
         .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

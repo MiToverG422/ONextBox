@@ -216,6 +216,7 @@ fun SettingsCardRow(
 
 
 
+    val spotlight = com.mi.onextbox.ui.screens.featureSpotlightModifier(title)
     val rowSummary = summary.takeIf { it.isNotBlank() }
     if (LocalColorOsDialogContent.current && onClick != null && trailing == null &&
         !showArrow && !showExpandArrow && leadingContent == null) {
@@ -228,6 +229,7 @@ fun SettingsCardRow(
 
     when {
         trailing != null -> BasicComponent(
+            modifier = spotlight,
             title = title,
             summary = rowSummary,
             startAction = startAction,
@@ -242,6 +244,7 @@ fun SettingsCardRow(
             onClick = onClick,
         )
         showArrow -> BasicComponent(
+            modifier = spotlight,
             title = title,
             summary = rowSummary,
             startAction = startAction,
@@ -250,6 +253,7 @@ fun SettingsCardRow(
             onClick = onClick,
         )
         showExpandArrow -> BasicComponent(
+            modifier = spotlight,
             title = title,
             summary = rowSummary,
             startAction = startAction,
@@ -260,6 +264,7 @@ fun SettingsCardRow(
             onClick = onClick,
         )
         else -> BasicComponent(
+            modifier = spotlight,
             title = title,
             summary = rowSummary,
             startAction = startAction,

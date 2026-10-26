@@ -150,6 +150,8 @@ chmod +x gradlew
 
 COUI 组件源码已内置于 `third_party/coui`，构建使用本地模块，无需下载远程 COUI 包。以当前 App 的样式、尺寸和交互为维护基准，版本、校验值与维护说明见该目录的 `sources.json`、`sources.sha256` 和 `UPSTREAM.txt`。运行 `:app:verifyLocalCoui` 可检查 Debug、DebugSlim、Release 均未引入远程 COUI 依赖；其他 Android 构建依赖仍使用常规仓库。
 
+功能页右上角最左侧的「本次更新」入口汇总新增与调整的功能，按当前系统筛选，可直接跳转并定位到对应设置。发布版本时同步维护 `FeatureUpdatesCatalog` 的条目和 `EDITION`；条目复用功能搜索的名称与路由，列表内置并支持离线查看。
+
 <a id="credits"></a>
 
 ## 📚 引用、来源与致谢

@@ -841,9 +841,25 @@
     <string name="about_reference_dexkit_summary" translatable="false">LuckyPray · LGPL-3.0</string>
     <string name="battery_information_group">Battery information</string>
     <string name="battery_show_cycle_count_title">Show battery cycle count</string>
-    <string name="battery_show_cycle_count_summary">Show cycle count below maximum capacity on the Battery health page</string>
     <string name="battery_cycle_count_label">Cycle count</string>
     <string name="battery_cycle_count_unavailable">Unavailable</string>
+    <string name="battery_show_health_status_title">Show health status</string>
+    <string name="battery_show_full_charge_capacity_title">Show full charge capacity</string>
+    <string name="battery_show_rated_capacity_title">Show rated capacity</string>
+    <string name="battery_show_typical_capacity_title">Show typical capacity</string>
+    <string name="battery_health_status_label">Health status</string>
+    <string name="battery_health_full_charge_label">Full charge capacity</string>
+    <string name="battery_health_rated_label">Rated capacity</string>
+    <string name="battery_health_typical_label">Typical capacity</string>
+    <string name="battery_show_calculated_health_title">Show actual capacity (calculated)</string>
+    <string name="battery_health_calculated_label">Actual capacity (calculated)</string>
+    <string name="battery_health_unknown">Unknown</string>
+    <string name="battery_health_good">Good</string>
+    <string name="battery_health_overheat">Overheated</string>
+    <string name="battery_health_dead">Dead</string>
+    <string name="battery_health_over_voltage">Overvoltage</string>
+    <string name="battery_health_failure">Failure</string>
+    <string name="battery_health_cold">Cold</string>
     <string name="feature_settings_app_info_card_title">App details information</string>
     <string name="feature_settings_app_info_card_summary">Show a collapsible information card in app details, with long-press copying</string>
     <string name="settings_app_info_card_title">App information</string>
@@ -1456,4 +1472,17 @@
     <string name="control_center_group_visibility">Hidden elements</string>
     <string name="launcher_group_app_management">App management</string>
     <string name="launcher_group_recent_interaction">Display and interaction</string>
+
+    <string name="feature_updates_title">What’s new</string>
+    <string name="feature_updates_version">Version %1$s</string>
+    <string name="feature_updates_counts">%1$d new · %2$d updated</string>
+    <string name="feature_updates_added">New features (%1$d)</string>
+    <string name="feature_updates_changed">Updated features (%1$d)</string>
+    <string name="feature_updates_empty">No matching features</string>
+    <string name="feature_updates_layout_note">Compatible with newer launchers; fixes custom layouts not applying</string>
+    <string name="feature_updates_corners_note">Unified expansion and collapse animations</string>
+    <string name="feature_updates_about_note">Aligned the layout and dividers in newer About device pages</string>
+    <string name="feature_updates_browser_note">Improved default-browser routing for complete web addresses</string>
+    <string name="feature_updates_ota_note">Improved download link parsing, authentication and redirects</string>
+    <string name="feature_updates_view_features">Explore updated features</string>
 </resources>

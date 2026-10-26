@@ -44,7 +44,12 @@ internal fun BatteryFeaturesPage() {
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
     val groups = listOf(
-        R.string.battery_information_group to listOf(BatteryFeature.ShowCycleCount),
+        R.string.battery_information_group to listOf(
+            BatteryFeature.ShowCycleCount, BatteryFeature.ShowHealthStatus,
+            BatteryFeature.ShowFullChargeCapacity, BatteryFeature.ShowRatedCapacity,
+            BatteryFeature.ShowTypicalCapacity,
+            BatteryFeature.ShowCalculatedHealth,
+        ),
         R.string.battery_optimization_group to listOf(
             BatteryFeature.RemoveRestrictPlugin, BatteryFeature.RestoreDefaultWhitelist,
         ),
@@ -57,14 +62,19 @@ internal fun BatteryFeaturesPage() {
                 SettingsToggleRow(
                     title = stringResource(when (feature) {
                         BatteryFeature.ShowCycleCount -> R.string.battery_show_cycle_count_title
+                        BatteryFeature.ShowHealthStatus -> R.string.battery_show_health_status_title
+                        BatteryFeature.ShowFullChargeCapacity -> R.string.battery_show_full_charge_capacity_title
+                        BatteryFeature.ShowRatedCapacity -> R.string.battery_show_rated_capacity_title
+                        BatteryFeature.ShowTypicalCapacity -> R.string.battery_show_typical_capacity_title
+                        BatteryFeature.ShowCalculatedHealth -> R.string.battery_show_calculated_health_title
                         BatteryFeature.RemoveRestrictPlugin -> R.string.battery_remove_restrict_plugin_title
                         BatteryFeature.RestoreDefaultWhitelist -> R.string.battery_restore_default_whitelist_title
                     }),
-                    summary = stringResource(when (feature) {
-                        BatteryFeature.ShowCycleCount -> R.string.battery_show_cycle_count_summary
-                        BatteryFeature.RemoveRestrictPlugin -> R.string.battery_remove_restrict_plugin_summary
-                        BatteryFeature.RestoreDefaultWhitelist -> R.string.battery_restore_default_whitelist_summary
-                    }),
+                    summary = when (feature) {
+                        BatteryFeature.RemoveRestrictPlugin -> stringResource(R.string.battery_remove_restrict_plugin_summary)
+                        BatteryFeature.RestoreDefaultWhitelist -> stringResource(R.string.battery_restore_default_whitelist_summary)
+                        else -> ""
+                    },
                     checked = states[feature] == true,
                     onCheckedChange = { enabled ->
                         states[feature] = enabled

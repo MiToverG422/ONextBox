@@ -160,7 +160,12 @@ class FeatureSearchTest {
     @Test fun batteryOptimizationFeaturesHaveAnIndependentDestination() {
         listOf(
             com.mi.onextbox.R.string.battery_show_cycle_count_title to
-                com.mi.onextbox.R.string.battery_show_cycle_count_summary,
+                0,
+            com.mi.onextbox.R.string.battery_show_health_status_title to 0,
+            com.mi.onextbox.R.string.battery_show_full_charge_capacity_title to 0,
+            com.mi.onextbox.R.string.battery_show_rated_capacity_title to 0,
+            com.mi.onextbox.R.string.battery_show_typical_capacity_title to 0,
+            com.mi.onextbox.R.string.battery_show_calculated_health_title to 0,
             com.mi.onextbox.R.string.battery_remove_restrict_plugin_title to
                 com.mi.onextbox.R.string.battery_remove_restrict_plugin_summary,
             com.mi.onextbox.R.string.battery_restore_default_whitelist_title to

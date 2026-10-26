@@ -787,9 +787,25 @@
     <string name="battery_restore_default_whitelist_summary">Dùng danh sách miễn trừ chế độ chờ tích hợp thay cho danh sách được gửi xuống và danh sách mở rộng cục bộ. Cần khởi động lại hệ thống</string>
     <string name="battery_information_group">Thông tin pin</string>
     <string name="battery_show_cycle_count_title">Hiển thị số chu kỳ pin</string>
-    <string name="battery_show_cycle_count_summary">Hiển thị số chu kỳ bên dưới dung lượng tối đa trên trang tình trạng pin</string>
     <string name="battery_cycle_count_label">Số chu kỳ</string>
     <string name="battery_cycle_count_unavailable">Không khả dụng</string>
+    <string name="battery_show_health_status_title">Hiển thị tình trạng pin</string>
+    <string name="battery_show_full_charge_capacity_title">Hiển thị dung lượng sạc đầy</string>
+    <string name="battery_show_rated_capacity_title">Hiển thị dung lượng định mức</string>
+    <string name="battery_show_typical_capacity_title">Hiển thị dung lượng điển hình</string>
+    <string name="battery_health_status_label">Tình trạng</string>
+    <string name="battery_health_full_charge_label">Dung lượng sạc đầy</string>
+    <string name="battery_health_rated_label">Dung lượng định mức</string>
+    <string name="battery_health_typical_label">Dung lượng điển hình</string>
+    <string name="battery_show_calculated_health_title">Hiển thị dung lượng thực tế (tính toán)</string>
+    <string name="battery_health_calculated_label">Dung lượng thực tế (tính toán)</string>
+    <string name="battery_health_unknown">Không rõ</string>
+    <string name="battery_health_good">Tốt</string>
+    <string name="battery_health_overheat">Quá nóng</string>
+    <string name="battery_health_dead">Hỏng</string>
+    <string name="battery_health_over_voltage">Quá áp</string>
+    <string name="battery_health_failure">Lỗi</string>
+    <string name="battery_health_cold">Quá lạnh</string>
     <string name="feature_settings_app_info_card_title">Thông tin chi tiết ứng dụng</string>
     <string name="feature_settings_app_info_card_summary">Hiển thị thẻ thông tin có thể thu gọn trong trang chi tiết ứng dụng, hỗ trợ nhấn giữ để sao chép</string>
     <string name="settings_app_info_card_title">Thông tin ứng dụng</string>
@@ -1359,4 +1375,17 @@
     <string name="control_center_group_visibility">Ẩn thành phần</string>
     <string name="launcher_group_app_management">Quản lý ứng dụng</string>
     <string name="launcher_group_recent_interaction">Hiển thị và tương tác</string>
+
+    <string name="feature_updates_title">Có gì mới</string>
+    <string name="feature_updates_version">Phiên bản %1$s</string>
+    <string name="feature_updates_counts">%1$d tính năng mới · %2$d cải tiến</string>
+    <string name="feature_updates_added">Tính năng mới (%1$d)</string>
+    <string name="feature_updates_changed">Tính năng cải tiến (%1$d)</string>
+    <string name="feature_updates_empty">Không có tính năng phù hợp</string>
+    <string name="feature_updates_layout_note">Tương thích trình khởi chạy mới và sửa lỗi áp dụng bố cục tùy chỉnh</string>
+    <string name="feature_updates_corners_note">Thống nhất hiệu ứng mở rộng và thu gọn cài đặt bo góc</string>
+    <string name="feature_updates_about_note">Căn chỉnh bố cục và đường phân cách trong trang thông tin thiết bị mới</string>
+    <string name="feature_updates_browser_note">Cải thiện mở địa chỉ web đầy đủ bằng trình duyệt mặc định</string>
+    <string name="feature_updates_ota_note">Cải thiện phân tích liên kết tải, xác thực và chuyển hướng</string>
+    <string name="feature_updates_view_features">Xem các tính năng được cập nhật</string>
 </resources>

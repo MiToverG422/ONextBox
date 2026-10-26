@@ -18,7 +18,7 @@ class ColorOs16FeaturePolicyTest {
             val titles = ColorOs16FeatureRegistry.titlesForPage(page)
             assertEquals(page.name, titles, ColorOs16FeaturePolicy.featureTitles[page].orEmpty())
             assertEquals(page.name, page in ColorOs16FeaturePolicy.categories || titles.isNotEmpty() ||
-                page == FeaturePageMode.EnabledFeatures, isColorOs16FeaturePageAvailable(page))
+                page in setOf(FeaturePageMode.EnabledFeatures, FeaturePageMode.Updates), isColorOs16FeaturePageAvailable(page))
         }
     }
 

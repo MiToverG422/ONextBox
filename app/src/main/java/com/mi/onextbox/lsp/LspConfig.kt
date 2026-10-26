@@ -261,6 +261,11 @@ object LspConfig {
 
     enum class BatteryFeature(val key: String) {
         ShowCycleCount("show_battery_cycle_count"),
+        ShowHealthStatus("show_battery_health_status"),
+        ShowFullChargeCapacity("show_battery_full_charge_capacity"),
+        ShowRatedCapacity("show_battery_rated_capacity"),
+        ShowTypicalCapacity("show_battery_typical_capacity"),
+        ShowCalculatedHealth("show_battery_calculated_health"),
         RemoveRestrictPlugin("remove_battery_restrict_plugin"),
         RestoreDefaultWhitelist("restore_default_battery_optimization_whitelist");
 

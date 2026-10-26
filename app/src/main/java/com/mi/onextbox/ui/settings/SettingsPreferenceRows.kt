@@ -55,7 +55,7 @@ internal fun SettingsSwitchPreference(
             else if (enabled && switchEnabled) currentOnCheckedChange(!checked)
         }
     })
-    val inputModifier = modifier.settingsInteractionGate(interactionEnabled)
+    val inputModifier = modifier.then(com.mi.onextbox.ui.screens.featureSpotlightModifier(title)).settingsInteractionGate(interactionEnabled)
     val gestureModifier = if (hiddenHoldEnabled) {
         inputModifier.pointerInput(checked, enabled, hiddenHoldDurationMillis) {
             var hiddenHoldTriggered = false
@@ -137,7 +137,7 @@ internal fun SettingsWindowDropdownPreference(
         items = items,
         selectedIndex = selectedIndex,
         title = title,
-        modifier = modifier,
+        modifier = modifier.then(com.mi.onextbox.ui.screens.featureSpotlightModifier(title)),
         summary = summary,
         dropdownColors = dropdownColors,
         startAction = startAction,
@@ -173,7 +173,7 @@ internal fun SettingsWindowDropdownPreference(
     ColorOsWindowDropdownPreference(
         entry = entry,
         title = title,
-        modifier = modifier,
+        modifier = modifier.then(com.mi.onextbox.ui.screens.featureSpotlightModifier(title)),
         summary = summary,
         dropdownColors = dropdownColors,
         startAction = startAction,

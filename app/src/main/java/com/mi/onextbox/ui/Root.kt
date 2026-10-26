@@ -96,6 +96,9 @@ import com.mi.onextbox.ui.screens.FeatureLaunchOrigin
 import com.mi.onextbox.ui.screens.FeaturePageAuroraBackground
 import com.mi.onextbox.ui.screens.FeaturePageMode
 import com.mi.onextbox.ui.screens.FeatureSubRoute
+import com.mi.onextbox.ui.screens.FeatureSpotlightPage
+import com.mi.onextbox.ui.screens.FeatureSpotlightState
+import com.mi.onextbox.ui.screens.LocalFeatureSpotlight
 import com.mi.onextbox.ui.settings.AboutMainRoute
 import com.mi.onextbox.ui.settings.AboutPageMode
 import com.mi.onextbox.ui.settings.AboutSubRoute
@@ -247,6 +250,9 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureEnabledFeatures : RootRoute
+
+    @Serializable
+    data object FeatureUpdates : RootRoute
 
     @Serializable
     data object FeatureDesktopLayout : RootRoute
@@ -461,6 +467,7 @@ private sealed interface RootRoute : NavKey {
 
 private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.EnabledFeatures -> RootRoute.FeatureEnabledFeatures
+    FeaturePageMode.Updates -> RootRoute.FeatureUpdates
     FeaturePageMode.Main -> null
     FeaturePageMode.Desktop -> RootRoute.FeatureDesktop
     FeaturePageMode.DesktopLayout -> RootRoute.FeatureDesktopLayout
@@ -678,6 +685,7 @@ private fun RootFeatureEntry(
     // own its capture layer; sharing the main-page backdrop lets the two scenes
     // overwrite one another and leaves rectangular holes in the toolbar blur.
     val entryBlurBackdrop = rememberChromeBlurBackdrop(ui.blurEffectEnabled)
+    FeatureSpotlightPage(pageMode, ui.bottomNavigationHeight) {
     FeatureSubRoute(
         modifier = Modifier.fillMaxSize(),
         pageMode = pageMode,
@@ -753,6 +761,7 @@ private fun RootFeatureEntry(
         onOpenSubPage = actions.openFeatureSubPage,
         onOpenAppErrorDetail = actions.openAppErrorDetail,
     )
+    }
 }
 
 @Composable
@@ -880,6 +889,7 @@ private fun RootAboutEntry(pageMode: AboutPageMode) {
         onOpenDeveloperOptions = { actions.openAboutSubPage(AboutPageMode.DeveloperOptions) },
         onOpenUpdateSettings = { actions.openAboutSubPage(AboutPageMode.UpdateSettings) },
         onOpenUpdateReleaseNotes = { actions.openAboutSubPage(AboutPageMode.UpdateReleaseNotes) },
+        onOpenFeatureUpdates = { actions.openFeatureSubPage(FeaturePageMode.Updates) },
     )
 }
 
@@ -1035,6 +1045,7 @@ fun Root(
             onDispose {}
         }
         val hapticClick = rememberHapticClick()
+        val featureSpotlight = remember { FeatureSpotlightState() }
         val visibleTabs = bottomTabs
         // An activity restored from the former four-tab layout may still hold tab 4.
         // Move that selection to Features, where Refresh Rate now lives.
@@ -1066,6 +1077,7 @@ fun Root(
                     subclass(RootRoute.Main::class)
                     subclass(RootRoute.FeatureDesktop::class)
                     subclass(RootRoute.FeatureEnabledFeatures::class)
+                    subclass(RootRoute.FeatureUpdates::class)
                     subclass(RootRoute.FeatureDesktopLayout::class)
                     subclass(RootRoute.FeatureDesktopIcons::class)
                     subclass(RootRoute.FeatureDesktopRecent::class)
@@ -2260,6 +2272,9 @@ fun Root(
             entry<RootRoute.FeatureEnabledFeatures> {
                 featureEntryContent(FeaturePageMode.EnabledFeatures)
             }
+            entry<RootRoute.FeatureUpdates> {
+                featureEntryContent(FeaturePageMode.Updates)
+            }
             entry<RootRoute.FeatureDesktopLayout> {
                 featureEntryContent(FeaturePageMode.DesktopLayout)
             }
@@ -2496,6 +2511,7 @@ fun Root(
             LocalMainPagerState provides mainPagerState,
             LocalRootUiState provides rootUiState,
             LocalRootActions provides rootActions,
+            LocalFeatureSpotlight provides featureSpotlight,
         ) {
             Box(
                 modifier = Modifier

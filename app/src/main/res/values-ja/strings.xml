@@ -787,9 +787,25 @@
     <string name="battery_restore_default_whitelist_summary">配信されたリストやローカルの拡張リストの代わりに、システム内蔵のスタンバイ除外リストを使用します。システムの再起動が必要です</string>
     <string name="battery_information_group">バッテリー情報</string>
     <string name="battery_show_cycle_count_title">充電サイクル数を表示</string>
-    <string name="battery_show_cycle_count_summary">バッテリーの状態画面で最大容量の下に充電サイクル数を表示します</string>
     <string name="battery_cycle_count_label">サイクル数</string>
     <string name="battery_cycle_count_unavailable">取得できません</string>
+    <string name="battery_show_health_status_title">バッテリーの健康状態を表示</string>
+    <string name="battery_show_full_charge_capacity_title">満充電容量を表示</string>
+    <string name="battery_show_rated_capacity_title">定格容量を表示</string>
+    <string name="battery_show_typical_capacity_title">標準容量を表示</string>
+    <string name="battery_health_status_label">健康状態</string>
+    <string name="battery_health_full_charge_label">満充電容量</string>
+    <string name="battery_health_rated_label">定格容量</string>
+    <string name="battery_health_typical_label">標準容量</string>
+    <string name="battery_show_calculated_health_title">実容量（計算）を表示</string>
+    <string name="battery_health_calculated_label">実容量（計算）</string>
+    <string name="battery_health_unknown">不明</string>
+    <string name="battery_health_good">良好</string>
+    <string name="battery_health_overheat">過熱</string>
+    <string name="battery_health_dead">劣化</string>
+    <string name="battery_health_over_voltage">過電圧</string>
+    <string name="battery_health_failure">異常</string>
+    <string name="battery_health_cold">低温</string>
     <string name="feature_settings_app_info_card_title">アプリ詳細情報</string>
     <string name="feature_settings_app_info_card_summary">アプリ詳細画面に折りたたみ可能な情報カードを表示し、長押しでコピーできます</string>
     <string name="settings_app_info_card_title">アプリ情報</string>
@@ -1384,4 +1400,17 @@
     <string name="control_center_group_visibility">要素の非表示</string>
     <string name="launcher_group_app_management">アプリ管理</string>
     <string name="launcher_group_recent_interaction">表示と操作</string>
+
+    <string name="feature_updates_title">今回の更新</string>
+    <string name="feature_updates_version">バージョン %1$s</string>
+    <string name="feature_updates_counts">新機能 %1$d 件 · 改善 %2$d 件</string>
+    <string name="feature_updates_added">新機能（%1$d）</string>
+    <string name="feature_updates_changed">機能の改善（%1$d）</string>
+    <string name="feature_updates_empty">一致する機能がありません</string>
+    <string name="feature_updates_layout_note">新しいランチャーに対応し、カスタム配置が適用されない問題を修正</string>
+    <string name="feature_updates_corners_note">角丸設定の展開・折りたたみアニメーションを統一</string>
+    <string name="feature_updates_about_note">新しいデバイス情報画面の配置と区切り線を調整</string>
+    <string name="feature_updates_browser_note">完全な URL を既定のブラウザーで開く処理を改善</string>
+    <string name="feature_updates_ota_note">ダウンロードリンクの解析、認証、リダイレクト処理を改善</string>
+    <string name="feature_updates_view_features">更新された機能を見る</string>
 </resources>

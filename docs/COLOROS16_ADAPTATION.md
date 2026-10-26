@@ -25,6 +25,8 @@
 | 已接入 | 使用系统内置电池优化白名单 | Battery | system |
 | 已接入 | 阻止电池限制插件加载 | Battery | com.oplus.battery |
 | 已接入 | 显示电池循环次数 | Battery | com.oplus.battery |
+| 已接入 | 显示电池健康状态、充满容量、额定容量、典型容量 | Battery | com.oplus.battery |
+| 已接入 | 显示实际容量（计算） | Battery | com.oplus.battery |
 | 已接入 | 允许系统应用使用隐藏 API | CorePatch | system |
 | 已接入 | 禁用 APK 签名验证 | CorePatch | system |
 | 已接入 | 禁用唯一签名匹配 | CorePatch | system |

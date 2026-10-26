@@ -40,8 +40,8 @@ class BatteryOptimizationRulesTest {
 
     @Test fun batteryFeatureKeysAreIndependentAndFitSystemPropertyLimits() {
         val features = LspConfig.BatteryFeature.entries
-        assertEquals(3, features.size)
-        assertEquals(3, features.map { it.key }.distinct().size)
+        assertEquals(8, features.size)
+        assertEquals(8, features.map { it.key }.distinct().size)
         assertTrue(features.all { it.persistPropertyKey.length < 92 })
         assertEquals("com.oplus.battery", BatteryOptimizationRules.PACKAGE_NAME)
     }

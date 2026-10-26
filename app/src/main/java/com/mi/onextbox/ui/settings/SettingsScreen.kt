@@ -110,6 +110,7 @@ fun AboutSubRoute(
     onOpenDeveloperOptions: () -> Unit,
     onOpenUpdateSettings: () -> Unit,
     onOpenUpdateReleaseNotes: () -> Unit,
+    onOpenFeatureUpdates: (() -> Unit)? = null,
 ) {
     if (pageMode == AboutPageMode.Logs) {
         AppLogsRoute(
@@ -190,7 +191,7 @@ fun AboutSubRoute(
                     onOpenReleaseNotes = onOpenUpdateReleaseNotes,
                 )
                 AboutPageMode.UpdateSettings -> SoftwareUpdateAutoSettingsPage(softwareUpdateState)
-                AboutPageMode.UpdateReleaseNotes -> SoftwareUpdateReleaseNotesPage(softwareUpdateState)
+                AboutPageMode.UpdateReleaseNotes -> SoftwareUpdateReleaseNotesPage(softwareUpdateState, onOpenFeatureUpdates)
                 AboutPageMode.Contributors -> AboutContributorsPage()
                 AboutPageMode.References -> AboutReferencesPage()
                 AboutPageMode.Logs -> Unit

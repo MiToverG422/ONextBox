@@ -787,9 +787,25 @@
     <string name="battery_restore_default_whitelist_summary">使用系統內建的待機豁免名單，略過下發及本機擴充名單，需要重新啟動系統</string>
     <string name="battery_information_group">電池資訊</string>
     <string name="battery_show_cycle_count_title">顯示電池循環次數</string>
-    <string name="battery_show_cycle_count_summary">在電池健康頁的最大電池容量下顯示循環次數</string>
     <string name="battery_cycle_count_label">循環次數</string>
     <string name="battery_cycle_count_unavailable">無法取得</string>
+    <string name="battery_show_health_status_title">顯示健康狀態</string>
+    <string name="battery_show_full_charge_capacity_title">顯示充滿容量</string>
+    <string name="battery_show_rated_capacity_title">顯示額定容量</string>
+    <string name="battery_show_typical_capacity_title">顯示典型容量</string>
+    <string name="battery_health_status_label">健康狀態</string>
+    <string name="battery_health_full_charge_label">充滿容量</string>
+    <string name="battery_health_rated_label">額定容量</string>
+    <string name="battery_health_typical_label">典型容量</string>
+    <string name="battery_show_calculated_health_title">顯示實際容量（計算）</string>
+    <string name="battery_health_calculated_label">實際容量（計算）</string>
+    <string name="battery_health_unknown">未知</string>
+    <string name="battery_health_good">良好</string>
+    <string name="battery_health_overheat">過熱</string>
+    <string name="battery_health_dead">損壞</string>
+    <string name="battery_health_over_voltage">電壓過高</string>
+    <string name="battery_health_failure">故障</string>
+    <string name="battery_health_cold">過冷</string>
     <string name="feature_settings_app_info_card_title">應用程式詳細資訊</string>
     <string name="feature_settings_app_info_card_summary">在應用程式詳細資訊頁顯示可摺疊的資訊卡片，支援長按複製</string>
     <string name="settings_app_info_card_title">應用程式資訊</string>
@@ -1383,4 +1399,17 @@
     <string name="control_center_group_visibility">隱藏項目</string>
     <string name="launcher_group_app_management">應用程式管理</string>
     <string name="launcher_group_recent_interaction">顯示與互動</string>
+
+    <string name="feature_updates_title">本次更新</string>
+    <string name="feature_updates_version">版本 %1$s</string>
+    <string name="feature_updates_counts">新增 %1$d 項 · 調整 %2$d 項</string>
+    <string name="feature_updates_added">新增功能（%1$d）</string>
+    <string name="feature_updates_changed">功能調整（%1$d）</string>
+    <string name="feature_updates_empty">沒有符合的功能</string>
+    <string name="feature_updates_layout_note">相容新版桌面，修復自訂配置無法套用</string>
+    <string name="feature_updates_corners_note">統一圓角設定的展開收合動畫</string>
+    <string name="feature_updates_about_note">對齊新版關於本機的配置與分隔線</string>
+    <string name="feature_updates_browser_note">改善完整網址的預設瀏覽器跳轉</string>
+    <string name="feature_updates_ota_note">改善下載連結解析、驗證與重新導向</string>
+    <string name="feature_updates_view_features">查看本次更新的功能</string>
 </resources>

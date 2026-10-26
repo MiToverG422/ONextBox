@@ -787,9 +787,25 @@
     <string name="battery_restore_default_whitelist_summary">Использует встроенный список исключений режима ожидания вместо загруженных и локальных расширенных списков. Требуется перезагрузка системы</string>
     <string name="battery_information_group">Информация о батарее</string>
     <string name="battery_show_cycle_count_title">Показывать число циклов батареи</string>
-    <string name="battery_show_cycle_count_summary">Показывать число циклов под максимальной ёмкостью на странице состояния батареи</string>
     <string name="battery_cycle_count_label">Число циклов</string>
     <string name="battery_cycle_count_unavailable">Недоступно</string>
+    <string name="battery_show_health_status_title">Показывать состояние батареи</string>
+    <string name="battery_show_full_charge_capacity_title">Показывать ёмкость полного заряда</string>
+    <string name="battery_show_rated_capacity_title">Показывать номинальную ёмкость</string>
+    <string name="battery_show_typical_capacity_title">Показывать типичную ёмкость</string>
+    <string name="battery_health_status_label">Состояние</string>
+    <string name="battery_health_full_charge_label">Ёмкость полного заряда</string>
+    <string name="battery_health_rated_label">Номинальная ёмкость</string>
+    <string name="battery_health_typical_label">Типичная ёмкость</string>
+    <string name="battery_show_calculated_health_title">Показывать фактическую ёмкость (расчёт)</string>
+    <string name="battery_health_calculated_label">Фактическая ёмкость (расчёт)</string>
+    <string name="battery_health_unknown">Неизвестно</string>
+    <string name="battery_health_good">Хорошее</string>
+    <string name="battery_health_overheat">Перегрев</string>
+    <string name="battery_health_dead">Неисправна</string>
+    <string name="battery_health_over_voltage">Перенапряжение</string>
+    <string name="battery_health_failure">Сбой</string>
+    <string name="battery_health_cold">Переохлаждение</string>
     <string name="feature_settings_app_info_card_title">Сведения о приложении</string>
     <string name="feature_settings_app_info_card_summary">Показывать сворачиваемую карточку в сведениях о приложении с копированием долгим нажатием</string>
     <string name="settings_app_info_card_title">Информация о приложении</string>
@@ -1386,4 +1402,17 @@
     <string name="control_center_group_visibility">Скрытие элементов</string>
     <string name="launcher_group_app_management">Управление приложениями</string>
     <string name="launcher_group_recent_interaction">Отображение и взаимодействие</string>
+
+    <string name="feature_updates_title">Что нового</string>
+    <string name="feature_updates_version">Версия %1$s</string>
+    <string name="feature_updates_counts">Новых: %1$d · Улучшено: %2$d</string>
+    <string name="feature_updates_added">Новые функции (%1$d)</string>
+    <string name="feature_updates_changed">Улучшенные функции (%1$d)</string>
+    <string name="feature_updates_empty">Совпадений не найдено</string>
+    <string name="feature_updates_layout_note">Исправлено применение сетки в новых версиях рабочего стола</string>
+    <string name="feature_updates_corners_note">Унифицирована анимация раскрытия настроек скругления</string>
+    <string name="feature_updates_about_note">Исправлены отступы и разделители на новом экране сведений об устройстве</string>
+    <string name="feature_updates_browser_note">Улучшено открытие полных адресов в браузере по умолчанию</string>
+    <string name="feature_updates_ota_note">Улучшены разбор ссылок, авторизация и перенаправления</string>
+    <string name="feature_updates_view_features">Посмотреть обновлённые функции</string>
 </resources>

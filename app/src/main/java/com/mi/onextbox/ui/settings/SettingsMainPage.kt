@@ -1000,7 +1000,7 @@ fun SoftwareUpdateDownloadBar(state: SoftwareUpdateUiState) {
 }
 
 @Composable
-fun SoftwareUpdateReleaseNotesPage(state: SoftwareUpdateUiState) {
+fun SoftwareUpdateReleaseNotesPage(state: SoftwareUpdateUiState, onOpenFeatureUpdates: (() -> Unit)? = null) {
     val context = LocalContext.current
     val currentVersionName = rememberAppVersionName()
     val currentVersionCode = BuildConfig.APP_VERSION_CODE_LABEL
@@ -1052,6 +1052,16 @@ fun SoftwareUpdateReleaseNotesPage(state: SoftwareUpdateUiState) {
             releaseNotesText = releaseNotesText,
             stateKey = versionSummary,
         )
+        if (onOpenFeatureUpdates != null && availableUpdate == null) {
+            SettingsGroup {
+                SettingsCardRow(
+                    title = stringResource(R.string.feature_updates_view_features),
+                    summary = "",
+                    showArrow = true,
+                    onClick = onOpenFeatureUpdates,
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(18.dp))
 

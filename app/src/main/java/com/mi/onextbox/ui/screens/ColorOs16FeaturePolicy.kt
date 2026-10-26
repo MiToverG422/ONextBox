@@ -51,7 +51,7 @@ internal object ColorOs16FeaturePolicy {
         }
 
     fun isPageAvailable(page: FeaturePageMode): Boolean =
-        page in categories || page in featureTitles || page == FeaturePageMode.EnabledFeatures
+        page in categories || page in featureTitles || page in setOf(FeaturePageMode.EnabledFeatures, FeaturePageMode.Updates)
 
     fun isFeatureAvailable(version: SystemAdaptationVersion, page: FeaturePageMode, title: Int): Boolean =
         version != SystemAdaptationVersion.ColorOs16 || title in featureTitles[page].orEmpty()
@@ -97,7 +97,7 @@ internal fun colorOs16PageHasAll(page: FeaturePageMode, titles: Set<Int>) =
 internal fun featureRestartPackages(mode: FeaturePageMode, version: SystemAdaptationVersion): List<String> {
     if (version != SystemAdaptationVersion.ColorOs16) return featureRestartPackages(mode)
     if (!ColorOs16FeaturePolicy.isPageAvailable(mode)) return emptyList()
-    if (mode in setOf(FeaturePageMode.Main, FeaturePageMode.EnabledFeatures, FeaturePageMode.CorePatch)) return emptyList()
+    if (mode in setOf(FeaturePageMode.Main, FeaturePageMode.EnabledFeatures, FeaturePageMode.Updates, FeaturePageMode.CorePatch)) return emptyList()
     return (ColorOs16FeatureRegistry.packagesForPage(mode) +
         ColorOs16FeaturePolicy.categories[mode].orEmpty().flatMap(ColorOs16FeatureRegistry::packagesForPage)).distinct()
 }

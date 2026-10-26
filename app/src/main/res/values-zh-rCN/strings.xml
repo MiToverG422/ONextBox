@@ -837,9 +837,25 @@
     <string name="battery_restore_default_whitelist_summary">使用系统内置的待机豁免名单，跳过下发及本地扩展名单，需要重启系统</string>
     <string name="battery_information_group">电池信息</string>
     <string name="battery_show_cycle_count_title">显示电池循环次数</string>
-    <string name="battery_show_cycle_count_summary">在电池健康页的最大电池容量下显示循环次数</string>
     <string name="battery_cycle_count_label">循环次数</string>
     <string name="battery_cycle_count_unavailable">无法获取</string>
+    <string name="battery_show_health_status_title">显示健康状态</string>
+    <string name="battery_show_full_charge_capacity_title">显示充满容量</string>
+    <string name="battery_show_rated_capacity_title">显示额定容量</string>
+    <string name="battery_show_typical_capacity_title">显示典型容量</string>
+    <string name="battery_health_status_label">健康状态</string>
+    <string name="battery_health_full_charge_label">充满容量</string>
+    <string name="battery_health_rated_label">额定容量</string>
+    <string name="battery_health_typical_label">典型容量</string>
+    <string name="battery_show_calculated_health_title">显示实际容量（计算）</string>
+    <string name="battery_health_calculated_label">实际容量（计算）</string>
+    <string name="battery_health_unknown">未知</string>
+    <string name="battery_health_good">良好</string>
+    <string name="battery_health_overheat">过热</string>
+    <string name="battery_health_dead">损坏</string>
+    <string name="battery_health_over_voltage">电压过高</string>
+    <string name="battery_health_failure">故障</string>
+    <string name="battery_health_cold">过冷</string>
     <string name="feature_settings_app_info_card_title">应用详情信息</string>
     <string name="feature_settings_app_info_card_summary">在应用详情页显示可折叠的信息卡片，支持长按复制</string>
     <string name="settings_app_info_card_title">应用信息</string>
@@ -1433,4 +1449,17 @@
     <string name="control_center_group_visibility">元素隐藏</string>
     <string name="launcher_group_app_management">应用管理</string>
     <string name="launcher_group_recent_interaction">显示与交互</string>
+
+    <string name="feature_updates_title">本次更新</string>
+    <string name="feature_updates_version">版本 %1$s</string>
+    <string name="feature_updates_counts">新增 %1$d 项 · 调整 %2$d 项</string>
+    <string name="feature_updates_added">新增功能（%1$d）</string>
+    <string name="feature_updates_changed">功能调整（%1$d）</string>
+    <string name="feature_updates_empty">没有匹配的功能</string>
+    <string name="feature_updates_layout_note">兼容新版桌面，修复自定义布局不生效</string>
+    <string name="feature_updates_corners_note">统一圆角设置的展开收起动画</string>
+    <string name="feature_updates_about_note">对齐新版关于本机的布局与分割线</string>
+    <string name="feature_updates_browser_note">完善完整网址的默认浏览器跳转</string>
+    <string name="feature_updates_ota_note">完善下载链接解析、鉴权与重定向处理</string>
+    <string name="feature_updates_view_features">查看本次更新的功能</string>
 </resources>

@@ -177,6 +177,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     ScreenRecording,
     Assistant,
     EnabledFeatures(true),
+    Updates(true),
 }
 
 data class FeatureLaunchOrigin(
@@ -224,7 +225,10 @@ fun FeatureMainRoute(
             bottomContentPadding = subPageBottomExtension,
             scrollResetKey = scrollResetKey,
             externalScrollState = externalScrollState,
-            actions = { EnabledFeaturesAction { onOpen(FeaturePageMode.EnabledFeatures, null) } },
+            actions = {
+                FeatureUpdatesAction { onOpen(FeaturePageMode.Updates, null) }
+                EnabledFeaturesAction { onOpen(FeaturePageMode.EnabledFeatures, null) }
+            },
         ) {
             FeatureSearchBar(state = searchState)
             if (searchQuery.isNotBlank()) {
@@ -261,6 +265,7 @@ fun FeatureMainRoute(
             null
         },
         actions = {
+            FeatureUpdatesAction { onOpen(FeaturePageMode.Updates, null) }
             EnabledFeaturesAction { onOpen(FeaturePageMode.EnabledFeatures, null) }
             FeatureRestartActionButton(
                 contentDescription = stringResource(R.string.feature_restart_all_scope_title),
@@ -377,6 +382,11 @@ fun FeatureSubRoute(
     val context = LocalContext.current
     val resources = LocalResources.current
     val subPageStateHolder = rememberSaveableStateHolder()
+    if (pageMode == FeaturePageMode.Updates) {
+        FeatureUpdatesPage(modifier.fillMaxSize(), subPageBottomExtension, blurBackdrop,
+            transitionScrollState, onBack, onOpenSubPage)
+        return
+    }
     if (pageMode == FeaturePageMode.EnabledFeatures) {
         EnabledFeaturesPage(
             modifier = modifier.fillMaxSize(),
@@ -546,6 +556,7 @@ private fun Modifier.extendPastBottom(extra: Dp): Modifier = layout { measurable
 @Composable
 internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.EnabledFeatures -> stringResource(R.string.enabled_features_title)
+    FeaturePageMode.Updates -> stringResource(R.string.feature_updates_title)
     FeaturePageMode.Main -> stringResource(R.string.tab_features)
     FeaturePageMode.Desktop -> stringResource(R.string.section_system_desktop)
     FeaturePageMode.DesktopLayout -> stringResource(R.string.desktop_category_layout)
@@ -682,6 +693,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
         "com.google.android.googlequicksearchbox",
     )
     FeaturePageMode.EnabledFeatures,
+    FeaturePageMode.Updates,
     FeaturePageMode.Main,
     // C17 flexible handles also live in system_server. Offer no misleading SystemUI-only restart.
     FeaturePageMode.SystemUiSmallWindow,
@@ -1569,7 +1581,7 @@ private fun FeatureSubPage(
             assistantNativeCircleEnabled = assistantNativeCircleEnabled,
             onAssistantNativeCircleEnabledChange = onAssistantNativeCircleEnabledChange,
         )
-        FeaturePageMode.Main, FeaturePageMode.EnabledFeatures -> Unit
+        FeaturePageMode.Main, FeaturePageMode.EnabledFeatures, FeaturePageMode.Updates -> Unit
     }
 }
 

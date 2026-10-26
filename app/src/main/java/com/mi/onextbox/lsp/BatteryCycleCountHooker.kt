@@ -39,12 +39,12 @@ internal object BatteryCycleCountHooker {
     private var reader = newReader()
     private val main = Handler(Looper.getMainLooper())
     private val roots = WeakHashMap<ViewGroup, Boolean>()
-    private data class Reading(val count: Int?, val timestamp: Long)
+    private data class Reading(val info: BatteryHealthInfo, val timestamp: Long)
     @Volatile private var cached: Reading? = null
 
     private class Card(
         val column: LinearLayout,
-        val value: TextView,
+        val rows: Map<BatteryFeature, Pair<View, TextView>>,
         val children: List<Pair<View, ViewGroup.LayoutParams>>,
     ) {
         val readState = BatteryCycleReadState()
@@ -104,7 +104,21 @@ internal object BatteryCycleCountHooker {
         }
     }
 
-    private fun enabled() = LspConfig.isBatteryFeatureEnabledXposed(BatteryFeature.ShowCycleCount)
+    private val informationFeatures = listOf(
+        BatteryFeature.ShowCalculatedHealth,
+        BatteryFeature.ShowCycleCount, BatteryFeature.ShowHealthStatus,
+        BatteryFeature.ShowFullChargeCapacity, BatteryFeature.ShowRatedCapacity,
+        BatteryFeature.ShowTypicalCapacity,
+    )
+
+    private fun enabled() = informationFeatures.any(LspConfig::isBatteryFeatureEnabledXposed)
+
+    private fun refresh(state: Card, info: BatteryHealthInfo?) {
+        state.rows.forEach { (feature, row) ->
+            row.first.visibility = if (LspConfig.isBatteryFeatureEnabledXposed(feature)) View.VISIBLE else View.GONE
+            show(row.second, feature, info)
+        }
+    }
 
     private fun card(root: ViewGroup): Card? = (0 until root.childCount).firstNotNullOfOrNull {
         root.getChildAt(it).tag as? Card
@@ -120,7 +134,7 @@ internal object BatteryCycleCountHooker {
         }
         if (state == null) state = append(root)
         val current = state
-        cached?.let { show(current.value, it.count) }
+        refresh(current, cached?.info)
         val generation = current.readState.begin() ?: return
         val host = root.context.applicationContext
         val rootRef = WeakReference(root)
@@ -140,7 +154,7 @@ internal object BatteryCycleCountHooker {
                     if (retryAfterRejection) update(target)
                     return@Runnable
                 }
-                if (enabled()) show(row.value, reading.count) else restore(target, row)
+                if (enabled()) refresh(row, reading.info) else restore(target, row)
             }
             if (Looper.myLooper() == Looper.getMainLooper()) completion.run() else main.post(completion)
         }
@@ -185,14 +199,25 @@ internal object BatteryCycleCountHooker {
         require(title != null && capacity != null && title.parent === root && capacity.parent === root)
         val inflater = LayoutInflater.from(context)
         val top = inflater.inflate(layout, null) as ViewGroup
-        val bottom = inflater.inflate(layout, null) as ViewGroup
-        val cycleTitle = requireNotNull(bottom.findViewById<TextView>(titleId))
-        val cycleValue = requireNotNull(bottom.findViewById<TextView>(dataId))
-        cycleTitle.id = View.generateViewId()
-        cycleValue.id = View.generateViewId()
-        cycleTitle.text = moduleString(context, "battery_cycle_count_label", "Cycle count")
-        cycleValue.setTextColor(capacity.textColors)
-        show(cycleValue, cached?.count)
+        val rows = informationFeatures.associateWith { feature ->
+            val row = inflater.inflate(layout, null) as ViewGroup
+            val rowTitle = requireNotNull(row.findViewById<TextView>(titleId))
+            val rowValue = requireNotNull(row.findViewById<TextView>(dataId))
+            rowTitle.id = View.generateViewId()
+            rowValue.id = View.generateViewId()
+            val (name, fallback) = when (feature) {
+                BatteryFeature.ShowCycleCount -> "battery_cycle_count_label" to "Cycle count"
+                BatteryFeature.ShowHealthStatus -> "battery_health_status_label" to "Health status"
+                BatteryFeature.ShowFullChargeCapacity -> "battery_health_full_charge_label" to "Full charge capacity"
+                BatteryFeature.ShowRatedCapacity -> "battery_health_rated_label" to "Rated capacity"
+                BatteryFeature.ShowTypicalCapacity -> "battery_health_typical_label" to "Typical capacity"
+                BatteryFeature.ShowCalculatedHealth -> "battery_health_calculated_label" to "Actual capacity (calculated)"
+                else -> error("Not a battery information feature")
+            }
+            rowTitle.text = moduleString(context, name, fallback)
+            rowValue.setTextColor(capacity.textColors)
+            row to rowValue
+        }
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             isFocusable = false
@@ -204,15 +229,16 @@ internal object BatteryCycleCountHooker {
             ModernReflect.setObjectField(params, it, 0)
         }
         val children = (0 until root.childCount).map { root.getChildAt(it).let { child -> child to child.layoutParams } }
-        val state = Card(column, cycleValue, children)
+        val state = Card(column, rows, children)
         column.tag = state
-        listOf(top, bottom).forEach { row ->
+        (listOf(top) + rows.values.map { it.first }).forEach { row ->
             row.id = View.NO_ID
             row.background = null
             row.setPadding(0, 0, 0, 0)
             column.addView(row, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
+        refresh(state, cached?.info)
         top.removeAllViews()
         try {
             children.forEach { (child, childParams) -> root.removeView(child); top.addView(child, childParams) }
@@ -234,12 +260,11 @@ internal object BatteryCycleCountHooker {
         }
     }
 
-    private fun read(context: Context): Int? {
+    private fun read(context: Context): BatteryHealthInfo {
         val broadcast = runCatching {
             context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-                ?.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, -1)
         }.getOrNull()
-        val count = BatteryCycleCountRules.resolve(broadcast,
+        val count = BatteryCycleCountRules.resolve(broadcast?.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, -1),
             kernel = { runCatching { File("/sys/class/power_supply/battery/cycle_count").readText() }.getOrNull() },
             diagnostic = {
                 runCatching {
@@ -250,15 +275,47 @@ internal object BatteryCycleCountHooker {
             },
         )
         HookLog.d(TAG, "Cycle count read: ${count ?: "unavailable"}")
-        return count
+        return BatteryHealthInfoReader.read(context, broadcast, count)
     }
 
-    private fun show(value: TextView, count: Int?) {
-        value.text = if (count == null) hostString(value.context, "battery_health_secret_code_info_obtain_fail",
+    private fun show(value: TextView, feature: BatteryFeature, info: BatteryHealthInfo?) {
+        val unavailable = hostString(value.context, "battery_health_secret_code_info_obtain_fail",
             "battery_cycle_count_unavailable", "Unavailable")
-        else NumberFormat.getIntegerInstance(value.resources.configuration.locales[0]).apply {
+        if (feature == BatteryFeature.ShowCalculatedHealth) {
+            val ratio = BatteryHealthInfoRules.healthRatio(info?.fullChargeCapacity, info?.ratedCapacity)
+            value.text = ratio?.let {
+                NumberFormat.getPercentInstance(value.resources.configuration.locales[0]).apply {
+                    minimumFractionDigits = 2
+                    maximumFractionDigits = 2
+                    isGroupingUsed = false
+                }.format(it)
+            } ?: unavailable
+            return
+        }
+        if (feature == BatteryFeature.ShowHealthStatus) {
+            val health = when (info?.health) {
+                BatteryManager.BATTERY_HEALTH_UNKNOWN -> "unknown" to "Unknown"
+                BatteryManager.BATTERY_HEALTH_GOOD -> "good" to "Good"
+                BatteryManager.BATTERY_HEALTH_OVERHEAT -> "overheat" to "Overheated"
+                BatteryManager.BATTERY_HEALTH_DEAD -> "dead" to "Dead"
+                BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "over_voltage" to "Overvoltage"
+                BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "failure" to "Failure"
+                BatteryManager.BATTERY_HEALTH_COLD -> "cold" to "Cold"
+                else -> null
+            }
+            value.text = health?.let { moduleString(value.context, "battery_health_${it.first}", it.second) } ?: unavailable
+            return
+        }
+        val count = when (feature) {
+            BatteryFeature.ShowCycleCount -> info?.cycleCount
+            BatteryFeature.ShowFullChargeCapacity -> info?.fullChargeCapacity
+            BatteryFeature.ShowRatedCapacity -> info?.ratedCapacity
+            BatteryFeature.ShowTypicalCapacity -> info?.typicalCapacity
+            else -> null
+        }
+        value.text = if (count == null) unavailable else NumberFormat.getIntegerInstance(value.resources.configuration.locales[0]).apply {
             isGroupingUsed = false
-        }.format(count)
+        }.format(count) + if (feature == BatteryFeature.ShowCycleCount) "" else " mAh"
     }
 
     @SuppressLint("DiscouragedApi") // IDs belong to the host APK and vary between firmware releases.
