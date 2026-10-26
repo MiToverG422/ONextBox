@@ -28,3 +28,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "ONextBox"
 include(":app")
+
+listOf("core", "shader", "squircle", "ui", "preference", "icons", "blur", "navigation3-ui")
+    .forEach { component ->
+        val module = "coui-$component"
+        include(":$module")
+        project(":$module").projectDir = file("third_party/coui/$module")
+    }

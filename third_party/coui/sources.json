@@ -1,0 +1,71 @@
+{
+  "baseline": "e193b64fa603691fdea448786d15b0c810effa5a",
+  "repository": "https://github.com/suqi8/coui",
+  "license": "Apache-2.0",
+  "artifacts": [
+    {
+      "module": "core",
+      "version": "1.1.0",
+      "url": "https://repo.maven.apache.org/maven2/io/github/suqi8/coui/kmp/coui-core-android/1.1.0/coui-core-android-1.1.0-sources.jar",
+      "sha256": "b930fce4127700c1e43b388d25f1a4add165fd4aac1cf8b05814ebf849be550f",
+      "aar_sha256": "77943a06732f557ed75a8eef77490e250207f2cc97d74f40a89cb39f206289ff",
+      "kotlin_files": 3
+    },
+    {
+      "module": "shader",
+      "version": "1.1.0",
+      "url": "https://repo.maven.apache.org/maven2/io/github/suqi8/coui/kmp/coui-shader-android/1.1.0/coui-shader-android-1.1.0-sources.jar",
+      "sha256": "c3075b158771287976e09a0884e6dcd4eb82cfffdd1f8fda6f73824f0afe901b",
+      "aar_sha256": "c1974ad6b0a71b148bd057233d595c0c42c7655140c2615441136c22179ab8b4",
+      "kotlin_files": 4
+    },
+    {
+      "module": "squircle",
+      "version": "1.1.0",
+      "url": "https://repo.maven.apache.org/maven2/io/github/suqi8/coui/kmp/coui-squircle-android/1.1.0/coui-squircle-android-1.1.0-sources.jar",
+      "sha256": "e5ce2f919d20956043b8d5e5b609109faef1c1b47c300ff542eb49e3de052f60",
+      "aar_sha256": "25d201e761fafe72a1b85105c15d055664ac636dd5a4205bbc54e13717e7927a",
+      "kotlin_files": 8
+    },
+    {
+      "module": "ui",
+      "version": "1.1.0",
+      "url": "https://repo.maven.apache.org/maven2/io/github/suqi8/coui/kmp/coui-ui-android/1.1.0/coui-ui-android-1.1.0-sources.jar",
+      "sha256": "f9de8d81c413c7651ed85657da1d061fd7ea91e5af533fcb1366b13509c60a0d",
+      "aar_sha256": "e53861f4335a9fe3ab9ab2047b72b5ebfe24684864ff521f882ef1e2908eb6a3",
+      "kotlin_files": 105
+    },
+    {
+      "module": "preference",
+      "version": "1.1.0",
+      "url": "https://repo.maven.apache.org/maven2/io/github/suqi8/coui/kmp/coui-preference-android/1.1.0/coui-preference-android-1.1.0-sources.jar",
+      "sha256": "a4c8356eab7e06b32a9b63d18917b6792c62ebae1b71a2ca09136aa4fd70c5c8",
+      "aar_sha256": "95072e91ba3deba070a6eef11af7629d0df731cde4e24f40d027fb28492ca378",
+      "kotlin_files": 25
+    },
+    {
+      "module": "icons",
+      "version": "1.1.0",
+      "url": "https://repo.maven.apache.org/maven2/io/github/suqi8/coui/kmp/coui-icons-android/1.1.0/coui-icons-android-1.1.0-sources.jar",
+      "sha256": "6225d79ea826d1fc17acec582771c0eaa54378bf59f248e6785bfa06a4e8dd8f",
+      "aar_sha256": "6e1b34b2477790a4f603535782a71fe9840e5df68e20b92fef4f6120d90f9ce4",
+      "kotlin_files": 156
+    },
+    {
+      "module": "blur",
+      "version": "1.0.0",
+      "url": "https://repo.maven.apache.org/maven2/io/github/suqi8/coui/kmp/coui-blur-android/1.0.0/coui-blur-android-1.0.0-sources.jar",
+      "sha256": "3889984d2a69935671cb193aa752405d987c0b08e09eca378f1ac195392affeb",
+      "aar_sha256": "7c03b2b9c0a3b2af001fb4f00eb14c6bbb283aee30b62773902e2b0696c32bf1",
+      "kotlin_files": 24
+    },
+    {
+      "module": "navigation3-ui",
+      "version": "1.0.0",
+      "url": "https://repo.maven.apache.org/maven2/io/github/suqi8/coui/kmp/coui-navigation3-ui-android/1.0.0/coui-navigation3-ui-android-1.0.0-sources.jar",
+      "sha256": "087bab44a8a84e1ba3d818730daaa8be5ac7ee6246b192e7f7a5d54147ef0393",
+      "aar_sha256": "39b2eaaebabce6cfa42d96772be09f93474d1b190baeeb46a358e9420437cc4c",
+      "kotlin_files": 19
+    }
+  ]
+}

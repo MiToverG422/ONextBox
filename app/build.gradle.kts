@@ -28,6 +28,15 @@ val assembleC16StackedSignal by tasks.registering(JavaExec::class) {
 }
 tasks.named("preBuild").configure { dependsOn(assembleC16StackedSignal) }
 
+val couiLicenseAssets = layout.buildDirectory.dir("generated/couiLicenses/assets")
+val prepareCouiLicenses by tasks.registering(Sync::class) {
+    from(rootProject.file("third_party/coui")) {
+        include("LICENSE", "UPSTREAM.txt", "sources.json")
+    }
+    into(couiLicenseAssets.map { it.dir("third_party/coui") })
+}
+tasks.named("preBuild").configure { dependsOn(prepareCouiLicenses) }
+
 val ciVersionName = (project.findProperty("ONEXTBOX_VERSION_NAME") as String?)
     ?.takeIf { it.isNotBlank() }
     ?: "17.0"
@@ -71,6 +80,7 @@ val hasExternalReleaseSigning =
 
 android {
     sourceSets.getByName("main").assets.srcDir(c16Assets.get().asFile)
+    sourceSets.getByName("main").assets.srcDir(couiLicenseAssets.get().asFile)
     namespace = "com.mi.onextbox"
     compileSdk {
         version = release(37)
@@ -236,11 +246,11 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.palette.ktx)
     implementation(libs.androidx.dynamicanimation)
-    implementation(libs.coui.ui)
-    implementation(libs.coui.preference)
-    implementation(libs.coui.blur)
-    implementation(libs.coui.icons)
-    implementation(libs.coui.navigation3.ui)
+    implementation(project(":coui-ui"))
+    implementation(project(":coui-preference"))
+    implementation(project(":coui-blur"))
+    implementation(project(":coui-icons"))
+    implementation(project(":coui-navigation3-ui"))
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
@@ -266,3 +276,27 @@ dependencies {
     // Module-app communication for modern remote preferences.
     implementation(libs.libxposed.service)
 }
+
+val verifyLocalCoui by tasks.registering {
+    group = "verification"
+    description = "Verifies that every app variant uses the bundled COUI source modules."
+    doLast {
+        val expected = setOf(
+            ":coui-core", ":coui-shader", ":coui-squircle", ":coui-ui",
+            ":coui-preference", ":coui-icons", ":coui-blur", ":coui-navigation3-ui"
+        )
+        listOf("debug", "debugSlim", "release").forEach { variant ->
+            val components = configurations.getByName("${variant}RuntimeClasspath")
+                .incoming.resolutionResult.allComponents.map { it.id }
+            val remote = components.filterIsInstance<org.gradle.api.artifacts.component.ModuleComponentIdentifier>()
+                .filter { it.group == "io.github.suqi8.coui.kmp" }
+            check(remote.isEmpty()) { "$variant still depends on remote COUI artifacts: $remote" }
+            val local = components.filterIsInstance<org.gradle.api.artifacts.component.ProjectComponentIdentifier>()
+                .map { it.projectPath }.toSet()
+            check(local.containsAll(expected)) { "$variant is missing local COUI modules: ${expected - local}" }
+        }
+        logger.lifecycle("All app variants use the eight bundled COUI modules; no remote COUI artifacts remain.")
+    }
+}
+tasks.named("check").configure { dependsOn(verifyLocalCoui) }
+tasks.named("preBuild").configure { dependsOn(verifyLocalCoui) }
