@@ -47,6 +47,7 @@ import com.mi.onextbox.ui.common.AppAppearanceTransitionHost
 import com.mi.onextbox.ui.common.AppAppearanceTransitionState
 import com.mi.onextbox.ui.common.AppLogStore
 import com.mi.onextbox.ui.common.installAppLaunchAnimation
+import com.mi.onextbox.ui.common.AppLaunchRevealState
 import com.mi.onextbox.ui.common.AppThemeColorSpec
 import com.mi.onextbox.ui.common.AppThemeKeyColor
 import com.mi.onextbox.ui.common.AppThemeMode
@@ -117,11 +118,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        var appLaunchRevealReady by mutableStateOf(savedInstanceState != null)
+        val appLaunchReveal = AppLaunchRevealState(restored = savedInstanceState != null)
         installAppLaunchAnimation(
             animate = savedInstanceState == null,
-            onExitStarted = { appLaunchRevealReady = true },
-            onFinished = { appLaunchRevealReady = true },
+            onExitStarted = appLaunchReveal::onExitStarted,
+            onFinished = appLaunchReveal::onFinished,
         )
         // Keep onboarding and the prepared app destination in one window. Its final clear/dissolve
         // animation can then reveal Root directly instead of exposing Launcher between activities.
@@ -607,8 +608,8 @@ class MainActivity : ComponentActivity() {
                 AppAppearanceTransitionHost(state = appearanceTransition) {
                     if (onboardingCompleted || onboardingDestinationPrepared) {
                         Root(
-                bottomBarStartupReady = appLaunchRevealReady && !onboardingVisible,
-                animateBottomBarStartup = savedInstanceState == null,
+                bottomBarStartupReady = appLaunchReveal.ready && !onboardingVisible,
+                animateBottomBarStartup = appLaunchReveal.animate,
                 openSoftwareUpdateRequest = openSoftwareUpdateRequest,
                 currentTab = currentTab,
                 onTabChange = { currentTab = it },

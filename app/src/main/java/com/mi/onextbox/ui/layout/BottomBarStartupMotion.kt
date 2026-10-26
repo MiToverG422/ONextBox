@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun rememberBottomBarStartupProgress(ready: Boolean, animate: Boolean): () -> Float {
     var consumed by rememberSaveable { mutableStateOf(!animate) }
-    val progress = remember { Animatable(if (animate && !consumed) 0f else 1f) }
+    val progress = remember { Animatable(1f) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(ready, animate, lifecycleOwner) {
@@ -36,6 +36,7 @@ internal fun rememberBottomBarStartupProgress(ready: Boolean, animate: Boolean):
             consumed = true
             try {
                 if (currentCoroutineContext()[MotionDurationScale]?.scaleFactor != 0f) {
+                    progress.snapTo(0f)
                     progress.animateTo(
                         targetValue = 1f,
                         animationSpec = tween(420, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
