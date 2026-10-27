@@ -1383,10 +1383,6 @@
     <string name="feature_updates_changed">功能调整（%1$d）</string>
     <string name="feature_updates_empty">没有匹配的功能</string>
     <string name="feature_updates_layout_note">兼容新版桌面，修复自定义布局不生效</string>
-    <string name="feature_updates_corners_note">统一圆角设置的展开收起动画</string>
-    <string name="feature_updates_about_note">对齐新版关于本机的布局与分割线</string>
-    <string name="feature_updates_browser_note">完善完整网址的默认浏览器跳转</string>
-    <string name="feature_updates_ota_note">完善下载链接解析、鉴权与重定向处理</string>
     <string name="feature_updates_view_features">查看本次更新的功能</string>
     <string name="settings_account_size_group">アカウントカード</string>
     <string name="settings_account_size_title">アカウントカードのサイズ</string>
@@ -1452,4 +1448,7 @@
     <string name="statusbar_category_power_summary">功耗讀數與溫度顯示</string>
     <string name="statusbar_category_battery_summary">電量百分比顯示</string>
     <string name="statusbar_category_interaction_summary">點兩下操作與限制</string>
+    <string name="feature_updates_sidebar_note">竖条颜色与透明度跟随智能侧边栏</string>
+    <string name="feature_updates_pin_note">修复滑动输入数字密码时缺失松手动画</string>
+    <string name="feature_updates_corepatch_note">入口移至软件包安装程序页</string>
 </resources>

@@ -1408,10 +1408,6 @@
     <string name="feature_updates_changed">기능 개선 (%1$d)</string>
     <string name="feature_updates_empty">일치하는 기능이 없습니다</string>
     <string name="feature_updates_layout_note">새 런처와 호환되도록 사용자 지정 레이아웃 적용 문제 수정</string>
-    <string name="feature_updates_corners_note">모서리 설정의 펼치기 및 접기 애니메이션 통일</string>
-    <string name="feature_updates_about_note">새 기기 정보 화면의 배치 및 구분선 조정</string>
-    <string name="feature_updates_browser_note">전체 웹 주소를 기본 브라우저로 여는 처리 개선</string>
-    <string name="feature_updates_ota_note">다운로드 링크 분석, 인증 및 리디렉션 처리 개선</string>
     <string name="feature_updates_view_features">업데이트된 기능 보기</string>
     <string name="settings_account_size_group">계정 카드</string>
     <string name="settings_account_size_title">계정 카드 크기</string>
@@ -1477,4 +1473,7 @@
     <string name="statusbar_category_power_summary">소비 전력 및 온도 표시</string>
     <string name="statusbar_category_battery_summary">배터리 잔량 표시</string>
     <string name="statusbar_category_interaction_summary">두 번 탭 동작 및 제한</string>
+    <string name="feature_updates_sidebar_note">핸들 색상과 투명도를 스마트 사이드바에 맞춤</string>
+    <string name="feature_updates_pin_note">PIN 스와이프 입력 시 손을 뗄 때의 애니메이션 복원</string>
+    <string name="feature_updates_corepatch_note">패키지 설치 프로그램 페이지로 이동</string>
 </resources>

@@ -1383,10 +1383,6 @@
     <string name="feature_updates_changed">Tính năng cải tiến (%1$d)</string>
     <string name="feature_updates_empty">Không có tính năng phù hợp</string>
     <string name="feature_updates_layout_note">Tương thích trình khởi chạy mới và sửa lỗi áp dụng bố cục tùy chỉnh</string>
-    <string name="feature_updates_corners_note">Thống nhất hiệu ứng mở rộng và thu gọn cài đặt bo góc</string>
-    <string name="feature_updates_about_note">Căn chỉnh bố cục và đường phân cách trong trang thông tin thiết bị mới</string>
-    <string name="feature_updates_browser_note">Cải thiện mở địa chỉ web đầy đủ bằng trình duyệt mặc định</string>
-    <string name="feature_updates_ota_note">Cải thiện phân tích liên kết tải, xác thực và chuyển hướng</string>
     <string name="feature_updates_view_features">Xem các tính năng được cập nhật</string>
     <string name="settings_account_size_group">Thẻ tài khoản</string>
     <string name="settings_account_size_title">Kích thước thẻ tài khoản</string>
@@ -1452,4 +1448,7 @@
     <string name="statusbar_category_power_summary">Công suất và nhiệt độ</string>
     <string name="statusbar_category_battery_summary">Hiển thị phần trăm pin</string>
     <string name="statusbar_category_interaction_summary">Thao tác chạm hai lần và giới hạn</string>
+    <string name="feature_updates_sidebar_note">Đồng bộ màu và độ trong suốt với Thanh bên thông minh</string>
+    <string name="feature_updates_pin_note">Khôi phục hiệu ứng nhả phím khi vuốt nhập mã PIN</string>
+    <string name="feature_updates_corepatch_note">Chuyển sang trang Trình cài đặt gói</string>
 </resources>

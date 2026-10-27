@@ -1383,10 +1383,6 @@
     <string name="feature_updates_changed">功能調整（%1$d）</string>
     <string name="feature_updates_empty">搵唔到符合嘅功能</string>
     <string name="feature_updates_layout_note">兼容新版桌面，修復自訂佈局無法套用</string>
-    <string name="feature_updates_corners_note">統一圓角設定嘅展開收合動畫</string>
-    <string name="feature_updates_about_note">對齊新版關於本機嘅佈局同分隔線</string>
-    <string name="feature_updates_browser_note">改善完整網址嘅預設瀏覽器跳轉</string>
-    <string name="feature_updates_ota_note">改善下載連結解析、驗證同重新導向</string>
     <string name="feature_updates_view_features">睇今次更新嘅功能</string>
     <string name="settings_account_size_group">帳號卡片</string>
     <string name="settings_account_size_title">帳號卡片尺寸</string>
@@ -1452,4 +1448,7 @@
     <string name="statusbar_category_power_summary">功耗讀數同溫度顯示</string>
     <string name="statusbar_category_battery_summary">電量百分比顯示</string>
     <string name="statusbar_category_interaction_summary">連按兩下操作同限制</string>
+    <string name="feature_updates_sidebar_note">側邊條顏色同透明度跟隨智能側邊欄</string>
+    <string name="feature_updates_pin_note">修復滑動輸入數字密碼時缺少放手動畫</string>
+    <string name="feature_updates_corepatch_note">入口移到套件安裝程式頁</string>
 </resources>

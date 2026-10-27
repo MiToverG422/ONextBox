@@ -1408,10 +1408,6 @@
     <string name="feature_updates_changed">機能の改善（%1$d）</string>
     <string name="feature_updates_empty">一致する機能がありません</string>
     <string name="feature_updates_layout_note">新しいランチャーに対応し、カスタム配置が適用されない問題を修正</string>
-    <string name="feature_updates_corners_note">角丸設定の展開・折りたたみアニメーションを統一</string>
-    <string name="feature_updates_about_note">新しいデバイス情報画面の配置と区切り線を調整</string>
-    <string name="feature_updates_browser_note">完全な URL を既定のブラウザーで開く処理を改善</string>
-    <string name="feature_updates_ota_note">ダウンロードリンクの解析、認証、リダイレクト処理を改善</string>
     <string name="feature_updates_view_features">更新された機能を見る</string>
     <string name="settings_account_size_group">アカウントカード</string>
     <string name="settings_account_size_title">アカウントカードのサイズ</string>
@@ -1477,4 +1473,7 @@
     <string name="statusbar_category_power_summary">消費電力と温度表示</string>
     <string name="statusbar_category_battery_summary">バッテリー残量の表示</string>
     <string name="statusbar_category_interaction_summary">ダブルタップ操作と制限</string>
+    <string name="feature_updates_sidebar_note">ハンドルの色と透明度をスマートサイドバーに合わせる</string>
+    <string name="feature_updates_pin_note">PIN のスワイプ入力で指を離した際のアニメーションを修正</string>
+    <string name="feature_updates_corepatch_note">パッケージインストーラーのページに移動</string>
 </resources>

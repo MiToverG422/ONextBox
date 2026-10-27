@@ -1410,10 +1410,6 @@
     <string name="feature_updates_changed">Улучшенные функции (%1$d)</string>
     <string name="feature_updates_empty">Совпадений не найдено</string>
     <string name="feature_updates_layout_note">Исправлено применение сетки в новых версиях рабочего стола</string>
-    <string name="feature_updates_corners_note">Унифицирована анимация раскрытия настроек скругления</string>
-    <string name="feature_updates_about_note">Исправлены отступы и разделители на новом экране сведений об устройстве</string>
-    <string name="feature_updates_browser_note">Улучшено открытие полных адресов в браузере по умолчанию</string>
-    <string name="feature_updates_ota_note">Улучшены разбор ссылок, авторизация и перенаправления</string>
     <string name="feature_updates_view_features">Посмотреть обновлённые функции</string>
     <string name="settings_account_size_group">Карточка аккаунта</string>
     <string name="settings_account_size_title">Размер карточки аккаунта</string>
@@ -1479,4 +1475,7 @@
     <string name="statusbar_category_power_summary">Потребление энергии и температура</string>
     <string name="statusbar_category_battery_summary">Заряд батареи в процентах</string>
     <string name="statusbar_category_interaction_summary">Двойное касание и ограничения</string>
+    <string name="feature_updates_sidebar_note">Цвет и прозрачность полоски соответствуют умной боковой панели</string>
+    <string name="feature_updates_pin_note">Восстановлена анимация отпускания клавиш при вводе PIN свайпом</string>
+    <string name="feature_updates_corepatch_note">Перенесено на страницу установщика пакетов</string>
 </resources>

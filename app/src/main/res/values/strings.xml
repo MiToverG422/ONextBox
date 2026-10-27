@@ -1480,10 +1480,6 @@
     <string name="feature_updates_changed">Updated features (%1$d)</string>
     <string name="feature_updates_empty">No matching features</string>
     <string name="feature_updates_layout_note">Compatible with newer launchers; fixes custom layouts not applying</string>
-    <string name="feature_updates_corners_note">Unified expansion and collapse animations</string>
-    <string name="feature_updates_about_note">Aligned the layout and dividers in newer About device pages</string>
-    <string name="feature_updates_browser_note">Improved default-browser routing for complete web addresses</string>
-    <string name="feature_updates_ota_note">Improved download link parsing, authentication and redirects</string>
     <string name="feature_updates_view_features">Explore updated features</string>
     <string name="settings_account_size_group">Account card</string>
     <string name="settings_account_size_title">Account card size</string>
@@ -1549,4 +1545,7 @@
     <string name="statusbar_category_power_summary">Power readings and temperature</string>
     <string name="statusbar_category_battery_summary">Battery percentage display</string>
     <string name="statusbar_category_interaction_summary">Double-tap actions and restrictions</string>
+    <string name="feature_updates_sidebar_note">Match handle color and opacity to Smart Sidebar</string>
+    <string name="feature_updates_pin_note">Restore native release animations during swipe PIN input</string>
+    <string name="feature_updates_corepatch_note">Moved to the Package Installer page</string>
 </resources>
