@@ -48,7 +48,10 @@ class ColorOs16FeaturePolicyTest {
 
     @Test fun advancedEditorsAreNotDuplicatedByGenericToggles() {
         val advanced = setOf(R.string.statusbar_order_title, R.string.carrier_name_title, R.string.power_indicator_title)
-        val entries = colorOs16CatalogEntries(FeaturePageMode.SystemUiStatusBar, advanced)
+        val entries = listOf(FeaturePageMode.SystemUiStatusBarLayout,
+            FeaturePageMode.SystemUiStatusBarNetwork, FeaturePageMode.SystemUiStatusBarPower)
+            .flatMap { colorOs16CatalogEntries(it, advanced) }
+        assertTrue(colorOs16CatalogEntries(FeaturePageMode.SystemUiStatusBar, emptySet()).isEmpty())
         assertTrue(entries.none { it.title in advanced })
         assertTrue(entries.any { it.title == R.string.feature_hide_disconnected_bluetooth_title })
         val actions = EnabledFeatureActions()

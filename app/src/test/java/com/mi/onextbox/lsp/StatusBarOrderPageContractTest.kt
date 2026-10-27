@@ -58,7 +58,7 @@ class StatusBarOrderPageContractTest {
     }
     @Test fun inventorySearchAndQuickEditsPointToTheChildAndKeepParentDependency() {
         val index = source("main/java/com/mi/onextbox/ui/screens/FeatureSearchIndex.kt")
-        assertTrue(index.contains("Entry(FeaturePageMode.SystemUiStatusBar, R.string.statusbar_order_title)"))
+        assertTrue(index.contains("Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_order_title)"))
         assertTrue(index.contains("Entry(FeaturePageMode.SystemUiIconOrder, R.string.statusbar_sim1)"))
         val catalog = source("main/java/com/mi/onextbox/ui/screens/EnabledFeatureCatalog.kt")
         assertTrue(catalog.contains("Entry(R.string.statusbar_sim_order_title, FeaturePageMode.SystemUiIconOrder, parents = setOf(R.string.statusbar_order_title))"))

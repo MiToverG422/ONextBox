@@ -57,6 +57,6 @@ class DataSimSignalRulesTest {
         assertTrue(hook.contains("DataSimSignalRules.forceIndependent(DataSimSignalSettings.enabledXposed()"))
         assertTrue(hook.contains("DataSimSignalSettings.independentOnlyXposed(), dataSubId()"))
         val search = source("main/java/com/mi/onextbox/ui/screens/FeatureSearchIndex.kt")
-        assertTrue(search.contains("Entry(FeaturePageMode.SystemUiStatusBar, R.string.feature_only_data_sim_independent_title)"))
+        assertTrue(search.contains("Entry(FeaturePageMode.SystemUiStatusBarNetwork, R.string.feature_only_data_sim_independent_title)"))
     }
 }

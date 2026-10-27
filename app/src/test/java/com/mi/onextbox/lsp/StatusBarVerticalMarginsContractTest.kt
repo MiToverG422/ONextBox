@@ -66,10 +66,10 @@ class StatusBarVerticalMarginsContractTest {
     @Test fun searchInventoryAndQuickToggleIncludeTheNewFeature() {
         val index = source("main/java/com/mi/onextbox/ui/screens/FeatureSearchIndex.kt")
         for (key in listOf("statusbar_vertical_margins_title", "statusbar_margin_top", "statusbar_margin_bottom")) {
-            assertTrue(index.contains("Entry(FeaturePageMode.SystemUiStatusBar, R.string.$key)"))
+            assertTrue(index.contains("Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.$key)"))
         }
         val catalog = source("main/java/com/mi/onextbox/ui/screens/EnabledFeatureCatalog.kt")
-        assertTrue(catalog.contains("Entry(R.string.statusbar_vertical_margins_title, FeaturePageMode.SystemUiStatusBar)"))
+        assertTrue(catalog.contains("Entry(R.string.statusbar_vertical_margins_title, FeaturePageMode.SystemUiStatusBarLayout)"))
         assertTrue(catalog.contains("R.string.statusbar_vertical_margins_title ->"))
         assertTrue(catalog.contains("\${it.top} dp / \${it.bottom} dp"))
         assertTrue(source("main/java/com/mi/onextbox/ui/screens/EnabledFeatureActions.kt")

@@ -47,13 +47,13 @@ class FeatureSearchTest {
         assertEquals(3, featureSearchScore("core patch (experimental)", "Core Patch (Experimental)", ""))
     }
 
-    @Test fun powerIndicatorDisplayOptionsUseTheStatusBarPage() {
+    @Test fun powerIndicatorDisplayOptionsUseThePowerPage() {
         listOf(
             com.mi.onextbox.R.string.power_indicator_hide_discharge_sign,
             com.mi.onextbox.R.string.power_indicator_temperature,
             com.mi.onextbox.R.string.power_indicator_temperature_unit,
         ).forEach { title ->
-            assertEquals(FeaturePageMode.SystemUiStatusBar,
+            assertEquals(FeaturePageMode.SystemUiStatusBarPower,
                 FeatureSearchIndex.entries.single { it.title == title }.page)
         }
     }
@@ -338,28 +338,39 @@ class FeatureSearchTest {
         assertEquals(FeaturePageMode.PhoneManager, countdown.page)
         assertEquals(com.mi.onextbox.R.string.phone_manager_skip_countdown_summary, countdown.description)
     }
-    @Test fun statusBarGroupsAndControlsKeepTheirDestination() {
-        val titles = listOf(
-            com.mi.onextbox.R.string.status_bar_group_network,
-            com.mi.onextbox.R.string.status_bar_group_battery,
-            com.mi.onextbox.R.string.status_bar_group_time,
-            com.mi.onextbox.R.string.status_bar_group_interaction,
-            com.mi.onextbox.R.string.feature_status_bar_double_tap_to_top_title,
-            com.mi.onextbox.R.string.feature_status_bar_remove_to_top_whitelist_title,
-            com.mi.onextbox.R.string.feature_international_network_display_title,
-            com.mi.onextbox.R.string.feature_hide_mobile_roaming_indicator_title,
-            com.mi.onextbox.R.string.feature_hide_network_activity_indicator_title,
-            com.mi.onextbox.R.string.feature_hide_disconnected_bluetooth_title,
-            com.mi.onextbox.R.string.feature_fluid_cloud_battery_title,
-            com.mi.onextbox.R.string.feature_permanent_clock_seconds_title,
+    @Test fun statusBarGroupsAndControlsUseTheirCategoryDestinations() {
+        val destinationsByPage = mapOf(
+            FeaturePageMode.SystemUiStatusBarNetwork to listOf(
+                com.mi.onextbox.R.string.status_bar_group_network,
+                com.mi.onextbox.R.string.feature_international_network_display_title,
+                com.mi.onextbox.R.string.feature_hide_mobile_roaming_indicator_title,
+                com.mi.onextbox.R.string.feature_hide_network_activity_indicator_title,
+                com.mi.onextbox.R.string.feature_hide_disconnected_bluetooth_title,
+            ),
+            FeaturePageMode.SystemUiStatusBarBattery to listOf(
+                com.mi.onextbox.R.string.status_bar_group_battery,
+                com.mi.onextbox.R.string.feature_fluid_cloud_battery_title,
+            ),
+            FeaturePageMode.SystemUiStatusBarInteraction to listOf(
+                com.mi.onextbox.R.string.status_bar_group_interaction,
+                com.mi.onextbox.R.string.feature_status_bar_double_tap_to_top_title,
+                com.mi.onextbox.R.string.feature_status_bar_remove_to_top_whitelist_title,
+            ),
+            FeaturePageMode.SystemUiClock to listOf(
+                com.mi.onextbox.R.string.clock_page_title,
+                com.mi.onextbox.R.string.feature_permanent_clock_seconds_title,
+            ),
         )
-        titles.forEach { title ->
-            val destinations = FeatureSearchIndex.entries.filter { it.title == title }
-            assertEquals(1, destinations.size)
-            assertEquals(FeaturePageMode.SystemUiStatusBar, destinations.single().page)
+        destinationsByPage.forEach { (page, titles) ->
+            titles.forEach { title ->
+                val destinations = FeatureSearchIndex.entries.filter { it.title == title }
+                assertEquals(1, destinations.size)
+                assertEquals(page, destinations.single().page)
+            }
         }
+        assertFalse(FeatureSearchIndex.entries.any { it.title == com.mi.onextbox.R.string.status_bar_group_time })
     }
-    @Test fun scrollToTopSwitchesHaveSeparateStatusBarSearchEntries() {
+    @Test fun scrollToTopSwitchesUseTheInteractionPage() {
         for ((title, description) in listOf(
             com.mi.onextbox.R.string.feature_status_bar_double_tap_to_top_title to
                 com.mi.onextbox.R.string.feature_status_bar_double_tap_to_top_summary,
@@ -368,24 +379,24 @@ class FeatureSearchTest {
         )) {
             val destinations = FeatureSearchIndex.entries.filter { it.title == title }
             assertEquals(1, destinations.size)
-            assertEquals(FeaturePageMode.SystemUiStatusBar, destinations.single().page)
+            assertEquals(FeaturePageMode.SystemUiStatusBarInteraction, destinations.single().page)
             assertEquals(description, destinations.single().description)
         }
     }
-    @Test fun disconnectedBluetoothIsSearchableOnlyUnderStatusBar() {
+    @Test fun disconnectedBluetoothIsSearchableOnlyUnderNetwork() {
         val destinations = FeatureSearchIndex.entries.filter {
             it.title == com.mi.onextbox.R.string.feature_hide_disconnected_bluetooth_title
         }
         assertEquals(1, destinations.size)
-        assertEquals(FeaturePageMode.SystemUiStatusBar, destinations.single().page)
+        assertEquals(FeaturePageMode.SystemUiStatusBarNetwork, destinations.single().page)
         assertEquals(com.mi.onextbox.R.string.feature_hide_disconnected_bluetooth_summary, destinations.single().description)
     }
-    @Test fun fluidCloudBatteryIsSearchableOnlyUnderStatusBar() {
+    @Test fun fluidCloudBatteryIsSearchableOnlyUnderBattery() {
         val destinations = FeatureSearchIndex.entries.filter {
             it.title == com.mi.onextbox.R.string.feature_fluid_cloud_battery_title
         }
         assertEquals(1, destinations.size)
-        assertEquals(FeaturePageMode.SystemUiStatusBar, destinations.single().page)
+        assertEquals(FeaturePageMode.SystemUiStatusBarBattery, destinations.single().page)
         assertEquals(com.mi.onextbox.R.string.feature_fluid_cloud_battery_summary, destinations.single().description)
     }
     @Test fun permanentClockSecondsIsSearchableOnlyUnderClock() {
