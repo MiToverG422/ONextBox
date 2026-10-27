@@ -1,6 +1,8 @@
 package com.mi.onextbox.lsp
 
 import com.mi.onextbox.lsp.compat.ModernMethodHook
+import com.mi.onextbox.lsp.compat.ModernHookRegistry
+import java.lang.reflect.Modifier
 import com.mi.onextbox.lsp.compat.ModernReflect
 
 internal object Wallpaper3DForceHooker {
@@ -14,7 +16,9 @@ internal object Wallpaper3DForceHooker {
             return
         }
         runCatching {
-            ModernReflect.findAndHookMethod(featureUtil, "q0", object : ModernMethodHook() {
+            val target = featureUtil.getDeclaredMethod("q0")
+            require(target.returnType == Boolean::class.javaPrimitiveType && Modifier.isStatic(target.modifiers))
+            ModernHookRegistry.installCompat("$TAG:force-enable", target, object : ModernMethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     if (Wallpaper3DForceSettings.enabledXposed()) param.result = true
                 }

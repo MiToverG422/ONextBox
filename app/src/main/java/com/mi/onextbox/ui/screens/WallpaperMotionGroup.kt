@@ -1,6 +1,8 @@
 package com.mi.onextbox.ui.screens
 
 import android.widget.Toast
+import android.content.SharedPreferences
+import com.mi.onextbox.lsp.LspPreferenceStore
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -15,7 +17,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
-internal fun WallpaperMotionGroup() {
+internal fun WallpaperMotionGroup(showForceEnable: Boolean = true) {
     val context = LocalContext.current
     val application = context.applicationContext
     val scope = rememberCoroutineScope()
@@ -23,6 +25,19 @@ internal fun WallpaperMotionGroup() {
     var enabled by remember { mutableStateOf(WallpaperMotionSettings.enabled(context)) }
     var amount by remember { mutableIntStateOf(WallpaperMotionSettings.amount(context)) }
     var saving by remember { mutableStateOf(false) }
+    DisposableEffect(application) {
+        val prefs = LspPreferenceStore.prefs(application)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (!saving && (key == null || key == Wallpaper3DForceSettings.ENABLED ||
+                    key == WallpaperMotionSettings.ENABLED || key == WallpaperMotionSettings.AMOUNT)) {
+                forceEnabled = Wallpaper3DForceSettings.enabled(application)
+                enabled = WallpaperMotionSettings.enabled(application)
+                amount = WallpaperMotionSettings.amount(application)
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
     fun saveForce(nextEnabled: Boolean) {
         forceEnabled = nextEnabled
         saving = true
@@ -39,6 +54,9 @@ internal fun WallpaperMotionGroup() {
                 Toast.makeText(context, R.string.enabled_features_save_failed, Toast.LENGTH_SHORT).show()
             } finally {
                 saving = false
+                forceEnabled = Wallpaper3DForceSettings.enabled(application)
+                enabled = WallpaperMotionSettings.enabled(application)
+                amount = WallpaperMotionSettings.amount(application)
             }
         }
     }
@@ -60,12 +78,15 @@ internal fun WallpaperMotionGroup() {
                 Toast.makeText(context, R.string.enabled_features_save_failed, Toast.LENGTH_SHORT).show()
             } finally {
                 saving = false
+                forceEnabled = Wallpaper3DForceSettings.enabled(application)
+                enabled = WallpaperMotionSettings.enabled(application)
+                amount = WallpaperMotionSettings.amount(application)
             }
         }
     }
     SettingsSection(title = stringResource(R.string.wallpaper_motion_group))
     FeatureAnimatedGroup {
-        row(0) { above, below ->
+        row(0, visible = showForceEnable) { above, below ->
             SettingsToggleRow(
                 title = stringResource(R.string.wallpaper_3d_force_title),
                 summary = stringResource(R.string.wallpaper_3d_force_summary),

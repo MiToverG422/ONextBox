@@ -147,7 +147,7 @@ internal fun ColorOs16AdvancedFeatureGroups(mode: FeaturePageMode, onOpen: (Feat
             handled += R.string.network_identity_title
         }
         FeaturePageMode.Wallpapers -> if (R.string.wallpaper_motion_title in supported) {
-            WallpaperMotionGroup()
+            WallpaperMotionGroup(showForceEnable = false)
             handled += R.string.wallpaper_motion_title
         }
         else -> Unit

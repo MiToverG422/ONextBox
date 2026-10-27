@@ -4,7 +4,7 @@ import com.mi.onextbox.R
 import com.mi.onextbox.lsp.SystemAdaptationVersion
 
 internal object FeatureUpdatesCatalog {
-    const val EDITION = "2026-10-27"
+    const val EDITION = "2026-10-27-r2"
 
     enum class Kind { Added, Changed }
 
@@ -12,6 +12,7 @@ internal object FeatureUpdatesCatalog {
     data class Item(val change: Change, val destination: FeatureSearchIndex.Entry)
 
     val changes = listOf(
+        R.string.wallpaper_3d_force_title,
         R.string.battery_show_health_status_title,
         R.string.battery_show_full_charge_capacity_title,
         R.string.battery_show_rated_capacity_title,

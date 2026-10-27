@@ -24,6 +24,7 @@ class FeatureUpdatesCatalogTest {
         assertEquals(FeatureUpdatesCatalog.Kind.Changed, kinds[R.string.keyguard_swipe_pin_title])
         assertFalse(kinds.containsKey(R.string.hide_screenshot_floating_title))
         assertFalse(kinds.containsKey(R.string.power_indicator_title))
+        assertEquals(FeatureUpdatesCatalog.Kind.Added, kinds[R.string.wallpaper_3d_force_title])
         assertEquals(FeatureUpdatesCatalog.Kind.Added, kinds[R.string.camera_default_gallery_title])
     }
 
@@ -32,6 +33,7 @@ class FeatureUpdatesCatalogTest {
         assertTrue(items.any { it.destination.title == R.string.network_speed_refresh_second })
         assertFalse(items.any { it.destination.title == R.string.hide_screenshot_floating_title })
         assertFalse(items.any { it.destination.title == R.string.keyguard_swipe_pin_title })
+        assertFalse(items.any { it.destination.title == R.string.wallpaper_3d_force_title })
         items.forEach {
             assertTrue(it.destination.title in ColorOs16FeatureRegistry.titlesForPage(it.destination.page))
         }
