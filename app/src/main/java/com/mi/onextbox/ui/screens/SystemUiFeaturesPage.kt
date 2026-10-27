@@ -119,6 +119,15 @@ internal fun SystemUiFeaturesPage(
                 )
             }
         }
+        FeaturePageMode.SystemUiVolume -> {
+            SideVolumePercentageSettingsGroup {
+                onOpenSubPage(FeaturePageMode.SystemUiSideVolumePercentageSettings)
+            }
+            SettingsSection(title = stringResource(R.string.volume_group_alerts))
+            SettingsGroup {
+                VolumeSafetyWarningSettingsRow()
+            }
+        }
         FeaturePageMode.SystemUiDynamicColor -> {
             SettingsGroup {
                 OptionDropdownRow(
@@ -168,6 +177,7 @@ internal fun SystemUiFeaturesPage(
             StatusBarLayoutSettingsGroup { onOpenSubPage(FeaturePageMode.SystemUiIconOrder) }
             CarrierNameSettingsGroup()
             PowerIndicatorSettingsGroup()
+            NetworkSpeedSettingsGroup()
             SettingsSection(title = stringResource(R.string.feature_large_network_type_title))
             SettingsGroup {
                 LargeNetworkTypeSettingsRow()
@@ -250,7 +260,11 @@ internal fun SystemUiFeaturesPage(
             }
         }
         FeaturePageMode.SystemUiControlCenter -> {
-            QsTileCornerSettingsGroup()
+            QsTileCornerSettingsGroup(
+                onOpenCorners = { onOpenSubPage(FeaturePageMode.SystemUiCornerSettings) },
+                onOpenPercentage = { onOpenSubPage(FeaturePageMode.SystemUiPercentageSettings) },
+            )
+            SettingsSection(title = stringResource(R.string.control_center_group_visibility))
             SettingsGroup {
                 SettingsToggleRow(
                     title = stringResource(R.string.feature_hide_qs_edit_title),

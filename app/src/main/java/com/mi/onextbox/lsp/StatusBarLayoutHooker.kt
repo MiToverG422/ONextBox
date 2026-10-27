@@ -11,8 +11,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal object StatusBarLayoutHooker {
     private const val TAG = "ONextBox-StatusBarLayout"
     fun hook(loader: ClassLoader) {
+        hook(loader, "status_bar_icon_container_height")
+    }
+
+    fun hookColorOs16(loader: ClassLoader) {
+        hook(loader, "status_bar_system_icons_height")
+    }
+
+    private fun hook(loader: ClassLoader, iconHeightResource: String) {
         runCatching { hookOrder(loader) }.onFailure { HookLog.w(TAG, "Icon-order adapter unavailable", it) }
-        runCatching { hookMargins(loader) }.onFailure { HookLog.w(TAG, "Margin adapter unavailable", it) }
+        runCatching { hookMargins(loader, iconHeightResource) }.onFailure { HookLog.w(TAG, "Margin adapter unavailable", it) }
     }
 
     private fun hookOrder(loader: ClassLoader) {
@@ -39,7 +47,7 @@ internal object StatusBarLayoutHooker {
         HookLog.i(TAG, "Native icon-order hook installed")
     }
 
-    private fun hookMargins(loader: ClassLoader) {
+    private fun hookMargins(loader: ClassLoader, iconHeightResource: String) {
         val type = ModernReflect.findClass("com.oplus.systemui.statusbar.phone.StatusBarPaddingProvider", loader)
         val pair = ModernReflect.findClass("kotlin.Pair", loader)
         val method = type.getDeclaredMethod("getHomeStatusBarLeftRightPadding", String::class.java, pair, pair)
@@ -76,7 +84,7 @@ internal object StatusBarLayoutHooker {
                     // display before returning the Rect. Retain the native icon height.
                     val height = (ModernReflect.getObjectField(requireNotNull(param.thisObject), "statusBarHeight") as Number).toInt()
                     val resources = ownerContext.resources
-                    val iconId = resources.getIdentifier("status_bar_icon_container_height", "dimen", "com.android.systemui")
+                    val iconId = resources.getIdentifier(iconHeightResource, "dimen", "com.android.systemui")
                     if (iconId == 0) return@runCatching
                     val padding = StatusBarLayoutRules.verticalPadding(original.top, original.bottom,
                         vertical.first, vertical.second, density, height, resources.getDimensionPixelSize(iconId))

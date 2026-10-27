@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="system_adaptation_runtime_restart">対応バージョンを切り替えました。設定は保持されます。完全に適用して以前の変更を解除するには、端末を再起動してください。</string>
-    <string name="developer_allow_hyperos3_title">HyperOS 3 サポートを許可</string>
     <string name="system_adaptation_no_content">この対応バージョンには、まだ機能やツールがありません</string>
+    <string name="setting_bottom_bar_hide_labels">底欄無字</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">一个 COUI 风格之 OPlus 系统自定义工具箱</string>
     <string name="tab_home">主頁</string>
@@ -19,17 +18,10 @@
     <string name="setting_theme_mode">主題方式</string>
     <string name="setting_ui_style">画面様式</string>
     <string name="ui_style_coloros">COUI 17.0</string>
-    <string name="ui_style_material3_expressive">Material 3 Expressive</string>
     <string name="setting_dynamic_color">動態取色</string>
     <string name="setting_dynamic_color_on_summary">使用系統桌布配色</string>
     <string name="setting_dynamic_color_off_summary">使用自選主題顏色</string>
     <string name="setting_theme_palette">主題顏色</string>
-    <string name="setting_material_floating_bottom_bar">懸浮底欄</string>
-    <string name="setting_material_floating_bottom_bar_summary">使用懸浮式底部導覽列</string>
-    <string name="setting_material_haptics">触覚反応</string>
-    <string name="setting_material_haptics_summary">切換底部導覽時提供触覚反応</string>
-    <string name="setting_material_switch_icons">表示切替器図標</string>
-    <string name="setting_material_switch_icons_summary">在切替器滑塊中表示有効化或無効化状態之図標</string>
     <string name="setting_theme_settings">設定</string>
     <string name="theme_mode_system">系統追従</string>
     <string name="theme_mode_light">淺色方式</string>
@@ -53,10 +45,6 @@
     <string name="language_system">系統追従</string>
     <string name="setting_blur_effect">有効化模糊效果</string>
     <string name="setting_feature_page_new_style">機能頁新版樣式</string>
-    <string name="setting_progressive_card_animation">漸進式卡片動畫</string>
-    <string name="setting_progressive_card_animation_summary">卡片隨滑動漸進表示，僅用於機能頁旧版樣式与 OPPO Push 監視器</string>
-    <string name="setting_feature_page_hide_background_video">隱藏機能頁背景影片</string>
-    <string name="setting_feature_page_hide_background_video_summary">在非莫奈深色主題中將背景影片替換為炫彩動態背景</string>
     <string name="setting_pop_follows_swipe_edge">戻方向跟隨滑動邊緣</string>
     <string name="setting_pop_follows_swipe_edge_summary">戻動畫方向跟隨手指滑入之邊緣</string>
     <string name="settings_section_other">其他</string>
@@ -97,6 +85,9 @@
     <string name="feature_force_native_clipboard_overlay_title">原生剪貼簿</string>
     <string name="feature_force_native_clipboard_overlay_summary">強制有効化左下角原生剪貼簿</string>
     <string name="feature_group_beautify">状態列</string>
+    <string name="feature_group_volume">音量</string>
+    <string name="volume_block_hearing_safety_warning_title">聴力安全の警告を非表示</string>
+    <string name="volume_block_hearing_safety_warning_summary">音量を上げたときの聴力安全警告ダイアログを非表示にします</string>
     <string name="feature_group_dynamic_color">莫奈动态取色</string>
     <string name="feature_force_tonal_spot_title">Tonal Spot 动态取色修复</string>
     <string name="feature_force_tonal_spot_summary">保留当前主题种子色，强制 SystemUI 使用 TONAL_SPOT 生成系统调色板，修复原生界面背景颜色过度鲜艳之问题</string>
@@ -333,8 +324,6 @@
     <string name="about_reference_material_icons_title">Material Icons</string>
     <string name="about_reference_junit_summary">JUnit Team · EPL-1.0</string>
     <string name="about_reference_junit_title">JUnit</string>
-    <string name="about_reference_miuix_summary">compose-miuix-ui · Apache-2.0</string>
-    <string name="about_reference_miuix_title">MIUIX</string>
     <string name="about_reference_oshin_summary">suqi8 · AGPL-3.0</string>
     <string name="about_reference_oshin_title">OShin</string>
     <string name="about_reference_xposed_api_summary">libxposed · Apache-2.0</string>
@@ -426,7 +415,7 @@
     <string name="onboarding_language_title">言語選択</string>
     <string name="onboarding_language_summary">初回設定及 ONextBox 使用言語選択</string>
     <string name="onboarding_appearance_title">画面及主題</string>
-    <string name="onboarding_appearance_summary">選択 ONextBox 之画面様式和主題方式</string>
+    <string name="onboarding_appearance_summary">選択 ONextBox 之主題方式</string>
     <string name="onboarding_appearance_theme_note">僅影響 App 外觀，有効化頁面不受影響</string>
     <string name="onboarding_personalization_title">打造御主之 ONextBox</string>
     <string name="onboarding_personalization_summary">預覽並選択機能頁樣式，之後仍可在設定中修改</string>
@@ -434,11 +423,7 @@
     <string name="onboarding_feature_style_new_summary">沉浸式版面構成与動態背景</string>
     <string name="onboarding_feature_style_classic">經典機能頁</string>
     <string name="onboarding_feature_style_classic_summary">簡潔、熟悉之清単版面構成</string>
-    <string name="onboarding_feature_video_title">ColorOS 17 既定動態桌布</string>
-    <string name="onboarding_feature_video_summary">僅在一般深色方式之新版機能頁中表示</string>
     <string name="onboarding_feature_style_section">機能頁樣式</string>
-    <string name="onboarding_feature_background_section">背景</string>
-    <string name="onboarding_feature_coui_only_note">以上設定僅限 COUI 17.0 支援</string>
     <string name="onboarding_migration_title">移転御主之設定</string>
     <string name="onboarding_migration_summary">從 ONextBox 設定備份復元，或作為新応用続行設定</string>
     <string name="onboarding_migration_preview_source">舊端末備份</string>
@@ -566,6 +551,7 @@
     <string name="notification_removal_overlay">応用上層通知除去</string>
     <string name="notification_removal_vpn">VPN 活動通知除去</string>
     <string name="notification_removal_developer">開発者選項通知除去</string>
+    <string name="notification_removal_extreme_refresh_rate">超高速リフレッシュレート通知除去</string>
     <string name="notification_removal_charging">充電完了通知除去</string>
     <string name="notification_removal_flashlight">懐中電灯開啓通知除去</string>
     <string name="notification_removal_consumption">応用耗電異常警告除去</string>
@@ -598,6 +584,7 @@
     <string name="feature_system_ui_status_bar_entry_summary">網絡表示、圖標順序與指示標記</string>
     <string name="feature_system_ui_notification_center_entry_summary">通知樣式與狀態欄通知非表示</string>
     <string name="feature_system_ui_control_center_entry_summary">編集、設定、更多按鈕與運營商表示</string>
+    <string name="feature_system_ui_volume_entry_summary">聴力安全の警告</string>
     <string name="feature_system_ui_dynamic_color_entry_summary">取色規範與 Tonal Spot 配色</string>
     <string name="feature_system_ui_native_entry_summary">通知圖標、氣泡、電源菜單與剪貼板</string>
     <string name="feature_settings_region_entry_summary">國際版設定、Google 入口與國行選項</string>
@@ -615,8 +602,8 @@
     <string name="small_window_group_performance">性能と制限</string>
     <string name="small_window_group_edge">貼辺外観</string>
     <string name="small_window_group_layout">寸法と配置</string>
-    <string name="small_window_white_bar">小窓貼辺を白色縦条で表示</string>
-    <string name="small_window_white_bar_summary">貼辺図標と細白条を連続漸変、点撃で原生図標を展開して応用選択、拖動や編集時は図標に復帰、反向操作は現在進度から継続、触控範囲は縮小しない</string>
+    <string name="small_window_white_bar">収納した小窓をサイドバー風の縦バーで表示</string>
+    <string name="small_window_white_bar_summary">スマートサイドバーの色と透明度に合わせます。タップで標準のアプリ選択を開き、ドラッグや編集時はアイコンに戻ります。アニメーションの進行度とタッチ領域を維持します。</string>
     <string name="small_window_safe_inset">上下安全辺距を拡大</string>
     <string name="small_window_safe_inset_summary">貼辺控件移動時は上下に最低 48 dp を確保、系統原有辺距は縮小せず、小屏幕では範囲を自動調整</string>
     <string name="small_window_hide_recents">多任務で小窓応用を非表示</string>
@@ -800,9 +787,25 @@
     <string name="battery_restore_default_whitelist_summary">使用系統內建之待機豁免名單，略過下発及本機拡張名單，需要重啟系統</string>
     <string name="battery_information_group">電池情報</string>
     <string name="battery_show_cycle_count_title">電池のサイクル数を表示</string>
-    <string name="battery_show_cycle_count_summary">電池の状態画面で最大容量の下にサイクル数を表示します</string>
     <string name="battery_cycle_count_label">サイクル数</string>
     <string name="battery_cycle_count_unavailable">取得できません</string>
+    <string name="battery_show_health_status_title">電池の健康状態を表示</string>
+    <string name="battery_show_full_charge_capacity_title">満充電容量を表示</string>
+    <string name="battery_show_rated_capacity_title">定格容量を表示</string>
+    <string name="battery_show_typical_capacity_title">標準容量を表示</string>
+    <string name="battery_health_status_label">健康状態</string>
+    <string name="battery_health_full_charge_label">満充電容量</string>
+    <string name="battery_health_rated_label">定格容量</string>
+    <string name="battery_health_typical_label">標準容量</string>
+    <string name="battery_show_calculated_health_title">実容量（計算）を表示</string>
+    <string name="battery_health_calculated_label">実容量（計算）</string>
+    <string name="battery_health_unknown">不明</string>
+    <string name="battery_health_good">良好</string>
+    <string name="battery_health_overheat">過熱</string>
+    <string name="battery_health_dead">劣化</string>
+    <string name="battery_health_over_voltage">過電圧</string>
+    <string name="battery_health_failure">異常</string>
+    <string name="battery_health_cold">低温</string>
     <string name="feature_settings_app_info_card_title">アプリ詳細情報</string>
     <string name="feature_settings_app_info_card_summary">アプリ詳細画面に折りたたみ可能な情報カードを表示し、長押しでコピーできます</string>
     <string name="settings_app_info_card_title">アプリ情報</string>
@@ -1117,7 +1120,7 @@
     <string name="wallpaper_3d_force_summary">於隱藏 3D 壁紙開關之裝置強制開啟該功能</string>
     <string name="wallpaper_motion_group">3D 壁紙</string>
     <string name="wallpaper_motion_title">3D 壁紙感度（實驗性）</string>
-    <string name="wallpaper_motion_summary">調整既有 3D 壁紙之傾斜感度，100% 為原始感度，數值越大反應越明顯，不變更系統角度上限。須於 LSPosed 勾選壁紙與炫彩引擎作用域後重新開啟壁紙</string>
+    <string name="wallpaper_motion_summary"></string>
     <string name="wallpaper_motion_amount">傾斜感度</string>
     <string name="feature_only_data_sim_signal_title">僅顯示數據卡信號</string>
     <string name="feature_only_data_sim_signal_summary">雙卡時僅顯示選定行動數據卡之信號與網路類型，切換數據卡後自動跟隨</string>
@@ -1161,7 +1164,7 @@
     <string name="launcher_icon_label_spacing_offset">間距偏移</string>
     <string name="launcher_swipe_gesture_group">上滑手勢</string>
     <string name="launcher_swipe_top_title">簡化上滑頂部區域</string>
-    <string name="launcher_swipe_top_summary">移除頂部手勢分割畫面入口並隱藏控制項，擴大浮動視窗觸發區域，不影響其他分割畫面入口</string>
+    <string name="launcher_swipe_top_summary">移除頂部手勢分割畫面入口並隱藏控制項，擴大浮動視窗觸發區域</string>
     <string name="launcher_float_trigger_width">浮動視窗觸發區域寬度</string>
     <string name="statusbar_icon_mute">靜音</string>
     <string name="statusbar_icon_network_speed">網路速度</string>
@@ -1214,11 +1217,13 @@
     <string name="carrier_name_reset">通信事業者名を元に戻す</string>
     <string name="qs_tile_corner_group">控制中心外观</string>
     <string name="qs_tile_corner_title">自定义控制中心圆角</string>
-    <string name="qs_tile_corner_summary">调节控制中心磁贴、媒体卡片及亮度和音量条的圆角，关闭后恢复系统形状</string>
+    <string name="qs_tile_corner_summary" formatted="false">按尺寸调节圆角百分比，-1 使用系统值，100% 对应磁贴短边的一半</string>
     <string name="qs_tile_corner_radius">圆角半径</string>
+    <string name="qs_tile_corner_settings_title">圆角调节</string>
+    <string name="qs_tile_corner_size_radius">%1$s磁贴圆角半径</string>
     <string name="launcher_group_effects">視覺效果</string>
     <string name="launcher_force_blur_title">強制開啟桌面模糊動效</string>
-    <string name="launcher_force_blur_summary">嘗試解除桌面背景、長按選單材質及相關模糊動效的機型限制，遵循系統模糊、省電和主題設定；可能增加耗電，韌體需保留原生模糊支援，切換後需重新啟動桌面</string>
+    <string name="launcher_force_blur_summary"></string>
 
     <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
 
@@ -1290,10 +1295,10 @@
     <string name="power_indicator_font">文字サイズ</string>
 
     <string name="rotation_suggestion_hide_title">回転提案ボタンを非表示</string>
-    <string name="rotation_suggestion_hide_summary">画面端の回転提案ボタンを非表示にします。自動回転や画面の向きの設定は変更しません</string>
+    <string name="rotation_suggestion_hide_summary">画面端の回転提案ボタンを非表示にします</string>
 
     <string name="hide_screenshot_floating_title">スクリーンショットからフローティングアプリを除外</string>
-    <string name="hide_screenshot_floating_summary">対応するフローティングウィンドウ、ピクチャーインピクチャー、アプリのオーバーレイを閉じずにシステムのスクリーンショットから除外</string>
+    <string name="hide_screenshot_floating_summary">対応するフローティングウィンドウ、ピクチャーインピクチャー、アプリのオーバーレイをシステムのスクリーンショットから除外</string>
     <string name="power_indicator_hide_discharge_sign">放電負号非表示</string>
     <string name="power_indicator_temperature">双行温度表示</string>
     <string name="power_indicator_temperature_summary">上行功耗表示、下行電池温度表示</string>
@@ -1315,17 +1320,13 @@
     <string name="setting_settings_home_entry_style">アイコンスタイル</string>
     <string name="setting_settings_home_entry_style_system">デフォルト</string>
     <string name="setting_settings_home_entry_style_app">アプリアイコン</string>
-    <string name="settings_section_system_adaptation">系統適配</string>
-    <string name="setting_system_adaptation_version">適配版本</string>
-    <string name="setting_system_adaptation_save_failed">無法保存系統適配版本，請確認 Xposed 框架連接後重試</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_title">LTPO/LTPS の動的な低下を無効化</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_summary">画面点灯中はシステム設定で選択したリフレッシュレートを維持します。有効にすると消費電力が増える場合があります。</string>
     <string name="display_enhancement_group">画质增强</string>
     <string name="display_enhancement_sr_thermal_title">解除画质超清增强温控限制</string>
-    <string name="display_enhancement_sr_thermal_summary">解除画质超清增强自身的温控限制，不解锁硬件能力，可能增加发热与耗电</string>
+    <string name="display_enhancement_sr_thermal_summary">解除画质超清增强自身的温控限制</string>
     <string name="display_enhancement_color_thermal_title">解除视频色彩增强温控限制</string>
-    <string name="display_enhancement_color_thermal_summary">解除视频色彩增强自身的温控限制，可能增加发热与耗电，不影响整机温控保护</string>
-    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="display_enhancement_color_thermal_summary">解除视频色彩增强自身的温控限制</string>
     <string name="settings_home_cleanup_group">設定ホーム</string>
     <string name="settings_home_hide_account_title">上部のアカウント項目を非表示</string>
     <string name="settings_home_hide_account_summary">システム設定ホームのアカウントカードを非表示にします</string>
@@ -1359,4 +1360,82 @@
     <string name="native_live_update_summary">標準のリアルタイム通知チップを使用します。有効にすると Fluid Cloud は表示されず、両方を同時に使用できません。</string>
     <string name="setting_hide_module_icon">モジュールのアプリアイコンを非表示</string>
     <string name="setting_hide_module_icon_failed">アイコンの表示状態を変更できません</string>
+    <string name="side_volume_group">侧边音量条</string>
+    <string name="side_volume_percentage_title">百分比显示</string>
+    <string name="side_volume_percentage_summary">在音量条上显示百分比，包括多音量调节</string>
+    <string name="side_volume_keep_wide_title">禁止调节时变为细条</string>
+    <string name="qs_slider_percentage_title">进度条百分比显示</string>
+    <string name="qs_slider_percentage_summary">在亮度、音量条上显示百分比，包含二级面板</string>
+    <string name="qs_slider_percentage_properties">百分比属性设置</string>
+    <string name="qs_slider_percentage_size">文字大小</string>
+    <string name="qs_slider_percentage_color">文字颜色</string>
+    <string name="qs_slider_percentage_offset">纵向位置偏移</string>
+    <string name="settings_color_white">白色</string>
+    <string name="settings_color_black">黑色</string>
+    <string name="capture_group_screenshot_options">スクリーンショット設定</string>
+    <string name="volume_group_alerts">音量通知</string>
+    <string name="control_center_group_visibility">要素の非表示</string>
+    <string name="launcher_group_app_management">アプリ管理</string>
+    <string name="launcher_group_recent_interaction">表示と操作</string>
+
+    <string name="feature_updates_title">本次更新</string>
+    <string name="feature_updates_version">版本 %1$s</string>
+    <string name="feature_updates_counts">新增 %1$d 项 · 调整 %2$d 项</string>
+    <string name="feature_updates_added">新增功能（%1$d）</string>
+    <string name="feature_updates_changed">功能调整（%1$d）</string>
+    <string name="feature_updates_empty">没有匹配的功能</string>
+    <string name="feature_updates_layout_note">兼容新版桌面，修复自定义布局不生效</string>
+    <string name="feature_updates_corners_note">统一圆角设置的展开收起动画</string>
+    <string name="feature_updates_about_note">对齐新版关于本机的布局与分割线</string>
+    <string name="feature_updates_browser_note">完善完整网址的默认浏览器跳转</string>
+    <string name="feature_updates_ota_note">完善下载链接解析、鉴权与重定向处理</string>
+    <string name="feature_updates_view_features">查看本次更新的功能</string>
+    <string name="settings_account_size_group">アカウントカード</string>
+    <string name="settings_account_size_title">アカウントカードのサイズ</string>
+    <string name="settings_account_size_summary">カードの高さ、アバター、文字のサイズをまとめて調整</string>
+    <string name="settings_account_size_percent">サイズの比率</string>
+    <string name="settings_title_lock_title">タイトルの折りたたみを固定</string>
+    <string name="settings_title_lock_summary">スクロールしても大きなタイトルを展開しない</string>
+    <string name="battery_block_whitelist_restore_title">バッテリー最適化リストの復元を防止</string>
+    <string name="battery_block_whitelist_restore_summary">バッテリーアプリが最適化設定を自動で既定値に戻すのを防ぎます。手動での変更は可能です</string>
+    <string name="feature_translation_title">翻訳</string>
+    <string name="translation_screen_group">画面翻訳</string>
+    <string name="translation_allow_floating_title">フローティングウィンドウでの翻訳制限を解除</string>
+    <string name="translation_allow_floating_summary">フローティングウィンドウが開いていても全画面翻訳を使用</string>
+    <string name="translation_bypass_app_blacklist_title">アプリのブラックリストを解除</string>
+    <string name="translation_bypass_app_blacklist_summary">ブラックリスト内のアプリで全画面翻訳を許可</string>
+    <string name="translation_allow_restricted_pages_title">特定の画面の制限を解除</string>
+    <string name="translation_allow_restricted_pages_summary">通話、ビデオ通話、権限画面で全画面翻訳を許可</string>
+    <string name="translation_allow_landscape_title">横画面の翻訳制限を解除</string>
+    <string name="translation_allow_landscape_summary">横画面でも全画面翻訳を利用可能にする</string>
+    <string name="translation_unlock_browser_title">ブラウザーの翻訳制限を解除</string>
+    <string name="translation_unlock_browser_summary">アプリの許可リストを回避し、未対応バージョンでは汎用のウェブ抽出を試す</string>
+    <string name="installer_cleanup_title">アプリインストーラー</string>
+    <string name="installer_cleanup_group">インストール</string>
+    <string name="installer_native_ui_title">標準インストーラーを使用</string>
+    <string name="installer_native_ui_summary">カスタムインストーラーを回避し、Android 標準のインストール画面を使用</string>
+    <string name="installer_skip_detection_title">インストール検査をスキップ</string>
+    <string name="installer_skip_detection_summary">アプリインストーラーのスキャンをスキップし、安全確認カードを非表示にする</string>
+    <string name="installer_remove_ads_title">インストール広告を削除</string>
+    <string name="installer_remove_ads_summary">インストール時、完了時、キャンセル時のアプリのおすすめを削除</string>
+    <string name="installer_hide_collection_notice_title">インストール情報収集の通知を非表示</string>
+    <string name="installer_hide_collection_notice_summary">インストール前の情報収集リマインダーダイアログをスキップ</string>
+    <string name="installer_block_network_title">インストーラーのネット接続を禁止</string>
+    <string name="installer_block_network_summary">アプリインストーラーのネット接続を禁止し、オンライン事前読み込みをスキップ</string>
+    <string name="package_installer_title">パッケージインストーラー</string>
+    <string name="camera_page_title">カメラ</string>
+    <string name="camera_preview_group">写真のプレビュー</string>
+    <string name="camera_default_gallery_title">既定のギャラリーで開く</string>
+    <string name="camera_default_gallery_summary">システムの「デフォルトのアプリ」で選択したギャラリーで写真や動画を開きます</string>
+
+    <string name="network_speed_title">通信速度表示</string>
+    <string name="network_speed_refresh_second">更新間隔を自訂</string>
+    <string name="network_speed_hide_per_second">/s を非表示</string>
+    <string name="network_speed_hide_units">速度単位を非表示</string>
+    <string name="network_speed_single_line">単行表示</string>
+
+    <string name="network_speed_interval">更新間隔</string>
+    <string name="network_speed_follow_font_weight">系統字重に従う</string>
+    <string name="network_speed_custom_font_size">字級を自訂</string>
+    <string name="network_speed_font_size">文字寸法</string>
 </resources>

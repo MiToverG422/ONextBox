@@ -1,37 +1,33 @@
 package com.mi.onextbox.ui.settings
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -39,10 +35,9 @@ import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.ColorOs17DetailTopBar
 import com.mi.onextbox.ui.common.ColorOsScrollEntranceHost
 import com.mi.onextbox.ui.common.rememberColorOsScrollEntrance
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.ScrollResetEffect
 import com.mi.onextbox.ui.layout.BlurredChromeBar
+import com.mi.onextbox.ui.layout.LocalChromeNativeBlurEnabled
 import com.mi.onextbox.ui.layout.topBarColors
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Scaffold
@@ -54,17 +49,6 @@ import io.github.suqi8.coui.kmp.blur.layerBackdrop
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Back
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.LargeFlexibleTopAppBar as MaterialLargeFlexibleTopAppBar
-import androidx.compose.material3.TopAppBar as MaterialTopAppBar
-import androidx.compose.material3.TopAppBarDefaults as MaterialTopAppBarDefaults
-import androidx.compose.material3.rememberTopAppBarState as rememberMaterialTopAppBarState
-import androidx.compose.material3.Scaffold as MaterialScaffold
-import androidx.compose.material3.Text as MaterialText
-import androidx.compose.material3.Icon as MaterialIcon
-import androidx.compose.material3.IconButton as MaterialIconButton
 import kotlin.math.abs
 
 @Composable
@@ -85,34 +69,8 @@ fun SettingsPageSurface(
     backgroundContent: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-        MiuixSettingsPageSurface(
-            title = title, modifier = modifier, showBack = showBack, onBack = onBack, actions = actions,
-            bottomContentPadding = bottomContentPadding, bottomChrome = bottomChrome,
-            contentScrollable = contentScrollable, edgeToEdgeBottom = edgeToEdgeBottom,
-            externalScrollState = externalScrollState, scrollResetKey = scrollResetKey,
-            backgroundContent = backgroundContent, content = content,
-        )
-        return
-    }
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveSettingsPageSurface(
-            title = title,
-            modifier = modifier,
-            showBack = showBack,
-            onBack = onBack,
-            actions = actions,
-            bottomContentPadding = bottomContentPadding,
-            bottomChrome = bottomChrome,
-            contentScrollable = contentScrollable,
-            edgeToEdgeBottom = edgeToEdgeBottom,
-            externalScrollState = externalScrollState,
-            scrollResetKey = scrollResetKey,
-            backgroundContent = backgroundContent,
-            content = content,
-        )
-        return
-    }
+
+
     val internalScrollState = rememberScrollState()
     val scrollState = externalScrollState ?: internalScrollState
     val cardEntrance = rememberColorOsScrollEntrance(scrollState)
@@ -179,6 +137,11 @@ fun SettingsPageSurface(
             effectExtension = if (showBack) 8.dp else homepageBlurExtension,
             effectTopOffsetPx = { if (showBack) 0f else topAppBarState.heightOffset },
         ) {
+            // Detail toolbars can be reparented between the launch surface and nested pages.
+            // Keep their buttons page-local for their whole lifetime, including settled frames.
+            CompositionLocalProvider(
+                LocalChromeNativeBlurEnabled provides (LocalChromeNativeBlurEnabled.current && !showBack),
+            ) {
             val navigationIcon: @Composable () -> Unit = {
                 if (showBack) {
                     ColorOsTopBarButton(
@@ -236,6 +199,7 @@ fun SettingsPageSurface(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+            }
         }
         },
         bottomBar = {
@@ -283,94 +247,4 @@ fun SettingsPageSurface(
             )
         }
         }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun Material3ExpressiveSettingsPageSurface(
-    title: String,
-    modifier: Modifier,
-    showBack: Boolean,
-    onBack: (() -> Unit)?,
-    actions: @Composable RowScope.() -> Unit,
-    bottomContentPadding: Dp,
-    bottomChrome: (@Composable () -> Unit)?,
-    contentScrollable: Boolean,
-    edgeToEdgeBottom: Boolean,
-    externalScrollState: ScrollState?,
-    scrollResetKey: Int?,
-    backgroundContent: (@Composable BoxScope.() -> Unit)?,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val internalScrollState = rememberScrollState()
-    val scrollState = externalScrollState ?: internalScrollState
-    val appBarState = rememberMaterialTopAppBarState()
-    ScrollResetEffect(scrollResetKey) {
-        scrollState.scrollTo(0)
-        appBarState.heightOffset = 0f
-        appBarState.contentOffset = 0f
-    }
-    val scrollBehavior = MaterialTopAppBarDefaults.exitUntilCollapsedScrollBehavior(appBarState)
-    val topBarColors = MaterialTopAppBarDefaults.topAppBarColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-    )
-    MaterialScaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .then(if (showBack) Modifier else Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        topBar = {
-            if (showBack) {
-                MaterialTopAppBar(
-                    title = { MaterialText(title, style = MaterialTheme.typography.titleLarge) },
-                    navigationIcon = {
-                        MaterialIconButton(onClick = { onBack?.invoke() }) {
-                            MaterialIcon(
-                                imageVector = COUIIcons.Back,
-                                contentDescription = null,
-                            )
-                        }
-                    },
-                    actions = actions,
-                    colors = topBarColors,
-                )
-            } else {
-                MaterialLargeFlexibleTopAppBar(
-                    title = { MaterialText(title) },
-                    actions = actions,
-                    scrollBehavior = scrollBehavior,
-                    colors = topBarColors,
-                )
-            }
-        },
-        bottomBar = { bottomChrome?.invoke() },
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier.fillMaxSize().consumeWindowInsets(
-                if (edgeToEdgeBottom) {
-                    PaddingValues(top = innerPadding.calculateTopPadding())
-                } else innerPadding,
-            ),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            backgroundContent?.invoke(this)
-            Column(
-                modifier = Modifier
-                    .widthIn(max = 680.dp)
-                    .fillMaxSize()
-                    .imePadding()
-                    .then(if (contentScrollable) Modifier.verticalScroll(scrollState) else Modifier)
-                    .padding(
-                        start = 0.dp,
-                        top = innerPadding.calculateTopPadding() + 12.dp,
-                        end = 0.dp,
-                        bottom = if (edgeToEdgeBottom) 0.dp else {
-                            maxOf(innerPadding.calculateBottomPadding(), bottomContentPadding) + 12.dp
-                        },
-                    ),
-                content = content,
-            )
-        }
-    }
 }

@@ -50,6 +50,6 @@ class EnabledFeatureCatalogTest {
     @Test fun subpagesShareScopeGroup() {
         assertEquals(FeaturePageMode.SystemUi, EnabledFeatureCatalog.group(FeaturePageMode.SystemUiNative))
         assertEquals(FeaturePageMode.Desktop, EnabledFeatureCatalog.group(FeaturePageMode.DesktopRecent))
-        assertEquals(FeaturePageMode.AndroidSystem, EnabledFeatureCatalog.group(FeaturePageMode.Installer))
+        assertEquals(FeaturePageMode.PackageInstaller, EnabledFeatureCatalog.group(FeaturePageMode.Installer))
     }
 }

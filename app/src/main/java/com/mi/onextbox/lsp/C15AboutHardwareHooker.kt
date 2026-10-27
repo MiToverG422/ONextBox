@@ -27,6 +27,7 @@ internal object C15AboutHardwareHooker {
     private const val NATIVE_ROW_LAYOUT = "oplus_device_info_item_preference"
     private const val ROW_TAG = "onextbox_c15_about_hardware_row"
     private const val DIVIDER_TAG = "onextbox_c15_about_hardware_divider"
+    private const val DIVIDER_DECORATION_CLASS = "com.coui.appcompat.preference.COUIPreferenceItemDecoration"
 
     private val hardwareKeys = setOf(
         "cpu_info", "battery_and_charge_info", "ram_info", "camera_info",
@@ -36,6 +37,10 @@ internal object C15AboutHardwareHooker {
     )
     private val hookedLoaders = ConcurrentHashMap.newKeySet<ClassLoader>()
     private val hookedAdapterClasses = ConcurrentHashMap.newKeySet<Class<*>>()
+    private val hookedDividerClasses = ConcurrentHashMap.newKeySet<Class<*>>()
+    private val modernDividerCards = Collections.synchronizedSet(
+        Collections.newSetFromMap(WeakHashMap<LinearLayout, Boolean>()),
+    )
     private val originalCardStates = Collections.synchronizedMap(WeakHashMap<LinearLayout, CardState>())
     private data class Binding(val adapter: WeakReference<Any>, val holder: WeakReference<Any>, val position: Int)
     private val boundRows = WeakHashMap<LinearLayout, Binding>()
@@ -54,6 +59,9 @@ internal object C15AboutHardwareHooker {
         HotReloadLifecycle.registerReplay("settings:c15-adapters",
             capture = { hookedAdapterClasses.toTypedArray() },
             replay = { state -> (state as? Array<*>)?.filterIsInstance<Class<*>>()?.forEach(::hookConcreteAdapter) })
+        HotReloadLifecycle.registerReplay("settings:c15-hardware-dividers",
+            capture = { hookedDividerClasses.toTypedArray() },
+            replay = { state -> (state as? Array<*>)?.filterIsInstance<Class<*>>()?.forEach(::hookDividerDecoration) })
         HotReloadLifecycle.register("settings:c15-hardware", capture = {
             boundRows.values.mapNotNull { row ->
                 val adapter = row.adapter.get() ?: return@mapNotNull null
@@ -72,6 +80,7 @@ internal object C15AboutHardwareHooker {
             })
         val fragmentClass = XposedHelpers.findClassIfExists(FRAGMENT_CLASS, classLoader) ?: return
         if (!hookedLoaders.add(classLoader)) return
+        XposedHelpers.findClassIfExists(DIVIDER_DECORATION_CLASS, classLoader)?.let(::hookDividerDecoration)
         runCatching {
             val handles = XposedBridge.hookAllMethods(
                 fragmentClass,
@@ -93,6 +102,38 @@ internal object C15AboutHardwareHooker {
         }.onFailure {
             hookedLoaders.remove(classLoader)
             log("hook DeviceInfoFragment.onCreateAdapter failed", it)
+        }
+    }
+
+    private fun hookDividerDecoration(decorationClass: Class<*>) {
+        if (!hookedDividerClasses.add(decorationClass)) return
+        runCatching {
+            val methods = decorationClass.declaredMethods.filter {
+                it.name == "shouldDrawDivider" && it.returnType == Boolean::class.javaPrimitiveType &&
+                    it.parameterCount == 2 && ViewGroup::class.java.isAssignableFrom(it.parameterTypes[0]) &&
+                    it.parameterTypes[1] == Int::class.javaPrimitiveType
+            }
+            if (methods.isEmpty()) {
+                hookedDividerClasses.remove(decorationClass)
+                log("About device divider decoration method unavailable")
+                return
+            }
+            methods.forEach { method ->
+                XposedBridge.hookMethod(method, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        if (HotReloadLifecycle.isRetiring ||
+                            !LspConfig.isSettingsC15AboutLayoutEnabledXposed()
+                        ) return
+                        val list = param.args.getOrNull(0) as? ViewGroup ?: return
+                        val index = param.args.getOrNull(1) as? Int ?: return
+                        val card = list.getChildAt(index) as? LinearLayout ?: return
+                        if (modernDividerCards.contains(card)) param.result = false
+                    }
+                })
+            }
+        }.onFailure {
+            hookedDividerClasses.remove(decorationClass)
+            log("hook About device divider decoration failed", it)
         }
     }
 
@@ -139,6 +180,7 @@ internal object C15AboutHardwareHooker {
         val itemView = XposedHelpers.getObjectField(holder, "itemView") as? View ?: return
         val card = itemView as? LinearLayout ?: return
         if (!inheritsCardLayout(card.javaClass)) return
+        val modern = C15AboutLayoutProfile.isModern(card.resources)
         boundRows[card] = Binding(WeakReference(adapter), WeakReference(holder), position)
         val margins = card.layoutParams as? ViewGroup.MarginLayoutParams
         originalCardStates[card] = CardState(
@@ -173,15 +215,13 @@ internal object C15AboutHardwareHooker {
                 positionInGroup != 3 && positionInGroup != 4)
         }
 
-        // The C17 charge preference still uses the original compact two-value
-        // layout. It only needs the native group background above.
-        if (key == "charge_info") return
+        if (!modern && key == "charge_info") return
 
         val title = displayTitle(preference, key, card) ?: run {
             restoreCard(card)
             return
         }
-        val values = boundValues(key, card, title)
+        val values = boundValues(preference, key, card, title, modern)
         if (values.isEmpty() && key != "tidal_architecture") {
             restoreCard(card)
             return
@@ -196,9 +236,14 @@ internal object C15AboutHardwareHooker {
         row.value.maxLines = if (key == "camera_info") Int.MAX_VALUE
             else if (values.size > 1) values.size.coerceAtMost(3) else 2
         row.value.ellipsize = if (key == "camera_info") null else TextUtils.TruncateAt.END
-        row.value.setLineSpacing(if (key == "camera_info") dp(card, 4).toFloat() else 0f, 1f)
+        row.value.setLineSpacing(
+            if (!modern && key == "camera_info") dp(card, 4).toFloat() else 0f,
+            1f,
+        )
         row.arrow.visibility = if (showArrow) View.VISIBLE else View.GONE
-        if (key == "camera_info") {
+        if (modern) {
+            alignNativeRow(card, row)
+        } else if (key == "camera_info") {
             (row.title.layoutParams as? LinearLayout.LayoutParams)?.let {
                 it.gravity = Gravity.TOP or Gravity.START
                 row.title.layoutParams = it
@@ -209,7 +254,7 @@ internal object C15AboutHardwareHooker {
             if (child !== row.container) child.visibility = View.GONE
         }
         row.container.visibility = View.VISIBLE
-        val customRowPadding = if (key == "camera_info" || key == "ram_info" ||
+        val customRowPadding = if (modern || key == "camera_info" || key == "ram_info" ||
             key == "screen_physics_size" || key == "security_chip_info"
         ) dp(card, 12) else 0
         row.container.setPaddingRelative(0, customRowPadding, 0, customRowPadding)
@@ -219,10 +264,14 @@ internal object C15AboutHardwareHooker {
         // setPositionInGroup, so the compact dimensions are applied last.
         card.minimumHeight = dp(card, 48)
         card.setPaddingRelative(dp(card, 32), 0, dp(card, 32), 0)
-        // These C17 spec preferences suppress most item decorations even after
-        // being moved into one category. Draw the missing C15 inset dividers in
-        // the joined card; camera and charging already receive the native line.
-        if (key != "camera_info" && positionInGroup != 3 && positionInGroup != 4) {
+        if (modern) {
+            if (positionInGroup != 3 && positionInGroup != 4) addInsetDivider(card)
+            modernDividerCards.add(card)
+            runCatching {
+                XposedHelpers.callMethod(holder, "setDividerAllowedAbove", false)
+                XposedHelpers.callMethod(holder, "setDividerAllowedBelow", false)
+            }
+        } else if (key != "camera_info" && positionInGroup != 3 && positionInGroup != 4) {
             addInsetDivider(card)
         }
     }
@@ -236,7 +285,40 @@ internal object C15AboutHardwareHooker {
         restoreCard(card)
     }
 
+    private fun alignNativeRow(card: LinearLayout, row: NativeRow) {
+        val margins = card.layoutParams as? ViewGroup.MarginLayoutParams
+        val estimatedCardWidth = card.resources.displayMetrics.widthPixels -
+            (margins?.marginStart ?: 0) - (margins?.marginEnd ?: 0)
+        val cardWidth = card.width.takeIf { it > 0 } ?: estimatedCardWidth
+        val contentWidth = (cardWidth - dp(card, 64)).coerceAtLeast(dp(card, 64))
+        row.container.isBaselineAligned = false
+        row.container.gravity = Gravity.CENTER_VERTICAL
+        row.container.minimumHeight = dp(card, 48)
+        row.title.maxWidth = (contentWidth * 0.38f).toInt().coerceAtLeast(1)
+        row.title.maxLines = 2
+        row.title.ellipsize = TextUtils.TruncateAt.END
+        row.title.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        ).apply {
+            marginEnd = dp(card, 16)
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        row.value.layoutParams = LinearLayout.LayoutParams(
+            0,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            1f,
+        ).apply { gravity = Gravity.CENTER_VERTICAL }
+        row.value.gravity = Gravity.END or Gravity.CENTER_VERTICAL
+        row.value.textAlignment = View.TEXT_ALIGNMENT_VIEW_END
+        (row.arrow.layoutParams as? LinearLayout.LayoutParams)?.let {
+            it.gravity = Gravity.CENTER_VERTICAL
+            row.arrow.layoutParams = it
+        }
+    }
+
     private fun restoreCard(card: LinearLayout) {
+        modernDividerCards.remove(card)
         val state = originalCardStates.remove(card) ?: return
         for (index in card.childCount - 1 downTo 0) {
             if (card.getChildAt(index).tag == ROW_TAG ||
@@ -288,12 +370,22 @@ internal object C15AboutHardwareHooker {
         return XposedHelpers.callMethod(preference, "getTitle") as? CharSequence
     }
 
-    private fun boundValues(key: String, card: View, title: CharSequence): List<String> {
+    private fun boundValues(
+        preference: Any,
+        key: String,
+        card: View,
+        title: CharSequence,
+        modern: Boolean,
+    ): List<String> {
         val values = when (key) {
             "cpu_info", "processor_detail" -> listOfNotNull(text(card, "assignment"))
             "battery_and_charge_info" -> listOfNotNull(
                 joinNonBlank(text(card, "battery_capacity_number"),
                     text(card, "battery_capacity_unit"), separator = " "),
+            )
+            "charge_info" -> listOfNotNull(
+                text(card, "text_wired_charging"),
+                text(card, "text_wireless_charging"),
             )
             "ram_info" -> listOfNotNull(
                 joinRam(text(card, "coui_statusText1"), text(card, "expand_ram")),
@@ -329,10 +421,25 @@ internal object C15AboutHardwareHooker {
                 text(card, "assignment_gameing_three_cores"),
                 text(card, "assignment_high_brush"),
             )
-            "device_market_name_header" -> listOfNotNull(text(card, "device_model_badge"))
+            "device_market_name_header" -> if (modern) {
+                listOfNotNull(boundModel(preference, card))
+            } else {
+                listOfNotNull(text(card, "device_model_badge"))
+            }
             else -> emptyList()
         }
         return values.filter { it.isNotBlank() }
+    }
+
+    private fun boundModel(preference: Any, card: View): String? {
+        val model = runCatching {
+            (XposedHelpers.getObjectField(preference, "mDeviceModel") as? CharSequence)
+                ?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+        }.getOrNull()
+        if (model != null) return model
+        val id = card.resources.getIdentifier("device_model_badge", "id", "com.android.settings")
+        if (id == 0) return null
+        return card.findViewById<TextView>(id)?.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }
     }
 
     private fun text(card: View, resourceName: String): String? {

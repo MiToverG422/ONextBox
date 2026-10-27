@@ -24,6 +24,9 @@ internal class SoftwareUpdateDownloadAuth(private val context: Context, private 
 
     fun apply(connection: HttpURLConnection, url: String, timestamp: () -> String) {
         check(SoftwareUpdateDownloadLinks.trustedCheckUrl(url))
+        val sessionMode = context.getSharedPreferences("state_info", Context.MODE_PRIVATE).getInt("gka_req_download", 0)
+        val mode = SoftwareUpdateDownloadLinks.authenticationMode(url, sessionMode)
+            ?: throw SoftwareUpdateAuthenticationUnavailable()
         val version = context.packageManager.getPackageInfo("com.oplus.ota", 0).longVersionCode
         connection.setRequestProperty("userId", "oplus-ota|$version")
         connection.setRequestProperty("marketName", Base64.getEncoder().encodeToString(property("ro.vendor.oplus.market.name").toByteArray()))
@@ -32,7 +35,7 @@ internal class SoftwareUpdateDownloadAuth(private val context: Context, private 
             .invoke(provider.getDeclaredConstructor().newInstance(), context, "GUID") as? String
         if (guid.isNullOrEmpty()) throw SoftwareUpdateAuthenticationUnavailable()
         val id = MessageDigest.getInstance("MD5").digest(guid.toByteArray()).joinToString("") { "%02x".format(it.toInt() and 255) }
-        when (val mode = context.getSharedPreferences("state_info", Context.MODE_PRIVATE).getInt("gka_req_download", 0)) {
+        when (mode) {
             0 -> {
                 val languageId = context.resources.getIdentifier("language_values_exam", "string", "oplus")
                 val language = if (languageId != 0) context.getString(languageId) else context.resources.configuration.locales[0].toLanguageTag()

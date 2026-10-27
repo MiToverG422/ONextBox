@@ -24,8 +24,7 @@ internal object AppLockDelayMenuHooker {
         private val prefix = "ONextBox-AppLock:menu@${System.identityHashCode(loader)}:"
         private val refresh = Runnable { HotReloadLifecycle.withHook({}, { if (!retired) rows.keys.toList().forEach(::refresh) }) }
         private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == null || key in setOf(AppLockDelaySettings.ENABLED, MODERN_PREFERENCES_READY_KEY,
-                SystemAdaptationSettings.KEY, SystemAdaptationSettings.ALLOW_HYPER_OS)) {
+            if (key == null || key in setOf(AppLockDelaySettings.ENABLED, MODERN_PREFERENCES_READY_KEY)) {
                 if (!retired) { main.removeCallbacks(refresh); main.post(refresh) }
             }
         }

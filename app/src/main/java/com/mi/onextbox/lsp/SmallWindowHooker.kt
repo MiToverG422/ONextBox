@@ -5,7 +5,6 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.Outline
@@ -16,6 +15,7 @@ import android.os.Looper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import com.mi.onextbox.lsp.LspConfig.SmallWindowFeature as Feature
@@ -38,6 +38,7 @@ internal object SmallWindowHooker {
     private val observedAnimations = WeakHashMap<Animator, Animator.AnimatorListener>()
     private val styledHosts = WeakHashMap<View, String>()
     private val visualFailed = AtomicBoolean(false)
+    private var sidebarAppearance: SmallWindowSidebarAppearance? = null
 
     private enum class Variant(val viewClass: String, val controllerClass: String) {
         Zoom(
@@ -51,9 +52,9 @@ internal object SmallWindowHooker {
     }
 
     fun hookSystemUi(loader: ClassLoader) = install(loader, Variant.Zoom)
-    fun hookSystemServer(loader: ClassLoader) {
+    fun hookSystemServer(loader: ClassLoader, colorOs16: Boolean = false) {
         install(loader, Variant.Flexible)
-        SmallWindowPolicyHooker.install(loader)
+        SmallWindowPolicyHooker.install(loader, colorOs16)
     }
 
     private fun enabled(feature: Feature): Boolean = LspConfig.isSmallWindowFeatureEnabledXposed(feature)
@@ -65,6 +66,8 @@ internal object SmallWindowHooker {
             },
             canReload = { synchronized(nativeDepths) { nativeDepths.isEmpty() } },
             detach = {
+                sidebarAppearance?.close()
+                sidebarAppearance = null
                 synchronized(pendingStyles) {
                     pendingStyles.forEach { (view, task) -> view.removeCallbacks(task) }
                     pendingStyles.clear()
@@ -362,6 +365,16 @@ internal object SmallWindowHooker {
         style.density = density
         style.hidden = hidden.toFloat()
         style.leftSide = leftSide
+        val appearance = sidebarAppearance ?: SmallWindowSidebarAppearance(container.context) {
+            if (!HotReloadLifecycle.isRetiring) {
+                val updated = sidebarAppearance?.value ?: return@SmallWindowSidebarAppearance
+                synchronized(styles) { styles.values.toList() }.forEach {
+                    it.appearance = updated
+                    it.container.get()?.invalidate()
+                }
+            }
+        }.also { sidebarAppearance = it }
+        style.appearance = appearance.value
         style.suspended = false
         synchronized(styles) { styles[container] = style }
         try {
@@ -389,6 +402,10 @@ internal object SmallWindowHooker {
         var density = 1f
         var hidden = 0f
         var leftSide = false
+        var appearance = SmallWindowSidebarAppearance.Style(SmallWindowSidebarAppearance.DEFAULT_COLOR, 0.41f)
+        var transitionAlpha = 1f
+        var alphaObserver: ViewTreeObserver.OnPreDrawListener? = null
+        var alphaObserverTree: WeakReference<ViewTreeObserver>? = null
     }
 
     private fun suspendStyle(style: AnimatedStyle) {
@@ -411,6 +428,7 @@ internal object SmallWindowHooker {
     private fun render(style: AnimatedStyle) {
         if (style.suspended) return
         val container = style.container.get() ?: return
+        observeTransitionAlpha(style, container)
         val nativeWeight = 1f - SmallWindowRules.barProgress(style.progress)
         style.native.alphas.forEach { (view, alpha) -> view.get()?.alpha = alpha * nativeWeight }
         style.native.backgrounds.forEach { (weak, background) ->
@@ -427,6 +445,38 @@ internal object SmallWindowHooker {
         if (foreground?.style !== style) container.foreground = WhiteBarDrawable(style)
         else foreground.invalidateSelf()
         container.invalidate()
+    }
+
+    private fun observeTransitionAlpha(style: AnimatedStyle, container: FrameLayout) {
+        val tree = container.viewTreeObserver
+        if (style.alphaObserver != null && style.alphaObserverTree?.get() === tree) return
+        removeAlphaObserver(style)
+        style.transitionAlpha = container.transitionAlpha
+        val weak = WeakReference(style)
+        val listener = ViewTreeObserver.OnPreDrawListener {
+            val current = weak.get()
+            val view = current?.container?.get()
+            if (current != null && view != null && !current.suspended && !HotReloadLifecycle.isRetiring) {
+                val alpha = view.transitionAlpha
+                if (alpha != current.transitionAlpha) {
+                    current.transitionAlpha = alpha
+                    // Native spring updates can change RenderNode alpha without redrawing the paint.
+                    (view.foreground as? WhiteBarDrawable)?.invalidateSelf()
+                }
+            }
+            true
+        }
+        tree.addOnPreDrawListener(listener)
+        style.alphaObserver = listener
+        style.alphaObserverTree = WeakReference(tree)
+    }
+
+    private fun removeAlphaObserver(style: AnimatedStyle) {
+        val tree = style.alphaObserverTree?.get()
+        val listener = style.alphaObserver
+        if (tree?.isAlive == true && listener != null) tree.removeOnPreDrawListener(listener)
+        style.alphaObserver = null
+        style.alphaObserverTree = null
     }
 
     private fun retarget(style: AnimatedStyle, target: Float) {
@@ -481,6 +531,7 @@ internal object SmallWindowHooker {
     }
 
     private fun finishStyle(style: AnimatedStyle) {
+        removeAlphaObserver(style)
         val old = style.animator
         style.animator = null
         old?.cancel()
@@ -544,7 +595,7 @@ internal object SmallWindowHooker {
     }
 
     private class WhiteBarDrawable(val style: AnimatedStyle) : Drawable() {
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private var opacity = 255
         override fun draw(canvas: Canvas) {
             val progress = SmallWindowRules.barProgress(style.progress)
@@ -554,7 +605,9 @@ internal object SmallWindowHooker {
             // A gentle length change complements the fade without altering hit areas or layout.
             val halfHeight = (rect.bottom - rect.top) * (0.7f + 0.3f * progress) / 2f
             val center = (rect.top + rect.bottom) / 2f
-            paint.alpha = (opacity * progress).toInt()
+            paint.color = style.appearance.color
+            paint.alpha = SmallWindowRules.barAlpha(style.appearance.color, style.appearance.opacity, opacity, progress,
+                style.container.get()?.transitionAlpha ?: 1f)
             canvas.drawRoundRect(bounds.left + rect.left, bounds.top + center - halfHeight,
                 bounds.left + rect.right, bounds.top + center + halfHeight, 2f * style.density, 2f * style.density, paint)
         }

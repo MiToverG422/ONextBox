@@ -5,10 +5,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Icon as MaterialIcon
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
@@ -42,14 +38,7 @@ fun SettingsToggleRow(
         summary = summary.takeIf { it.isNotBlank() },
         startAction = icon?.let { imageVector ->
             {
-                if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-                    MaterialIcon(
-                        imageVector = imageVector,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp),
-                    )
-                } else {
+                run {
                     Icon(
                         imageVector = imageVector,
                         contentDescription = null,
@@ -67,9 +56,7 @@ fun SettingsToggleRow(
         switchEnabled = switchEnabled,
         interactionEnabled = interactionEnabled,
     ) }
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        Material3ExpressiveInferredSegmentPosition(hasDividerAbove, hasDividerBelow, row)
-    } else {
+    run {
         row()
     }
 }

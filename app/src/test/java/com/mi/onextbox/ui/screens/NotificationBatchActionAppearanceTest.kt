@@ -1,33 +1,15 @@
 package com.mi.onextbox.ui.screens
 
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import java.io.File
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NotificationBatchActionAppearanceTest {
-    @Test fun materialDisabledContainersAreOpaqueInLightAndDarkThemes() {
-        for ((foreground, surface) in listOf(Color.Black to Color.White, Color.White to Color(0xFF141218))) {
-            val actual = notificationBatchDisabledContainerColor(foreground, surface)
-            assertEquals(1f, actual.alpha, 0f)
-            assertEquals(foreground.copy(alpha = .12f).compositeOver(surface), actual)
-        }
-    }
-
-    @Test fun translucentThemeSurfacesCannotMakeTheDisabledButtonTransparent() {
-        val surface = Color(0xFF352A4D)
-        assertEquals(notificationBatchDisabledContainerColor(Color.White, surface),
-            notificationBatchDisabledContainerColor(Color.White, surface.copy(alpha = .4f)))
-    }
-
-    @Test fun bothMaterialButtonsUseTheOpaqueDisabledContainerWithoutChangingEnabledColors() {
+    @Test fun actionsUseOnlyCouiButtonsAndPreserveEnabledState() {
         val buttons = source().substringAfter("private fun BatchButton(").substringBefore("private fun BatchToolbarButton(")
-        assertTrue(buttons.contains("ButtonDefaults.buttonColors(disabledContainerColor = disabledContainer)"))
-        assertTrue(buttons.contains("ButtonDefaults.filledTonalButtonColors(disabledContainerColor = disabledContainer)"))
-        assertFalse(buttons.contains("containerColor ="))
+        assertFalse(buttons.contains("ButtonDefaults."))
+        assertTrue(buttons.contains("ColorOs17Button("))
         assertTrue(buttons.contains("enabled = enabled"))
     }
 

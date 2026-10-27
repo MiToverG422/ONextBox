@@ -2,7 +2,7 @@ package com.mi.onextbox.ui.common
 
 import android.content.Context
 import io.github.suqi8.coui.kmp.theme.ColorSchemeMode
-import io.github.suqi8.coui.kmp.theme.ThemeColorSpec
+import com.mi.onextbox.ui.common.CouiColorSpec as ThemeColorSpec
 import io.github.suqi8.coui.kmp.theme.ThemePaletteStyle
 
 enum class AppThemeMode {

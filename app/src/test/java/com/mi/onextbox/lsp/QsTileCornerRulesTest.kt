@@ -5,30 +5,35 @@ import org.junit.Test
 
 class QsTileCornerRulesTest {
     @Test fun savedRadiusIsBounded() {
-        assertEquals(0, QsTileCornerRules.normalize(Int.MIN_VALUE))
+        assertEquals(-1, QsTileCornerRules.normalize(Int.MIN_VALUE))
         assertEquals(0, QsTileCornerRules.normalize(0))
-        assertEquals(24, QsTileCornerRules.normalize(24))
-        assertEquals(64, QsTileCornerRules.normalize(Int.MAX_VALUE))
+        assertEquals(50, QsTileCornerRules.normalize(50))
+        assertEquals(100, QsTileCornerRules.normalize(Int.MAX_VALUE))
     }
-    @Test fun dpConversionUsesTheTileDisplayDensity() {
-        assertEquals(72f, QsTileCornerRules.pixels(24, 3f)!!, 0f)
-        assertEquals(30f, QsTileCornerRules.pixels(24, 1.25f)!!, 0f)
+    @Test fun percentageScalesWithActualBoundsAndKeepsTheSameProportion() {
+        assertEquals(25f, QsTileCornerRules.pixels(50, 300, 100)!!, 0f)
+        assertEquals(75f, QsTileCornerRules.pixels(50, 900, 300)!!, 0f)
+        assertEquals(12.5f, QsTileCornerRules.pixels(25, 100, 300)!!, 0f)
     }
     @Test fun radiusNeverExceedsHalfOfTheActualBackgroundShortSide() {
-        assertEquals(50f, QsTileCornerRules.pixels(64, 3f, 300, 100)!!, 0f)
-        assertEquals(50f, QsTileCornerRules.pixels(64, 3f, 100, 300)!!, 0f)
-        assertEquals(51f, QsTileCornerRules.pixels(64, 3f, 102, 102)!!, 0f)
+        assertEquals(50f, QsTileCornerRules.pixels(100, 300, 100)!!, 0f)
+        assertEquals(50f, QsTileCornerRules.pixels(100, 100, 300)!!, 0f)
+        assertEquals(51f, QsTileCornerRules.pixels(Int.MAX_VALUE, 102, 102)!!, 0f)
     }
     @Test fun zeroProducesSquareCornersEvenOnCircularTiles() {
-        assertEquals(0f, QsTileCornerRules.pixels(0, 3f, 100, 100)!!, 0f)
+        assertEquals(0f, QsTileCornerRules.pixels(0, 100, 100)!!, 0f)
     }
-    @Test fun invalidDensityRetainsNativeGeometry() {
-        listOf(0f, -1f, Float.NaN, Float.POSITIVE_INFINITY).forEach { assertNull(QsTileCornerRules.pixels(24, it)) }
-        assertNull(QsTileCornerRules.pixels(64, Float.MAX_VALUE))
+    @Test fun systemDefaultAndDisabledSettingsNeverProduceCustomGeometry() {
+        assertNull(QsTileCornerRules.customPercent(-1))
+        assertNull(QsTileCornerRules.pixels(-1, 100, 100))
+        assertNull(QsTileCornerRules.customPercent(50, enabled = false))
+        assertEquals(0, QsTileCornerRules.customPercent(0))
+        assertEquals(100, QsTileCornerRules.customPercent(100))
     }
-    @Test fun notYetLaidOutTilesUseDpUntilRealBoundsAreKnown() {
-        assertEquals(72f, QsTileCornerRules.pixels(24, 3f, 0, 100)!!, 0f)
-        assertEquals(72f, QsTileCornerRules.pixels(24, 3f, 100, 0)!!, 0f)
-        assertEquals(20f, QsTileCornerRules.pixels(24, 3f, 100, 40)!!, 0f)
+    @Test fun notYetLaidOutTilesRetainNativeGeometryUntilRealBoundsAreKnown() {
+        assertNull(QsTileCornerRules.pixels(50, 0, 100))
+        assertNull(QsTileCornerRules.pixels(50, 100, 0))
+        assertNull(QsTileCornerRules.pixels(50, -10, 100))
+        assertEquals(10f, QsTileCornerRules.pixels(50, 100, 40)!!, 0f)
     }
 }

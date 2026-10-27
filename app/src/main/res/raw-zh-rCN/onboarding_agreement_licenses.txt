@@ -6,6 +6,6 @@ MaterialKolor（jordond）采用 MIT 许可。
 
 CorePatch N（LSPosed）根据上游声明采用 GNU GPL v2.0，其许可不因集成而改变。
 
-运行时组件包括依据 Apache-2.0 提供的 AndroidX、Jetpack Compose、Kotlin 与 kotlinx、COUI/Miuix、Kyant0 Shapes、AndroidLiquidGlass、libsu、HiddenApiBypass、libxposed、Material Color Utilities 与 Poko。
+运行时组件包括依据 Apache-2.0 提供的 AndroidX、Jetpack Compose、Kotlin 与 kotlinx、COUI、Kyant0 Shapes、AndroidLiquidGlass、libsu、HiddenApiBypass、libxposed、Material Color Utilities 与 Poko。
 
 Android、ColorOS/OPlus 软件、Root 管理器及 LSPosed 属于兼容目标或运行平台，不因 ONextBox 而改变其许可。本页是简要说明，各项目附带的版权声明和完整许可证文本具有优先效力；源代码与署名链接可在“关于”页面继续查看。

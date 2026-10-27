@@ -40,4 +40,21 @@ class NotificationRemovalRulesTest {
         assertNull(NotificationRemovalRules.match("com.oplus.battery", null, 5))
         assertNull(NotificationRemovalRules.match("third.party.app", "high_performance_channel_id", 5))
     }
+
+    @Test fun extremeRefreshReminderRequiresItsCompleteIdentity() {
+        assertEquals(Feature.ExtremeRefreshRate, NotificationRemovalRules.match(
+            "android", "DEVELOPER_IMPORTANT", 1024, "ExtremeRefreshRate"))
+        for (pkg in listOf("com.android.systemui", "third.party.app")) {
+            assertNull(NotificationRemovalRules.match(pkg, "DEVELOPER_IMPORTANT", 1024, "ExtremeRefreshRate"))
+        }
+        for (channel in listOf(null, "INS", "DEVELOPER", "DurationNotification")) {
+            assertNull(NotificationRemovalRules.match("android", channel, 1024, "ExtremeRefreshRate"))
+        }
+        for (id in listOf(4, 1023, 1025, 10002)) {
+            assertNull(NotificationRemovalRules.match("android", "DEVELOPER_IMPORTANT", id, "ExtremeRefreshRate"))
+        }
+        for (tag in listOf(null, "", "DeveloperMode", "extremerefreshrate")) {
+            assertNull(NotificationRemovalRules.match("android", "DEVELOPER_IMPORTANT", 1024, tag))
+        }
+    }
 }

@@ -109,14 +109,14 @@ class GameAssistantHookContractTest {
         assertTrue(page.contains("save(GameAssistantSettings.SKIN, selectedSkin = id)"))
         assertFalse(page.contains("game_assistant_skins_summary"))
         assertFalse(page.contains("game_assistant_skin_summary"))
-        listOf("SettingsUiStyleDropdown.kt", "SettingsLanguageDropdown.kt").forEach { file ->
+        listOf("SettingsLanguageDropdown.kt").forEach { file ->
             assertTrue(source("main/java/com/mi/onextbox/ui/settings/$file").contains("SettingsWindowDropdownPreference("))
         }
         val selector = source("main/java/com/mi/onextbox/ui/settings/SettingsPreferenceRows.kt")
             .substringAfter("internal fun SettingsWindowDropdownPreference(").substringBefore("private fun Material3ExpressiveDropdownPreference")
-        assertTrue(selector.contains("Material3ExpressiveDropdownPreference("))
+        assertFalse(selector.contains("Material3ExpressiveDropdownPreference("))
         assertTrue(selector.contains("ColorOsWindowDropdownPreference("))
-        assertTrue(selector.contains("collapseOnSelection = true"))
+        assertTrue(selector.contains("collapseOnSelection: Boolean = true"))
         assertTrue(page.contains("FeatureSettingWriteQueue.application.enqueue"))
     }
     @Test fun everySupportedLanguageHasEveryNewString() {

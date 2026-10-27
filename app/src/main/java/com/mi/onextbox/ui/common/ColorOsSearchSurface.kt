@@ -33,6 +33,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
+import com.mi.onextbox.ui.layout.LocalChromeNativeBlurEnabled
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlin.math.abs
 import kotlin.math.exp
@@ -52,6 +53,8 @@ internal fun ColorOsSearchSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val dark = COUITheme.colorScheme.background.luminance() < .5f
+    val nativeBlurEnabled = LocalChromeNativeBlurEnabled.current
+    val fallbackColor = ColorOsToolbarGlass.fallbackColor(background, COUITheme.colorScheme.surface)
     // Observe animation frames only in AndroidView.update, not in the editor's
     // composable scope. Material/spotlight redraws must not restart cursor/IME state.
     val materialProgress = animateFloatAsState(if (focused) .5f else .4f,
@@ -159,8 +162,16 @@ internal fun ColorOsSearchSurface(
         // stays stable; only a render transform changes while the finger drags.
         Box(Modifier.matchParentSize().then(wholeCapsuleMotion)) {
             AndroidView(
-                factory = { ColorOsTopBarMaterialView(it, dark, background.toArgb(), searchCapsule = true) },
-                update = { it.updateAppearance(dark, background.toArgb()); it.updateSearchProgress(materialProgress.value) },
+                factory = {
+                    ColorOsTopBarMaterialView(
+                        it, dark, fallbackColor.toArgb(), searchCapsule = true,
+                        nativeBlurEnabled = nativeBlurEnabled,
+                    )
+                },
+                update = {
+                    it.updateAppearance(dark, fallbackColor.toArgb(), nativeBlurEnabled)
+                    it.updateSearchProgress(materialProgress.value)
+                },
                 modifier = Modifier.fillMaxSize(),
             )
             content()

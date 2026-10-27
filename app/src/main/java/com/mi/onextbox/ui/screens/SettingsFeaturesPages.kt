@@ -4,6 +4,7 @@ import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
 
+
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.runtime.Composable
@@ -21,7 +22,6 @@ import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsSection
 import com.mi.onextbox.ui.settings.SettingsToggleRow
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
 import com.mi.onextbox.ui.settings.FeatureSettingWriteQueue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -76,9 +76,6 @@ internal fun SettingsFeaturesPage(
     val scope = rememberCoroutineScope()
     var settingsInternationalEnabled by rememberSaveable {
         mutableStateOf(LspConfig.isSettingsInternationalEnabled(context))
-    }
-    var settingsTitleCollapsed by rememberSaveable {
-        mutableStateOf(LspConfig.isSettingsTitleCollapsedEnabled(context))
     }
     var settingsAppInfoCard by rememberSaveable {
         mutableStateOf(LspConfig.isSettingsAppInfoCardEnabled(context))
@@ -143,20 +140,8 @@ internal fun SettingsFeaturesPage(
 
     if (mode == FeaturePageMode.SettingsAppearance) {
         SettingsHomeCleanupGroup()
-        SettingsSection(title = stringResource(R.string.feature_group_settings_interface))
-        SettingsGroup {
-            SettingsToggleRow(
-                title = stringResource(R.string.feature_settings_title_collapsed_title),
-                summary = stringResource(R.string.feature_settings_title_collapsed_summary),
-                checked = settingsTitleCollapsed,
-                onCheckedChange = { enabled ->
-                    settingsTitleCollapsed = enabled
-                    scope.launch {
-                        withContext(Dispatchers.IO) { LspConfig.setSettingsTitleCollapsedEnabled(context, enabled) }
-                    }
-                },
-            )
-        }
+        SettingsAccountCardSizeGroup()
+        SettingsTitleCollapseGroup()
     }
 
     if (mode == FeaturePageMode.SettingsPermissions) {
@@ -174,27 +159,23 @@ internal fun SettingsFeaturesPage(
     if (mode == FeaturePageMode.SettingsAppearance) {
         SettingsSection(title = stringResource(R.string.display_enhancement_group))
         SettingsGroup {
-            Material3ExpressiveSegmentPosition(index = 0, count = 2) {
-                SettingsToggleRow(
+            run {SettingsToggleRow(
                     title = stringResource(R.string.display_enhancement_sr_thermal_title),
                     summary = stringResource(R.string.display_enhancement_sr_thermal_summary),
                     checked = superResolutionThermalBypass,
                     interactionEnabled = !enhancementSaving,
                     onCheckedChange = { saveEnhancement(DisplayEnhancementThermalSettings.SUPER_RESOLUTION, it) },
                     hasDividerBelow = true,
-                )
-            }
+                )}
             SettingsDivider()
-            Material3ExpressiveSegmentPosition(index = 1, count = 2) {
-                SettingsToggleRow(
+            run {SettingsToggleRow(
                     title = stringResource(R.string.display_enhancement_color_thermal_title),
                     summary = stringResource(R.string.display_enhancement_color_thermal_summary),
                     checked = videoColorThermalBypass,
                     interactionEnabled = !enhancementSaving,
                     onCheckedChange = { saveEnhancement(DisplayEnhancementThermalSettings.VIDEO_COLOR, it) },
                     hasDividerAbove = true,
-                )
-            }
+                )}
         }
     }
 
@@ -272,8 +253,7 @@ internal fun SettingsFeaturesPage(
     if (mode == FeaturePageMode.SettingsAppearance) {
         SettingsSection(title = stringResource(R.string.feature_group_screen_refresh_rate))
         SettingsGroup {
-            Material3ExpressiveSegmentPosition(index = 0, count = 4) {
-                SettingsToggleRow(
+            run {SettingsToggleRow(
                     title = stringResource(R.string.feature_settings_unlock_refresh_rate_title),
                     summary = stringResource(R.string.feature_settings_unlock_refresh_rate_summary),
                     checked = settingsRefreshRateUnlocked,
@@ -286,11 +266,9 @@ internal fun SettingsFeaturesPage(
                         }
                     },
                     hasDividerBelow = true,
-                )
-            }
+                )}
             SettingsDivider()
-            Material3ExpressiveSegmentPosition(index = 1, count = 4) {
-                SettingsToggleRow(
+            run {SettingsToggleRow(
                     title = stringResource(R.string.feature_settings_force_global_extreme_refresh_rate_title),
                     summary = stringResource(R.string.feature_settings_force_global_extreme_refresh_rate_summary),
                     checked = settingsForceGlobalExtremeRefreshRate,
@@ -304,11 +282,9 @@ internal fun SettingsFeaturesPage(
                     },
                     hasDividerAbove = true,
                     hasDividerBelow = true,
-                )
-            }
+                )}
             SettingsDivider()
-            Material3ExpressiveSegmentPosition(index = 2, count = 4) {
-                SettingsToggleRow(
+            run {SettingsToggleRow(
                     title = stringResource(R.string.feature_settings_disable_adaptive_refresh_rate_title),
                     summary = stringResource(R.string.feature_settings_disable_adaptive_refresh_rate_summary),
                     checked = settingsDisableAdaptiveRefreshRate,
@@ -322,18 +298,15 @@ internal fun SettingsFeaturesPage(
                     },
                     hasDividerAbove = true,
                     hasDividerBelow = true,
-                )
-            }
+                )}
             SettingsDivider()
-            Material3ExpressiveSegmentPosition(index = 3, count = 4) {
-                SettingsToggleRow(
+            run {SettingsToggleRow(
                     title = stringResource(R.string.feature_extreme_refresh_165_title),
                     summary = stringResource(R.string.feature_extreme_refresh_165_summary),
                     checked = extremeRefresh165Enabled,
                     onCheckedChange = onExtremeRefresh165EnabledChange,
                     hasDividerAbove = true,
-                )
-            }
+                )}
         }
     }
 

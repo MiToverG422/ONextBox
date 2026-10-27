@@ -8,8 +8,6 @@
         <package android:name="com.oplus.safecenter" />
         <package android:name="com.realme.wellbeing" />
         <package android:name="com.oplus.heartrate.detect" />
-        <package android:name="com.xiaomi.touchservice" />
-        <package android:name="com.miui.securitycenter" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -53,6 +51,7 @@
         <package android:name="com.oplus.wallpapers" />
         <package android:name="com.heytap.colorfulengine" />
         <package android:name="com.heytap.themestore" />
+        <package android:name="com.oplus.camera" />
         <package android:name="com.coloros.gallery3d" />
         <package android:name="com.oplus.launcher" />
         <package android:name="com.oneplus.launcher" />
@@ -60,6 +59,9 @@
         <package android:name="com.oplus.euicc" />
         <package android:name="com.heytap.market" />
         <package android:name="com.oplus.battery" />
+        <package android:name="com.coloros.translate" />
+        <package android:name="com.oplus.appdetail" />
+        <package android:name="com.android.packageinstaller" />
         <package android:name="com.oplus.trafficmonitor" />
         <package android:name="com.oplus.keyboard" />
         <package android:name="com.coloros.filemanager" />

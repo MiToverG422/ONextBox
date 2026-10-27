@@ -37,14 +37,14 @@ class LauncherBlurContractTest {
         listOf("\"ii.l\"", "\"pg.a\"", "\"pg.e\"").forEach { assertFalse(targets.contains(it)) }
     }
 
-    @Test fun allLocalesHaveTitleSummaryAndGroupWithoutTrailingPeriod() {
+    @Test fun allLocalesKeepTitleAndGroupWithoutASummary() {
         val locales = listOf("values", "values-zh-rCN", "values-zh-rTW", "values-b+yue+Hant",
             "values-ja", "values-ja-rCN", "values-ko", "values-vi", "values-ru")
         locales.forEach { locale ->
             val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder()
                 .parse(File(main, "res/$locale/strings.xml"))
             val nodes = doc.getElementsByTagName("string")
-            listOf("launcher_group_effects", "launcher_force_blur_title", "launcher_force_blur_summary").forEach { key ->
+            listOf("launcher_group_effects", "launcher_force_blur_title").forEach { key ->
                 val matches = (0 until nodes.length).map { nodes.item(it) }
                     .filter { it.attributes.getNamedItem("name").nodeValue == key }
                 assertEquals("$locale:$key", 1, matches.size)
@@ -52,6 +52,10 @@ class LauncherBlurContractTest {
                 assertTrue(text.isNotBlank())
                 assertFalse(text.endsWith("。").or(text.endsWith(".")))
             }
+            val summaries = (0 until nodes.length).map { nodes.item(it) }
+                .filter { it.attributes.getNamedItem("name").nodeValue == "launcher_force_blur_summary" }
+            assertEquals("$locale:launcher_force_blur_summary", 1, summaries.size)
+            assertEquals("$locale:launcher_force_blur_summary", "", summaries.single().textContent)
         }
     }
 }

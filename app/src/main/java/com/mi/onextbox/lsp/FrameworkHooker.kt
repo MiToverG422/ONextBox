@@ -48,7 +48,7 @@ object FrameworkHooker {
     @Volatile
     private var nativeNotificationBubblesEnabledAtStart = false
 
-    fun hook(packageName: String, classLoader: ClassLoader?): Boolean {
+    fun hook(packageName: String, classLoader: ClassLoader?, colorOs16: Boolean = false): Boolean {
         var totalHooks = 0
         when (packageName) {
             PACKAGE_SYSTEM -> {
@@ -67,7 +67,7 @@ object FrameworkHooker {
                 }
                 if (featureState.extremeRefresh) {
                     totalHooks += installHookGroup("165Hz") {
-                        RefreshRateHooker.hook(classLoader = classLoader, packageName = packageName)
+                        RefreshRateHooker.hook(classLoader = classLoader, packageName = packageName, colorOs16 = colorOs16)
                     }
                 }
                 log(

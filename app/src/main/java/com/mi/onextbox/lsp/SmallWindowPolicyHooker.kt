@@ -31,11 +31,11 @@ internal object SmallWindowPolicyHooker {
     private val floatType = Float::class.javaPrimitiveType!!
     private fun enabled(feature: Feature) = LspConfig.isSmallWindowFeatureEnabledXposed(feature)
 
-    fun install(loader: ClassLoader) {
+    fun install(loader: ClassLoader, colorOs16: Boolean = false) {
         val groups = listOf(
             Feature.HideRecents to { installRecents(loader) },
             Feature.KeepRunning to { installKeepRunning(loader) },
-            Feature.LandscapeRatio to { installLandscape(loader) },
+            Feature.LandscapeRatio to { installLandscape(loader, colorOs16) },
             Feature.LargerSize to { installSize(loader) },
             Feature.CompactCaption to { installCaption(loader) },
             Feature.MuteStashed to { installMute(loader) },
@@ -48,7 +48,7 @@ internal object SmallWindowPolicyHooker {
         }
         // One shared callback for both switches, avoiding duplicate hooks on the FPS overloads.
         if (enabled(Feature.KeepRunning) || enabled(Feature.UnlimitedFrameRate)) {
-            runCatching { installFrameRate(loader) }
+            runCatching { installFrameRate(loader, colorOs16) }
                 .onSuccess { HookLog.i(TAG, "Small-window frame-rate interfaces installed") }
                 .onFailure { HookLog.w(TAG, "Frame-rate interface unavailable; stock behavior retained", it) }
         }
@@ -178,7 +178,7 @@ internal object SmallWindowPolicyHooker {
         }
     }
 
-    private fun installFrameRate(loader: ClassLoader) {
+    private fun installFrameRate(loader: ClassLoader, colorOs16: Boolean) {
         val target = wm(loader, "FlexibleTaskPerformanceManager")
         val process = wm(loader, "WindowProcessController")
         val policy = wm(loader, "FlexibleTaskPerformanceManager\$FpsPolicy")
@@ -189,7 +189,11 @@ internal object SmallWindowPolicyHooker {
         target.getDeclaredField("mAtms")
         process.getDeclaredField("mUid")
         exact(utils, "isFlexibleTaskAndHasCaption", task)
-        exact(utils, "getTaskWindowProcessController", task)
+        if (colorOs16) {
+            val wrapper = exact(task, "getWrapper").returnType
+            val extension = exact(wrapper, "getExtImpl").returnType
+            check(exact(extension, "getTaskWindowProcessController").returnType == process)
+        } else exact(utils, "getTaskWindowProcessController", task)
         val fps4 = exact(target, "setAppFpsLow", String::class.java, floatType, floatType, process)
         val fps5 = exact(target, "setAppFpsLow", String::class.java, floatType, floatType, process, policy)
         listOf(fps4, fps5).forEach { method ->
@@ -203,7 +207,7 @@ internal object SmallWindowPolicyHooker {
                 if (highThermal) return@hook
                 val wpc = param.args[3] ?: return@hook
                 val uid = Reflect.getObjectField(wpc, "mUid") as Int
-                val smallProcess = unlimited && isSmallWindowProcess(receiver, wpc, utils)
+                val smallProcess = unlimited && isSmallWindowProcess(receiver, wpc, utils, colorOs16)
                 val stashed = keepRunning && uid in stashedUids(loader)
                 if (!SmallWindowRules.removeFrameRateLimit(unlimited, keepRunning, smallProcess, stashed, highThermal)) return@hook
                 // 0 removes this OEM VRR limiter; normal app rendering and thermal policy remain.
@@ -213,7 +217,7 @@ internal object SmallWindowPolicyHooker {
         }
     }
 
-    private fun isSmallWindowProcess(receiver: Any, process: Any, utils: Class<*>): Boolean {
+    private fun isSmallWindowProcess(receiver: Any, process: Any, utils: Class<*>, colorOs16: Boolean): Boolean {
         val atms = Reflect.getObjectField(receiver, "mAtms") ?: return false
         val lock = Reflect.getObjectField(atms, "mGlobalLock") ?: return false
         val root = Reflect.getObjectField(atms, "mRootWindowContainer") ?: return false
@@ -221,7 +225,10 @@ internal object SmallWindowPolicyHooker {
         var visibleOther = false
         synchronized(lock) {
             Reflect.callMethod(root, "forAllLeafTasks", Consumer<Any> { task ->
-                if (Reflect.callStaticMethod(utils, "getTaskWindowProcessController", task) !== process) return@Consumer
+                val taskProcess = if (colorOs16) {
+                    Reflect.callMethod(Reflect.callMethod(Reflect.callMethod(task, "getWrapper"), "getExtImpl"), "getTaskWindowProcessController")
+                } else Reflect.callStaticMethod(utils, "getTaskWindowProcessController", task)
+                if (taskProcess !== process) return@Consumer
                 val small = Reflect.callMethod(task, "getDisplayId") == 0 &&
                     Reflect.callStaticMethod(utils, "isFlexibleTaskAndHasCaption", task) == true
                 if (small) smallWindow = true
@@ -231,12 +238,14 @@ internal object SmallWindowPolicyHooker {
         return smallWindow && !visibleOther
     }
 
-    private fun installLandscape(loader: ClassLoader) {
+    private fun installLandscape(loader: ClassLoader, colorOs16: Boolean) {
         val target = wm(loader, "FlexibleTaskController")
         val utils = wm(loader, "FlexibleWindowUtils")
         val display = wm(loader, "OplusZoomDisplay")
-        val fill = exact(target, "fillFlexibleTaskInfo", wm(loader, "FlexibleTaskInfo\$Builder"),
-            Rect::class.java, Intent::class.java, ActivityInfo::class.java, boolType, wm(loader, "DisplayContent"))
+        val fillTypes = arrayOf(wm(loader, "FlexibleTaskInfo\$Builder"), Rect::class.java,
+            Intent::class.java, ActivityInfo::class.java, boolType)
+        val fill = if (colorOs16) exact(target, "fillFlexibleTaskInfo", *fillTypes)
+            else exact(target, "fillFlexibleTaskInfo", *fillTypes, wm(loader, "DisplayContent"))
         val ratios = exact(target, "getFlexibleTaskAvailableRatioByActivity", wm(loader, "ActivityRecord"), String::class.java, boolType)
         val support = exact(utils, "isSupportFullScreenRatioInFlexibleTask", String::class.java)
         val scope = ThreadLocal<ArrayDeque<Boolean>>()

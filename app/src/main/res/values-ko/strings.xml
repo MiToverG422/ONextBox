@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="system_adaptation_runtime_restart">호환 버전을 전환했습니다. 기존 설정은 유지됩니다. 완전히 적용하고 이전 변경 사항을 해제하려면 휴대전화를 다시 시작하세요.</string>
-    <string name="developer_allow_hyperos3_title">HyperOS 3 지원 허용</string>
     <string name="system_adaptation_no_content">현재 호환 버전에는 아직 기능이나 도구가 없습니다</string>
+    <string name="setting_bottom_bar_hide_labels">하단 바 텍스트 숨기기</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">OPlus 시스템을 사용자 정의하기 위한 COUI 스타일 도구 상자</string>
     <string name="tab_home">홈</string>
@@ -19,17 +18,10 @@
     <string name="setting_theme_mode">테마 모드</string>
     <string name="setting_ui_style">인터페이스 스타일</string>
     <string name="ui_style_coloros">COUI 17.0</string>
-    <string name="ui_style_material3_expressive">Material 3 Expressive</string>
     <string name="setting_dynamic_color">동적 색상</string>
     <string name="setting_dynamic_color_on_summary">시스템 배경화면의 색상 사용</string>
     <string name="setting_dynamic_color_off_summary">맞춤 테마 색상 사용</string>
     <string name="setting_theme_palette">테마 색상</string>
-    <string name="setting_material_floating_bottom_bar">플로팅 하단바</string>
-    <string name="setting_material_floating_bottom_bar_summary">부동 하단 탐색 모음 사용</string>
-    <string name="setting_material_haptics">햅틱 피드백</string>
-    <string name="setting_material_haptics_summary">탐색 탭 전환 시 햅틱 피드백 제공</string>
-    <string name="setting_material_switch_icons">스위치 아이콘 표시</string>
-    <string name="setting_material_switch_icons_summary">스위치 손잡이에 켜짐 또는 꺼짐 상태 아이콘 표시</string>
     <string name="setting_theme_settings">설정</string>
     <string name="theme_mode_system">시스템 설정 따르기</string>
     <string name="theme_mode_light">라이트 모드</string>
@@ -53,10 +45,6 @@
     <string name="language_system">시스템 설정 따르기</string>
     <string name="setting_blur_effect">흐림 효과 활성화</string>
     <string name="setting_feature_page_new_style">새로운 기능 페이지 스타일</string>
-    <string name="setting_progressive_card_animation">점진적 카드 애니메이션</string>
-    <string name="setting_progressive_card_animation_summary">스크롤할 때 카드가 차례로 나타남, 기능 페이지의 기존 스타일과 OPPO Push 모니터에만 적용</string>
-    <string name="setting_feature_page_hide_background_video">기능 숨기기 페이지 배경 비디오</string>
-    <string name="setting_feature_page_hide_background_video_summary">Monet가 아닌 어두운 테마에서는 배경 비디오를 다채로운 애니메이션 배경으로 바꿉니다</string>
     <string name="setting_pop_follows_swipe_edge">팝은 스와이프 가장자리를 따릅니다</string>
     <string name="setting_pop_follows_swipe_edge_summary">팝 애니메이션 방향은 손가락 스와이프 가장자리를 따릅니다</string>
     <string name="settings_section_other">기타</string>
@@ -97,6 +85,9 @@
     <string name="feature_force_native_clipboard_overlay_title">기본 클립보드</string>
     <string name="feature_force_native_clipboard_overlay_summary">왼쪽 하단 기본 클립보드 항목을 강제로 활성화합니다</string>
     <string name="feature_group_beautify">상태 표시줄</string>
+    <string name="feature_group_volume">볼륨</string>
+    <string name="volume_block_hearing_safety_warning_title">청력 안전 알림 차단</string>
+    <string name="volume_block_hearing_safety_warning_summary">볼륨을 높일 때 표시되는 청력 안전 알림 창을 숨깁니다</string>
     <string name="feature_group_dynamic_color">동적 색상</string>
     <string name="feature_force_tonal_spot_title">Tonal Spot 동적 색상 수정</string>
     <string name="feature_force_tonal_spot_summary">선택한 시드 색상을 유지하지만 SystemUI가 TONAL_SPOT을 사용하여 시스템 팔레트를 생성하도록 강제하여 기본 페이지에서 지나치게 채도가 높은 배경을 방지합니다</string>
@@ -333,8 +324,6 @@
     <string name="about_reference_material_icons_title">소재 아이콘</string>
     <string name="about_reference_junit_summary">JUnit 팀 · EPL-1.0</string>
     <string name="about_reference_junit_title">JUnit</string>
-    <string name="about_reference_miuix_summary">compose-miuix-ui · Apache-2.0</string>
-    <string name="about_reference_miuix_title">MUIIX</string>
     <string name="about_reference_oshin_summary">suqi8 · AGPL-3.0</string>
     <string name="about_reference_oshin_title">오신</string>
     <string name="about_reference_xposed_api_summary">libxposed · Apache-2.0</string>
@@ -426,7 +415,7 @@
     <string name="onboarding_language_title">언어 선택</string>
     <string name="onboarding_language_summary">초기 설정과 ONextBox에서 사용할 언어를 선택하세요</string>
     <string name="onboarding_appearance_title">화면 스타일과 테마</string>
-    <string name="onboarding_appearance_summary">ONextBox의 인터페이스 스타일과 테마를 선택합니다</string>
+    <string name="onboarding_appearance_summary">ONextBox의 테마를 선택합니다</string>
     <string name="onboarding_appearance_theme_note">이는 앱만 변경합니다. 설정 화면은 영향을 받지 않습니다</string>
     <string name="onboarding_personalization_title">나만의 스타일로 꾸미기</string>
     <string name="onboarding_personalization_summary">계속하기 전에 기능 페이지의 모양을 미리 보고 선택하세요</string>
@@ -434,11 +423,7 @@
     <string name="onboarding_feature_style_new_summary">애니메이션 배경을 갖춘 몰입형 레이아웃</string>
     <string name="onboarding_feature_style_classic">클래식 기능 페이지</string>
     <string name="onboarding_feature_style_classic_summary">간단하고 친숙한 목록 레이아웃</string>
-    <string name="onboarding_feature_video_title">ColorOS 17 기본 라이브 배경화면</string>
-    <string name="onboarding_feature_video_summary">표준 어두운 모드의 새로운 기능 페이지에만 표시됩니다</string>
     <string name="onboarding_feature_style_section">기능 페이지 스타일</string>
-    <string name="onboarding_feature_background_section">배경</string>
-    <string name="onboarding_feature_coui_only_note">이러한 옵션은 COUI 17.0에서만 지원됩니다</string>
     <string name="onboarding_migration_title">원하는 설정을 가져오세요</string>
     <string name="onboarding_migration_summary">ONextBox 구성 백업을 복원하거나 새로 설정합니다</string>
     <string name="onboarding_migration_preview_source">장치 백업</string>
@@ -566,6 +551,7 @@
     <string name="notification_removal_overlay">다른 앱 위에 표시 알림 숨기기</string>
     <string name="notification_removal_vpn">VPN 활성 알림 숨기기</string>
     <string name="notification_removal_developer">개발자 옵션 알림 숨기기</string>
+    <string name="notification_removal_extreme_refresh_rate">초고속 주사율 알림 숨기기</string>
     <string name="notification_removal_charging">충전 완료 알림 숨기기</string>
     <string name="notification_removal_flashlight">손전등 켜짐 알림 숨기기</string>
     <string name="notification_removal_consumption">앱 배터리 사용 이상 경고 숨기기</string>
@@ -598,6 +584,7 @@
     <string name="feature_system_ui_status_bar_entry_summary">네트워크 표시, 아이콘 순서 및 표시기</string>
     <string name="feature_system_ui_notification_center_entry_summary">알림 스타일 및 상태 표시줄 알림 숨기기</string>
     <string name="feature_system_ui_control_center_entry_summary">편집·설정·더보기 버튼 및 이동통신사 표시</string>
+    <string name="feature_system_ui_volume_entry_summary">청력 안전 알림</string>
     <string name="feature_system_ui_dynamic_color_entry_summary">색상 규격 및 Tonal Spot 배색</string>
     <string name="feature_system_ui_native_entry_summary">알림 아이콘, 말풍선, 전원 메뉴 및 클립보드</string>
     <string name="feature_settings_region_entry_summary">국제 버전 설정, Google 항목 및 중국 버전 옵션</string>
@@ -615,8 +602,8 @@
     <string name="small_window_group_performance">성능 및 제한</string>
     <string name="small_window_group_edge">가장자리 보관 모양</string>
     <string name="small_window_group_layout">크기 및 레이아웃</string>
-    <string name="small_window_white_bar">가장자리에 보관한 작은 창을 흰색 막대로 표시</string>
-    <string name="small_window_white_bar_summary">보관된 앱 아이콘과 가는 흰색 막대를 부드럽게 전환, 탭하면 기본 앱 선택 아이콘을 표시하고 드래그나 편집 시 아이콘으로 복원, 반대 방향 조작도 현재 진행도에서 계속하며 터치 영역은 유지</string>
+    <string name="small_window_white_bar">접힌 작은 창을 사이드바 스타일 세로 막대로 표시</string>
+    <string name="small_window_white_bar_summary">스마트 사이드바의 색상과 투명도를 따릅니다. 탭하면 기본 앱 선택을 열고, 드래그하거나 편집할 때는 아이콘을 복원합니다. 애니메이션 진행 상태와 터치 영역을 유지합니다.</string>
     <string name="small_window_safe_inset">상하 안전 여백 확대</string>
     <string name="small_window_safe_inset_summary">보관 핸들을 이동할 때 위아래 최소 48 dp 확보, 기존 시스템 여백은 줄이지 않으며 작은 화면에서는 범위를 자동 조정</string>
     <string name="small_window_hide_recents">최근 앱에서 작은 창 숨기기</string>
@@ -800,9 +787,25 @@
     <string name="battery_restore_default_whitelist_summary">배포된 목록과 로컬 확장 목록 대신 시스템 내장 대기 예외 목록을 사용합니다. 시스템을 다시 시작해야 합니다</string>
     <string name="battery_information_group">배터리 정보</string>
     <string name="battery_show_cycle_count_title">배터리 사이클 수 표시</string>
-    <string name="battery_show_cycle_count_summary">배터리 상태 페이지의 최대 용량 아래에 사이클 수 표시</string>
     <string name="battery_cycle_count_label">사이클 수</string>
     <string name="battery_cycle_count_unavailable">확인할 수 없음</string>
+    <string name="battery_show_health_status_title">배터리 건강 상태 표시</string>
+    <string name="battery_show_full_charge_capacity_title">완충 용량 표시</string>
+    <string name="battery_show_rated_capacity_title">정격 용량 표시</string>
+    <string name="battery_show_typical_capacity_title">일반 용량 표시</string>
+    <string name="battery_health_status_label">건강 상태</string>
+    <string name="battery_health_full_charge_label">완충 용량</string>
+    <string name="battery_health_rated_label">정격 용량</string>
+    <string name="battery_health_typical_label">일반 용량</string>
+    <string name="battery_show_calculated_health_title">실제 용량(계산) 표시</string>
+    <string name="battery_health_calculated_label">실제 용량(계산)</string>
+    <string name="battery_health_unknown">알 수 없음</string>
+    <string name="battery_health_good">양호</string>
+    <string name="battery_health_overheat">과열</string>
+    <string name="battery_health_dead">손상</string>
+    <string name="battery_health_over_voltage">과전압</string>
+    <string name="battery_health_failure">오류</string>
+    <string name="battery_health_cold">저온</string>
     <string name="feature_settings_app_info_card_title">앱 상세 정보</string>
     <string name="feature_settings_app_info_card_summary">앱 상세 페이지에 접을 수 있는 정보 카드를 표시하며 길게 눌러 복사할 수 있습니다</string>
     <string name="settings_app_info_card_title">앱 정보</string>
@@ -1117,7 +1120,7 @@
     <string name="wallpaper_3d_force_summary">3D 배경화면 스위치가 숨겨진 기기에서 이 기능을 강제로 활성화합니다</string>
     <string name="wallpaper_motion_group">3D 배경화면</string>
     <string name="wallpaper_motion_title">3D 배경화면 감도 (실험적)</string>
-    <string name="wallpaper_motion_summary">기존 3D 배경화면의 기울기 감도를 조절합니다. 100%는 원래 감도이며 값이 클수록 반응이 커집니다. 시스템 각도 제한은 변경하지 않습니다. LSPosed에서 배경화면과 Colorful Engine을 활성화한 후 배경화면을 다시 여세요</string>
+    <string name="wallpaper_motion_summary"></string>
     <string name="wallpaper_motion_amount">기울기 감도</string>
     <string name="feature_only_data_sim_signal_title">데이터 SIM 신호만 표시</string>
     <string name="feature_only_data_sim_signal_summary">듀얼 SIM 사용 시 모바일 데이터용으로 선택한 SIM의 신호와 네트워크 유형만 표시합니다. 데이터 SIM 변경을 자동으로 반영합니다</string>
@@ -1161,7 +1164,7 @@
     <string name="launcher_icon_label_spacing_offset">간격 오프셋</string>
     <string name="launcher_swipe_gesture_group">위로 스와이프 제스처</string>
     <string name="launcher_swipe_top_title">위로 스와이프 상단 영역 간소화</string>
-    <string name="launcher_swipe_top_summary">상단 제스처 영역의 분할 화면 진입과 컨트롤을 숨기고 플로팅 창 실행 영역을 넓힙니다. 다른 분할 화면 진입에는 영향을 주지 않습니다</string>
+    <string name="launcher_swipe_top_summary">상단 제스처 영역의 분할 화면 진입과 컨트롤을 숨기고 플로팅 창 실행 영역을 넓힙니다</string>
     <string name="launcher_float_trigger_width">플로팅 창 실행 영역 너비</string>
     <string name="statusbar_icon_mute">음소거</string>
     <string name="statusbar_icon_network_speed">네트워크 속도</string>
@@ -1214,11 +1217,13 @@
     <string name="carrier_name_reset">통신사 이름 복원</string>
     <string name="qs_tile_corner_group">제어 센터 모양</string>
     <string name="qs_tile_corner_title">제어 센터 모서리 맞춤 설정</string>
-    <string name="qs_tile_corner_summary">제어 센터 타일, 미디어 카드, 밝기 및 음량 슬라이더의 모서리를 조절하며 끄면 시스템 모양으로 복원</string>
+    <string name="qs_tile_corner_summary" formatted="false">타일 크기별로 모서리 반경을 백분율로 조절합니다. -1은 시스템 값이며 100%는 짧은 변의 절반입니다</string>
     <string name="qs_tile_corner_radius">모서리 반경</string>
+    <string name="qs_tile_corner_settings_title">모서리 조절</string>
+    <string name="qs_tile_corner_size_radius">%1$s 타일 모서리 반경</string>
     <string name="launcher_group_effects">시각 효과</string>
     <string name="launcher_force_blur_title">홈 화면 흐림 효과 강제 활성화</string>
-    <string name="launcher_force_blur_summary">홈 배경, 길게 누르기 메뉴 및 흐림 애니메이션의 기종 제한 해제를 시도하며 시스템 흐림, 절전 및 테마 설정을 따름; 전력 소비가 늘 수 있고 펌웨어의 기본 지원이 필요함; 변경 후 런처를 다시 시작해야 함</string>
+    <string name="launcher_force_blur_summary"></string>
 
     <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
 
@@ -1227,8 +1232,7 @@
     <string name="feature_c16_stacked_signal_save_failed">설정을 저장하지 못했습니다</string>
 
 <!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
-    <string name="corepatch_title">Core Patch (Experimental)</string>
-    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_title">Core Patch</string>
     <string name="corepatch_downgrade">다운그레이드 허용</string>
     <string name="corepatch_downgrade_summary">애플리케이션 다운그레이드를 허용합니다.</string>
     <string name="corepatch_min_sdk">최소 SDK 버전 제한 우회</string>
@@ -1316,10 +1320,10 @@
     <string name="power_indicator_font">글꼴 크기</string>
 
     <string name="rotation_suggestion_hide_title">회전 제안 버튼 숨기기</string>
-    <string name="rotation_suggestion_hide_summary">화면 가장자리의 회전 제안 버튼을 숨깁니다. 자동 회전이나 화면 방향 설정은 변경하지 않습니다</string>
+    <string name="rotation_suggestion_hide_summary">화면 가장자리의 회전 제안 버튼을 숨깁니다</string>
 
     <string name="hide_screenshot_floating_title">스크린샷에서 플로팅 앱 제외</string>
-    <string name="hide_screenshot_floating_summary">지원되는 플로팅 창, PIP 및 앱 오버레이를 닫지 않고 시스템 스크린샷에서 제외</string>
+    <string name="hide_screenshot_floating_summary">지원되는 플로팅 창, PIP 및 앱 오버레이를 시스템 스크린샷에서 제외</string>
     <string name="power_indicator_hide_discharge_sign">방전 음수 기호 숨기기</string>
     <string name="power_indicator_temperature">온도 두 줄 표시</string>
     <string name="power_indicator_temperature_summary">첫째 줄에 전력, 둘째 줄에 배터리 온도 표시</string>
@@ -1341,17 +1345,13 @@
     <string name="setting_settings_home_entry_style">아이콘 스타일</string>
     <string name="setting_settings_home_entry_style_system">기본값</string>
     <string name="setting_settings_home_entry_style_app">앱 아이콘</string>
-    <string name="settings_section_system_adaptation">시스템 호환 설정</string>
-    <string name="setting_system_adaptation_version">호환 버전</string>
-    <string name="setting_system_adaptation_save_failed">호환 버전을 저장하지 못했습니다. Xposed 프레임워크 연결을 확인한 후 다시 시도하세요</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_title">LTPO/LTPS 동적 주사율 저하 방지</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_summary">화면이 켜져 있을 때 시스템 설정에서 선택한 주사율을 유지합니다. 사용 시 전력 소모가 늘어날 수 있습니다.</string>
     <string name="display_enhancement_group">화질 향상</string>
     <string name="display_enhancement_sr_thermal_title">초고화질 향상 온도 제한 해제</string>
-    <string name="display_enhancement_sr_thermal_summary">초고화질 향상 기능 자체의 온도 제한을 해제합니다. 미지원 하드웨어 기능은 활성화하지 않으며 발열과 전력 소비가 증가할 수 있습니다</string>
+    <string name="display_enhancement_sr_thermal_summary">초고화질 향상 기능 자체의 온도 제한을 해제합니다</string>
     <string name="display_enhancement_color_thermal_title">동영상 색상 향상 온도 제한 해제</string>
-    <string name="display_enhancement_color_thermal_summary">동영상 색상 향상 기능 자체의 온도 제한을 해제합니다. 발열과 전력 소비가 증가할 수 있으며 시스템 전체의 온도 보호는 유지됩니다</string>
-    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="display_enhancement_color_thermal_summary">동영상 색상 향상 기능 자체의 온도 제한을 해제합니다</string>
     <string name="settings_home_cleanup_group">설정 홈</string>
     <string name="settings_home_hide_account_title">상단 계정 항목 숨기기</string>
     <string name="settings_home_hide_account_summary">시스템 설정 홈의 계정 카드를 숨깁니다</string>
@@ -1385,4 +1385,82 @@
     <string name="native_live_update_summary">기본 실시간 알림 칩을 사용합니다. 활성화하면 Fluid Cloud가 표시되지 않으며 두 기능을 동시에 사용할 수 없습니다.</string>
     <string name="setting_hide_module_icon">모듈 앱 아이콘 숨기기</string>
     <string name="setting_hide_module_icon_failed">아이콘 표시 상태를 변경할 수 없습니다</string>
+    <string name="side_volume_group">측면 음량 막대</string>
+    <string name="side_volume_percentage_title">백분율 표시</string>
+    <string name="side_volume_percentage_summary">개별 음량 조절을 포함한 음량 막대에 백분율 표시</string>
+    <string name="side_volume_keep_wide_title">음량 조절 중 막대가 가늘어지지 않도록 유지</string>
+    <string name="qs_slider_percentage_title">슬라이더 백분율 표시</string>
+    <string name="qs_slider_percentage_summary">확장 패널을 포함한 밝기 및 음량 슬라이더에 백분율 표시</string>
+    <string name="qs_slider_percentage_properties">백분율 속성 설정</string>
+    <string name="qs_slider_percentage_size">글자 크기</string>
+    <string name="qs_slider_percentage_color">글자 색상</string>
+    <string name="qs_slider_percentage_offset">세로 위치 조정</string>
+    <string name="settings_color_white">흰색</string>
+    <string name="settings_color_black">검은색</string>
+    <string name="capture_group_screenshot_options">스크린샷 옵션</string>
+    <string name="volume_group_alerts">음량 알림</string>
+    <string name="control_center_group_visibility">요소 숨기기</string>
+    <string name="launcher_group_app_management">앱 관리</string>
+    <string name="launcher_group_recent_interaction">표시 및 상호작용</string>
+
+    <string name="feature_updates_title">이번 업데이트</string>
+    <string name="feature_updates_version">버전 %1$s</string>
+    <string name="feature_updates_counts">새 기능 %1$d개 · 개선 %2$d개</string>
+    <string name="feature_updates_added">새 기능 (%1$d)</string>
+    <string name="feature_updates_changed">기능 개선 (%1$d)</string>
+    <string name="feature_updates_empty">일치하는 기능이 없습니다</string>
+    <string name="feature_updates_layout_note">새 런처와 호환되도록 사용자 지정 레이아웃 적용 문제 수정</string>
+    <string name="feature_updates_corners_note">모서리 설정의 펼치기 및 접기 애니메이션 통일</string>
+    <string name="feature_updates_about_note">새 기기 정보 화면의 배치 및 구분선 조정</string>
+    <string name="feature_updates_browser_note">전체 웹 주소를 기본 브라우저로 여는 처리 개선</string>
+    <string name="feature_updates_ota_note">다운로드 링크 분석, 인증 및 리디렉션 처리 개선</string>
+    <string name="feature_updates_view_features">업데이트된 기능 보기</string>
+    <string name="settings_account_size_group">계정 카드</string>
+    <string name="settings_account_size_title">계정 카드 크기</string>
+    <string name="settings_account_size_summary">카드 높이, 아바타 및 글자 크기를 함께 조절</string>
+    <string name="settings_account_size_percent">크기 비율</string>
+    <string name="settings_title_lock_title">제목 접힘 상태 고정</string>
+    <string name="settings_title_lock_summary">스크롤해도 큰 제목이 펼쳐지지 않도록 유지</string>
+    <string name="battery_block_whitelist_restore_title">배터리 최적화 허용 목록 복원 방지</string>
+    <string name="battery_block_whitelist_restore_summary">배터리 앱이 최적화 설정을 기본값으로 자동 복원하지 못하게 합니다. 수동 변경은 유지됩니다</string>
+    <string name="feature_translation_title">번역</string>
+    <string name="translation_screen_group">화면 번역</string>
+    <string name="translation_allow_floating_title">플로팅 창에서 화면 번역 허용</string>
+    <string name="translation_allow_floating_summary">플로팅 창이 열려 있어도 전체 화면 번역 사용</string>
+    <string name="translation_bypass_app_blacklist_title">앱 차단 목록 해제</string>
+    <string name="translation_bypass_app_blacklist_summary">차단 목록의 앱에서 전체 화면 번역 허용</string>
+    <string name="translation_allow_restricted_pages_title">특정 화면 제한 해제</string>
+    <string name="translation_allow_restricted_pages_summary">통화, 영상 통화 및 권한 화면에서 전체 화면 번역 허용</string>
+    <string name="translation_allow_landscape_title">가로 화면 번역 허용</string>
+    <string name="translation_allow_landscape_summary">가로 화면에서도 전체 화면 번역 사용</string>
+    <string name="translation_unlock_browser_title">브라우저 번역 제한 해제</string>
+    <string name="translation_unlock_browser_summary">앱 허용 목록을 우회하고 미지원 버전에서 일반 웹 추출 시도</string>
+    <string name="installer_cleanup_title">앱 설치 프로그램</string>
+    <string name="installer_cleanup_group">설치</string>
+    <string name="installer_native_ui_title">기본 설치 프로그램 사용</string>
+    <string name="installer_native_ui_summary">맞춤 설치 프로그램 대신 Android 기본 설치 화면 사용</string>
+    <string name="installer_skip_detection_title">설치 검사 건너뛰기</string>
+    <string name="installer_skip_detection_summary">앱 설치 프로그램의 검사와 안전 검사 카드를 숨깁니다</string>
+    <string name="installer_remove_ads_title">설치 광고 제거</string>
+    <string name="installer_remove_ads_summary">설치, 완료 및 취소 화면에서 앱 추천 제거</string>
+    <string name="installer_hide_collection_notice_title">설치 정보 수집 알림 숨기기</string>
+    <string name="installer_hide_collection_notice_summary">설치 전에 표시되는 정보 수집 알림 대화상자를 건너뜁니다</string>
+    <string name="installer_block_network_title">설치 프로그램 네트워크 차단</string>
+    <string name="installer_block_network_summary">앱 설치 프로그램의 네트워크를 차단하고 설치 전 온라인 사전 로드를 건너뜁니다</string>
+    <string name="package_installer_title">패키지 설치 프로그램</string>
+    <string name="camera_page_title">카메라</string>
+    <string name="camera_preview_group">사진 미리보기</string>
+    <string name="camera_default_gallery_title">기본 갤러리로 열기</string>
+    <string name="camera_default_gallery_summary">시스템 기본 앱에서 선택한 갤러리로 사진과 동영상을 엽니다</string>
+
+    <string name="network_speed_title">네트워크 속도 표시</string>
+    <string name="network_speed_refresh_second">새로고침 간격 설정</string>
+    <string name="network_speed_hide_per_second">/s 숨기기</string>
+    <string name="network_speed_hide_units">속도 단위 숨기기</string>
+    <string name="network_speed_single_line">한 줄로 표시</string>
+
+    <string name="network_speed_interval">새로고침 간격</string>
+    <string name="network_speed_follow_font_weight">시스템 글꼴 굵기 따르기</string>
+    <string name="network_speed_custom_font_size">글꼴 크기 설정</string>
+    <string name="network_speed_font_size">글꼴 크기</string>
 </resources>

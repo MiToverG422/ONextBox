@@ -39,7 +39,7 @@ class FeatureAnimatedGroupTest {
         assertTrue(text.contains("transition.currentState || transition.targetState || !transition.isIdle"))
         assertTrue(text.contains("visibleState = transitions[rowIndex]"))
         assertTrue(text.contains("key(identity)"))
-        assertTrue(text.contains("if (position < rendered.lastIndex) Spacer(Modifier.height(2.dp))"))
+        org.junit.Assert.assertFalse(text.contains("Spacer(Modifier.height(2.dp))"))
         assertTrue(text.contains("if (below) SettingsDivider()"))
         assertTrue(text.indexOf("androidx.compose.animation.AnimatedVisibility(") < text.indexOf("Box(Modifier.animateBounds("))
     }

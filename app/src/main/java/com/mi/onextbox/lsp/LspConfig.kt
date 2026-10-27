@@ -261,8 +261,14 @@ object LspConfig {
 
     enum class BatteryFeature(val key: String) {
         ShowCycleCount("show_battery_cycle_count"),
+        ShowHealthStatus("show_battery_health_status"),
+        ShowFullChargeCapacity("show_battery_full_charge_capacity"),
+        ShowRatedCapacity("show_battery_rated_capacity"),
+        ShowTypicalCapacity("show_battery_typical_capacity"),
+        ShowCalculatedHealth("show_battery_calculated_health"),
         RemoveRestrictPlugin("remove_battery_restrict_plugin"),
-        RestoreDefaultWhitelist("restore_default_battery_optimization_whitelist");
+        RestoreDefaultWhitelist("restore_default_battery_optimization_whitelist"),
+        BlockWhitelistRestore("block_battery_optimization_whitelist_restore");
 
         val propertyKey get() = "oost.$key"
         val persistPropertyKey get() = "persist.sys.$propertyKey"
@@ -280,6 +286,31 @@ object LspConfig {
     }
 
     fun isBatteryFeatureEnabledXposed(feature: BatteryFeature): Boolean = readXposedBoolean(
+        feature.persistPropertyKey, feature.propertyKey, feature.settingsKey, feature.key, false,
+    )
+
+    enum class NetworkSpeedFeature(val key: String) {
+        CustomRefreshInterval("systemui_network_speed_refresh_second"),
+        HidePerSecond("systemui_network_speed_hide_per_second"),
+        HideUnits("systemui_network_speed_hide_units"),
+        SingleLine("systemui_network_speed_single_line"),
+        FollowSystemFontWeight("systemui_network_speed_follow_font_weight"),
+        CustomFontSize("systemui_network_speed_custom_font_size");
+
+        val propertyKey get() = "oost.$key"
+        val persistPropertyKey get() = "persist.sys.$propertyKey"
+        val settingsKey get() = "oost_$key"
+    }
+
+    fun isNetworkSpeedFeatureEnabled(context: Context, feature: NetworkSpeedFeature): Boolean =
+        LspPreferenceStore.readBoolean(context, feature.key, false)
+
+    fun setNetworkSpeedFeatureEnabled(context: Context, feature: NetworkSpeedFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(context, feature.key, enabled,
+            listOf(feature.persistPropertyKey, feature.propertyKey), feature.settingsKey)
+    }
+
+    fun isNetworkSpeedFeatureEnabledXposed(feature: NetworkSpeedFeature): Boolean = readXposedBoolean(
         feature.persistPropertyKey, feature.propertyKey, feature.settingsKey, feature.key, false,
     )
 
@@ -739,6 +770,7 @@ object LspConfig {
         Overlay("notify_remove_overlay"),
         Vpn("notify_remove_vpn"),
         DeveloperMode("notify_remove_developer"),
+        ExtremeRefreshRate("notify_remove_extreme_refresh_rate"),
         ChargingCompleted("notify_remove_charging"),
         Flashlight("notify_remove_flashlight"),
         HighBatteryConsumption("notify_remove_consumption"),
@@ -2738,6 +2770,12 @@ object LspConfig {
             setNavigationHandleOpacity(context, ImmersiveNavigationRules.SYSTEM_DEFAULT)
             setNavigationHandleAutoHideEnabled(context, false)
             setSettingsTitleCollapsedEnabled(context, false)
+            SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.TITLE_LOCK, false)
+            CameraGallerySettings.set(context, false)
+            ScreenTranslationSettings.keys.forEach { ScreenTranslationSettings.set(context, it, false) }
+            InstallerCleanupSettings.reset(context)
+            SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.ACCOUNT_SIZE, false)
+            SettingsAppearanceSettings.setPercent(context, SettingsAppearanceSettings.DEFAULT_PERCENT)
             setSettingsAppInfoCardEnabled(context, false)
             setSystemRootDetectionBlocked(context, false)
             setExpressNoMiniProgramEnabled(context, false)
@@ -2746,6 +2784,7 @@ object LspConfig {
             setRoundNotificationClearButtonEnabled(context, false)
             setAospBackPanelEnabled(context, false)
             AospVolumeSettings.set(context, false)
+            VolumeSafetyWarningSettings.set(context, false)
             ScreenCaptureSettings.set(context, false)
             LargeNetworkTypeSettings.set(context, false)
             LargeNetworkTypeSettings.setSystemFont(context, false)
@@ -2753,6 +2792,7 @@ object LspConfig {
             LargeNetworkTypeSettings.setArtwork(context, false)
             LargeNetworkTypeSettings.setLte(context, false)
             setHideDisconnectedBluetoothEnabled(context, false)
+            NetworkSpeedFeature.entries.forEach { setNetworkSpeedFeatureEnabled(context, it, false) }
             StatusBarInteractionFeature.entries.forEach { setStatusBarInteractionFeatureEnabled(context, it, false) }
             BatteryFeature.entries.forEach { setBatteryFeatureEnabled(context, it, false) }
             TrafficFeature.entries.forEach { setTrafficFeatureEnabled(context, it, false) }
@@ -3110,6 +3150,13 @@ object LspConfig {
         BatteryFeature.entries.forEach { feature ->
             syncScalarState(
                 value = if (isBatteryFeatureEnabled(context, feature)) "1" else "0",
+                propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
+                settingsGlobalKey = feature.settingsKey,
+            )
+        }
+        NetworkSpeedFeature.entries.forEach { feature ->
+            syncScalarState(
+                value = if (isNetworkSpeedFeatureEnabled(context, feature)) "1" else "0",
                 propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
                 settingsGlobalKey = feature.settingsKey,
             )

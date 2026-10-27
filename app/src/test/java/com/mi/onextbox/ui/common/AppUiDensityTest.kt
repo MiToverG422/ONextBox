@@ -5,15 +5,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AppUiDensityTest {
-    @Test fun miuixHasItsOwnCompactScaleWithoutChangingTheExistingStyles() {
+    @Test fun couiUsesSystemDensity() {
         assertEquals(1f, AppUiStyle.ColorOs.pageDensityScale, 0f)
-        assertEquals(0.95f, AppUiStyle.Material3Expressive.pageDensityScale, 0f)
-        assertEquals(0.90f, AppUiStyle.Miuix.pageDensityScale, 0f)
     }
 
     @Test fun scaleIsRelativeToTheDisplayDensityRatherThanAFixedDeviceDpi() {
         listOf(1f, 2f, 2.75f, 3f, 4f).forEach { density ->
-            assertEquals(density * 0.9f, density * AppUiStyle.Miuix.pageDensityScale, 0.0001f)
+            assertEquals(density, density * AppUiStyle.ColorOs.pageDensityScale, 0.0001f)
         }
     }
 

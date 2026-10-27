@@ -19,11 +19,11 @@ internal object SecurityPermissionHooker {
     private const val PACKAGE = "com.oplus.securitypermission"
     private val loaders = ConcurrentHashMap.newKeySet<Int>()
 
-    fun hook(classLoader: ClassLoader) {
+    fun hook(classLoader: ClassLoader, colorOs16: Boolean = false) {
         if (!loaders.add(System.identityHashCode(classLoader))) return
         install(TAG, "old app-start dialog") { hookOldDialog(classLoader) }
-        install(TAG, "always-allow button") { hookAlwaysAllowButton(classLoader) }
-        install(TAG, "permanent start whitelist") { hookWhitelist(classLoader) }
+        install(TAG, "always-allow button") { hookAlwaysAllowButton(classLoader, colorOs16) }
+        install(TAG, "permanent start whitelist") { hookWhitelist(classLoader, colorOs16) }
         install(TAG, "restricted settings") { hookRestrictedSettings(classLoader) }
     }
 
@@ -49,10 +49,11 @@ internal object SecurityPermissionHooker {
         }
     }
 
-    private fun hookAlwaysAllowButton(loader: ClassLoader): Int {
+    private fun hookAlwaysAllowButton(loader: ClassLoader, colorOs16: Boolean): Int {
         // C17 has obfuscated COUIAlertDialogBuilder as 'e'. Only the neutral-button signature
         // and this specific resource ID are changed; unrelated system dialogs stay untouched.
-        return listOf("com.coui.appcompat.dialog.COUIAlertDialogBuilder", "com.coui.appcompat.dialog.e")
+        return (if (colorOs16) listOf("b2.b") else
+            listOf("com.coui.appcompat.dialog.COUIAlertDialogBuilder", "com.coui.appcompat.dialog.e"))
             .mapNotNull { XposedHelpers.findClassIfExists(it, loader) }
             .distinct()
             .sumOf { target ->
@@ -80,17 +81,17 @@ internal object SecurityPermissionHooker {
             }
     }
 
-    private fun hookWhitelist(loader: ClassLoader): Int {
+    private fun hookWhitelist(loader: ClassLoader, colorOs16: Boolean): Int {
         val targets = listOf(
             "android.content.pm.OplusPermissionManager",
             "com.oplusos.securitypermission.permission.utils.OplusPermissionManager",
-            "s9.d", // verified C17 wrapper around ISecurityPermissionService
+            if (colorOs16) "r8.c" else "s9.d",
         ).mapNotNull { XposedHelpers.findClassIfExists(it, loader) }.distinct()
         return targets.sumOf { target ->
             target.declaredMethods.filter { method ->
                 method.parameterTypes.contentEquals(arrayOf(Bundle::class.java)) &&
                     (method.name == "putActivityStartWhiteList" ||
-                        (target.name == "s9.d" && method.name == "d" &&
+                        (target.name == (if (colorOs16) "r8.c" else "s9.d") && method.name == "d" &&
                             target.declaredFields.any { it.type.name == "android.os.ISecurityPermissionService" }))
             }.onEach { method ->
                 XposedBridge.hookMethod(method, object : XC_MethodHook() {

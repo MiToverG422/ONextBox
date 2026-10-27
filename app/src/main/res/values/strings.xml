@@ -1,17 +1,6 @@
 <resources>
-    <string name="system_adaptation_runtime_restart">Profile switched; saved choices are preserved. Restart the phone to fully apply this profile and clear changes from the previous one.</string>
-    <string name="developer_allow_hyperos3_title">Allow HyperOS 3 support</string>
-    <string name="hyperos_performance_notice_title">Compatibility and restart</string>
-    <string name="hyperos_performance_notice">Only songyuan, Android 16, OS3.0.310.0.WGNCNXM is supported. Other devices cannot enable these options. Enable the system framework, Xiaomi Touch Service and Security scopes in LSPosed. Restart the phone after enabling or disabling; disabling and restarting restores system behavior. Active vendor locks require a restart for module updates and cannot be hot-reloaded.</string>
-    <string name="hyperos_performance_group">Display and touch</string>
-    <string name="hyperos_refresh_title">Global 185 Hz</string>
-    <string name="hyperos_refresh_summary">Force the verified 185 Hz display mode, including the lock screen and AOD. Disables AOD panel low-power mode and increases power use; does not guarantee app frame rates.</string>
-    <string name="hyperos_idle_title">Disable LTPS</string>
-    <string name="hyperos_idle_summary">Disable idle refresh-rate reduction through the native idle timer. Does not change the panel type or select 185 Hz by itself; may increase power use.</string>
-    <string name="hyperos_touch_title">High touch report rate</string>
-    <string name="hyperos_touch_summary">Use this ROM’s existing 480 Hz touch profile globally. Does not change the display refresh rate; may increase power use and change touch response.</string>
-    <string name="hyperos_reboot_required">Saved. Restart the phone to apply or restore.</string>
     <string name="system_adaptation_no_content">No features or tools are available for this adaptation yet</string>
+    <string name="setting_bottom_bar_hide_labels">Hide bottom bar labels</string>
     <string name="feature_search_hint">Search features</string>
     <string name="feature_search_clear">Clear search</string>
     <string name="feature_search_results">Results (%1$d)</string>
@@ -44,17 +33,10 @@
     <string name="setting_theme_mode">Theme mode</string>
     <string name="setting_ui_style">Interface style</string>
     <string name="ui_style_coloros">COUI 17.0</string>
-    <string name="ui_style_material3_expressive">Material 3 Expressive</string>
     <string name="setting_dynamic_color">Dynamic colors</string>
     <string name="setting_dynamic_color_on_summary">Use colors from the system wallpaper</string>
     <string name="setting_dynamic_color_off_summary">Use a custom theme color</string>
     <string name="setting_theme_palette">Theme color</string>
-    <string name="setting_material_floating_bottom_bar">Floating bottom bar</string>
-    <string name="setting_material_floating_bottom_bar_summary">Use a floating bottom navigation bar</string>
-    <string name="setting_material_haptics">Haptic feedback</string>
-    <string name="setting_material_haptics_summary">Provide haptic feedback when switching navigation tabs</string>
-    <string name="setting_material_switch_icons">Show switch icons</string>
-    <string name="setting_material_switch_icons_summary">Show an on or off state icon inside the switch thumb</string>
 
 <string name="setting_theme_settings">Settings</string>
 
@@ -85,10 +67,6 @@
 
 <string name="setting_blur_effect">Enable Blur Effect</string>
 <string name="setting_feature_page_new_style">New Features page style</string>
-    <string name="setting_progressive_card_animation">Progressive card animation</string>
-    <string name="setting_progressive_card_animation_summary">Cards enter progressively while scrolling, only in the classic Features layout and OPPO Push Monitor</string>
-    <string name="setting_feature_page_hide_background_video">Hide Features page background video</string>
-    <string name="setting_feature_page_hide_background_video_summary">In non-Monet dark themes, replaces the background video with the colorful animated background</string>
     <string name="setting_pop_follows_swipe_edge">Pop Follows Swipe Edge</string>
     <string name="setting_pop_follows_swipe_edge_summary">Pop animation direction follows the finger swipe edge</string>
     <string name="settings_section_other">Other</string>
@@ -132,6 +110,9 @@
     <string name="feature_force_native_clipboard_overlay_title">Native clipboard</string>
     <string name="feature_force_native_clipboard_overlay_summary">Force-enable the bottom-left native clipboard entry</string>
     <string name="feature_group_beautify">Status bar</string>
+    <string name="feature_group_volume">Volume</string>
+    <string name="volume_block_hearing_safety_warning_title">Block hearing safety reminder</string>
+    <string name="volume_block_hearing_safety_warning_summary">Suppress the hearing safety reminder dialog shown when raising volume</string>
     <string name="feature_group_dynamic_color">Dynamic colors</string>
     <string name="feature_force_tonal_spot_title">Tonal Spot dynamic color fix</string>
     <string name="feature_force_tonal_spot_summary">Keep the selected seed color but force SystemUI to generate the system palette with TONAL_SPOT, preventing overly saturated backgrounds in native pages</string>
@@ -389,8 +370,6 @@
     <string name="about_reference_material_icons_title">Material Icons</string>
     <string name="about_reference_junit_summary">JUnit Team · EPL-1.0</string>
     <string name="about_reference_junit_title">JUnit</string>
-    <string name="about_reference_miuix_summary">compose-miuix-ui · Apache-2.0</string>
-    <string name="about_reference_miuix_title">MIUIX</string>
     <string name="about_reference_oshin_summary">suqi8 · AGPL-3.0</string>
     <string name="about_reference_oshin_title">OShin</string>
     <string name="about_reference_xposed_api_summary">libxposed · Apache-2.0</string>
@@ -493,7 +472,7 @@
     <string name="onboarding_language_title">Select language</string>
     <string name="onboarding_language_summary">Choose the language used during setup and in ONextBox</string>
     <string name="onboarding_appearance_title">Interface and theme</string>
-    <string name="onboarding_appearance_summary">Choose the interface style and theme for ONextBox</string>
+    <string name="onboarding_appearance_summary">Choose the theme for ONextBox</string>
     <string name="onboarding_appearance_theme_note">This changes the app only; the setup screen is unaffected</string>
     <string name="onboarding_personalization_title">Make it yours</string>
     <string name="onboarding_personalization_summary">Preview and choose how the Features page looks before you continue</string>
@@ -501,11 +480,7 @@
     <string name="onboarding_feature_style_new_summary">Immersive layout with animated backgrounds</string>
     <string name="onboarding_feature_style_classic">Classic Features page</string>
     <string name="onboarding_feature_style_classic_summary">Simple, familiar list layout</string>
-    <string name="onboarding_feature_video_title">ColorOS 17 default live wallpaper</string>
-    <string name="onboarding_feature_video_summary">Shown only on the new Features page in standard dark mode</string>
     <string name="onboarding_feature_style_section">Features page style</string>
-    <string name="onboarding_feature_background_section">Background</string>
-    <string name="onboarding_feature_coui_only_note">These options are supported only in COUI 17.0</string>
     <string name="onboarding_migration_title">Bring your settings with you</string>
     <string name="onboarding_migration_summary">Restore an ONextBox configuration backup, or set up as new</string>
     <string name="onboarding_migration_preview_source">Device backup</string>
@@ -639,6 +614,7 @@
     <string name="notification_removal_overlay">Remove overlay notification</string>
     <string name="notification_removal_vpn">Remove VPN active notification</string>
     <string name="notification_removal_developer">Remove developer options notification</string>
+    <string name="notification_removal_extreme_refresh_rate">Remove extreme refresh rate reminder</string>
     <string name="notification_removal_charging">Remove charging completed notification</string>
     <string name="notification_removal_flashlight">Remove flashlight on notification</string>
     <string name="notification_removal_consumption">Remove unusual app battery usage warning</string>
@@ -671,6 +647,7 @@
     <string name="feature_system_ui_status_bar_entry_summary">Network display, icon order and indicators</string>
     <string name="feature_system_ui_notification_center_entry_summary">Notification style and status bar notification hiding</string>
     <string name="feature_system_ui_control_center_entry_summary">Edit, settings and more buttons, carrier display</string>
+    <string name="feature_system_ui_volume_entry_summary">Hearing safety reminder</string>
     <string name="feature_system_ui_dynamic_color_entry_summary">Color specifications and Tonal Spot palettes</string>
     <string name="feature_system_ui_native_entry_summary">Notification icons, bubbles, power menu and clipboard</string>
     <string name="feature_settings_region_entry_summary">International settings, Google entry and domestic options</string>
@@ -695,8 +672,8 @@
     <string name="small_window_group_performance">Performance and limits</string>
     <string name="small_window_group_edge">Edge-stash appearance</string>
     <string name="small_window_group_layout">Size and layout</string>
-    <string name="small_window_white_bar">White bar when edge-stashed</string>
-    <string name="small_window_white_bar_summary">Smoothly cross-fade stashed app icons into a slim white bar, tap to reveal the stock app picker, dragging or editing restores icons, reversing continues from the current progress, touch areas stay unchanged</string>
+    <string name="small_window_white_bar">Show a sidebar-style handle for stashed windows</string>
+    <string name="small_window_white_bar_summary">Match the Smart Sidebar color and opacity. Tap to expand the original app picker; dragging or editing restores the icons. Transitions keep their current progress and touch area.</string>
     <string name="small_window_safe_inset">Increase vertical safe spacing</string>
     <string name="small_window_safe_inset_summary">Keep at least 48 dp from the top and bottom when moving a stashed handle, preserve larger system margins, smaller screens automatically bound the spacing</string>
     <string name="small_window_hide_recents">Hide small windows from recents</string>
@@ -864,9 +841,25 @@
     <string name="about_reference_dexkit_summary" translatable="false">LuckyPray · LGPL-3.0</string>
     <string name="battery_information_group">Battery information</string>
     <string name="battery_show_cycle_count_title">Show battery cycle count</string>
-    <string name="battery_show_cycle_count_summary">Show cycle count below maximum capacity on the Battery health page</string>
     <string name="battery_cycle_count_label">Cycle count</string>
     <string name="battery_cycle_count_unavailable">Unavailable</string>
+    <string name="battery_show_health_status_title">Show health status</string>
+    <string name="battery_show_full_charge_capacity_title">Show full charge capacity</string>
+    <string name="battery_show_rated_capacity_title">Show rated capacity</string>
+    <string name="battery_show_typical_capacity_title">Show typical capacity</string>
+    <string name="battery_health_status_label">Health status</string>
+    <string name="battery_health_full_charge_label">Full charge capacity</string>
+    <string name="battery_health_rated_label">Rated capacity</string>
+    <string name="battery_health_typical_label">Typical capacity</string>
+    <string name="battery_show_calculated_health_title">Show actual capacity (calculated)</string>
+    <string name="battery_health_calculated_label">Actual capacity (calculated)</string>
+    <string name="battery_health_unknown">Unknown</string>
+    <string name="battery_health_good">Good</string>
+    <string name="battery_health_overheat">Overheated</string>
+    <string name="battery_health_dead">Dead</string>
+    <string name="battery_health_over_voltage">Overvoltage</string>
+    <string name="battery_health_failure">Failure</string>
+    <string name="battery_health_cold">Cold</string>
     <string name="feature_settings_app_info_card_title">App details information</string>
     <string name="feature_settings_app_info_card_summary">Show a collapsible information card in app details, with long-press copying</string>
     <string name="settings_app_info_card_title">App information</string>
@@ -1193,7 +1186,7 @@
     <string name="wallpaper_3d_force_summary">Force enable the feature on devices where the 3D wallpaper switch is hidden</string>
     <string name="wallpaper_motion_group">3D wallpaper</string>
     <string name="wallpaper_motion_title">3D wallpaper sensitivity (experimental)</string>
-    <string name="wallpaper_motion_summary">Adjust tilt sensitivity for existing 3D wallpapers. 100% uses the original sensitivity; higher values produce a stronger response. System angle limits are unchanged. Requires Wallpapers and Colorful Engine enabled in LSPosed, then reopening the wallpaper</string>
+    <string name="wallpaper_motion_summary"></string>
     <string name="wallpaper_motion_amount">Tilt sensitivity</string>
     <string name="feature_only_data_sim_signal_title">Only show the data SIM signal</string>
     <string name="feature_only_data_sim_signal_summary">With two SIMs, only show the signal and network type of the SIM selected for mobile data. Follows data SIM changes</string>
@@ -1237,7 +1230,7 @@
     <string name="launcher_icon_label_spacing_offset">Spacing offset</string>
     <string name="launcher_swipe_gesture_group">Swipe-up gestures</string>
     <string name="launcher_swipe_top_title">Simplify the swipe-up top area</string>
-    <string name="launcher_swipe_top_summary">Remove the split-screen entry and hide controls in the top gesture area, with a wider floating-window trigger area; other split-screen entries are unchanged</string>
+    <string name="launcher_swipe_top_summary">Remove the split-screen entry and hide controls in the top gesture area, with a wider floating-window trigger area</string>
     <string name="launcher_float_trigger_width">Floating-window trigger width</string>
     <string name="statusbar_icon_mute">Mute</string>
     <string name="statusbar_icon_network_speed">Network speed</string>
@@ -1290,17 +1283,21 @@
     <string name="carrier_name_reset">Restore carrier names</string>
     <string name="qs_tile_corner_group">Control Center appearance</string>
     <string name="qs_tile_corner_title">Custom Control Center corners</string>
-    <string name="qs_tile_corner_summary">Adjust corners for Control Center tiles, the media card, and brightness/volume sliders; turn off to restore system shapes</string>
+    <string name="qs_tile_corner_summary" formatted="false">Adjust corners by tile size; -1 uses system corners, and 100% is half the shorter side</string>
     <string name="qs_tile_corner_radius">Corner radius</string>
+    <string name="qs_tile_corner_settings_title">Corner adjustment</string>
+    <string name="qs_tile_corner_size_radius">%1$s tile corner radius</string>
     <string name="launcher_group_effects">Visual effects</string>
     <string name="launcher_force_blur_title">Force launcher blur effects</string>
-    <string name="launcher_force_blur_summary">Try to unlock native desktop, icon menu and animated blur on restricted models while respecting system blur, power saving and theme settings; may increase power use and requires native firmware support; restart the launcher after changing</string>
+    <string name="launcher_force_blur_summary"></string>
 
     <string name="about_contributor_concerrox_title" translatable="false">ConcerroX</string>
     <string name="about_contributor_concerrox_summary" translatable="false">GitHub@ConcerroX</string>
     <string name="about_contributor_fishcpy_title" translatable="false">fishcpy</string>
     <string name="about_contributor_fishcpy_summary" translatable="false">GitHub@fishcpy</string>
     <string name="about_contributor_hehejuice_title" translatable="false">HeheJuice</string>
+    <string name="about_contributor_xiefei_title" translatable="false">xiefei-github</string>
+    <string name="about_contributor_xiefei_summary" translatable="false">GitHub@xiefei-github</string>
     <string name="about_reference_capsule_title" translatable="false">Capsule</string>
     <string name="about_reference_capsule_summary" translatable="false">Kyant0 · Apache-2.0</string>
     <string name="about_reference_liquid_glass_title" translatable="false">AndroidLiquidGlass</string>
@@ -1320,8 +1317,7 @@
     <string name="feature_c16_stacked_signal_save_failed">Could not save the setting</string>
 
 <!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
-    <string name="corepatch_title">Core Patch (Experimental)</string>
-    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_title">Core Patch</string>
     <string name="corepatch_downgrade">Bypass downgrade</string>
     <string name="corepatch_downgrade_summary">Allow installing an older version over a newer version.</string>
     <string name="corepatch_min_sdk">Bypass minimum SDK version check</string>
@@ -1396,10 +1392,10 @@
     <string name="power_indicator_font">Font size</string>
 
     <string name="rotation_suggestion_hide_title">Hide rotation suggestion button</string>
-    <string name="rotation_suggestion_hide_summary">Hide the floating screen-rotation suggestion without changing auto-rotate or orientation settings</string>
+    <string name="rotation_suggestion_hide_summary">Hide the floating screen-rotation suggestion</string>
 
     <string name="hide_screenshot_floating_title">Exclude floating apps from screenshots</string>
-    <string name="hide_screenshot_floating_summary">Exclude supported floating app windows and picture-in-picture layers from system screenshots without closing them</string>
+    <string name="hide_screenshot_floating_summary">Exclude supported floating app windows and picture-in-picture layers from system screenshots</string>
     <string name="power_indicator_hide_discharge_sign">Hide discharge minus sign</string>
     <string name="power_indicator_temperature">Show temperature on two lines</string>
     <string name="power_indicator_temperature_summary">Show power on the first line and battery temperature on the second</string>
@@ -1421,17 +1417,13 @@
     <string name="setting_settings_home_entry_style">Icon style</string>
     <string name="setting_settings_home_entry_style_system">Default</string>
     <string name="setting_settings_home_entry_style_app">App icon</string>
-    <string name="settings_section_system_adaptation">System adaptation</string>
-    <string name="setting_system_adaptation_version">Adaptation version</string>
-    <string name="setting_system_adaptation_save_failed">Could not save the system adaptation version. Check the Xposed framework connection and try again</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_title">Disable LTPO/LTPS downclocking</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_summary">Keep the refresh rate selected in system settings while the screen is on. Enabling this may increase power consumption.</string>
     <string name="display_enhancement_group">Picture enhancement</string>
     <string name="display_enhancement_sr_thermal_title">Remove Ultra-clear enhancement thermal limit</string>
-    <string name="display_enhancement_sr_thermal_summary">Remove the thermal limit specific to Ultra-clear enhancement without unlocking unsupported hardware. May increase heat and power consumption.</string>
+    <string name="display_enhancement_sr_thermal_summary">Remove the thermal limit specific to Ultra-clear enhancement</string>
     <string name="display_enhancement_color_thermal_title">Remove video color enhancement thermal limit</string>
-    <string name="display_enhancement_color_thermal_summary">Remove the thermal limit specific to video color enhancement. May increase heat and power consumption; system-wide thermal protection is unchanged.</string>
-    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="display_enhancement_color_thermal_summary">Remove the thermal limit specific to video color enhancement</string>
     <string name="settings_home_cleanup_group">Settings home</string>
     <string name="settings_home_hide_account_title">Hide top account entry</string>
     <string name="settings_home_hide_account_summary">Hide the account card on the system Settings home page</string>
@@ -1465,4 +1457,82 @@
     <string name="native_live_update_summary">Use native Live Update chips. Enabling this hides Fluid Cloud; the two cannot be used together.</string>
     <string name="setting_hide_module_icon">Hide module App icon</string>
     <string name="setting_hide_module_icon_failed">Unable to change launcher icon visibility</string>
+    <string name="side_volume_group">Side volume slider</string>
+    <string name="side_volume_percentage_title">Show percentage</string>
+    <string name="side_volume_percentage_summary">Show percentages on volume sliders, including multiple volume controls</string>
+    <string name="side_volume_keep_wide_title">Keep the slider wide while adjusting volume</string>
+    <string name="qs_slider_percentage_title">Slider percentage</string>
+    <string name="qs_slider_percentage_summary">Show percentages on brightness and volume sliders, including expanded panels</string>
+    <string name="qs_slider_percentage_properties">Percentage properties</string>
+    <string name="qs_slider_percentage_size">Text size</string>
+    <string name="qs_slider_percentage_color">Text color</string>
+    <string name="qs_slider_percentage_offset">Vertical position offset</string>
+    <string name="settings_color_white">White</string>
+    <string name="settings_color_black">Black</string>
+    <string name="capture_group_screenshot_options">Screenshot options</string>
+    <string name="volume_group_alerts">Volume alerts</string>
+    <string name="control_center_group_visibility">Hidden elements</string>
+    <string name="launcher_group_app_management">App management</string>
+    <string name="launcher_group_recent_interaction">Display and interaction</string>
+
+    <string name="feature_updates_title">What’s new</string>
+    <string name="feature_updates_version">Version %1$s</string>
+    <string name="feature_updates_counts">%1$d new · %2$d updated</string>
+    <string name="feature_updates_added">New features (%1$d)</string>
+    <string name="feature_updates_changed">Updated features (%1$d)</string>
+    <string name="feature_updates_empty">No matching features</string>
+    <string name="feature_updates_layout_note">Compatible with newer launchers; fixes custom layouts not applying</string>
+    <string name="feature_updates_corners_note">Unified expansion and collapse animations</string>
+    <string name="feature_updates_about_note">Aligned the layout and dividers in newer About device pages</string>
+    <string name="feature_updates_browser_note">Improved default-browser routing for complete web addresses</string>
+    <string name="feature_updates_ota_note">Improved download link parsing, authentication and redirects</string>
+    <string name="feature_updates_view_features">Explore updated features</string>
+    <string name="settings_account_size_group">Account card</string>
+    <string name="settings_account_size_title">Account card size</string>
+    <string name="settings_account_size_summary">Adjust card height, avatar size and text size together</string>
+    <string name="settings_account_size_percent">Size scale</string>
+    <string name="settings_title_lock_title">Lock collapsed title</string>
+    <string name="settings_title_lock_summary">Keep the large title collapsed while scrolling</string>
+    <string name="battery_block_whitelist_restore_title">Prevent battery optimization allowlist resets</string>
+    <string name="battery_block_whitelist_restore_summary">Prevent the battery app from automatically restoring Optimize or Do not optimize. Manual changes remain available</string>
+    <string name="feature_translation_title">Translation</string>
+    <string name="translation_screen_group">Screen translation</string>
+    <string name="translation_allow_floating_title">Allow screen translation with floating windows</string>
+    <string name="translation_allow_floating_summary">Keep full-screen translation available while a floating window is open</string>
+    <string name="translation_bypass_app_blacklist_title">Bypass app blacklist</string>
+    <string name="translation_bypass_app_blacklist_summary">Allow full-screen translation in blacklisted apps</string>
+    <string name="translation_allow_restricted_pages_title">Allow restricted screens</string>
+    <string name="translation_allow_restricted_pages_summary">Allow full-screen translation on call, video call and permission screens</string>
+    <string name="translation_allow_landscape_title">Allow landscape translation</string>
+    <string name="translation_allow_landscape_summary">Keep full-screen translation available in landscape</string>
+    <string name="translation_unlock_browser_title">Unlock browser translation</string>
+    <string name="translation_unlock_browser_summary">Bypass the app allowlist and try generic web extraction for unsupported versions</string>
+    <string name="installer_cleanup_title">App installer</string>
+    <string name="installer_cleanup_group">Installation</string>
+    <string name="installer_native_ui_title">Use native installer</string>
+    <string name="installer_native_ui_summary">Open the Android installer instead of the customized installer</string>
+    <string name="installer_skip_detection_title">Skip installation checks</string>
+    <string name="installer_skip_detection_summary">Skip App installer scans and hide security check cards</string>
+    <string name="installer_remove_ads_title">Remove installation ads</string>
+    <string name="installer_remove_ads_summary">Remove recommendations on installation, completion and cancellation pages</string>
+    <string name="installer_hide_collection_notice_title">Hide installation information collection reminder</string>
+    <string name="installer_hide_collection_notice_summary">Skip the information collection reminder shown before installation</string>
+    <string name="installer_block_network_title">Block installer network access</string>
+    <string name="installer_block_network_summary">Block App installer network access and skip online preloading before installation</string>
+    <string name="package_installer_title">Package installer</string>
+    <string name="camera_page_title">Camera</string>
+    <string name="camera_preview_group">Photo preview</string>
+    <string name="camera_default_gallery_title">Follow default gallery</string>
+    <string name="camera_default_gallery_summary">Open photos and videos with the gallery selected in system Default apps</string>
+
+    <string name="network_speed_title">Network speed indicator</string>
+    <string name="network_speed_refresh_second">Custom refresh interval</string>
+    <string name="network_speed_hide_per_second">Hide /s</string>
+    <string name="network_speed_hide_units">Hide speed units</string>
+    <string name="network_speed_single_line">Single-line display</string>
+
+    <string name="network_speed_interval">Refresh interval</string>
+    <string name="network_speed_follow_font_weight">Follow system font weight</string>
+    <string name="network_speed_custom_font_size">Custom font size</string>
+    <string name="network_speed_font_size">Font size</string>
 </resources>

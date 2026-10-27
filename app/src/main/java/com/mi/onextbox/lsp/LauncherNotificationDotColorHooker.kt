@@ -393,6 +393,11 @@ internal object LauncherNotificationDotColorHooker {
     private fun resolveDotDrawable(loader: ClassLoader): GradientDrawable? {
         dotDrawable?.let { return it }
         dotDrawable = runCatching {
+            if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16) {
+                val cache = ModernReflect.findClass("com.android.common.util.CacheUtils", loader)
+                val instance = cache.getDeclaredField("INSTANCE").get(null)
+                return@runCatching cache.getDeclaredMethod("getDotDrawable").invoke(instance) as? GradientDrawable
+            }
             val holder = ModernReflect.findClass("com.android.common.util.f4", loader)
             holder.declaredFields.asSequence()
                 .filter { Modifier.isStatic(it.modifiers) && it.type.name == "ht.c" }

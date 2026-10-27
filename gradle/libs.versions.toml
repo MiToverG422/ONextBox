@@ -9,27 +9,26 @@ activityCompose = "1.13.0"
 kotlin = "2.4.10"
 composeBom = "2026.08.00"
 material3Expressive = "1.5.0-alpha27"
-materialKolor = "5.0.1"
 couiCompose = "1.9.3"
 couiComposeWindowSize = "1.9.0"
 couiCapsule = "2.1.1-patch2"
 kyantShapes = "1.2.1"
-miuix = "0.9.4"
 couiAndroidxWindow = "1.5.0"
 libxposed = "102.0.0"
 palette = "1.0.0"
 androidxNavigation3 = "1.1.4"
 kotlinxSerialization = "1.11.0"
-couiKmp = "1.1.0"
-couiBlur = "1.0.0"
-couiNavigation3 = "1.0.0"
+couiFoundation = "1.11.1"
+couiNavigationEvent = "1.1.2"
+couiCollection = "1.6.0"
+couiLifecycle = "2.11.0"
+couiMaterialKolor = "5.0.0"
 libsu = "6.0.0"
 hiddenApiBypass = "4.3"
 dynamicAnimation = "1.1.0"
 dexkit = "2.3.0"
 
 [libraries]
-miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -41,7 +40,6 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3Expressive" }
-material-kolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialKolor" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
@@ -57,11 +55,12 @@ androidx-palette-ktx = { group = "androidx.palette", name = "palette-ktx", versi
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "androidxNavigation3" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
-coui-ui = { module = "io.github.suqi8.coui.kmp:coui-ui", version.ref = "couiKmp" }
-coui-preference = { module = "io.github.suqi8.coui.kmp:coui-preference", version.ref = "couiKmp" }
-coui-blur = { module = "io.github.suqi8.coui.kmp:coui-blur", version.ref = "couiBlur" }
-coui-icons = { module = "io.github.suqi8.coui.kmp:coui-icons", version.ref = "couiKmp" }
-coui-navigation3-ui = { module = "io.github.suqi8.coui.kmp:coui-navigation3-ui", version.ref = "couiNavigation3" }
+coui-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "couiFoundation" }
+coui-navigation-event = { module = "androidx.navigationevent:navigationevent-compose", version.ref = "couiNavigationEvent" }
+coui-collection = { module = "androidx.collection:collection", version.ref = "couiCollection" }
+coui-lifecycle-runtime = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime", version.ref = "couiLifecycle" }
+coui-lifecycle-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "couiLifecycle" }
+coui-material-kolor = { module = "com.materialkolor:material-color-utilities", version.ref = "couiMaterialKolor" }
 libsu-core = { module = "com.github.topjohnwu.libsu:core", version.ref = "libsu" }
 libsu-service = { module = "com.github.topjohnwu.libsu:service", version.ref = "libsu" }
 hidden-api-bypass = { module = "org.lsposed.hiddenapibypass:hiddenapibypass", version.ref = "hiddenApiBypass" }

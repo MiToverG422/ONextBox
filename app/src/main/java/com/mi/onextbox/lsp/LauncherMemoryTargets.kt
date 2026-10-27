@@ -37,6 +37,7 @@ internal class LauncherMemoryTargets(val values: Array<*>) {
         private const val UPDATE_ANCHOR = "updateMemoDisplaySwitch(), e="
 
         fun resolve(loader: ClassLoader, apkPath: String): LauncherMemoryTargets {
+            if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16) return resolveColorOs16(loader)
             System.loadLibrary("dexkit")
             val bytes = ZipFile(apkPath).use { apk ->
                 apk.entries().asSequence().filter { it.name.matches(Regex("classes\\d*\\.dex")) }
@@ -96,6 +97,32 @@ internal class LauncherMemoryTargets(val values: Array<*>) {
                     update.getMethodInstance(loader), panel.getDeclaredMethod("onFinishInflate"), callers.toTypedArray(), bind,
                 ))
             }
+        }
+
+        private fun resolveColorOs16(loader: ClassLoader): LauncherMemoryTargets {
+            val type = ModernReflect.findClass("com.oplus.quickstep.memory.MemoryInfoManager", loader)
+            val panel = ModernReflect.findClass("com.oplus.quickstep.views.OplusClearAllPanelView", loader)
+            val wrapper = ModernReflect.findClass("${type.name}\$MemoryInfoWrapper", loader)
+            check(View::class.java.isAssignableFrom(panel))
+            wrapper.getDeclaredConstructor(String::class.java, Int::class.javaPrimitiveType)
+            val gates = listOf("isAllowMemoryInfoDisplay", "needMemoryDetail").map { name ->
+                type.getDeclaredMethod(name).also { require(it.returnType == Boolean::class.javaPrimitiveType) }
+            }
+            val format = type.getDeclaredMethod("getMemoryInfo", Boolean::class.javaPrimitiveType)
+            require(format.returnType == wrapper)
+            val refresh = type.getDeclaredMethod("updateMemoDisplaySwitch")
+            val update = panel.getDeclaredMethod("updateMeminfo", Boolean::class.javaPrimitiveType)
+            val bind = panel.getDeclaredMethod("b", panel, wrapper, Boolean::class.javaPrimitiveType, type)
+            require(listOf(refresh, update, bind).all { it.returnType == Void.TYPE })
+            // C16's constructor delegates the capability test, and its allowance field is mutable.
+            // Keep the same read/force/restore lifecycle instead of matching C17's final-field shape.
+            return LauncherMemoryTargets(arrayOf(
+                type.getDeclaredConstructor(Context::class.java), refresh,
+                type.getDeclaredField("mAllowMemoryInfoDisplay"), type.getDeclaredField("mNeedMemoryDetail"),
+                gates.toTypedArray(), type.getDeclaredMethod("getInstance", Context::class.java),
+                type.getDeclaredField("sInstance"), format, update, panel.getDeclaredMethod("onFinishInflate"),
+                (type.declaredMethods.toList() + panel.declaredMethods).toTypedArray(), bind,
+            ))
         }
     }
 }

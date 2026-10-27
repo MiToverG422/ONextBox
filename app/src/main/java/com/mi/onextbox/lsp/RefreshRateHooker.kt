@@ -1,5 +1,7 @@
 package com.mi.onextbox.lsp
 
+import android.graphics.Point
+import android.view.Display
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernReflect
 import io.github.libxposed.api.XposedInterface
@@ -36,7 +38,7 @@ internal object RefreshRateHooker {
         val putUsrOverrideRefreshRateId: Method,
     )
 
-    fun hook(classLoader: ClassLoader?, packageName: String): Int {
+    fun hook(classLoader: ClassLoader?, packageName: String, colorOs16: Boolean = false): Int {
         var installed = 0
         if (hookFast(CLS_CONFIGS, classLoader, "isExtremeHighEnable") { true }) installed++
         if (hookFast(CLS_SETTINGS, classLoader, "isExtremeHighSettingOn") { true }) installed++
@@ -46,7 +48,20 @@ internal object RefreshRateHooker {
                 classLoader,
                 "getFinalDisplayModeIdLocked",
                 arrayOf("android.view.DisplayInfo", "android.graphics.Point"),
-            ) { FORCED_DISPLAY_MODE_ID }
+            ) { chain ->
+                if (!colorOs16) FORCED_DISPLAY_MODE_ID
+                else {
+                    val info = chain.getArg(0)
+                    val size = chain.getArg(1) as? Point
+                    val mode = runCatching {
+                        val modes = ModernReflect.getObjectField(info!!, "supportedModes") as? Array<*>
+                        ColorOs16RefreshRateRules.modeId(modes.orEmpty().filterIsInstance<Display.Mode>().map {
+                            ColorOs16RefreshRateRules.Mode(it.modeId, it.physicalWidth, it.physicalHeight, it.refreshRate)
+                        }, size?.x ?: 0, size?.y ?: 0)
+                    }.getOrNull()
+                    mode ?: chain.proceed()
+                }
+            }
         ) installed++
         if (hookFast(CLS_PICK_DATA, classLoader, "isKeyguardShown") { false }) installed++
 

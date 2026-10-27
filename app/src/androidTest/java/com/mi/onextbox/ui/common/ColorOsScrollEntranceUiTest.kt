@@ -64,14 +64,6 @@ class ColorOsScrollEntranceUiTest {
         assertTouchEntrance(lazy = true)
     }
 
-    @Test fun materialEagerCardsKeepTheirOriginalPlacementWhileScrolling() {
-        assertMaterialPlacement(lazy = false)
-    }
-
-    @Test fun materialLazyCardsKeepTheirOriginalPlacementWhileScrolling() {
-        assertMaterialPlacement(lazy = true)
-    }
-
     @Test fun replacingEagerCardsWhileIdleDoesNotReplayTheEntrance() {
         assertIdleReplacement(lazy = false)
     }
@@ -97,14 +89,14 @@ class ColorOsScrollEntranceUiTest {
     }
 
     @Test fun disablingTheHostKeepsEagerCardsAtTheirScrolledPositions() {
-        assertDisabledEntrance(lazy = false, hostEnabled = false, preferenceEnabled = true)
+        assertDisabledEntrance(lazy = false)
     }
 
-    @Test fun disablingTheGlobalPreferenceKeepsLazyCardsAtTheirScrolledPositions() {
-        assertDisabledEntrance(lazy = true, hostEnabled = true, preferenceEnabled = false)
+    @Test fun disablingTheHostKeepsLazyCardsAtTheirScrolledPositions() {
+        assertDisabledEntrance(lazy = true)
     }
 
-    @Test fun disablingThePreferenceDuringPlaybackResetsCardsAndCanBeEnabledAgain() {
+    @Test fun disablingTheHostDuringPlaybackResetsCardsAndCanBeEnabledAgain() {
         val harness = showCards(lazy = true)
         val pinned = compose.onNodeWithTag(PinnedTag).getUnclippedBoundsInRoot()
         compose.mainClock.autoAdvance = false
@@ -112,17 +104,17 @@ class ColorOsScrollEntranceUiTest {
         finishDrag(upward = true)
         compose.runOnIdle {
             assertFalse(harness.isScrolling())
-            assertTrue("An entrance must be playing before the preference is disabled",
+            assertTrue("An entrance must be playing before the host is disabled",
                 harness.entrance.offsetFor(5) > 0f)
-            harness.preferenceEnabled.value = false
+            harness.hostEnabled.value = false
         }
         repeat(2) { compose.mainClock.advanceTimeByFrame() }
         compose.runOnIdle {
-            assertEquals("Disabling the preference must immediately clear the running entrance", 0f,
+            assertEquals("Disabling the host must immediately clear the running entrance", 0f,
                 harness.entrance.offsetFor(5), 0.001f)
         }
         assertRenderedTop(harness, index = 5, key = 5)
-        compose.runOnIdle { harness.preferenceEnabled.value = true }
+        compose.runOnIdle { harness.hostEnabled.value = true }
         repeat(2) { compose.mainClock.advanceTimeByFrame() }
         compose.runOnIdle {
             assertEquals("Enabling while idle must not replay cards that are already visible", 0f,
@@ -130,10 +122,10 @@ class ColorOsScrollEntranceUiTest {
         }
         beginDrag(upward = false)
         compose.runOnIdle {
-            assertTrue("New cards should animate again after the preference is re-enabled",
+            assertTrue("New cards should animate again after the host is re-enabled",
                 harness.entrance.offsetFor(0) < 0f)
         }
-        assertEquals("Changing the preference must not move fixed controls", pinned,
+        assertEquals("Changing the host must not move fixed controls", pinned,
             compose.onNodeWithTag(PinnedTag).getUnclippedBoundsInRoot())
         finishDrag(upward = false)
         compose.mainClock.advanceTimeBy(420)
@@ -230,22 +222,8 @@ class ColorOsScrollEntranceUiTest {
         assertEquals(pinned, compose.onNodeWithTag(PinnedTag).getUnclippedBoundsInRoot())
     }
 
-    private fun assertMaterialPlacement(lazy: Boolean) {
-        val harness = showCards(lazy, AppUiStyle.Material3Expressive)
-        compose.mainClock.autoAdvance = false
-        beginDrag(upward = true)
-        compose.runOnIdle {
-            (0 until CardCount).forEach { key ->
-                assertEquals("Material cards must not receive the COUI entrance", 0f,
-                    harness.entrance.offsetFor(key), 0.001f)
-            }
-        }
-        assertRenderedTop(harness, index = 5, key = 5)
-        finishDrag(upward = true)
-    }
-
-    private fun assertDisabledEntrance(lazy: Boolean, hostEnabled: Boolean, preferenceEnabled: Boolean) {
-        val harness = showCards(lazy, hostEnabled = hostEnabled, preferenceEnabled = preferenceEnabled)
+    private fun assertDisabledEntrance(lazy: Boolean) {
+        val harness = showCards(lazy, hostEnabled = false)
         compose.mainClock.autoAdvance = false
         beginDrag(upward = true)
         compose.runOnIdle {
@@ -381,16 +359,13 @@ class ColorOsScrollEntranceUiTest {
         edgeOverlays: Boolean = false,
         extendedHost: Boolean = false,
         hostEnabled: Boolean = true,
-        preferenceEnabled: Boolean = true,
     ): Harness {
         val harness = Harness()
         harness.contentPadding = if (edgeOverlays) 40.dp else 0.dp
         harness.hostEnabled.value = hostEnabled
-        harness.preferenceEnabled.value = preferenceEnabled
         compose.setContent {
             CompositionLocalProvider(
                 LocalAppUiStyle provides style,
-                LocalColorOsProgressiveCardAnimationEnabled provides harness.preferenceEnabled.value,
             ) {
                 harness.density = LocalDensity.current
                 if (lazy) {
@@ -469,7 +444,6 @@ class ColorOsScrollEntranceUiTest {
         var contentPadding = 0.dp
         val generation = mutableIntStateOf(0)
         val hostEnabled = mutableStateOf(true)
-        val preferenceEnabled = mutableStateOf(true)
         fun isScrolling() = lazy?.isScrollInProgress ?: requireNotNull(eager).isScrollInProgress
         fun baseTop(index: Int, key: Int = index): Float {
             val padding = with(density) { contentPadding.toPx() }

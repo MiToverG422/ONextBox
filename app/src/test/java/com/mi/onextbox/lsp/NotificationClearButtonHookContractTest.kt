@@ -47,9 +47,11 @@ class NotificationClearButtonHookContractTest {
         assertTrue(config.contains("setRoundNotificationClearButtonEnabled(context, false)"))
         assertTrue(config.contains("value = if (isRoundNotificationClearButtonEnabled(context)) \"1\" else \"0\""))
         val entry = source("lsp/OosLspModuleEntry.kt")
-        val call = entry.indexOf("NotificationClearButtonHooker.hook(classLoader)")
-        assertTrue(call > entry.indexOf("PACKAGE_SYSTEM_UI ->"))
-        assertTrue(call < entry.indexOf("PACKAGE_SETTINGS ->"))
+        val sharedDispatch = entry.indexOf("InstallerRedirectHooker.hookApp()")
+        assertTrue(sharedDispatch >= 0)
+        val call = entry.indexOf("NotificationClearButtonHooker.hook(classLoader)", sharedDispatch)
+        assertTrue(call > entry.indexOf("PACKAGE_SYSTEM_UI ->", sharedDispatch))
+        assertTrue(call < entry.indexOf("PACKAGE_SETTINGS ->", sharedDispatch))
         assertTrue(source("ui/screens/SystemUiFeaturesPage.kt").contains("NotificationClearButtonSettingsRow()"))
     }
 

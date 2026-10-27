@@ -40,6 +40,14 @@ internal object KeyguardCaptureHooker {
         install("recorder quick panel") { installRecorderQuickPanel() }
     }
 
+    fun hookColorOs16Recorder(loader: ClassLoader) {
+        if (!recordingEnabled()) return
+        install("C16 recorder screen-off events") {
+            installRecorderEvents(loader, "t4.i", setOf("t4.b", "t4.g", "t4.k"))
+        }
+        install("C16 recorder quick panel") { installRecorderQuickPanel() }
+    }
+
     private inline fun install(label: String, block: () -> Unit) {
         runCatching(block)
             .onSuccess { HookLog.i(TAG, "Installed $label") }
@@ -144,12 +152,16 @@ internal object KeyguardCaptureHooker {
         // Gallery/preview access and every other recorder keyguard query keep their real state.
     }
 
-    private fun installRecorderEvents(loader: ClassLoader) {
-        val eventType = Reflect.findClass(EVENT_PREFIX + "RecordEventType", loader)
+    private fun installRecorderEvents(
+        loader: ClassLoader,
+        enumName: String = EVENT_PREFIX + "RecordEventType",
+        knownClasses: Set<String>? = null,
+    ) {
+        val eventType = Reflect.findClass(enumName, loader)
         check(eventType.isEnum) { "Unknown recorder event contract" }
         // The recorder obfuscates its event bus classes, discover by enum/Map signatures
         // rather than depending on jadx-generated field names or a particular APK's letters.
-        val names = eventClassNames(loader).ifEmpty {
+        val names = knownClasses ?: eventClassNames(loader).ifEmpty {
             setOf(EVENT_PREFIX + "b", EVENT_PREFIX + "g", EVENT_PREFIX + "j")
         }
         val types = names.mapNotNull { Reflect.findClassIfExists(it, loader) }

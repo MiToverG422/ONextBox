@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="system_adaptation_runtime_restart">Версия переключена, настройки сохранены. Перезагрузите телефон, чтобы применить текущую версию и сбросить эффекты предыдущей.</string>
-    <string name="developer_allow_hyperos3_title">Разрешить поддержку HyperOS 3</string>
     <string name="system_adaptation_no_content">Для этой версии пока нет функций и инструментов</string>
+    <string name="setting_bottom_bar_hide_labels">Скрыть подписи нижней панели</string>
     <string name="app_name">ONextBox</string>
     <string name="xposed_description">Набор инструментов в стиле COUI для настройки систем OPlus</string>
     <string name="tab_home">Главная</string>
@@ -19,17 +18,10 @@
     <string name="setting_theme_mode">Режим темы</string>
     <string name="setting_ui_style">Стиль интерфейса</string>
     <string name="ui_style_coloros">COUI 17.0</string>
-    <string name="ui_style_material3_expressive">Material 3 Expressive</string>
     <string name="setting_dynamic_color">Динамические цвета</string>
     <string name="setting_dynamic_color_on_summary">Использовать цвета системных обоев</string>
     <string name="setting_dynamic_color_off_summary">Использовать собственный цвет темы</string>
     <string name="setting_theme_palette">Цвет темы</string>
-    <string name="setting_material_floating_bottom_bar">Плавающая нижняя планка</string>
-    <string name="setting_material_floating_bottom_bar_summary">Использовать плавающую нижнюю панель навигации</string>
-    <string name="setting_material_haptics">Тактильная обратная связь</string>
-    <string name="setting_material_haptics_summary">Обеспечивает тактильную обратную связь при переключении вкладок навигации</string>
-    <string name="setting_material_switch_icons">Значки переключателей</string>
-    <string name="setting_material_switch_icons_summary">Показывать значки состояния на ползунке переключателя</string>
     <string name="setting_theme_settings">Настройки</string>
     <string name="theme_mode_system">Как в системе</string>
     <string name="theme_mode_light">Светлая тема</string>
@@ -53,10 +45,6 @@
     <string name="language_system">Как в системе</string>
     <string name="setting_blur_effect">Включить эффект размытия</string>
     <string name="setting_feature_page_new_style">Стиль страницы «Новые функции»</string>
-    <string name="setting_progressive_card_animation">Плавное появление карточек</string>
-    <string name="setting_progressive_card_animation_summary">Карточки постепенно появляются при прокрутке, только в классическом оформлении страницы функций и мониторе OPPO Push</string>
-    <string name="setting_feature_page_hide_background_video">Скрыть фоновое видео страницы функций</string>
-    <string name="setting_feature_page_hide_background_video_summary">В темных темах, отличных от Monet, заменяет фоновое видео красочным анимированным фоном</string>
     <string name="setting_pop_follows_swipe_edge">Pop следует за краем смахивания</string>
     <string name="setting_pop_follows_swipe_edge_summary">Направление всплывающей анимации следует за краем пальца</string>
     <string name="settings_section_other">Другое</string>
@@ -97,6 +85,9 @@
     <string name="feature_force_native_clipboard_overlay_title">Родной буфер обмена</string>
     <string name="feature_force_native_clipboard_overlay_summary">Принудительное включение встроенной записи буфера обмена в левом нижнем углу</string>
     <string name="feature_group_beautify">Строка состояния</string>
+    <string name="feature_group_volume">Громкость</string>
+    <string name="volume_block_hearing_safety_warning_title">Скрыть предупреждение о безопасности слуха</string>
+    <string name="volume_block_hearing_safety_warning_summary">Скрывает диалог предупреждения о безопасности слуха при повышении громкости</string>
     <string name="feature_group_dynamic_color">Динамические цвета</string>
     <string name="feature_force_tonal_spot_title">Динамическое исправление цвета Tonal Spot</string>
     <string name="feature_force_tonal_spot_summary">Сохраните выбранный исходный цвет, но заставьте SystemUI генерировать системную палитру с помощью TONAL_SPOT, предотвращая чрезмерно насыщенный фон на собственных страницах</string>
@@ -333,8 +324,6 @@
     <string name="about_reference_material_icons_title">Значки материалов</string>
     <string name="about_reference_junit_summary">Команда JUnit · EPL-1.0</string>
     <string name="about_reference_junit_title">JUnit</string>
-    <string name="about_reference_miuix_summary">compose-miuix-ui · Apache-2.0</string>
-    <string name="about_reference_miuix_title">MIUIX</string>
     <string name="about_reference_oshin_summary">suqi8 · AGPL-3.0</string>
     <string name="about_reference_oshin_title">Ошин</string>
     <string name="about_reference_xposed_api_summary">libxposed · Apache-2.0</string>
@@ -426,7 +415,7 @@
     <string name="onboarding_language_title">Выбор языка</string>
     <string name="onboarding_language_summary">Выберите язык первоначальной настройки и ONextBox</string>
     <string name="onboarding_appearance_title">Интерфейс и тема</string>
-    <string name="onboarding_appearance_summary">Выберите стиль и тему интерфейса для ONextBox</string>
+    <string name="onboarding_appearance_summary">Выберите тему для ONextBox</string>
     <string name="onboarding_appearance_theme_note">Это изменяет только приложение; экран настройки не затрагивается</string>
     <string name="onboarding_personalization_title">Настройте под себя</string>
     <string name="onboarding_personalization_summary">Предварительный просмотр и выбор внешнего вида страницы «Функции», прежде чем продолжить</string>
@@ -434,11 +423,7 @@
     <string name="onboarding_feature_style_new_summary">Иммерсивный макет с анимированным фоном</string>
     <string name="onboarding_feature_style_classic">Страница  Classic с функциями</string>
     <string name="onboarding_feature_style_classic_summary">Простой, знакомый макет списка</string>
-    <string name="onboarding_feature_video_title">ColorOS 17 живые обои по умолчанию</string>
-    <string name="onboarding_feature_video_summary">Отображается только на новой странице функций в стандартном темном режиме</string>
     <string name="onboarding_feature_style_section">Особенности стиля страницы</string>
-    <string name="onboarding_feature_background_section">Фон</string>
-    <string name="onboarding_feature_coui_only_note">Эти параметры поддерживаются только в COUI 17.0</string>
     <string name="onboarding_migration_title">Возьмите с собой настройки</string>
     <string name="onboarding_migration_summary">Восстановите резервную копию конфигурации ONextBox или настройте ее как новую</string>
     <string name="onboarding_migration_preview_source">Резервное копирование устройства</string>
@@ -566,6 +551,7 @@
     <string name="notification_removal_overlay">Скрыть уведомление о наложении</string>
     <string name="notification_removal_vpn">Скрыть уведомление об активном VPN</string>
     <string name="notification_removal_developer">Скрыть уведомление о режиме разработчика</string>
+    <string name="notification_removal_extreme_refresh_rate">Скрыть уведомление об экстремальной частоте обновления</string>
     <string name="notification_removal_charging">Скрыть уведомление о завершении зарядки</string>
     <string name="notification_removal_flashlight">Скрыть уведомление о включённом фонарике</string>
     <string name="notification_removal_consumption">Скрыть предупреждение о расходе заряда</string>
@@ -598,6 +584,7 @@
     <string name="feature_system_ui_status_bar_entry_summary">Отображение сети, порядок значков и индикаторы</string>
     <string name="feature_system_ui_notification_center_entry_summary">Стиль уведомлений и скрытие уведомлений в строке состояния</string>
     <string name="feature_system_ui_control_center_entry_summary">Кнопки редактирования, настроек и меню, оператор сети</string>
+    <string name="feature_system_ui_volume_entry_summary">Безопасность слуха</string>
     <string name="feature_system_ui_dynamic_color_entry_summary">Спецификации цветов и палитры Tonal Spot</string>
     <string name="feature_system_ui_native_entry_summary">Значки уведомлений, пузыри, меню питания и буфер обмена</string>
     <string name="feature_settings_region_entry_summary">Международные настройки, раздел Google и опции китайской версии</string>
@@ -615,8 +602,8 @@
     <string name="small_window_group_performance">Производительность и ограничения</string>
     <string name="small_window_group_edge">Вид у края экрана</string>
     <string name="small_window_group_layout">Размер и расположение</string>
-    <string name="small_window_white_bar">Белая полоска вместо свёрнутых значков</string>
-    <string name="small_window_white_bar_summary">Плавно заменять значки у края тонкой белой полоской, касание открывает стандартный выбор приложения, перетаскивание и редактирование возвращают значки, обратный переход продолжается с текущего положения, область касания не уменьшается</string>
+    <string name="small_window_white_bar">Боковая полоска для свёрнутого мини-окна</string>
+    <string name="small_window_white_bar_summary">Цвет и прозрачность соответствуют умной боковой панели. Нажатие открывает штатный выбор приложений, перетаскивание и редактирование возвращают значки. Прогресс анимации и область касания сохраняются.</string>
     <string name="small_window_safe_inset">Увеличить безопасные отступы сверху и снизу</string>
     <string name="small_window_safe_inset_summary">Оставлять не менее 48 dp сверху и снизу при перемещении свёрнутого окна, не уменьшать системные отступы, автоматически ограничивать их на небольших экранах</string>
     <string name="small_window_hide_recents">Скрыть малые окна в недавних приложениях</string>
@@ -800,9 +787,25 @@
     <string name="battery_restore_default_whitelist_summary">Использует встроенный список исключений режима ожидания вместо загруженных и локальных расширенных списков. Требуется перезагрузка системы</string>
     <string name="battery_information_group">Информация о батарее</string>
     <string name="battery_show_cycle_count_title">Показывать число циклов батареи</string>
-    <string name="battery_show_cycle_count_summary">Показывать число циклов под максимальной ёмкостью на странице состояния батареи</string>
     <string name="battery_cycle_count_label">Число циклов</string>
     <string name="battery_cycle_count_unavailable">Недоступно</string>
+    <string name="battery_show_health_status_title">Показывать состояние батареи</string>
+    <string name="battery_show_full_charge_capacity_title">Показывать ёмкость полного заряда</string>
+    <string name="battery_show_rated_capacity_title">Показывать номинальную ёмкость</string>
+    <string name="battery_show_typical_capacity_title">Показывать типичную ёмкость</string>
+    <string name="battery_health_status_label">Состояние</string>
+    <string name="battery_health_full_charge_label">Ёмкость полного заряда</string>
+    <string name="battery_health_rated_label">Номинальная ёмкость</string>
+    <string name="battery_health_typical_label">Типичная ёмкость</string>
+    <string name="battery_show_calculated_health_title">Показывать фактическую ёмкость (расчёт)</string>
+    <string name="battery_health_calculated_label">Фактическая ёмкость (расчёт)</string>
+    <string name="battery_health_unknown">Неизвестно</string>
+    <string name="battery_health_good">Хорошее</string>
+    <string name="battery_health_overheat">Перегрев</string>
+    <string name="battery_health_dead">Неисправна</string>
+    <string name="battery_health_over_voltage">Перенапряжение</string>
+    <string name="battery_health_failure">Сбой</string>
+    <string name="battery_health_cold">Переохлаждение</string>
     <string name="feature_settings_app_info_card_title">Сведения о приложении</string>
     <string name="feature_settings_app_info_card_summary">Показывать сворачиваемую карточку в сведениях о приложении с копированием долгим нажатием</string>
     <string name="settings_app_info_card_title">Информация о приложении</string>
@@ -1117,7 +1120,7 @@
     <string name="wallpaper_3d_force_summary">Принудительно включать функцию на устройствах, где скрыт переключатель 3D-обоев</string>
     <string name="wallpaper_motion_group">3D-обои</string>
     <string name="wallpaper_motion_title">Чувствительность 3D-обоев (экспериментально)</string>
-    <string name="wallpaper_motion_summary">Настройка чувствительности существующих 3D-обоев к наклону. 100% — исходная чувствительность; чем выше значение, тем сильнее отклик. Системный предел угла не меняется. Включите «Обои» и Colorful Engine в LSPosed, затем заново откройте обои</string>
+    <string name="wallpaper_motion_summary"></string>
     <string name="wallpaper_motion_amount">Чувствительность к наклону</string>
     <string name="feature_only_data_sim_signal_title">Показывать только сигнал SIM для данных</string>
     <string name="feature_only_data_sim_signal_summary">При использовании двух SIM отображаются только сигнал и тип сети SIM, выбранной для мобильных данных. При смене SIM для данных отображение обновляется</string>
@@ -1161,7 +1164,7 @@
     <string name="launcher_icon_label_spacing_offset">Смещение расстояния</string>
     <string name="launcher_swipe_gesture_group">Жесты смахивания вверх</string>
     <string name="launcher_swipe_top_title">Упростить верхнюю область жеста</string>
-    <string name="launcher_swipe_top_summary">Убрать вход в разделение экрана и скрыть элементы управления в верхней области жеста, расширив зону запуска плавающего окна; другие входы в разделение экрана не меняются</string>
+    <string name="launcher_swipe_top_summary">Убрать вход в разделение экрана и скрыть элементы управления в верхней области жеста, расширив зону запуска плавающего окна</string>
     <string name="launcher_float_trigger_width">Ширина зоны запуска плавающего окна</string>
     <string name="statusbar_icon_mute">Без звука</string>
     <string name="statusbar_icon_network_speed">Скорость сети</string>
@@ -1214,11 +1217,13 @@
     <string name="carrier_name_reset">Восстановить названия операторов</string>
     <string name="qs_tile_corner_group">Внешний вид центра управления</string>
     <string name="qs_tile_corner_title">Углы центра управления</string>
-    <string name="qs_tile_corner_summary">Настройка углов плиток, медиакарточки и ползунков яркости и громкости в центре управления; отключите для восстановления системной формы</string>
+    <string name="qs_tile_corner_summary" formatted="false">Радиус в процентах для каждого размера плитки: -1 — системное значение, 100% — половина короткой стороны</string>
     <string name="qs_tile_corner_radius">Радиус скругления</string>
+    <string name="qs_tile_corner_settings_title">Настройка скругления</string>
+    <string name="qs_tile_corner_size_radius">Радиус углов плитки %1$s</string>
     <string name="launcher_group_effects">Визуальные эффекты</string>
     <string name="launcher_force_blur_title">Принудительное размытие рабочего стола</string>
-    <string name="launcher_force_blur_summary">Попытаться снять ограничения модели для фона, меню значков и анимированного размытия, сохраняя системные настройки размытия, энергосбережения и темы; возможно увеличение расхода энергии, нужна встроенная поддержка прошивки; после изменения перезапустите лаунчер</string>
+    <string name="launcher_force_blur_summary"></string>
 
     <string name="about_contributor_hehejuice_summary">GitHub@HeheJuice</string>
 
@@ -1227,8 +1232,7 @@
     <string name="feature_c16_stacked_signal_save_failed">Не удалось сохранить настройку</string>
 
 <!-- Adapted from LSPosed/CorePatch ddf87bb; upstream declares GPL v2.0 -->
-    <string name="corepatch_title">Core Patch (Experimental)</string>
-    <string name="corepatch_warning">All options are off by default. Reboot after enabling or disabling. Signature bypass weakens security: unknown APKs may replace apps and access their data. Shared UID or reusing signatures may corrupt data or prevent boot. Back up first and do not enable standalone CorePatch at the same time. Shared UID requires digest bypass; reusing signatures requires both verification and digest bypass. Switches show saved settings, not verified Hook activation.</string>
+    <string name="corepatch_title">Core Patch</string>
     <string name="corepatch_downgrade">Разрешить понижать версию.</string>
     <string name="corepatch_downgrade_summary">Разрешить переустановку приложений на прошлые версии.</string>
     <string name="corepatch_min_sdk">Обойти ограничение минимальной версии SDK</string>
@@ -1318,10 +1322,10 @@
     <string name="power_indicator_font">Размер шрифта</string>
 
     <string name="rotation_suggestion_hide_title">Скрывать кнопку предложения поворота</string>
-    <string name="rotation_suggestion_hide_summary">Скрывать всплывающую кнопку поворота экрана, не меняя автоповорот и настройки ориентации</string>
+    <string name="rotation_suggestion_hide_summary">Скрывать всплывающую кнопку поворота экрана</string>
 
     <string name="hide_screenshot_floating_title">Не показывать плавающие окна на снимках</string>
-    <string name="hide_screenshot_floating_summary">Исключает поддерживаемые плавающие окна, картинку в картинке и наложения приложений из системных снимков, не закрывая окна</string>
+    <string name="hide_screenshot_floating_summary">Исключает поддерживаемые плавающие окна, картинку в картинке и наложения приложений из системных снимков</string>
     <string name="power_indicator_hide_discharge_sign">Скрывать минус при разряде</string>
     <string name="power_indicator_temperature">Температура второй строкой</string>
     <string name="power_indicator_temperature_summary">Сверху — мощность, снизу — температура батареи</string>
@@ -1343,17 +1347,13 @@
     <string name="setting_settings_home_entry_style">Стиль значка</string>
     <string name="setting_settings_home_entry_style_system">По умолчанию</string>
     <string name="setting_settings_home_entry_style_app">Значок приложения</string>
-    <string name="settings_section_system_adaptation">Адаптация к системе</string>
-    <string name="setting_system_adaptation_version">Версия системы</string>
-    <string name="setting_system_adaptation_save_failed">Не удалось сохранить версию системы. Проверьте подключение к фреймворку Xposed и повторите попытку</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_title">Отключить снижение частоты LTPO/LTPS</string>
     <string name="feature_settings_disable_adaptive_refresh_rate_summary">Удерживать выбранную в системе частоту при включённом экране. Включение может увеличить расход энергии.</string>
     <string name="display_enhancement_group">Улучшение изображения</string>
     <string name="display_enhancement_sr_thermal_title">Снять температурный лимит сверхчёткого изображения</string>
-    <string name="display_enhancement_sr_thermal_summary">Снимает температурный лимит улучшения чёткости, не открывая неподдерживаемые аппаратные функции. Может увеличить нагрев и расход энергии</string>
+    <string name="display_enhancement_sr_thermal_summary">Снимает температурный лимит улучшения чёткости</string>
     <string name="display_enhancement_color_thermal_title">Снять температурный лимит улучшения цвета видео</string>
-    <string name="display_enhancement_color_thermal_summary">Снимает температурный лимит улучшения цвета видео. Может увеличить нагрев и расход энергии. Общая тепловая защита системы сохраняется</string>
-    <string name="ui_style_miuix">Miuix（Testing）</string>
+    <string name="display_enhancement_color_thermal_summary">Снимает температурный лимит улучшения цвета видео</string>
     <string name="settings_home_cleanup_group">Главная страница настроек</string>
     <string name="settings_home_hide_account_title">Скрыть аккаунт вверху настроек</string>
     <string name="settings_home_hide_account_summary">Скрывает карточку аккаунта на главной странице системных настроек</string>
@@ -1387,4 +1387,82 @@
     <string name="native_live_update_summary">Использовать системную капсулу Live Update. При включении Fluid Cloud скрывается; совместное использование невозможно.</string>
     <string name="setting_hide_module_icon">Скрыть значок приложения модуля</string>
     <string name="setting_hide_module_icon_failed">Не удалось изменить видимость значка</string>
+    <string name="side_volume_group">Боковой ползунок громкости</string>
+    <string name="side_volume_percentage_title">Показывать проценты</string>
+    <string name="side_volume_percentage_summary">Показывать проценты на ползунках, включая отдельные регуляторы громкости</string>
+    <string name="side_volume_keep_wide_title">Сохранять ширину ползунка при регулировке</string>
+    <string name="qs_slider_percentage_title">Проценты на ползунках</string>
+    <string name="qs_slider_percentage_summary">Показывать проценты на ползунках яркости и громкости, включая развёрнутые панели</string>
+    <string name="qs_slider_percentage_properties">Настройки отображения процентов</string>
+    <string name="qs_slider_percentage_size">Размер текста</string>
+    <string name="qs_slider_percentage_color">Цвет текста</string>
+    <string name="qs_slider_percentage_offset">Смещение по вертикали</string>
+    <string name="settings_color_white">Белый</string>
+    <string name="settings_color_black">Чёрный</string>
+    <string name="capture_group_screenshot_options">Параметры снимков экрана</string>
+    <string name="volume_group_alerts">Уведомления громкости</string>
+    <string name="control_center_group_visibility">Скрытие элементов</string>
+    <string name="launcher_group_app_management">Управление приложениями</string>
+    <string name="launcher_group_recent_interaction">Отображение и взаимодействие</string>
+
+    <string name="feature_updates_title">Что нового</string>
+    <string name="feature_updates_version">Версия %1$s</string>
+    <string name="feature_updates_counts">Новых: %1$d · Улучшено: %2$d</string>
+    <string name="feature_updates_added">Новые функции (%1$d)</string>
+    <string name="feature_updates_changed">Улучшенные функции (%1$d)</string>
+    <string name="feature_updates_empty">Совпадений не найдено</string>
+    <string name="feature_updates_layout_note">Исправлено применение сетки в новых версиях рабочего стола</string>
+    <string name="feature_updates_corners_note">Унифицирована анимация раскрытия настроек скругления</string>
+    <string name="feature_updates_about_note">Исправлены отступы и разделители на новом экране сведений об устройстве</string>
+    <string name="feature_updates_browser_note">Улучшено открытие полных адресов в браузере по умолчанию</string>
+    <string name="feature_updates_ota_note">Улучшены разбор ссылок, авторизация и перенаправления</string>
+    <string name="feature_updates_view_features">Посмотреть обновлённые функции</string>
+    <string name="settings_account_size_group">Карточка аккаунта</string>
+    <string name="settings_account_size_title">Размер карточки аккаунта</string>
+    <string name="settings_account_size_summary">Одновременное изменение высоты карточки, размера аватара и текста</string>
+    <string name="settings_account_size_percent">Масштаб</string>
+    <string name="settings_title_lock_title">Закрепить свёрнутый заголовок</string>
+    <string name="settings_title_lock_summary">Не раскрывать большой заголовок при прокрутке</string>
+    <string name="battery_block_whitelist_restore_title">Запрет сброса списка оптимизации батареи</string>
+    <string name="battery_block_whitelist_restore_summary">Запретить приложению батареи автоматически восстанавливать настройки оптимизации. Ручное изменение доступно</string>
+    <string name="feature_translation_title">Перевод</string>
+    <string name="translation_screen_group">Перевод экрана</string>
+    <string name="translation_allow_floating_title">Перевод экрана при плавающих окнах</string>
+    <string name="translation_allow_floating_summary">Разрешить полноэкранный перевод при открытом плавающем окне</string>
+    <string name="translation_bypass_app_blacklist_title">Обход чёрного списка приложений</string>
+    <string name="translation_bypass_app_blacklist_summary">Разрешить полноэкранный перевод в приложениях из чёрного списка</string>
+    <string name="translation_allow_restricted_pages_title">Снять ограничения экранов</string>
+    <string name="translation_allow_restricted_pages_summary">Разрешить полноэкранный перевод на экранах звонков, видеозвонков и разрешений</string>
+    <string name="translation_allow_landscape_title">Разрешить перевод в альбомной ориентации</string>
+    <string name="translation_allow_landscape_summary">Сохранять доступ к полноэкранному переводу в альбомной ориентации</string>
+    <string name="translation_unlock_browser_title">Снять ограничения браузеров</string>
+    <string name="translation_unlock_browser_summary">Обходить список приложений и пробовать обычное извлечение страниц в неподдерживаемых версиях</string>
+    <string name="installer_cleanup_title">Установщик приложений</string>
+    <string name="installer_cleanup_group">Установка</string>
+    <string name="installer_native_ui_title">Использовать стандартный установщик</string>
+    <string name="installer_native_ui_summary">Открывать стандартный установщик Android вместо изменённого</string>
+    <string name="installer_skip_detection_title">Пропускать проверки установки</string>
+    <string name="installer_skip_detection_summary">Пропускать проверку в установщике приложений и скрывать карточку проверки безопасности</string>
+    <string name="installer_remove_ads_title">Убрать рекламу при установке</string>
+    <string name="installer_remove_ads_summary">Убрать рекомендации приложений при установке, её завершении и отмене</string>
+    <string name="installer_hide_collection_notice_title">Скрыть напоминание о сборе информации при установке</string>
+    <string name="installer_hide_collection_notice_summary">Пропускать диалог о сборе информации перед установкой</string>
+    <string name="installer_block_network_title">Запретить установщику доступ к сети</string>
+    <string name="installer_block_network_summary">Блокировать сеть для установщика приложений и пропускать сетевую предзагрузку</string>
+    <string name="package_installer_title">Установщик пакетов</string>
+    <string name="camera_page_title">Камера</string>
+    <string name="camera_preview_group">Просмотр фото</string>
+    <string name="camera_default_gallery_title">Использовать галерею по умолчанию</string>
+    <string name="camera_default_gallery_summary">Открывать фото и видео в галерее, выбранной в системных настройках приложений по умолчанию</string>
+
+    <string name="network_speed_title">Индикатор скорости сети</string>
+    <string name="network_speed_refresh_second">Свой интервал обновления</string>
+    <string name="network_speed_hide_per_second">Скрыть /s</string>
+    <string name="network_speed_hide_units">Скрыть единицы скорости</string>
+    <string name="network_speed_single_line">Отображать в одну строку</string>
+
+    <string name="network_speed_interval">Интервал обновления</string>
+    <string name="network_speed_follow_font_weight">Системная толщина шрифта</string>
+    <string name="network_speed_custom_font_size">Свой размер шрифта</string>
+    <string name="network_speed_font_size">Размер шрифта</string>
 </resources>

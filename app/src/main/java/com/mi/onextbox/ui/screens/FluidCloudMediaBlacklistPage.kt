@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -19,16 +23,13 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -42,8 +43,6 @@ import com.mi.onextbox.R
 import com.mi.onextbox.lsp.FluidCloudMediaRules
 import com.mi.onextbox.lsp.FluidCloudMediaSettings
 import com.mi.onextbox.lsp.LspPreferenceStore
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsLazyGroupItem
@@ -197,6 +196,5 @@ private fun MediaBlacklistAppIcon(packageName: String) {
     val image = icon
     if (image != null) Image(image, contentDescription = null, modifier = Modifier.size(36.dp))
     else Icon(Icons.Rounded.Apps, contentDescription = null, modifier = Modifier.size(36.dp),
-        tint = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) MaterialTheme.colorScheme.onSurfaceVariant
-        else COUITheme.colorScheme.onSurface)
+        tint = COUITheme.colorScheme.onSurface)
 }

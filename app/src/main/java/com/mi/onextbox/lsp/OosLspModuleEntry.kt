@@ -1,12 +1,15 @@
 package com.mi.onextbox.lsp
 
+import android.content.SharedPreferences
 import android.util.Log
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.AdaptationHookGate
+import com.mi.onextbox.lsp.compat.AdaptationRuntimePolicy
 import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.HotReloadDispatchMailbox
 import com.mi.onextbox.lsp.compat.ModernHotReloadSession
+import com.mi.onextbox.lsp.compat.MODERN_PREFERENCES_READY_KEY
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface
 import java.util.concurrent.ConcurrentHashMap
@@ -34,6 +37,10 @@ class OosLspModuleEntry : XposedModule() {
     }
     private var processName = ""
     private var systemServer = false
+    @Volatile private var observedPreferences: SharedPreferences? = null
+    private val preferenceReadinessListener = SharedPreferences.OnSharedPreferenceChangeListener { preferences, key ->
+        if (key == null || key == MODERN_PREFERENCES_READY_KEY) replayWhenPreferencesReady(preferences)
+    }
 
     override fun onModuleLoaded(param: XposedModuleInterface.ModuleLoadedParam) {
         processName = param.processName
@@ -54,20 +61,47 @@ class OosLspModuleEntry : XposedModule() {
         return runCatching {
             val preferences = getRemotePreferences(PREFERENCES_GROUP)
             ModernHookRuntime.attachRemotePreferences(PREFERENCES_GROUP, preferences)
-            check(HookConfigSnapshot.attach(preferences)) { "Preference listener is unavailable" }
+            fun observePreferences() {
+                check(HookConfigSnapshot.attach(preferences)) { "Preference listener is unavailable" }
+                preferences.registerOnSharedPreferenceChangeListener(preferenceReadinessListener)
+                observedPreferences = preferences
+                // Close the registration race without relying on framework listener ordering.
+                replayWhenPreferencesReady(preferences)
+            }
+            observePreferences()
             HotReloadLifecycle.register(
                 key = "core.preferences",
-                detach = { check(HookConfigSnapshot.detach()) { "Preference listener could not be removed" } },
-                restore = { check(HookConfigSnapshot.attach(preferences)) { "Preference listener could not be restored" } },
+                detach = {
+                    preferences.unregisterOnSharedPreferenceChangeListener(preferenceReadinessListener)
+                    observedPreferences = null
+                    check(HookConfigSnapshot.detach()) { "Preference listener could not be removed" }
+                },
+                restore = { observePreferences() },
             )
         }
             .onFailure {
                 HookLog.w(
                     TAG,
-                    "Remote preferences unavailable in $processName; synced system state will be used",
+                    "Remote preferences unavailable in $processName; feature dispatch waits for synchronized configuration",
                     it,
                 )
             }.isSuccess
+    }
+
+    private fun replayWhenPreferencesReady(preferences: SharedPreferences) {
+        HotReloadLifecycle.withInfrastructureHook({}) {
+            if (observedPreferences !== preferences) return@withInfrastructureHook
+            runCatching {
+                check(HookConfigSnapshot.attach(preferences)) { "Preference listener is unavailable" }
+                if (HookConfigSnapshot.isAvailable) HotReloadLifecycle.afterCommit {
+                    HotReloadLifecycle.withInfrastructureHook({}) {
+                        if (observedPreferences === preferences && HookConfigSnapshot.isAvailable) {
+                            HotReloadDispatchMailbox.bind(reloadMailbox, lifecycleReceiver)
+                        }
+                    }
+                }
+            }.onFailure { HookLog.w(TAG, "Unable to resume pending lifecycle events in $processName", it) }
+        }
     }
 
     override fun onSystemServerStarting(
@@ -79,8 +113,11 @@ class OosLspModuleEntry : XposedModule() {
     }
 
     private fun dispatchSystemServer(loader: ClassLoader) {
-        if (AdaptationHookGate.bind() == SystemAdaptationVersion.HyperOs3) {
-            HyperOsPerformanceHooker.hook(PACKAGE_SYSTEM, loader)
+        SystemAdaptationDetector.initialize(PACKAGE_SYSTEM, loader)
+        val profile = AdaptationHookGate.bind()
+        if (!AdaptationHookGate.isActive(profile) || !AdaptationRuntimePolicy.allowsSystemServer(profile)) return
+        if (profile == SystemAdaptationVersion.ColorOs16) {
+            ColorOs16FrameworkHooks.hook(loader)
             return
         }
         CorePatchIntegration.hook(loader)
@@ -133,6 +170,12 @@ class OosLspModuleEntry : XposedModule() {
     }
 
     private fun dispatchLifecycle(target: ReloadTarget) {
+        if (!HookConfigSnapshot.isAvailable) {
+            deferLifecycle(target.export())
+            // READY may have drained the mailbox between the check and this enqueue.
+            observedPreferences?.let(::replayWhenPreferencesReady)
+            return
+        }
         ModernHookRuntime.attach(this)
         val dispatchKey = "${target.packageName}@${System.identityHashCode(target.classLoader)}"
         if (!dispatchedPackages.add(dispatchKey)) return
@@ -144,9 +187,25 @@ class OosLspModuleEntry : XposedModule() {
         val packageName = target.packageName
         val classLoader = target.classLoader
 
-        if (AdaptationHookGate.bind() == SystemAdaptationVersion.HyperOs3) {
-            if (packageName in HyperOsPerformanceSettings.packages) {
-                HyperOsPerformanceHooker.hook(packageName, classLoader)
+        // Auxiliary package callbacks must not bind the launcher's adapter using another APK's loader.
+        if (processName.substringBefore(':') == PACKAGE_LAUNCHER && packageName != PACKAGE_LAUNCHER) return
+        SystemAdaptationDetector.initialize(packageName, classLoader)
+        val profile = AdaptationHookGate.bind()
+        if (!AdaptationHookGate.isActive(profile) || !AdaptationRuntimePolicy.allowsPackage(profile, packageName)) return
+        if (profile == SystemAdaptationVersion.ColorOs16) {
+            ColorOs16FrameworkHooks.hookApp()
+            ColorOs16AppHooks.hook(packageName, classLoader, target.sourceDir, processName)
+            when (packageName) {
+                PACKAGE_LAUNCHER -> ColorOs16SettingsLauncherHooks.hookLauncher(classLoader, target.sourceDir)
+                PACKAGE_SYSTEM_UI -> ColorOs16SystemUiHooks.hook(classLoader)
+                PACKAGE_SETTINGS -> ColorOs16SettingsLauncherHooks.hookSettings(classLoader)
+                PACKAGE_OPLUS_AOD -> ColorOs16SettingsLauncherHooks.hookAod(classLoader)
+                PACKAGE_WALLPAPERS, WallpaperMotionSettings.ENGINE_PACKAGE ->
+                    ColorOs16SettingsLauncherHooks.hookWallpaperMotion(classLoader)
+                ExpressCardRules.PLATFORM, ExpressCardRules.ASSISTANT ->
+                    ColorOs16SettingsLauncherHooks.hookExpress(packageName, classLoader)
+                "com.oplus.screenshot" -> ColorOs16SystemUiFeatureHooks.hookScreenshot(classLoader)
+                "com.oplus.screenrecorder" -> ColorOs16SystemUiFeatureHooks.hookRecorder(classLoader)
             }
             return
         }
@@ -163,10 +222,17 @@ class OosLspModuleEntry : XposedModule() {
                 CarrierNameHooker.hook(classLoader)
                 runCatching { QsTileCornerHooker.hook(classLoader) }
                     .onFailure { HookLog.w("ONextBox-QsTileCorner", "Tile corner adapter unavailable", it) }
+                runCatching { QsSliderPercentageHooker.hook(classLoader) }
+                    .onFailure { HookLog.w("ONextBox-QsPercentage", "Slider percentage adapter unavailable", it) }
+                runCatching { SideVolumePercentageHooker.hook(classLoader) }
+                    .onFailure { HookLog.w("ONextBox-SideVolumePercentage", "Volume popup percentage adapter unavailable", it) }
+                runCatching { SideVolumeAppearanceHooker.hook(classLoader) }
+                    .onFailure { HookLog.w("ONextBox-SideVolumeAppearance", "Volume popup appearance adapter unavailable", it) }
                 SideKeySystemUiHooker.hook(classLoader)
                 ImmersiveNavigationHooker.hook(classLoader)
                 AospBackPanelHooker.hook(classLoader)
                 AospVolumeHooker.hook(classLoader)
+                VolumeSafetyWarningHooker.hook(classLoader)
                 NativeLiveUpdateHooker.hook(classLoader)
                 C16StackedSignalHooker.hook(classLoader)
                 AssistantHooker.hook(packageName, classLoader)
@@ -181,6 +247,7 @@ class OosLspModuleEntry : XposedModule() {
                 NotificationClearButtonHooker.hook(classLoader)
                 HideNotificationClearHooker.hook(classLoader)
                 SmallWindowHooker.hookSystemUi(classLoader)
+                NetworkSpeedHooker.hook(classLoader)
                 FaceTapUnlockHooker.hook(classLoader)
                 KeyguardCaptureHooker.hookSystemUi(classLoader)
                 PasswordDialHighlightHooker.hook(classLoader)
@@ -195,6 +262,7 @@ class OosLspModuleEntry : XposedModule() {
                     classLoader = classLoader,
                 )
                 SettingsTitleCollapseHooker.hook(classLoader)
+                SettingsAccountCardSizeHooker.hook(classLoader)
                 SettingsHomeEntryHooker.hook(classLoader)
                 SettingsHomeCleanupHooker.hook(classLoader)
                 SettingsProcessManager.hook(classLoader)
@@ -254,6 +322,11 @@ class OosLspModuleEntry : XposedModule() {
                 BatteryCycleCountHooker.hook(classLoader)
                 BatteryOptimizationHooker.hookBattery(classLoader, target.sourceDir)
             }
+
+            CameraGallerySettings.PACKAGE_NAME -> CameraGalleryHooker.hook(classLoader, target.sourceDir)
+            ScreenTranslationSettings.PACKAGE_NAME -> ScreenTranslationHooker.hook(classLoader, target.sourceDir)
+            InstallerCleanupSettings.APP_DETAIL, InstallerCleanupSettings.PACKAGE_INSTALLER ->
+                InstallerCleanupHooker.hook(classLoader, target.sourceDir, packageName)
 
             FileManagerCardRules.PACKAGE_NAME -> FileManagerHooker.hook(classLoader)
 

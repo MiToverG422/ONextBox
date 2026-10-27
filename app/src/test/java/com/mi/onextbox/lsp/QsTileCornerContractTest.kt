@@ -47,7 +47,7 @@ class QsTileCornerContractTest {
         val hook = source("lsp/QsTileCornerHooker")
         assertTrue(hook.contains("WeakHashMap<Drawable, QsTileCornerOwnership<Any>>()"))
         assertTrue(hook.contains("state.shouldRestore(current)"))
-        assertTrue(hook.contains("if (dp == null)"))
+        assertTrue(hook.contains("if (percent == null)"))
         assertTrue(hook.contains("restore(drawable, state)"))
         assertTrue(hook.contains("owned.remove(drawable)"))
         assertTrue(hook.contains("HotReloadLifecycle.register(\"qs:tile-corners\", detach ="))
@@ -57,7 +57,9 @@ class QsTileCornerContractTest {
     @Test fun temporaryPressProviderIsNotCapturedAndAnimatedRadiusIsNotFrozen() {
         val hook = source("lsp/QsTileCornerHooker")
         assertTrue(hook.contains("Reflect.getObjectField(delegate, \"pathProvider\")"))
-        assertTrue(hook.contains("\"getDeformPathProvider\") != null"))
+        assertTrue(hook.contains("if (isAnimating(drawable)) return false"))
+        assertTrue(hook.contains("animationCapture.get() != true"))
+        assertTrue(hook.contains("if (method.name == \"captureValues\")"))
         assertFalse(hook.contains("\"setBlockPathProvider\""))
         assertFalse(hook.contains("\"setDeformFraction\""))
         assertFalse(hook.contains("\"setAnimationEnable\""))
@@ -77,16 +79,34 @@ class QsTileCornerContractTest {
         assertFalse(slider.contains("putBoolean"))
         assertTrue(slider.contains("QsTileCornerRules.normalize(radius)"))
         assertTrue(slider.contains("LspConfig.syncReadableState(context)"))
+        assertFalse(settings.contains("\"systemui_qs_tile_corner_radius\""))
     }
     @Test fun sharedDualUiUsesAnimatedJoinedCardsSliderAndExplicitReset() {
-        val ui = source("ui/screens/UiCustomizationSettings").substringAfter("internal fun QsTileCornerSettingsGroup()").substringBefore("internal fun StatusBarLayoutSettingsGroup")
+        val customization = source("ui/screens/UiCustomizationSettings")
+        val parent = customization.substringAfter("internal fun QsTileCornerSettingsGroup(").substringBefore("internal fun QsSliderPercentageSettingsPage")
+        assertTrue(parent.contains("visible = value.enabled"))
+        assertTrue(parent.contains("onClick = onOpenCorners"))
+        assertFalse(parent.contains("FeatureSliderRow"))
+        val ui = customization.substringAfter("internal fun QsTileCornerSettingsPage()").substringBefore("internal fun StatusBarLayoutSettingsGroup")
         assertTrue(ui.contains("FeatureAnimatedGroup(animateChanges = true)"))
-        assertTrue(ui.contains("visible = value.enabled"))
+        assertTrue(ui.contains("enabled = value.enabled"))
         assertTrue(ui.contains("FeatureSliderRow("))
         assertTrue(ui.contains("hasDividerAbove = above, hasDividerBelow = below"))
         assertTrue(ui.contains("onReset ="))
-        assertTrue(ui.contains("setRadius(context, QsTileCornerRules.DEFAULT_DP)"))
-        assertTrue(source("ui/screens/SystemUiFeaturesPage").substringAfter("FeaturePageMode.SystemUiControlCenter ->").contains("QsTileCornerSettingsGroup()"))
+        assertTrue(ui.contains("setRadius(context, size, QsTileCornerRules.SYSTEM_DEFAULT)"))
+        assertTrue(ui.contains("stringResource(R.string.feature_slider_current_default)"))
+        assertTrue(ui.contains("stringResource(R.string.feature_slider_current_value, \"\$radius%\")"))
+        assertTrue(ui.contains("QsTileCornerSettings.Size.entries.forEach"))
+        assertTrue(source("ui/screens/SystemUiFeaturesPage").substringAfter("FeaturePageMode.SystemUiControlCenter ->")
+            .contains("onOpenCorners = { onOpenSubPage(FeaturePageMode.SystemUiCornerSettings) }"))
+        val screen = source("ui/screens/FeaturesScreen")
+        assertTrue(screen.contains("FeaturePageMode.SystemUiCornerSettings -> QsTileCornerSettingsPage()"))
+        assertTrue(screen.substringAfter("internal fun featureRestartPackages").contains("FeaturePageMode.SystemUiCornerSettings,"))
+        val root = source("ui/Root")
+        assertTrue(root.contains("subclass(RootRoute.FeatureSystemUiCornerSettings::class)"))
+        assertTrue(root.contains("entry<RootRoute.FeatureSystemUiCornerSettings>"))
+        assertTrue(source("ui/screens/FeatureSearchIndex")
+            .contains("Entry(FeaturePageMode.SystemUiCornerSettings, R.string.qs_tile_corner_settings_title)"))
         for (name in listOf("FeatureSearchIndex", "EnabledFeatureCatalog", "EnabledFeatureActions")) {
             assertTrue(name, source("ui/screens/$name").contains("SharedFeatureDefinitions.qsCorner"))
         }
@@ -95,7 +115,7 @@ class QsTileCornerContractTest {
         for (locale in listOf("values", "values-zh-rCN", "values-zh-rTW", "values-b+yue+Hant", "values-ja", "values-ja-rCN", "values-ko", "values-ru", "values-vi")) {
             val nodes = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file("main/res/$locale/strings.xml")).getElementsByTagName("string")
             val strings = (0 until nodes.length).associate { nodes.item(it).attributes.getNamedItem("name").nodeValue to nodes.item(it).textContent }
-            for (key in listOf("group", "title", "summary", "radius").map { "qs_tile_corner_$it" }) {
+            for (key in listOf("group", "title", "summary", "radius", "settings_title", "size_radius").map { "qs_tile_corner_$it" }) {
                 assertTrue("$locale/$key", strings[key]?.isNotBlank() == true)
                 assertFalse("$locale/$key", strings.getValue(key).endsWith(".") || strings.getValue(key).endsWith("。"))
             }

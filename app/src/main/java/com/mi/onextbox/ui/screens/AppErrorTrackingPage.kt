@@ -2,6 +2,10 @@
 
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -33,21 +37,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Icon as MaterialIcon
-import androidx.compose.material3.IconButton as MaterialIconButton
-import androidx.compose.material3.Text as MaterialText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.ImageBitmap
@@ -73,12 +71,9 @@ import com.mi.onextbox.errors.AppErrorRepository
 import com.mi.onextbox.errors.AppErrorRules
 import com.mi.onextbox.errors.AppErrorTrackingSettings
 import com.mi.onextbox.lsp.LspPreferenceStore
-import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.CouiConfirmDialog
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.LogExport
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentContentCard
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsSection
@@ -218,9 +213,7 @@ internal fun AppErrorTrackingRoute(
         actions = {
             if (detailId == 0L && records.isNotEmpty()) {
                 val label = stringResource(R.string.app_errors_clear)
-                if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-                    MaterialIconButton(onClick = { showClear = true }) { MaterialIcon(Icons.Rounded.DeleteOutline, label) }
-                } else {
+                run {
                     ColorOsTopBarButton(onClick = { showClear = true }) { Icon(Icons.Rounded.DeleteOutline, label, Modifier.size(22.dp)) }
                 }
             }
@@ -300,11 +293,10 @@ internal fun AppErrorSummaryCard(record: AppErrorRecord, onOpen: () -> Unit, onC
                     ErrorText(errorTime(record.time), secondary = true, maxLines = 1)
                 }
                 val arrow = Icons.AutoMirrored.Rounded.KeyboardArrowRight
-                if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) MaterialIcon(arrow, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                else Icon(arrow, null, Modifier.size(20.dp), tint = COUITheme.colorScheme.onSurfaceVariantActions)
+                Icon(arrow, null, Modifier.size(20.dp), tint = COUITheme.colorScheme.onSurfaceVariantActions)
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val accent = if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) MaterialTheme.colorScheme.primary else COUITheme.colorScheme.primary
+                val accent = COUITheme.colorScheme.primary
                 LogLevelBadge(errorKindLabel(record.kind), accent)
                 ErrorText(record.packageName, Modifier.weight(1f), secondary = true, maxLines = 1)
             }
@@ -446,7 +438,6 @@ private fun AppErrorAppIcon(packageName: String) {
     val current = bitmap
     Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
         if (current != null) Image(current, null, Modifier.fillMaxSize())
-        else if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) MaterialIcon(Icons.Rounded.BugReport, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
         else Icon(Icons.Rounded.BugReport, null, Modifier.size(28.dp), tint = COUITheme.colorScheme.primary)
     }
 }
@@ -454,7 +445,7 @@ private fun AppErrorAppIcon(packageName: String) {
 @Composable
 private fun ErrorCard(content: @Composable () -> Unit) {
     SettingsGroup(bottomPadding = 10.dp) {
-        if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) Material3ExpressiveSegmentContentCard(content = content) else content()
+        content()
     }
 }
 
@@ -464,15 +455,11 @@ private fun ErrorText(
     maxLines: Int = Int.MAX_VALUE, monospace: Boolean = false,
     fontSize: TextUnit = if (secondary) 12.sp else 14.sp, fontWeight: FontWeight = FontWeight.Normal,
 ) {
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val color = if (material) {
-        if (secondary) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-    } else {
+    val color = run {
         if (secondary) COUITheme.colorScheme.onSurfaceVariantSummary else COUITheme.colorScheme.onSurface
     }
     val family = if (monospace) FontFamily.Monospace else FontFamily.Default
-    if (material) MaterialText(text, modifier, color = color, fontSize = fontSize, fontWeight = fontWeight, lineHeight = fontSize * 1.5f, maxLines = maxLines, overflow = TextOverflow.Ellipsis, fontFamily = family)
-    else CouiText(text, modifier, color = color, fontSize = fontSize, fontWeight = fontWeight, lineHeight = fontSize * 1.5f, maxLines = maxLines, overflow = TextOverflow.Ellipsis, fontFamily = family)
+    CouiText(text, modifier, color = color, fontSize = fontSize, fontWeight = fontWeight, lineHeight = fontSize * 1.5f, maxLines = maxLines, overflow = TextOverflow.Ellipsis, fontFamily = family)
 }
 
 @Composable

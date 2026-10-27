@@ -45,7 +45,31 @@ internal object LauncherFeaturesHooker {
         LauncherRecentMemoryHooker.hook(classLoader, apkPath)
     }
 
+    /** C16 groups whose native producers and consumers are present in the C16 launcher. */
+    fun hookColorOs16(classLoader: ClassLoader, apkPath: String) {
+        LauncherGridHooker.hook(classLoader, apkPath)
+        LauncherRecentInteractionHooker.hook(classLoader)
+        if (enabled(LauncherFeature.OldClearButton) || enabled(LauncherFeature.HideClearButton)) {
+            install("clear-button") { hookClearButton(classLoader) }
+        }
+        if (listOf(LauncherFeature.HideShortcutBadge, LauncherFeature.HideWorkBadge, LauncherFeature.HideCloneBadge)
+                .any(::enabled)) install("badges") { hookBadges(classLoader) }
+        if (enabled(LauncherFeature.HideUpdateDot)) install("update-dot") {
+            val type = ModernReflect.findClass("com.android.launcher3.BubbleTextView", classLoader)
+            hook(type.getDeclaredMethod("isShouldShowGreenDot", Boolean::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)) {
+                if (enabled(LauncherFeature.HideUpdateDot)) false else it.proceed()
+            }
+            hook(type.getDeclaredMethod("drawNewUpdateDotIfNecessary", Canvas::class.java, Boolean::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)) {
+                if (enabled(LauncherFeature.HideUpdateDot)) null else it.proceed()
+            }
+        }
+        if (enabled(LauncherFeature.UnlimitedFolderInput)) install("folder-input") { hookFolderInput(classLoader) }
+        LauncherDockHooker.hook(classLoader)
+        LauncherRecentMemoryHooker.hook(classLoader, apkPath)
+    }
+
     private fun hookClearButton(loader: ClassLoader) {
+        val c16 = SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16
         val panel = ModernReflect.findClass("com.oplus.quickstep.views.OplusClearAllPanelView", loader)
         val buttonClass = ModernReflect.findClass("com.android.launcher.views.PressFeedbackButton", loader)
         val getButton = panel.getDeclaredMethod("getClearPressButton")
@@ -95,7 +119,7 @@ internal object LauncherFeaturesHooker {
             panel.getDeclaredMethod("onFinishInflate"),
             panel.getDeclaredMethod("setAlpha", Float::class.javaPrimitiveType),
             panel.getDeclaredMethod("onConfigurationChanged", android.content.res.Configuration::class.java),
-            panel.getDeclaredMethod("y"),
+            panel.getDeclaredMethod(if (c16) "updateClearAllSize" else "y"),
         ).forEach { method ->
             after(method) { chain ->
                 if (method.name == "onConfigurationChanged") {
@@ -117,7 +141,7 @@ internal object LauncherFeaturesHooker {
         hook(clickable) { chain ->
             if (enabled(LauncherFeature.HideClearButton)) chain.proceed(arrayOf(0f)) else chain.proceed()
         }
-        val panelClick = panel.getDeclaredMethod("m")
+        val panelClick = panel.getDeclaredMethod(if (c16) "clearAllBtnPerformClick" else "m")
         require(panelClick.returnType == Void.TYPE)
         hook(panelClick) { chain ->
             if (enabled(LauncherFeature.HideClearButton)) null else chain.proceed()
@@ -138,7 +162,9 @@ internal object LauncherFeaturesHooker {
         }
         // The verified host click bridge may show a permission dialog before reaching
         // the external listener. Suppress that bridge too, scoped to this panel only.
-        val clickBridge = panel.getDeclaredMethod("b", panel, View.OnClickListener::class.java, View::class.java)
+        val clickBridge = if (c16) {
+            panel.getDeclaredMethod("lambda\$setOnClearClickListener\$6", View.OnClickListener::class.java, View::class.java)
+        } else panel.getDeclaredMethod("b", panel, View.OnClickListener::class.java, View::class.java)
         hook(clickBridge) { chain ->
             if (enabled(LauncherFeature.HideClearButton)) null else chain.proceed()
         }
@@ -160,6 +186,7 @@ internal object LauncherFeaturesHooker {
     }
 
     private fun hookBadges(loader: ClassLoader) {
+        val c16 = SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16
         val bitmap = ModernReflect.findClass("com.android.launcher3.icons.BitmapInfo", loader)
         val drawable = ModernReflect.findClass("com.android.launcher3.icons.FastBitmapDrawable", loader)
         val flags = bitmap.getDeclaredField("flags")
@@ -171,7 +198,7 @@ internal object LauncherFeaturesHooker {
         val itemBitmap = item.getDeclaredField("bitmap")
         val getIcon = bubble.getDeclaredMethod("getIcon")
         val badges = LauncherBadgeState()
-        val fancy = ModernReflect.findClass("xl.c", loader)
+        val fancy = ModernReflect.findClass(if (c16) "com.oplus.fancyicon.fancydrawable.IconFancyDrawable" else "xl.c", loader)
         val setWorkFlag = fancy.getDeclaredMethod("setWorkFlag", Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType)
         fun badgeFor(info: Any) = LauncherFeatureRules.badge(shortcut.get(info) != null, flags.getInt(info))
         fun hidden(badge: LauncherFeatureRules.Badge) = LauncherFeatureRules.hideBadge(
@@ -198,7 +225,10 @@ internal object LauncherFeaturesHooker {
             hide(badgeFor(info), icon)
         }
         // Apply the same badge rules when creating, copying, and restoring icons.
-        hook(bitmap.getDeclaredMethod("applyFlags", Context::class.java, drawable, Int::class.javaPrimitiveType)) { chain ->
+        val applyFlags = if (c16) bitmap.getDeclaredMethod("applyFlags", Context::class.java, drawable,
+            Int::class.javaPrimitiveType, android.graphics.Path::class.java)
+        else bitmap.getDeclaredMethod("applyFlags", Context::class.java, drawable, Int::class.javaPrimitiveType)
+        hook(applyFlags) { chain ->
             val badge = badgeFor(chain.thisObject!!)
             chain.getArg(1)?.let { badges.remember(it, badge) }
             val result = chain.proceed()

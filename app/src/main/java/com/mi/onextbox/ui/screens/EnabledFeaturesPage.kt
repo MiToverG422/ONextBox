@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.widget.Toast
@@ -10,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -26,8 +29,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspPreferenceStore
-import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
+import com.mi.onextbox.ui.common.rememberSystemAdaptationVersion
 import com.mi.onextbox.ui.settings.*
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
@@ -43,9 +45,7 @@ internal fun EnabledFeaturesAction(onClick: () -> Unit) {
 
 @Composable
 private fun InventoryAction(icon: ImageVector, label: String, onClick: () -> Unit) {
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        IconButton(onClick = onClick) { Icon(icon, label) }
-    } else {
+    run {
         com.mi.onextbox.ui.common.ColorOsTopBarButton(onClick = onClick) {
             Icon(icon, label, tint = COUITheme.colorScheme.onSurface, modifier = Modifier.size(24.dp))
         }
@@ -64,17 +64,19 @@ internal fun EnabledFeaturesPage(
     val context = LocalContext.current
     val resources = LocalResources.current
     val configuration = LocalConfiguration.current
+    val version = rememberSystemAdaptationVersion()
+    val availableEntries = remember(version) { enabledFeatureEntries(version) }
     val owner = LocalLifecycleOwner.current
     var revision by remember { mutableIntStateOf(0) }
-    var entries by remember { mutableStateOf<List<EnabledFeatureCatalog.Entry>?>(null) }
-    var details by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
+    var entries by remember(version) { mutableStateOf<List<EnabledFeatureCatalog.Entry>?>(null) }
+    var details by remember(version) { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val actions = remember { EnabledFeatureActions() }
     var savingTitle by remember { mutableStateOf<Int?>(null) }
     val saving = savingTitle != null
-    var configured by remember { mutableStateOf(emptySet<Int>()) }
-    var retained by remember { mutableStateOf(emptySet<Int>()) }
+    var configured by remember(version) { mutableStateOf(emptySet<Int>()) }
+    var retained by remember(version) { mutableStateOf(emptySet<Int>()) }
     DisposableEffect(context, owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) revision++
@@ -88,18 +90,18 @@ internal fun EnabledFeaturesPage(
             prefs.unregisterOnSharedPreferenceChangeListener(listener)
         }
     }
-    LaunchedEffect(revision, saving, configuration) {
+    LaunchedEffect(revision, saving, configuration, version) {
         if (saving) return@LaunchedEffect
         failed = false
         try {
             val snapshot = withContext(Dispatchers.IO) {
-                val values = EnabledFeatureCatalog.configured(context)
-                values to EnabledFeatureCatalog.entries.associate { it.title to EnabledFeatureCatalog.detail(context, it.title) }
+                val values = availableEntries.filter { it.read(context) }.mapTo(mutableSetOf()) { it.title }
+                values to availableEntries.associate { it.title to EnabledFeatureCatalog.detail(context, it.title) }
             }
             configured = snapshot.first
-            retained = retained + EnabledFeatureCatalog.entries
+            retained = retained + availableEntries
                 .filter { EnabledFeatureCatalog.isActive(it.title, configured) }.map { it.title }
-            entries = EnabledFeatureCatalog.entries.filter { it.title in retained }
+            entries = availableEntries.filter { it.title in retained }
             details = snapshot.second.mapValues { (id, value) ->
                 if (id in configured) value else details[id] ?: value
             }
@@ -121,7 +123,7 @@ internal fun EnabledFeaturesPage(
             }
         }
     }
-    val activeCount = EnabledFeatureCatalog.entries.count { EnabledFeatureCatalog.isActive(it.title, configured) }
+    val activeCount = availableEntries.count { EnabledFeatureCatalog.isActive(it.title, configured) }
     val groups = entries.orEmpty().filter { EnabledFeatureCatalog.dependenciesActive(it.title, configured) }
         .sortedBy { it.page.ordinal }
         .groupBy { EnabledFeatureCatalog.group(it.page) }.toSortedMap(compareBy { it.ordinal })

@@ -6,7 +6,6 @@ import com.mi.onextbox.lsp.compat.ModernHookBridge as XposedBridge
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernMethodHook as XC_MethodHook
 import com.mi.onextbox.lsp.compat.ModernReflect as XposedHelpers
-import java.lang.reflect.Modifier
 import java.util.Collections
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
@@ -22,17 +21,11 @@ object LauncherHooker {
     private const val OPLUS_BUBBLE_TEXT_VIEW_CLASS = "com.android.launcher3.OplusBubbleTextView"
     private const val APP_WIDGET_HOST_VIEW_CLASS = "com.android.launcher3.widget.LauncherAppWidgetHostView"
     private const val CUSTOM_APP_WIDGET_HOST_VIEW_CLASS = "com.android.launcher3.widget.CustomLauncherAppWidgetHostView"
-    private const val BOTTOM_SEARCH_INJECTOR_CLASS = "com.android.launcher.bottomsearch.j"
-    private const val BOTTOM_SEARCH_MANAGER_CLASS = "com.android.launcher.bottomsearch.i"
-    private const val BOTTOM_SEARCH_IMPL_CLASS = "com.android.launcher.bottomsearch.e"
     private const val EXPORT_BOTTOM_SEARCH_CLASS =
         "com.android.launcher.bottomsearch.ExportBottomSearch"
     private const val DOMESTIC_BOTTOM_SEARCH_CLASS =
         "com.android.launcher.bottomsearch.DomesticBottomSearch"
-    private const val DOMESTIC_BOTTOM_SEARCH_SUPPORT_CLASS =
-        "com.android.launcher.bottomsearch.DomesticBottomSearch\$a"
     private const val APP_FEATURE_UTILS_CLASS = "com.android.common.util.AppFeatureUtils"
-    private const val BOTTOM_SEARCH_UTILS_CLASS = "com.android.launcher.bottomsearch.k"
     private const val FEATURE_OPTION_CLASS = "com.android.common.config.FeatureOption"
     private const val LAUNCHER_SETTINGS_FRAGMENT_CLASS =
         "com.android.launcher.settings.LauncherSettingsFragment"
@@ -43,7 +36,14 @@ object LauncherHooker {
     private val guardedCardLabels = Collections.synchronizedMap(WeakHashMap<View, View.OnLayoutChangeListener>())
     private val titleOwnerClasses = ConcurrentHashMap<Class<*>, Boolean>()
 
-    fun hook(classLoader: ClassLoader?) {
+    fun hook(classLoader: ClassLoader?, searchBarOnly: Boolean = false) {
+        if (searchBarOnly) {
+            val searchBarMode = LspConfig.getLauncherSearchBarModeXposed()
+            if (searchBarMode != LspConfig.LAUNCHER_SEARCH_BAR_MODE_OFF) {
+                hookSearchBarMode(classLoader, searchBarMode)
+            }
+            return
+        }
         HotReloadLifecycle.register("launcher:widget-labels",
             capture = { synchronized(guardedCardLabels) { guardedCardLabels.keys.toTypedArray() } },
             detach = {
@@ -154,12 +154,13 @@ object LauncherHooker {
     }
 
     private fun hookSearchBarMode(classLoader: ClassLoader?, mode: Int) {
+        val targets = LauncherSearchTargets.forVersion(SystemAdaptationDetector.current())
         val managerClass = XposedHelpers.findClassIfExists(
-            BOTTOM_SEARCH_MANAGER_CLASS,
+            targets.manager,
             classLoader,
         )
         val implementationClass = XposedHelpers.findClassIfExists(
-            BOTTOM_SEARCH_IMPL_CLASS,
+            targets.implementation,
             classLoader,
         )
         val selectedImplementationName = when (mode) {
@@ -175,14 +176,12 @@ object LauncherHooker {
             implementationClass == null ||
             selectedImplementationClass == null
         ) {
-            HookLog.w(TAG, "C17 search-bar implementation is unavailable")
+            HookLog.w(TAG, "Search-bar implementation is unavailable: ${targets.manager}")
             return
         }
 
-        val implementationField = managerClass.declaredFields.firstOrNull { field ->
-            Modifier.isStatic(field.modifiers) && implementationClass.isAssignableFrom(field.type)
-        } ?: run {
-            HookLog.w(TAG, "C17 bottom-search manager implementation field is unavailable")
+        val implementationField = targets.resolveProxyField(managerClass, implementationClass) ?: run {
+            HookLog.w(TAG, "Bottom-search manager implementation field is unavailable: ${targets.manager}")
             return
         }
         implementationField.isAccessible = true
@@ -196,7 +195,7 @@ object LauncherHooker {
                 )
                 HookLog.i(
                     TAG,
-                    "Selected C17 search-bar implementation: " +
+                    "Selected search-bar implementation (${if (targets.namedApi) "C16" else "C17"}): " +
                         selectedImplementationClass.simpleName,
                 )
             }
@@ -211,13 +210,13 @@ object LauncherHooker {
             }
 
         var hookCount = 0
-        val injectorKey = "$BOTTOM_SEARCH_INJECTOR_CLASS#a"
+        val injectorKey = "${targets.injector}#${targets.injectorMethod}"
         if (installedHookKeys.add(injectorKey)) {
             runCatching {
                 XposedHelpers.findAndHookMethod(
-                    BOTTOM_SEARCH_INJECTOR_CLASS,
+                    targets.injector,
                     classLoader,
-                    "a",
+                    targets.injectorMethod,
                     Context::class.java,
                     String::class.java,
                     object : XC_MethodHook() {
@@ -234,7 +233,7 @@ object LauncherHooker {
             }
         }
 
-        hookCount += hookSettingsEntries(classLoader, mode)
+        hookCount += hookSettingsEntries(classLoader, mode, targets)
         if (mode == LspConfig.LAUNCHER_SEARCH_BAR_MODE_CHINA) {
             // DomesticBottomSearch contains two product gates in addition to the user's native
             // switch: a launcher feature flag and an A/K-series allowlist. Treat the selected
@@ -246,8 +245,8 @@ object LauncherHooker {
                 classLoader = classLoader,
             )
             hookCount += forceBooleanResult(
-                className = DOMESTIC_BOTTOM_SEARCH_SUPPORT_CLASS,
-                methodName = "b",
+                className = targets.domesticSupport,
+                methodName = targets.domesticSupportMethod,
                 classLoader = classLoader,
             )
         } else if (mode == LspConfig.LAUNCHER_SEARCH_BAR_MODE_INTERNATIONAL) {
@@ -256,23 +255,24 @@ object LauncherHooker {
                 methodName = "getHasQsbAtBottomFeature",
                 classLoader = classLoader,
             )
-            hookCount += hookInternationalSwitchState(classLoader)
+            hookCount += hookInternationalSwitchState(classLoader, targets)
             hookCount += hookInternationalSwitchRefresh(
                 classLoader = classLoader,
                 implementationField = implementationField,
+                targets = targets,
             )
         }
-        if (LspConfig.isLauncherSearchCompatibilityEnabledXposed()) {
+        if (!targets.namedApi && LspConfig.isLauncherSearchCompatibilityEnabledXposed()) {
             hookCount += LauncherSearchDeviceCompat.install(
                 classLoader,
                 selectedImplementationClass,
                 implementationField,
             )
         }
-        HookLog.i(TAG, "C17 search-bar entry mode $mode installed: $hookCount methods")
+        HookLog.i(TAG, "${if (targets.namedApi) "C16" else "C17"} search-bar entry mode $mode installed: $hookCount methods")
     }
 
-    private fun hookSettingsEntries(classLoader: ClassLoader?, mode: Int): Int {
+    private fun hookSettingsEntries(classLoader: ClassLoader?, mode: Int, targets: LauncherSearchTargets): Int {
         val settingsClass = XposedHelpers.findClassIfExists(
             LAUNCHER_SETTINGS_FRAGMENT_CLASS,
             classLoader,
@@ -289,7 +289,7 @@ object LauncherHooker {
                     methodName,
                     object : XC_MethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            applySettingsEntryMode(param.thisObject, mode)
+                            applySettingsEntryMode(param.thisObject, mode, targets)
                         }
                     },
                 )
@@ -302,16 +302,18 @@ object LauncherHooker {
         }
 
         val runnableClass = XposedHelpers.findClassIfExists(
-            SETTINGS_COMPAT_RUNNABLE_CLASS,
+            if (targets.namedApi) "$LAUNCHER_SETTINGS_FRAGMENT_CLASS\$mCompatStrategyChangeListener\$1"
+            else SETTINGS_COMPAT_RUNNABLE_CLASS,
             classLoader,
         )
         if (runnableClass != null) {
-            val key = "$SETTINGS_COMPAT_RUNNABLE_CLASS#run#searchBarEntry"
+            val callbackName = if (targets.namedApi) "onCompatStrategyChanged" else "run"
+            val key = "${runnableClass.name}#$callbackName#searchBarEntry"
             if (installedHookKeys.add(key)) {
                 val handles = runCatching {
                     XposedBridge.hookAllMethods(
                         runnableClass,
-                        "run",
+                        callbackName,
                         object : XC_MethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
                                 val fragment = param.thisObject?.javaClass?.declaredFields
@@ -325,7 +327,7 @@ object LauncherHooker {
                                     ?.firstOrNull {
                                         settingsClass.isInstance(it)
                                     }
-                                if (fragment != null) applySettingsEntryMode(fragment, mode)
+                                if (fragment != null) applySettingsEntryMode(fragment, mode, targets)
                             }
                         },
                     )
@@ -340,7 +342,7 @@ object LauncherHooker {
         return count
     }
 
-    private fun applySettingsEntryMode(fragment: Any?, mode: Int) {
+    private fun applySettingsEntryMode(fragment: Any?, mode: Int, targets: LauncherSearchTargets) {
         if (fragment == null) return
         val category = runCatching {
             XposedHelpers.getObjectField(fragment, "mLauncherCategory")
@@ -353,7 +355,7 @@ object LauncherHooker {
         }.getOrNull()
 
         listOfNotNull(domesticEntry, internationalEntry).forEach { entry ->
-            runCatching { XposedHelpers.callMethod(category, "f", entry) }
+            runCatching { XposedHelpers.callMethod(category, targets.removePreference, entry) }
         }
         val selectedEntry = when (mode) {
             LspConfig.LAUNCHER_SEARCH_BAR_MODE_CHINA -> domesticEntry
@@ -361,31 +363,31 @@ object LauncherHooker {
             else -> null
         } ?: return
         runCatching { XposedHelpers.callMethod(selectedEntry, "setEnabled", true) }
-        runCatching { XposedHelpers.callMethod(category, "b", selectedEntry) }
+        runCatching { XposedHelpers.callMethod(category, targets.addPreference, selectedEntry) }
             .onFailure { error ->
                 HookLog.w(TAG, "Failed to expose the selected launcher search entry", error)
             }
     }
 
-    private fun hookInternationalSwitchState(classLoader: ClassLoader?): Int {
+    private fun hookInternationalSwitchState(classLoader: ClassLoader?, targets: LauncherSearchTargets): Int {
         val managerClass = XposedHelpers.findClassIfExists(
-            BOTTOM_SEARCH_MANAGER_CLASS,
+            targets.manager,
             classLoader,
         ) ?: return 0
         val utilsClass = XposedHelpers.findClassIfExists(
-            BOTTOM_SEARCH_UTILS_CLASS,
+            targets.utils,
             classLoader,
         ) ?: return 0
-        val key = "$BOTTOM_SEARCH_MANAGER_CLASS#r#actualSwitch"
+        val key = "${targets.manager}#${targets.enabledMethod}#actualSwitch"
         if (!installedHookKeys.add(key)) return 0
         val handles = runCatching {
             XposedBridge.hookAllMethods(
                 managerClass,
-                "r",
+                targets.enabledMethod,
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val context = param.args.firstOrNull() ?: return
-                        param.result = XposedHelpers.callStaticMethod(utilsClass, "o", context)
+                        param.result = XposedHelpers.callStaticMethod(utilsClass, targets.switchOnMethod, context)
                     }
                 },
             )
@@ -400,21 +402,22 @@ object LauncherHooker {
     private fun hookInternationalSwitchRefresh(
         classLoader: ClassLoader?,
         implementationField: java.lang.reflect.Field,
+        targets: LauncherSearchTargets,
     ): Int {
         val utilsClass = XposedHelpers.findClassIfExists(
-            BOTTOM_SEARCH_UTILS_CLASS,
+            targets.utils,
             classLoader,
         ) ?: return 0
         val taskbarUtilsClass = XposedHelpers.findClassIfExists(
             TASKBAR_UTILS_CLASS,
             classLoader,
         ) ?: return 0
-        val key = "$BOTTOM_SEARCH_UTILS_CLASS#t#internationalRefresh"
+        val key = "${targets.utils}#${targets.saveSwitchMethod}#internationalRefresh"
         if (!installedHookKeys.add(key)) return 0
         val handles = runCatching {
             XposedBridge.hookAllMethods(
                 utilsClass,
-                "t",
+                targets.saveSwitchMethod,
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         if (param.args.size != 3 || param.args[2] != true) return
@@ -423,7 +426,7 @@ object LauncherHooker {
                             "getOplusLauncher",
                         ) ?: return
                         val implementation = implementationField.get(null) ?: return
-                        XposedHelpers.callMethod(implementation, "o", launcher, false)
+                        XposedHelpers.callMethod(implementation, targets.refreshMethod, launcher, false)
                     }
                 },
             )

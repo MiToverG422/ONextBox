@@ -47,6 +47,13 @@ object SettingsHooker {
             .onFailure { log("Settings refresh-rate hook registration failed", it) }
     }
 
+    /** C16 keeps these native controllers and the same preference/callback contracts. */
+    internal fun hookColorOs16VerifiedEntries(classLoader: ClassLoader) {
+        hookInternationalWallet(classLoader)
+        hookRestoreSmartLock(classLoader)
+        SettingsDomesticAuxiliaryHooker.hook(classLoader)
+    }
+
 /** Settings edition gate, retaining domestic style and its fragment allow-list. */
     private fun hookInternationalSettings(classLoader: ClassLoader) {
         var hookCount = 0

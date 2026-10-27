@@ -57,6 +57,12 @@ internal class LauncherGridApplyTargets(val values: Array<*>) {
     companion object {
         const val SCHEMA_SIZE = 16
 
+        fun completionMethod(task: Class<*>): Method =
+            task.getDeclaredMethod("onPostExecute", Any::class.java).also {
+                require(it.returnType == Void.TYPE && !Modifier.isStatic(it.modifiers) &&
+                    !Modifier.isAbstract(it.modifiers))
+            }
+
         fun resolve(loader: ClassLoader): LauncherGridApplyTargets {
             val launcher = ModernReflect.findClass("com.android.launcher.Launcher", loader)
             val base = ModernReflect.findClass("com.android.launcher3.Launcher", loader)
@@ -71,9 +77,9 @@ internal class LauncherGridApplyTargets(val values: Array<*>) {
             require(Modifier.isStatic(apply.modifiers) && apply.returnType == Void.TYPE)
             val task = helper.declaredClasses.flatMap { it.declaredConstructors.toList() }
                 .single { it.parameterTypes.contentEquals(signature) }
-            val completed = task.declaringClass.getDeclaredMethod("onPostExecute", Boolean::class.javaObjectType)
             val async = Class.forName("android.os.AsyncTask", false, loader)
-            require(async.isAssignableFrom(task.declaringClass) && completed.returnType == Void.TYPE)
+            require(async.isAssignableFrom(task.declaringClass))
+            val completed = completionMethod(task.declaringClass)
             val workspace = launcher.getMethod("getWorkspace")
             require(ViewGroup::class.java.isAssignableFrom(workspace.returnType))
             val drag = launcher.getMethod("getDragController")

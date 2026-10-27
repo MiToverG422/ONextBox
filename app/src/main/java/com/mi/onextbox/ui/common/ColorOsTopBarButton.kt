@@ -1,32 +1,39 @@
 package com.mi.onextbox.ui.common
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.mi.onextbox.ui.layout.LocalChromeNativeBlurEnabled
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import kotlinx.coroutines.launch
 
 /** ColorOS 17 toolbar button: one 40dp circle shared by material, state and motion. */
 @Composable
@@ -35,185 +42,133 @@ fun ColorOsTopBarButton(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-        top.yukonga.miuix.kmp.basic.IconButton(onClick = onClick, modifier = modifier) {
-            Box(contentAlignment = Alignment.Center, content = content)
-        }
-        return
-    }
     val interactionSource = remember { MutableInteractionSource() }
-    val pressScale = remember { Animatable(1f) }
-    val pressMask = remember { Animatable(0f) }
-    val spotlightViewHolder = remember { TopBarSpotlightViewHolder() }
-
+    val density = LocalDensity.current.density
+    val motion = remember(density) { ColorOsTopBarMotion(density) }
     val darkTheme = COUITheme.colorScheme.background.luminance() < 0.5f
-    val fallbackColor = COUITheme.colorScheme.surfaceContainer
+    val fallbackColor = ColorOsToolbarGlass.fallbackColor(
+        COUITheme.colorScheme.surfaceContainer,
+        COUITheme.colorScheme.surface,
+    )
+    val nativeBlurEnabled = LocalChromeNativeBlurEnabled.current
     val maskColor = if (darkTheme) {
         androidx.compose.ui.graphics.Color(0x33FFFFFF)
     } else {
         androidx.compose.ui.graphics.Color(0x1F000000)
     }
-
-    LaunchedEffect(interactionSource) {
-        interactionSource.interactions.collect { interaction ->
-            when (interaction) {
-                is PressInteraction.Press -> {
-                    launch {
-                        pressScale.animateTo(
-                            targetValue = 0.88858957f,
-                            animationSpec = spring(
-                                dampingRatio = 1f,
-                                stiffness = 631.655f,
-                            ),
-                        )
-                    }
-                    launch {
-                        pressMask.animateTo(
-                            targetValue = 1f,
-                            animationSpec = spring(
-                                dampingRatio = 1f,
-                                stiffness = 438.649f,
-                            ),
-                        )
-                    }
-                }
-
-                is PressInteraction.Release,
-                is PressInteraction.Cancel,
-                -> {
-                    launch {
-                        pressScale.animateTo(
-                            targetValue = 1f,
-                            animationSpec = spring(
-                                dampingRatio = 0.4f,
-                                stiffness = 157.914f,
-                            ),
-                        )
-                    }
-                    launch {
-                        pressMask.animateTo(
-                            targetValue = 0f,
-                            animationSpec = spring(
-                                dampingRatio = 1f,
-                                stiffness = 438.649f,
-                            ),
-                        )
-                    }
-                }
-            }
+    val host = LocalView.current
+    val redraw = remember { mutableIntStateOf(0) }
+    val spotlight = remember(host) {
+        ColorOsSpotlightRenderer(host, ColorOsSpotlightRenderer.Style.TopBarButton, darkTheme) {
+            redraw.intValue++
         }
     }
-
-    DisposableEffect(Unit) {
+    SideEffect { spotlight.updateAppearance(darkTheme = darkTheme) }
+    DisposableEffect(motion, spotlight) {
         onDispose {
-            spotlightViewHolder.view?.cancelSpotlight()
-            spotlightViewHolder.view = null
+            motion.dispose()
+            spotlight.cancel()
         }
     }
 
+    // Input stays in a fixed hit box; only the visual subtree follows the finger.
     Box(
         modifier = modifier
             .size(40.dp)
-            .graphicsLayer {
-                scaleX = pressScale.value
-                scaleY = pressScale.value
-                clip = false
-            }
-            .pointerInput(Unit) {
-                fun spotlightLocalPosition(position: Offset): Offset {
-                    val centerX = size.width / 2f
-                    val centerY = size.height / 2f
-                    val scale = pressScale.value.coerceAtLeast(0.001f)
-                    return Offset(
-                        x = centerX + (position.x - centerX) / scale,
-                        y = centerY + (position.y - centerY) / scale,
-                    )
-                }
-                awaitPointerEventScope {
-                    while (true) {
-                        val down = awaitFirstDown(
-                            requireUnconsumed = false,
-                            pass = PointerEventPass.Initial,
-                        )
-                        var lastPosition = down.position
-                        spotlightLocalPosition(lastPosition).let { position ->
-                            spotlightViewHolder.view?.spotlightDown(position.x, position.y)
-                        }
-                        try {
-                            var tracking = true
-                            while (tracking) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val change = event.changes.firstOrNull { it.id == down.id }
-                                if (change != null) {
-                                    lastPosition = change.position
-                                }
-                                if (change == null || !change.pressed) {
-                                    tracking = false
-                                } else {
-                                    spotlightLocalPosition(change.position).let { position ->
-                                        spotlightViewHolder.view?.spotlightMove(position.x, position.y)
-                                    }
-                                }
+            .pointerInput(motion, spotlight) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    val tracker = VelocityTracker()
+                    tracker.addPosition(down.uptimeMillis, down.position)
+                    var lastPosition = down.position
+                    var dragged = false
+                    var releasedNormally = false
+                    motion.begin()
+                    motion.localPosition(lastPosition, size).let { spotlight.onDown(it.x, it.y) }
+                    try {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            lastPosition = change.position
+                            tracker.addPosition(change.uptimeMillis, lastPosition)
+                            val singlePointer = event.changes.none {
+                                it.id != down.id && (it.pressed || it.previousPressed)
                             }
-                        } finally {
-                            spotlightLocalPosition(lastPosition).let { position ->
-                                spotlightViewHolder.view?.spotlightUp(position.x, position.y)
+                            if (!singlePointer) {
+                                event.changes.forEach { it.consume() }
+                                break
+                            }
+                            if (!change.pressed) {
+                                releasedNormally = true
+                                if (dragged) change.consume()
+                                break
+                            }
+                            val delta = lastPosition - down.position
+                            if (delta.getDistance() > viewConfiguration.touchSlop) dragged = true
+                            if (dragged) change.consume()
+                            motion.move(delta, size)
+                            motion.localPosition(lastPosition, size).let { spotlight.onMove(it.x, it.y) }
+                            if (!dragged) {
+                                val finalChange = awaitPointerEvent(PointerEventPass.Final).changes
+                                    .firstOrNull { it.id == down.id }
+                                if (finalChange == null || finalChange.isConsumed) break
                             }
                         }
+                    } finally {
+                        val velocity = if (releasedNormally) tracker.calculateVelocity() else null
+                        motion.release(size, velocity?.let { Offset(it.x, it.y) } ?: Offset.Zero)
+                        motion.localPosition(lastPosition, size).let { spotlight.onUp(it.x, it.y) }
                     }
                 }
             }
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                role = Role.Button,
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,
     ) {
-        AndroidView(
-            factory = { context ->
-                ColorOsTopBarMaterialView(
-                    context = context,
-                    darkTheme = darkTheme,
-                    fallbackColor = fallbackColor.toArgb(),
-                )
+        Box(
+            modifier = Modifier.fillMaxSize().graphicsLayer {
+                scaleX = motion.scaleX
+                scaleY = motion.scaleY
+                translationX = motion.translationX
+                translationY = motion.translationY
+                clip = false
             },
-            update = { view ->
-                view.updateAppearance(darkTheme, fallbackColor.toArgb())
-            },
-            modifier = Modifier.fillMaxSize(),
-        )
-
-        // COUIMaskEffectDrawable is a background layer in C17, so the icon remains crisp.
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            if (pressMask.value > 0.001f) {
-                drawCircle(
-                    color = maskColor.copy(alpha = maskColor.alpha * pressMask.value),
-                    radius = size.minDimension / 2f,
-                )
+            contentAlignment = Alignment.Center,
+        ) {
+            AndroidView(
+                factory = { context ->
+                    ColorOsTopBarMaterialView(
+                        context = context,
+                        darkTheme = darkTheme,
+                        fallbackColor = fallbackColor.toArgb(),
+                        nativeBlurEnabled = nativeBlurEnabled,
+                    )
+                },
+                update = { view ->
+                    view.updateAppearance(darkTheme, fallbackColor.toArgb(), nativeBlurEnabled)
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                if (motion.maskProgress > 0.001f) {
+                    drawCircle(
+                        color = maskColor.copy(alpha = maskColor.alpha * motion.maskProgress),
+                        radius = size.minDimension / 2f,
+                    )
+                }
+            }
+            content()
+            // Draw-only overlay preserves the spotlight without adding an Android touch target.
+            Canvas(Modifier.fillMaxSize().clip(CircleShape).onSizeChanged {
+                spotlight.onSizeChanged(it.width, it.height)
+            }) {
+                redraw.intValue
+                spotlight.draw(drawContext.canvas.nativeCanvas)
             }
         }
-
-        content()
-
-        // C17 uses ViewOverlay for TOOLBAR_BUTTON / MENU_OVERFLOW_BUTTON spotlights, so the
-        // light is composited after both the pressed-state mask and the icon.
-        AndroidView(
-            factory = { context ->
-                ColorOsTopBarSpotlightView(
-                    context = context,
-                    darkTheme = darkTheme,
-                ).also { spotlightViewHolder.view = it }
-            },
-            update = { view ->
-                view.updateAppearance(darkTheme)
-                spotlightViewHolder.view = view
-            },
-            modifier = Modifier.fillMaxSize(),
-        )
     }
-}
-
-private class TopBarSpotlightViewHolder {
-    var view: ColorOsTopBarSpotlightView? = null
 }

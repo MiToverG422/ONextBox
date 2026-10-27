@@ -1,0 +1,45 @@
+COUI local source baseline for ONextBox
+======================================
+
+Upstream: https://github.com/suqi8/coui
+License: Apache-2.0 (see LICENSE and the original notices in source files)
+
+The sources come from the published Android sources JARs for the exact COUI
+versions used by ONextBox at commit e193b64fa603691fdea448786d15b0c810effa5a:
+
+  1.1.0: coui-core, coui-shader, coui-squircle, coui-ui, coui-preference, coui-icons
+  1.0.0: coui-blur, coui-navigation3-ui
+
+The previous dependency graph already selected shader/squircle 1.1.0 when blur
+and navigation3-ui requested 1.0.0. The local graph preserves that selection.
+sources.json records the source URLs, SHA-256 digests, published AAR digests,
+and Kotlin file counts. sources.sha256 records the imported source baseline.
+It is an audit record, not a requirement to leave these sources immutable.
+
+Import changes:
+- Android and common Kotlin sources are retained; other platform targets and
+  upstream publication, documentation and example build plugins are omitted.
+- CRCRLF/CRLF line endings are normalized to LF. Kotlin logic is unchanged.
+- Five baseline profiles are retained from the corresponding published AARs.
+- Build scripts use the project's Kotlin/AGP/Compose compiler and local project
+  dependencies. Non-COUI dependencies retain their previous declared versions.
+  Local Android compilation is aligned with the app Compose BOM and the
+  Lifecycle 2.11.0 version already selected by the original app runtime graph.
+- No upstream binary JAR/AAR is required to compile these COUI modules.
+- The full license and this provenance record are included in the app assets.
+
+ONextBox UI standard:
+The app's ui/common, ui/layout, ui/settings and Root implementations at the
+baseline commit define the accepted appearance and interaction. Keep their
+theme, spacing, joined cards, expansion motion, navigation materials and
+startup behavior when maintaining the bundled components. Upstream changes
+are reviewed and selected manually rather than applied automatically.
+
+Maintenance:
+- Edit the local modules directly when a component fix is needed.
+- Preserve upstream license/copyright notices and record imported changes here.
+- Do not replace project dependencies with remote COUI coordinates or a Git
+  submodule. :app:verifyLocalCoui inspects all app runtime variants and also
+  runs automatically before app builds and as part of :app:check.
+- AndroidX, Compose, Kotlin, AGP and other non-COUI dependencies still use the
+  normal dependency repositories; this is not a fully offline Android SDK.

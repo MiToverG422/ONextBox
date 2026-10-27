@@ -19,13 +19,13 @@ internal object GameAssistantHooker {
     private const val TAG = "ONextBox-GameAssistant"
     private val musicPlayersOnly = ThreadLocal<Boolean>()
 
-    fun hook(loader: ClassLoader, apkPath: String) {
+    fun hook(loader: ClassLoader, apkPath: String, colorOs16: Boolean = false) {
         fun adapter(name: String, action: () -> Unit) = runCatching(action)
             .onFailure { HookLog.w(TAG, "$name unavailable; stock behavior retained", it) }
-        adapter("Sidebar") { sidebar(loader) }
+        adapter("Sidebar") { sidebar(loader, colorOs16) }
         adapter("Root safety state") { rootSafety(loader) }
-        adapter("Skins") { skins(loader) }
-        adapter("Developer options") { GameAssistantDeveloperController.hook(loader) }
+        if (!colorOs16) adapter("Skins") { skins(loader) }
+        if (!colorOs16) adapter("Developer options") { GameAssistantDeveloperController.hook(loader) }
         adapter("Semantic adapters") {
             System.loadLibrary("dexkit")
             DexKitBridge.create(apkPath).use { dex ->
@@ -37,8 +37,9 @@ internal object GameAssistantHooker {
                     } }.single()
                     val method = data.getMethodInstance(loader)
                     val types = method.parameterTypes.map { it.name }
-                    require(types == List(4) { "kotlin.jvm.functions.Function0" } + List(6) { "java.lang.String" } +
-                        listOf("java.lang.Boolean", "kotlin.jvm.functions.Function1"))
+                    require(types == List(4) { if (colorOs16) "vy0.a" else "kotlin.jvm.functions.Function0" } +
+                        List(6) { "java.lang.String" } + listOf("java.lang.Boolean",
+                            if (colorOs16) "vy0.l" else "kotlin.jvm.functions.Function1"))
                     fast(method) { chain ->
                         if (!on(GameAssistantSettings.PROMOTIONS)) chain.proceed() else {
                             // Match the native no-show path: report false, never confirm, and
@@ -62,10 +63,10 @@ internal object GameAssistantHooker {
                     val method = dex.findMethod { matcher {
                         declaredClass = "business.notification.WelfareNotificationHelper"
                         usingStrings("checkAndSendWelfareNotification installGameList isNotEmpty")
-                        paramTypes("kotlin.coroutines.Continuation")
+                        paramTypes(if (colorOs16) "kotlin.coroutines.c" else "kotlin.coroutines.Continuation")
                         returnType = "java.lang.Object"
                     } }.single().getMethodInstance(loader)
-                    val unit = listOf("kotlin.q", "kotlin.Unit").firstNotNullOfOrNull { name ->
+                    val unit = (if (colorOs16) listOf("kotlin.u") else listOf("kotlin.q", "kotlin.Unit")).firstNotNullOfOrNull { name ->
                         ModernReflect.findClassIfExists(name, loader)?.let { type ->
                             type.declaredFields.firstOrNull { Modifier.isStatic(it.modifiers) && it.type == type }
                                 ?.apply { isAccessible = true }?.get(null)
@@ -82,7 +83,7 @@ internal object GameAssistantHooker {
                     } }.single().getMethodInstance(loader)
                     replace(method, GameAssistantSettings.REALME_STARTUP_ANIMATION) { null }
                 }
-                adapter("Music whitelist") { musicWhitelist(loader, dex) }
+                if (!colorOs16) adapter("Music whitelist") { musicWhitelist(loader, dex) }
                 adapter("Local Root probes") {
                     val owner = dex.findMethod { matcher {
                         usingStrings("/system/app/Superuser.apk")
@@ -100,10 +101,12 @@ internal object GameAssistantHooker {
                         .forEach { probe -> deoptimize(probe.callers.mapNotNull { runCatching { it.getMethodInstance(loader) }.getOrNull() }) }
                 }
                 adapter("Skin and safety callers") {
-                    listOf(
+                    (if (colorOs16) listOf(
+                        Triple("com.oplus.cosa.COSASDKManager", "getSupportCoolEx", "android.os.Bundle"),
+                    ) else listOf(
                         Triple("com.coloros.gamespaceui.helper.d", "g", "java.lang.String"),
                         Triple("com.oplus.cosa.COSASDKManager", "getSupportCoolEx", "android.os.Bundle"),
-                    ).forEach { (owner, name, result) ->
+                    )).forEach { (owner, name, result) ->
                         val target = dex.findMethod { matcher { declaredClass = owner; this.name = name; returnType = result; paramTypes() } }.single()
                         deoptimize(target.callers.mapNotNull { runCatching { it.getMethodInstance(loader) }.getOrNull() })
                     }
@@ -128,18 +131,21 @@ internal object GameAssistantHooker {
             .onFailure { error -> HookLog.w(TAG, "Caller deoptimization unavailable: ${it.name}", error) } }
     }
 
-    private fun sidebar(loader: ClassLoader) {
+    private fun sidebar(loader: ClassLoader, colorOs16: Boolean) {
         val provider = ModernReflect.findClass("business.gamedock.sort.AppDataProviderCommon", loader)
         // Both helpers cache the max into final static fields during <clinit>. Update the
         // audited cache at the guard, including restoring its stock value when disabled.
-        maxCache(loader, "business.module.customdefine.apps.DesignatedAppsHelper", "v", arrayOf(Boolean::class.javaPrimitiveType!!), 20)
+        maxCache(loader, "business.module.customdefine.apps.DesignatedAppsHelper",
+            if (colorOs16) "h" else "v", if (colorOs16)
+                arrayOf(ModernReflect.findClass("business.gamedock.tiles.m1", loader))
+            else arrayOf(Boolean::class.javaPrimitiveType!!), 20)
         val bookmark = ModernReflect.findClassIfExists("business.mainpanel.bookmarks.adapter.DesignatedBookMarksHelper", loader)
         if (bookmark != null) {
             val bean = ModernReflect.findClass("business.mainpanel.bookmarks.data.CustomServiceBean", loader)
             maxCache(loader, bookmark.name, "i", arrayOf(bean), 8)
         }
         replace(provider.getDeclaredMethod("j"), GameAssistantSettings.UNLIMITED) { Int.MAX_VALUE }
-        ModernReflect.findClassIfExists("p2.a", loader)?.let { type ->
+        ModernReflect.findClassIfExists(if (colorOs16) "b3.a" else "p2.a", loader)?.let { type ->
             val getter = type.getDeclaredMethod("a")
             require(getter.returnType == Int::class.javaPrimitiveType)
             replace(getter, GameAssistantSettings.UNLIMITED) { Int.MAX_VALUE }

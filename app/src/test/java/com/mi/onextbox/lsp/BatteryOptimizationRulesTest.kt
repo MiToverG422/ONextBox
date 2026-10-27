@@ -40,9 +40,19 @@ class BatteryOptimizationRulesTest {
 
     @Test fun batteryFeatureKeysAreIndependentAndFitSystemPropertyLimits() {
         val features = LspConfig.BatteryFeature.entries
-        assertEquals(3, features.size)
-        assertEquals(3, features.map { it.key }.distinct().size)
+        assertEquals(9, features.size)
+        assertEquals(9, features.map { it.key }.distinct().size)
         assertTrue(features.all { it.persistPropertyKey.length < 92 })
         assertEquals("com.oplus.battery", BatteryOptimizationRules.PACKAGE_NAME)
+    }
+
+    @Test fun whitelistRestoreContractRejectsOtherOverloadsAndReturnTypes() {
+        val params = listOf("android.os.IDeviceIdleController", "java.lang.String", "android.content.Context")
+        assertTrue(BatteryOptimizationRules.isWhitelistRestore("void", params, true, false))
+        assertFalse(BatteryOptimizationRules.isWhitelistRestore("boolean", params, true, false))
+        assertFalse(BatteryOptimizationRules.isWhitelistRestore("void", params, false, false))
+        assertFalse(BatteryOptimizationRules.isWhitelistRestore("void", params, true, true))
+        assertFalse(BatteryOptimizationRules.isWhitelistRestore("void", params.reversed(), true, false))
+        assertFalse(BatteryOptimizationRules.isWhitelistRestore("void", listOf("android.content.Context"), true, false))
     }
 }

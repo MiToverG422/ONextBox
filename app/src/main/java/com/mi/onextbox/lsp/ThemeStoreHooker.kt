@@ -30,7 +30,7 @@ internal object ThemeStoreHooker {
         if (delivered.compareAndSet(false, true)) HookLog.i(TAG, "Theme-store client VIP hooks reached")
     }
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader, colorOs16: Boolean = false) {
         var installed = 0
         val targets = mapOf(
             "com.oppo.cdo.card.theme.dto.vip.VipUserDto" to mapOf("getVipStatus" to 1, "getVipDays" to 999),
@@ -50,7 +50,7 @@ internal object ThemeStoreHooker {
                 }.onFailure { HookLog.w(TAG, "VIP getter unavailable: $name.$getter", it) }
             }
         }
-        ThemeStoreAdsHooker.hook(loader)
+        if (!colorOs16) ThemeStoreAdsHooker.hook(loader)
         runCatching {
             val receiver = ModernReflect.findClassIfExists("com.nearme.themespace.trial.ThemeTrialExpireReceiver", loader)
                 ?: return@runCatching

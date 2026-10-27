@@ -121,7 +121,7 @@ class LauncherGridHookContractTest {
         assertFalse(session.contains("saveLayoutInfo"))
         val targets = source("lsp/LauncherGridApplyTargets.kt")
         assertTrue(targets.contains("getDeclaredMethod(\"applyLayoutSettings\", *signature)"))
-        assertTrue(targets.contains("getDeclaredMethod(\"onPostExecute\", Boolean::class.javaObjectType)"))
+        assertTrue(targets.contains("getDeclaredMethod(\"onPostExecute\", Any::class.java)"))
         assertTrue(targets.contains("current === normal.get(null) || current === background.get(null)"))
         assertTrue(targets.contains("dragging.invoke"))
     }

@@ -46,12 +46,11 @@ ONextBox 是由 **MiToverG422 主导开发与维护** 的个人项目。项目�
 
 ## ✨ 不止一个开关
 
-### 🎨 两种界面，一份工具箱
+### 🎨 COUI 17.0 界面
 
 | 界面风格 | 体验方向 |
 | --- | --- |
 | **COUI 17.0** | 以 ColorOS 风格为方向，提供圆润卡片、拼接列表、顶栏模糊与细腻的交互动效 |
-| **Material 3 Expressive** | 使用 Material 3 Expressive 组件与主题，呈现另一套布局和交互体验 |
 
 > 💡 激活流程使用独立的视觉样式，选择 App 的主题模式不会改变激活页面的颜色。「激活」是首次设置流程，不是收费授权。
 
@@ -112,7 +111,7 @@ ONextBox 会为兼容性检查和功能运行读取必要的设备、系统、Ro
 | Gradle Wrapper | **9.3.1** |
 | Android Gradle Plugin | **9.1.0** |
 | Kotlin | **2.4.10** |
-| 界面 | Jetpack Compose、COUI、Material 3 Expressive |
+| 界面 | Jetpack Compose、COUI 17.0 |
 | 模块 API | libxposed **102.0.0** |
 
 以 [版本目录](gradle/libs.versions.toml)、[App 构建配置](app/build.gradle.kts) 和 [Gradle Wrapper](gradle/wrapper/gradle-wrapper.properties) 为准。
@@ -145,9 +144,13 @@ chmod +x gradlew
 | `debugSlim` | 启用代码压缩、资源缩减，关闭可调试标记；用于本地实机体验测试 | `app/build/outputs/apk/debugSlim/app-debugSlim.apk` |
 | `release` | 优化构建与发布验证 | `app/build/outputs/apk/release/app-release.apk` |
 
-正式构建需要在被 Git 忽略的 `signing.properties` 中配置 `ONEXTBOX_RELEASE_STORE_FILE`、`ONEXTBOX_RELEASE_STORE_PASSWORD`、`ONEXTBOX_RELEASE_KEY_ALIAS` 和 `ONEXTBOX_RELEASE_KEY_PASSWORD`，也可通过同名 Gradle 属性传入，缺少签名配置时构建会失败，不会自动使用 Debug 证书
+正式构建需要在被 Git 忽略的 `local.properties` 或 `signing.properties` 中配置 `ONEXTBOX_RELEASE_STORE_FILE`、`ONEXTBOX_RELEASE_STORE_PASSWORD`、`ONEXTBOX_RELEASE_KEY_ALIAS` 和 `ONEXTBOX_RELEASE_KEY_PASSWORD`，也可通过同名 Gradle 属性传入。缺少签名配置时构建会失败，不会自动使用 Debug 证书
 
 提交前运行 `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug`，Linux / macOS 使用 `./gradlew`，手动 Actions 构建同样会执行这些检查
+
+COUI 组件源码已内置于 `third_party/coui`，构建使用本地模块，无需下载远程 COUI 包。以当前 App 的样式、尺寸和交互为维护基准，版本、校验值与维护说明见该目录的 `sources.json`、`sources.sha256` 和 `UPSTREAM.txt`。运行 `:app:verifyLocalCoui` 可检查 Debug、DebugSlim、Release 均未引入远程 COUI 依赖；其他 Android 构建依赖仍使用常规仓库。
+
+功能页右上角最左侧的「本次更新」入口汇总新增与调整的功能，按当前系统筛选，可直接跳转并定位到对应设置。发布版本时同步维护 `FeatureUpdatesCatalog` 的条目和 `EDITION`；条目复用功能搜索的名称与路由，列表内置并支持离线查看。
 
 <a id="credits"></a>
 
@@ -165,7 +168,6 @@ chmod +x gradlew
 | --- | --- |
 | **ONextBox COUI 17.0** | [MiToverG422](https://github.com/MiToverG422) · GPL-3.0 |
 | [COUI](https://github.com/suqi8/coui) | suqi8 及贡献者 · Apache-2.0 |
-| [Miuix](https://github.com/compose-miuix-ui/miuix) | YuKongA 及贡献者 · Apache-2.0 |
 | [Jetpack Compose / Material 3](https://developer.android.com/jetpack/compose) | Google、AndroidX 贡献者 · Apache-2.0 |
 | [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) | Kyant0 及贡献者 · Apache-2.0 |
 | [Capsule](https://github.com/Kyant0/Capsule) | Kyant0 及贡献者 · Apache-2.0 |

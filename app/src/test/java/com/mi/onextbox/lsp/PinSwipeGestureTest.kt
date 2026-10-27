@@ -37,7 +37,9 @@ class PinSwipeGestureTest {
     }
     @Test fun hookRetainsNativeVerificationAndGuardsInputScope() {
         val source = File("src/main/java/com/mi/onextbox/lsp/PinSwipeInputHooker.kt").readText()
-        assertTrue(source.contains("target.performClick()"))
+        assertTrue(source.contains("gesture.feedback.perform(target, event, reuseInitialDown)"))
+        val click = File("src/main/java/com/mi/onextbox/lsp/PinSwipeNativeClick.kt").readText()
+        assertTrue(click.contains("target.performClick()"))
         assertTrue(source.contains("keys.size != 10"))
         assertTrue(source.contains("isTouchExplorationEnabled"))
         assertTrue(source.contains("event.pointerCount != 1"))

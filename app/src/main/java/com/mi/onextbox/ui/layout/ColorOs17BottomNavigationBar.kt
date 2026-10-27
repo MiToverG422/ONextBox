@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.mi.onextbox.ui.common.ColorOsBottomBarMaterialView
+import com.mi.onextbox.ui.LocalBottomBarContentOpacity
 import com.mi.onextbox.ui.common.ColorOsTopBarSpotlightView
 import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
@@ -80,9 +82,12 @@ internal fun ColorOs17BottomNavigationBar(
     modifier: Modifier = Modifier,
     selectedIcons: List<ImageVector>? = null,
     unselectedIcons: List<ImageVector>? = null,
+    hideLabels: Boolean = false,
+    startupRevealProgress: () -> Float = { 1f },
 ) {
     if (items.isEmpty()) return
 
+    val contentOpacity = LocalBottomBarContentOpacity.current
     val colors = COUITheme.colorScheme
     val darkTheme = colors.background.luminance() < 0.5f
     val fallbackColor = if (darkTheme) Color(0xFF333333) else Color(0xFFF0F0F0)
@@ -92,6 +97,7 @@ internal fun ColorOs17BottomNavigationBar(
     val layoutDirection = LocalLayoutDirection.current
     val exactTitleSize = with(density) { 10.dp.toSp() }
     val currentOnItemSelected by rememberUpdatedState(onItemSelected)
+    val currentStartupRevealProgress by rememberUpdatedState(startupRevealProgress)
     val currentSelectedIndex by rememberUpdatedState(selectedIndex.coerceIn(items.indices))
 
     var pressed by remember { mutableStateOf(false) }
@@ -126,9 +132,12 @@ internal fun ColorOs17BottomNavigationBar(
             BottomBarItemWidth * items.size +
             BottomBarItemSpacing * (items.size - 1)
         val maximumWidth = maxWidth - BottomBarScreenPadding * 2
-        val barWidth = minOf(desiredWidth, maximumWidth.coerceAtLeast(0.dp))
+        val barWidth = (
+            minOf(desiredWidth, maximumWidth.coerceAtLeast(0.dp)) - BottomBarWidthInset * 2
+            ).coerceAtLeast(0.dp)
+        val contentHorizontalPadding = BottomBarHorizontalPadding
         val itemsAvailableWidth = (
-            barWidth - BottomBarHorizontalPadding * 2 -
+            barWidth - contentHorizontalPadding * 2 -
                 BottomBarItemSpacing * (items.size - 1)
             ).coerceAtLeast(0.dp)
         val itemWidth = minOf(BottomBarItemWidth, itemsAvailableWidth / items.size)
@@ -166,6 +175,7 @@ internal fun ColorOs17BottomNavigationBar(
             modifier = Modifier
                 .width(barWidth)
                 .height(BottomBarHeight)
+                .bottomBarStartupReveal(startupRevealProgress)
                 .graphicsLayer {
                     translationX = touchMotion.translationX
                     translationY = touchMotion.translationY
@@ -174,8 +184,8 @@ internal fun ColorOs17BottomNavigationBar(
                     scaleY = pressScale.value + touchMotion.scaleY - 1f
                     clip = false
                 }
-                .pointerInput(items.size, itemWidth, layoutDirection) {
-                    val horizontalPaddingPx = BottomBarHorizontalPadding.toPx()
+                .pointerInput(items.size, itemWidth, contentHorizontalPadding, layoutDirection) {
+                    val horizontalPaddingPx = contentHorizontalPadding.toPx()
                     val itemSpacingPx = BottomBarItemSpacing.toPx()
                     val itemWidthPx = itemWidth.toPx()
                     val itemTopPx = BottomBarItemTop.toPx()
@@ -205,6 +215,14 @@ internal fun ColorOs17BottomNavigationBar(
                             requireUnconsumed = false,
                             pass = PointerEventPass.Initial,
                         )
+                        if (currentStartupRevealProgress() < 1f) {
+                            down.consume()
+                            do {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                event.changes.forEach { it.consume() }
+                            } while (event.changes.any { it.pressed })
+                            return@awaitEachGesture
+                        }
                         // This pointer node is inside the animated layer, matching Android View's
                         // inverse-transformed local MotionEvent coordinates used by C17.
                         val downPosition = down.position
@@ -327,7 +345,7 @@ internal fun ColorOs17BottomNavigationBar(
                 update = { view ->
                     view.updateAppearance(darkTheme, fallbackColor.toArgb())
                 },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().bottomBarStartupMaterialWidth(startupRevealProgress),
             )
 
             // BaseBottomFloatingMenuView draws the spotlight after its material edge but before
@@ -349,29 +367,51 @@ internal fun ColorOs17BottomNavigationBar(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = BottomBarHorizontalPadding),
+                    .graphicsLayer {
+                        alpha = contentOpacity().coerceIn(0f, 1f)
+                        compositingStrategy = CompositingStrategy.ModulateAlpha
+                    }
+                    .bottomBarStartupContentClip(startupRevealProgress)
+                    .padding(horizontal = contentHorizontalPadding),
                 horizontalArrangement = Arrangement.spacedBy(BottomBarItemSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 items.forEachIndexed { index, item ->
                     val itemSelected = index == previewIndex
                     val itemColor = if (itemSelected) selectedColor else unselectedColor
+                    val startupCenterOffset = with(density) {
+                        val logicalCenter = contentHorizontalPadding.toPx() + itemWidth.toPx() / 2f +
+                            index * (itemWidth.toPx() + BottomBarItemSpacing.toPx())
+                        val physicalCenter = if (layoutDirection == LayoutDirection.Ltr) {
+                            logicalCenter
+                        } else barWidth.toPx() - logicalCenter
+                        barWidth.toPx() / 2f - physicalCenter
+                    }
                     Column(
                         modifier = Modifier
                             .width(itemWidth)
                             .height(BottomBarItemHeight)
+                            .graphicsLayer {
+                                translationX = startupCenterOffset *
+                                    (1f - currentStartupRevealProgress().coerceIn(0f, 1f))
+                            }
                             .clearAndSetSemantics {
                                 selected = itemSelected
                                 role = Role.Tab
                                 contentDescription = item.label
                                 onClick(label = item.label) {
-                                    currentOnItemSelected(index)
-                                    true
+                                    if (currentStartupRevealProgress() >= 1f) {
+                                        currentOnItemSelected(index)
+                                        true
+                                    } else false
                                 }
                             },
+                        verticalArrangement = if (hideLabels) Arrangement.Center else Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Spacer(modifier = Modifier.height(BottomBarIconTopMargin))
+                        if (!hideLabels) {
+                            Spacer(modifier = Modifier.height(BottomBarIconTopMargin))
+                        }
                         Image(
                             imageVector = if (itemSelected) {
                                 selectedIcons?.getOrNull(index) ?: item.icon
@@ -382,21 +422,23 @@ internal fun ColorOs17BottomNavigationBar(
                             modifier = Modifier.size(BottomBarIconSize),
                             colorFilter = ColorFilter.tint(itemColor),
                         )
-                        Spacer(modifier = Modifier.height(BottomBarIconTitleGap))
-                        BasicText(
-                            text = item.label,
-                            modifier = Modifier.fillMaxWidth(),
-                            style = TextStyle(
-                                color = itemColor,
-                                fontFamily = FontFamily.SansSerif,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = exactTitleSize,
-                                textAlign = TextAlign.Center,
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            softWrap = false,
-                        )
+                        if (!hideLabels) {
+                            Spacer(modifier = Modifier.height(BottomBarIconTitleGap))
+                            BasicText(
+                                text = item.label,
+                                modifier = Modifier.fillMaxWidth(),
+                                style = TextStyle(
+                                    color = itemColor,
+                                    fontFamily = FontFamily.SansSerif,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = exactTitleSize,
+                                    textAlign = TextAlign.Center,
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                softWrap = false,
+                            )
+                        }
                     }
                 }
             }
@@ -730,6 +772,7 @@ private val BottomBarHostHeight = 88.dp
 private val BottomBarHeight = 56.dp
 private val BottomBarScreenPadding = 16.dp
 private val BottomBarHorizontalPadding = 12.dp
+private val BottomBarWidthInset = 8.dp
 private val BottomBarItemHeight = 48.dp
 private val BottomBarItemTop = 4.dp
 private val BottomBarItemWidth = 70.dp

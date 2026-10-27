@@ -89,8 +89,9 @@ internal object NativeLiveUpdateHooker {
             }
         }
         private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == null || key in setOf(NativeLiveUpdateSettings.KEY, MODERN_PREFERENCES_READY_KEY,
-                    SystemAdaptationSettings.KEY, SystemAdaptationSettings.ALLOW_HYPER_OS)) schedule()
+            if (key == null || key in setOf(
+                    NativeLiveUpdateSettings.KEY, MODERN_PREFERENCES_READY_KEY,
+                )) schedule()
         }
 
         private fun active() = ready && !retired && NativeLiveUpdateSettings.active()

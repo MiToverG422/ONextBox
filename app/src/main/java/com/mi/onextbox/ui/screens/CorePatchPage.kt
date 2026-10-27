@@ -8,7 +8,7 @@ import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.CorePatchSettings
 import com.mi.onextbox.lsp.LspPreferenceStore
-import com.mi.onextbox.ui.common.CouiConfirmDialog
+import com.mi.onextbox.ui.common.rememberSystemAdaptationVersion
 import com.mi.onextbox.ui.settings.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -16,10 +16,10 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun CorePatchPage() {
     val app = LocalContext.current.applicationContext
+    val adaptation = rememberSystemAdaptationVersion()
     val scope = rememberCoroutineScope()
     var revision by remember { mutableIntStateOf(0) }
     var saving by remember { mutableStateOf(false) }
-    var confirm by remember { mutableStateOf<CorePatchSettings.Option?>(null) }
     DisposableEffect(app) {
         val prefs = LspPreferenceStore.prefs(app)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> revision++ }
@@ -39,20 +39,13 @@ internal fun CorePatchPage() {
     }
     SettingsSection(title = "CorePatch N")
     FeatureAnimatedGroup {
-        CorePatchSettings.Option.entries.forEach { option ->
+        CorePatchSettings.availableOptions(adaptation).forEach { option ->
             row(option.key) { above, below ->
                 val enabled = remember(revision, option) { CorePatchSettings.enabled(app, option) }
                 SettingsToggleRow(title = stringResource(option.title), summary = stringResource(option.summary),
                     checked = enabled, interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below,
-                    onCheckedChange = { next -> if (!saving) { if (next) confirm = option else save(option, false) } })
+                    onCheckedChange = { next -> save(option, next) })
             }
         }
     }
-    CouiConfirmDialog(show = confirm != null,
-        title = stringResource(confirm?.title ?: R.string.corepatch_title),
-        summary = stringResource(R.string.corepatch_warning),
-        negativeText = stringResource(android.R.string.cancel), positiveText = stringResource(android.R.string.ok),
-        onDismissRequest = { confirm = null }, onPositive = {
-            confirm?.let { option -> confirm = null; save(option, true) }
-        })
 }

@@ -1,14 +1,16 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.SharedPreferences
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -18,7 +20,6 @@ import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspPreferenceStore
 import com.mi.onextbox.lsp.SettingsHomeCleanupSettings
 import com.mi.onextbox.ui.settings.FeatureSettingWriteQueue
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsSection
@@ -65,22 +66,18 @@ internal fun SettingsHomeCleanupGroup() {
     }
     SettingsSection(title = stringResource(R.string.settings_home_cleanup_group))
     SettingsGroup {
-        Material3ExpressiveSegmentPosition(index = 0, count = 2) {
-            SettingsToggleRow(
+        run {SettingsToggleRow(
                 title = stringResource(R.string.settings_home_hide_account_title),
                 summary = stringResource(R.string.settings_home_hide_account_summary),
                 checked = account, interactionEnabled = !saving,
                 onCheckedChange = { save(SettingsHomeCleanupSettings.ACCOUNT, it) }, hasDividerBelow = true,
-            )
-        }
+            )}
         SettingsDivider()
-        Material3ExpressiveSegmentPosition(index = 1, count = 2) {
-            SettingsToggleRow(
+        run {SettingsToggleRow(
                 title = stringResource(R.string.settings_home_hide_update_title),
                 summary = stringResource(R.string.settings_home_hide_update_summary),
                 checked = update, interactionEnabled = !saving,
                 onCheckedChange = { save(SettingsHomeCleanupSettings.UPDATE, it) }, hasDividerAbove = true,
-            )
-        }
+            )}
     }
 }

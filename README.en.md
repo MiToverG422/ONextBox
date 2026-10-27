@@ -46,12 +46,11 @@ Feedback with reproduction steps, as well as code, translation, and design contr
 
 ## ✨ More than a toggle
 
-### 🎨 Two interfaces, one toolbox
+### 🎨 COUI 17.0 interface
 
 | Interface style | Experience |
 | --- | --- |
 | **COUI 17.0** | A ColorOS-inspired interface with rounded cards, connected lists, top-bar blur, and refined interaction animations |
-| **Material 3 Expressive** | Material 3 Expressive components and theming, offering a different layout and interaction experience |
 
 > 💡 The activation flow has its own visual style. Changing the app's theme mode does not change the colors of the activation screens. “Activation” means first-time setup, not paid licensing.
 
@@ -111,7 +110,7 @@ Pull requests are welcome. For system feature changes, describe the applicable v
 | Gradle Wrapper | **9.3.1** |
 | Android Gradle Plugin | **9.1.0** |
 | Kotlin | **2.4.10** |
-| UI | Jetpack Compose, COUI, Material 3 Expressive |
+| UI | Jetpack Compose, COUI 17.0 |
 | Module API | libxposed **102.0.0** |
 
 Refer to the [version catalog](gradle/libs.versions.toml), [app build configuration](app/build.gradle.kts), and [Gradle Wrapper](gradle/wrapper/gradle-wrapper.properties) for the authoritative configuration.
@@ -164,7 +163,6 @@ Special thanks to [LuckyTool](https://github.com/luckyzyx/LuckyTool) and [OShin]
 | --- | --- |
 | **ONextBox COUI 17.0** | [MiToverG422](https://github.com/MiToverG422) · GPL-3.0 |
 | [COUI](https://github.com/suqi8/coui) | suqi8 and contributors · Apache-2.0 |
-| [Miuix](https://github.com/compose-miuix-ui/miuix) | YuKongA and contributors · Apache-2.0 |
 | [Jetpack Compose / Material 3](https://developer.android.com/jetpack/compose) | Google and AndroidX contributors · Apache-2.0 |
 | [AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) | Kyant0 and contributors · Apache-2.0 |
 | [Capsule](https://github.com/Kyant0/Capsule) | Kyant0 and contributors · Apache-2.0 |

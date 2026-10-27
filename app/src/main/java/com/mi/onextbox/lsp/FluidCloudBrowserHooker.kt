@@ -1,10 +1,12 @@
 package com.mi.onextbox.lsp
 
 import android.app.role.RoleManager
+import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Bundle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import io.github.libxposed.api.XposedInterface
@@ -20,11 +22,18 @@ internal object FluidCloudBrowserHooker {
     }
 
     fun hook(loader: ClassLoader) {
-        val key = "$TAG:invoke@${System.identityHashCode(loader)}"
+        val prefix = "$TAG:launch@${System.identityHashCode(loader)}:"
         runCatching {
             val type = loader.loadClass(TEXT_INTENT)
             val invoke = type.getDeclaredMethod("processInvoke", Context::class.java, Intent::class.java)
             check(invoke.returnType == Void.TYPE && !Modifier.isStatic(invoke.modifiers))
+            val launchers = mutableListOf(invoke)
+            type.declaredMethods.singleOrNull {
+                it.name == "startMiniFloat" && it.returnType == Void.TYPE &&
+                    !Modifier.isStatic(it.modifiers) && it.parameterTypes.contentEquals(
+                        arrayOf(Context::class.java, Intent::class.java, Bundle::class.java),
+                    )
+            }?.let(launchers::add)
             val packageName = type.getDeclaredField("packageName").apply {
                 check(this.type == String::class.java && !Modifier.isStatic(modifiers))
                 isAccessible = true
@@ -37,18 +46,24 @@ internal object FluidCloudBrowserHooker {
                 check(this.type == Int::class.javaPrimitiveType && !Modifier.isStatic(modifiers))
                 isAccessible = true
             }
-            ModernHookRegistry.installFast(key, invoke, XposedInterface.Hooker { chain ->
+            val redirect = XposedInterface.Hooker { chain ->
                 if (!FluidCloudBrowserSettings.isEnabledXposed()) return@Hooker chain.proceed()
                 val owner = chain.thisObject ?: return@Hooker chain.proceed()
                 val context = chain.args.getOrNull(0) as? Context ?: return@Hooker chain.proceed()
                 val original = chain.args.getOrNull(1) as? Intent ?: return@Hooker chain.proceed()
                 val prepared = runCatching {
                     val oldPackage = packageName.get(owner) as? String
-                    val url = FluidCloudBrowserRules.webUrl(original.dataString) ?: return@runCatching null
+                    val typeCode = textType.get(owner) as? Int
+                    val url = FluidCloudBrowserRules.launchUrl(
+                        original.action, original.dataString,
+                        if (original.action == Intent.ACTION_WEB_SEARCH)
+                            original.getStringExtra(SearchManager.QUERY) else null,
+                        typeCode,
+                    ) ?: return@runCatching null
                     val webUri = Uri.parse(url)
                     if (!FluidCloudBrowserRules.accepts(
                             enabled = true,
-                            textType = textType.get(owner) as? Int,
+                            textType = typeCode,
                             intentType = intentType.getInt(owner),
                             packageName = oldPackage,
                             action = original.action,
@@ -63,12 +78,8 @@ internal object FluidCloudBrowserHooker {
                         reportOnce("No default browser resolved; original route retained")
                         return@runCatching null
                     }
-                    val redirected = Intent(original).apply {
-                        component = null
-                        data = webUri
-                        setPackage(target)
-                        addCategory(Intent.CATEGORY_BROWSABLE)
-                    }
+                    if (target == FluidCloudBrowserRules.STOCK_BROWSER) return@runCatching null
+                    val redirected = FluidCloudBrowserIntents.redirect(original, url, target)
                     val activity = redirected.resolveActivityInfo(context.packageManager, PackageManager.MATCH_DEFAULT_ONLY)
                         ?: run {
                             reportOnce("Default browser cannot resolve web intent; original route retained")
@@ -85,9 +96,13 @@ internal object FluidCloudBrowserHooker {
                 FluidCloudBrowserRules.withTarget(
                     prepared.first, prepared.second, { packageName.set(owner, it) },
                 ) { chain.proceed(args) }
-            })
+            }
+            launchers.forEach { method ->
+                ModernHookRegistry.installFast("$prefix${method.name}", method, redirect)
+            }
             type.declaredMethods.filter {
-                it.name == "invoke" || it.name == "access\$processInvoke"
+                it.name == "invoke" || it.name == "processInvoke" ||
+                    it.name == "access\$processInvoke" || it.name == "startMiniFloat\$default"
             }.forEach { ModernHookRuntime.requireModule().deoptimize(it) }
             runCatching { loader.loadClass("$TEXT_INTENT\$invoke\$1\$1\$1") }.getOrNull()
                 ?.declaredMethods?.filter { it.name == "invokeSuspend" }
@@ -111,7 +126,7 @@ internal object FluidCloudBrowserHooker {
             }
             HookLog.i(TAG, "Recognized web link routing installed")
         }.onFailure {
-            ModernHookRegistry.unhook(key)
+            ModernHookRegistry.unhookPrefix(prefix)
             HookLog.w(TAG, "Web link target unavailable, stock behavior retained", it)
         }
     }

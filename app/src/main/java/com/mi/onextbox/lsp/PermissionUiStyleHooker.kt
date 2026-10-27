@@ -43,11 +43,11 @@ internal object PermissionUiStyleHooker {
         }
     }
 
-    fun hookPermissionController(loader: ClassLoader) {
+    fun hookPermissionController(loader: ClassLoader, colorOs16: Boolean = false) {
         if (!loaders.add("controller:${System.identityHashCode(loader)}")) return
         // C17 ka.a.f is PermissionController's local UI branch query. Never change the
         // persist.sys.permission.enable property or the system interception service.
-        hookBoolean(loader, "ka.a", "f", false) {
+        hookBoolean(loader, if (colorOs16) "j8.a" else "ka.a", if (colorOs16) "g" else "f", false) {
             activeFeature.get() == PermissionFeature.ExportPermissionPages ||
                 activeFeature.get() == PermissionFeature.NativePermissionDialogs
         }

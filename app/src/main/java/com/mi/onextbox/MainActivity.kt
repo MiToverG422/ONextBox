@@ -1,5 +1,9 @@
 package com.mi.onextbox
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -18,14 +22,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
@@ -45,6 +46,8 @@ import com.mi.onextbox.ui.common.AppLocale
 import com.mi.onextbox.ui.common.AppAppearanceTransitionHost
 import com.mi.onextbox.ui.common.AppAppearanceTransitionState
 import com.mi.onextbox.ui.common.AppLogStore
+import com.mi.onextbox.ui.common.installAppLaunchAnimation
+import com.mi.onextbox.ui.common.AppLaunchRevealState
 import com.mi.onextbox.ui.common.AppThemeColorSpec
 import com.mi.onextbox.ui.common.AppThemeKeyColor
 import com.mi.onextbox.ui.common.AppThemeMode
@@ -98,16 +101,14 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val PREF_BLUR_EFFECT_ENABLED = "blur_effect_enabled"
         const val PREF_FEATURE_PAGE_NEW_STYLE = "feature_page_new_style"
-        const val PREF_COLOROS_PROGRESSIVE_CARD_ANIMATION = "coloros_progressive_card_animation"
-        const val PREF_FEATURE_PAGE_VIDEO_HIDDEN = "feature_page_video_hidden"
         const val PREF_POP_DIRECTION_FOLLOWS_SWIPE_EDGE = "pop_direction_follows_swipe_edge"
         const val PREF_SHOW_FPS_MONITOR = "show_fps_monitor"
         const val PREF_LIQUID_GLASS_BOTTOM_BAR = "liquid_glass_bottom_bar"
-        const val PREF_MATERIAL_FLOATING_BOTTOM_BAR = "material_floating_bottom_bar"
-        const val PREF_MATERIAL_HAPTICS = "material_haptics"
-        const val PREF_MATERIAL_SWITCH_ICONS = "material_switch_icons"
+        const val PREF_BOTTOM_BAR_HIDE_LABELS = "bottom_bar_hide_labels"
+
+
         const val PREF_COLOROS_THEME_MODE = "coloros_theme_mode"
-        const val PREF_MATERIAL_THEME_MODE = "material_theme_mode"
+
         const val CONFIG_WRITE_DEBOUNCE_MS = 250L
     }
 
@@ -117,6 +118,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val appLaunchReveal = AppLaunchRevealState(restored = savedInstanceState != null)
+        installAppLaunchAnimation(
+            animate = savedInstanceState == null,
+            onExitStarted = appLaunchReveal::onExitStarted,
+            onFinished = appLaunchReveal::onFinished,
+        )
         // Keep onboarding and the prepared app destination in one window. Its final clear/dissolve
         // animation can then reveal Root directly instead of exposing Launcher between activities.
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -149,7 +156,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
             var blurEffectEnabled by rememberConfigState(
-                prefs.getBoolean(PREF_BLUR_EFFECT_ENABLED, false),
+                prefs.getBoolean(PREF_BLUR_EFFECT_ENABLED, true),
             ) { value ->
                 prefs.edit()
                     .putBoolean(PREF_BLUR_EFFECT_ENABLED, value)
@@ -163,21 +170,6 @@ class MainActivity : ComponentActivity() {
                     .putBoolean(PREF_FEATURE_PAGE_NEW_STYLE, value)
                     .commitOrReport()
                 AppLogStore.i("Settings", "New Features page style: $value")
-            }
-            var featurePageVideoHidden by rememberConfigState(
-                prefs.getBoolean(PREF_FEATURE_PAGE_VIDEO_HIDDEN, false),
-            ) { value ->
-                prefs.edit()
-                    .putBoolean(PREF_FEATURE_PAGE_VIDEO_HIDDEN, value)
-                    .commitOrReport()
-                AppLogStore.i("Settings", "Features page background video hidden: $value")
-            }
-            var progressiveCardAnimationEnabled by rememberConfigState(
-                prefs.getBoolean(PREF_COLOROS_PROGRESSIVE_CARD_ANIMATION, true),
-            ) { value ->
-                prefs.edit()
-                    .putBoolean(PREF_COLOROS_PROGRESSIVE_CARD_ANIMATION, value)
-                    .commitOrReport()
             }
             var popDirectionFollowsSwipeEdge by rememberConfigState(
                 prefs.getBoolean(PREF_POP_DIRECTION_FOLLOWS_SWIPE_EDGE, false),
@@ -204,6 +196,14 @@ class MainActivity : ComponentActivity() {
                     .commitOrReport()
                 AppLogStore.i("Settings", "LiquidGlass bottom bar: $value")
             }
+            var bottomBarHideLabels by rememberConfigState(
+                prefs.getBoolean(PREF_BOTTOM_BAR_HIDE_LABELS, false),
+            ) { value ->
+                prefs.edit()
+                    .putBoolean(PREF_BOTTOM_BAR_HIDE_LABELS, value)
+                    .commitOrReport()
+                AppLogStore.i("Settings", "Bottom bar hide labels: $value")
+            }
             var currentTab by rememberSaveable {
                 mutableIntStateOf(0)
             }
@@ -218,42 +218,20 @@ class MainActivity : ComponentActivity() {
             val initiallySavedThemeMode = remember { AppThemeMode.get(this@MainActivity) }
             var appThemeMode by rememberSaveable {
                 val storedMode = prefs.getString(
-                    if (initiallySelectedUiStyle == AppUiStyle.Material3Expressive) {
-                        PREF_MATERIAL_THEME_MODE
-                    } else {
+                    run {
                         PREF_COLOROS_THEME_MODE
                     },
                     null,
                 )
                 mutableStateOf(
                     if (storedMode != null) AppThemeMode.fromName(storedMode)
-                    else if (initiallySelectedUiStyle == AppUiStyle.Material3Expressive) {
-                        if (AppThemeKeyColor.get(this@MainActivity) != null) {
-                            initiallySavedThemeMode.withStaticColor()
-                        } else {
-                            initiallySavedThemeMode.withDynamicColor()
-                        }
-                    } else initiallySavedThemeMode,
+                    else initiallySavedThemeMode,
                 )
             }
             var appUiStyle by rememberSaveable {
                 mutableStateOf(initiallySelectedUiStyle)
             }
-            var materialFloatingBottomBarEnabled by rememberConfigState(
-                prefs.getBoolean(PREF_MATERIAL_FLOATING_BOTTOM_BAR, false),
-            ) { value ->
-                prefs.edit().putBoolean(PREF_MATERIAL_FLOATING_BOTTOM_BAR, value).commitOrReport()
-            }
-            var materialHapticsEnabled by rememberConfigState(
-                prefs.getBoolean(PREF_MATERIAL_HAPTICS, true),
-            ) { value ->
-                prefs.edit().putBoolean(PREF_MATERIAL_HAPTICS, value).commitOrReport()
-            }
-            var materialSwitchIconsEnabled by rememberConfigState(
-                prefs.getBoolean(PREF_MATERIAL_SWITCH_ICONS, false),
-            ) { value ->
-                prefs.edit().putBoolean(PREF_MATERIAL_SWITCH_ICONS, value).commitOrReport()
-            }
+
             var appThemeKeyColor by rememberSaveable {
                 mutableStateOf(AppThemeKeyColor.get(this@MainActivity))
             }
@@ -262,16 +240,12 @@ class MainActivity : ComponentActivity() {
                 if (!prefs.contains(PREF_COLOROS_THEME_MODE)) {
                     editor.putString(
                         PREF_COLOROS_THEME_MODE,
-                        if (initiallySelectedUiStyle == AppUiStyle.ColorOs) {
+                        run {
                             initiallySavedThemeMode.name
-                        } else {
-                            initiallySavedThemeMode.withStaticColor().name
                         },
                     )
                 }
-                if (appUiStyle == AppUiStyle.Material3Expressive) {
-                    editor.putString(PREF_MATERIAL_THEME_MODE, appThemeMode.name)
-                }
+
                 editor.apply()
                 AppThemeMode.set(this@MainActivity, appThemeMode)
             }
@@ -634,6 +608,8 @@ class MainActivity : ComponentActivity() {
                 AppAppearanceTransitionHost(state = appearanceTransition) {
                     if (onboardingCompleted || onboardingDestinationPrepared) {
                         Root(
+                bottomBarStartupReady = appLaunchReveal.ready && !onboardingVisible,
+                animateBottomBarStartup = appLaunchReveal.animate,
                 openSoftwareUpdateRequest = openSoftwareUpdateRequest,
                 currentTab = currentTab,
                 onTabChange = { currentTab = it },
@@ -642,16 +618,14 @@ class MainActivity : ComponentActivity() {
                 onBlurEffectEnabledChange = { blurEffectEnabled = it },
                 featurePageNewStyleEnabled = featurePageNewStyleEnabled,
                 onFeaturePageNewStyleEnabledChange = { featurePageNewStyleEnabled = it },
-                progressiveCardAnimationEnabled = progressiveCardAnimationEnabled,
-                onProgressiveCardAnimationEnabledChange = { progressiveCardAnimationEnabled = it },
-                featurePageVideoHidden = featurePageVideoHidden,
-                onFeaturePageVideoHiddenChange = { featurePageVideoHidden = it },
                 popDirectionFollowsSwipeEdge = popDirectionFollowsSwipeEdge,
                 onPopDirectionFollowsSwipeEdgeChange = { popDirectionFollowsSwipeEdge = it },
                 showFpsMonitor = showFpsMonitor,
                 onShowFpsMonitorChange = { showFpsMonitor = it },
                 liquidGlassBottomBarEnabled = liquidGlassBottomBarEnabled,
                 onLiquidGlassBottomBarEnabledChange = { liquidGlassBottomBarEnabled = it },
+                bottomBarHideLabels = bottomBarHideLabels,
+                onBottomBarHideLabelsChange = { bottomBarHideLabels = it },
                 appLanguageTag = appLanguageTag,
                 onAppLanguageChange = { languageTag ->
                     changeAppAppearance(appLanguageTag != languageTag) {
@@ -665,9 +639,7 @@ class MainActivity : ComponentActivity() {
                         appThemeMode = mode
                         AppThemeMode.set(this@MainActivity, mode)
                         prefs.edit().putString(
-                            if (appUiStyle == AppUiStyle.Material3Expressive) {
-                                PREF_MATERIAL_THEME_MODE
-                            } else {
+                            run {
                                 PREF_COLOROS_THEME_MODE
                             },
                             mode.name,
@@ -677,20 +649,14 @@ class MainActivity : ComponentActivity() {
                 appUiStyle = appUiStyle,
                 onAppUiStyleChange = { style ->
                     changeAppAppearance(style != appUiStyle) {
-                        val sourceKey = if (appUiStyle == AppUiStyle.Material3Expressive) {
-                            PREF_MATERIAL_THEME_MODE
-                        } else {
+                        val sourceKey = run {
                             PREF_COLOROS_THEME_MODE
                         }
-                        val targetKey = if (style == AppUiStyle.Material3Expressive) {
-                            PREF_MATERIAL_THEME_MODE
-                        } else {
+                        val targetKey = run {
                             PREF_COLOROS_THEME_MODE
                         }
                         val nextMode = prefs.getString(targetKey, null)?.let(AppThemeMode::fromName)
-                            ?: if (style == AppUiStyle.Material3Expressive) {
-                                appThemeMode.withDynamicColor()
-                            } else {
+                            ?: run {
                                 appThemeMode.withStaticColor()
                             }
                         prefs.edit()
@@ -703,12 +669,6 @@ class MainActivity : ComponentActivity() {
                         AppUiStyle.set(this@MainActivity, style)
                     }
                 },
-                materialFloatingBottomBarEnabled = materialFloatingBottomBarEnabled,
-                onMaterialFloatingBottomBarEnabledChange = { materialFloatingBottomBarEnabled = it },
-                materialHapticsEnabled = materialHapticsEnabled,
-                onMaterialHapticsEnabledChange = { materialHapticsEnabled = it },
-                materialSwitchIconsEnabled = materialSwitchIconsEnabled,
-                onMaterialSwitchIconsEnabledChange = { materialSwitchIconsEnabled = it },
                 appThemeKeyColor = appThemeKeyColor,
                 onAppThemeKeyColorChange = { color ->
                     appThemeKeyColor = color
@@ -869,13 +829,6 @@ class MainActivity : ComponentActivity() {
                             featurePageNewStyleEnabled = enabled
                             prefs.edit()
                                 .putBoolean(PREF_FEATURE_PAGE_NEW_STYLE, enabled)
-                                .apply()
-                        },
-                        featurePageVideoHidden = featurePageVideoHidden,
-                        onFeaturePageVideoHiddenChange = { hidden ->
-                            featurePageVideoHidden = hidden
-                            prefs.edit()
-                                .putBoolean(PREF_FEATURE_PAGE_VIDEO_HIDDEN, hidden)
                                 .apply()
                         },
                         onDestinationPreparationRequested = {

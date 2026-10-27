@@ -36,7 +36,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 private val LocalColorOsScrollEntrance = compositionLocalOf<ColorOsScrollEntranceState?> { null }
-internal val LocalColorOsProgressiveCardAnimationEnabled = compositionLocalOf { true }
 
 @Composable
 internal fun rememberColorOsScrollEntrance(scrollState: ScrollState): ColorOsScrollEntranceState =
@@ -54,9 +53,7 @@ internal fun ColorOsScrollEntranceHost(
     enabled: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    if (!enabled || !LocalColorOsProgressiveCardAnimationEnabled.current ||
-        LocalAppUiStyle.current != AppUiStyle.ColorOs
-    ) {
+    if (!enabled) {
         CompositionLocalProvider(LocalColorOsScrollEntrance provides null) {
             Box(modifier, content = content)
         }
@@ -78,7 +75,7 @@ internal fun ColorOsScrollEntranceHost(
 @Composable
 internal fun Modifier.colorOsScrollEntrance(key: Any? = null): Modifier {
     val state = LocalColorOsScrollEntrance.current
-    if (state == null || LocalAppUiStyle.current != AppUiStyle.ColorOs) return this
+    if (state == null) return this
     val itemKey = remember(key) { key ?: Any() }
     return then(ColorOsScrollEntranceElement(state, itemKey))
 }

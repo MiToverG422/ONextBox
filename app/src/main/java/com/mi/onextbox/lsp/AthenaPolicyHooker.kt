@@ -15,6 +15,7 @@ internal object AthenaPolicyHooker {
     private const val TAG = "ONextBox-Athena"
     private const val ATHENA_PACKAGE = "com.oplus.athena"
     private const val ATHENA_C17_VERSION_CODE = 700L
+    private const val ATHENA_C16_VERSION_CODE = 601L
     private const val ACTIVITY_THREAD_CLASS = "android.app.ActivityThread"
     private const val PARSER_CLASS = "com.oplus.athena.common.parser.a"
     private const val C17_CONFIG_HOLDER_CLASS = "com.oplus.athena.common.parser.athena.q"
@@ -56,6 +57,13 @@ internal object AthenaPolicyHooker {
 
     @Volatile
     private var verifiedC17Version: Boolean? = null
+    @Volatile private var colorOs16 = false
+
+    /** C16 Athena 6.0.1 uses the same policy fields and a different final kill boundary. */
+    fun hookColorOs16(classLoader: ClassLoader?): Boolean {
+        colorOs16 = true
+        return hook(classLoader)
+    }
 
     fun hook(classLoader: ClassLoader?): Boolean {
         HotReloadLifecycle.registerReplay("athena-dynamic-loaders",
@@ -225,14 +233,16 @@ internal object AthenaPolicyHooker {
     private fun installSwipeUpKillGuard(classLoader: ClassLoader?): Boolean {
         val actionClass = findClass(C17_SWIPE_UP_CLEAR_ACTION_CLASS, classLoader) ?: return false
         val actualClassLoader = actionClass.classLoader ?: classLoader
-        val dynamicFilterClass = findClass(C17_DYNAMIC_CLEAR_FILTER_CLASS, actualClassLoader)
+        val dynamicFilterClass = findClass(if (colorOs16)
+            "com.oplus.athena.systemservice.action.prockill.clear.h"
+            else C17_DYNAMIC_CLEAR_FILTER_CLASS, actualClassLoader)
             ?: return false
         val procDetailClass = findClass(PROC_DETAIL_INFO_CLASS, actualClassLoader) ?: return false
         val classLoaderKey = loaderKey(actualClassLoader)
         if (!installedSwipeUpKillGuards.add(classLoaderKey)) return true
 
         val killDecisionMethod = actionClass.declaredMethods.firstOrNull { method ->
-            method.name == "I0" &&
+            method.name == (if (colorOs16) "D0" else "I0") &&
                 method.parameterCount == 5 &&
                 method.returnType == Void.TYPE &&
                 dynamicFilterClass.isAssignableFrom(method.parameterTypes[1]) &&
@@ -358,10 +368,11 @@ internal object AthenaPolicyHooker {
         val versionCode = runCatching {
             context.packageManager.getPackageInfo(ATHENA_PACKAGE, 0).longVersionCode
         }.getOrNull() ?: return false
-        val supported = versionCode == ATHENA_C17_VERSION_CODE
+        val expected = if (colorOs16) ATHENA_C16_VERSION_CODE else ATHENA_C17_VERSION_CODE
+        val supported = versionCode == expected
         verifiedC17Version = supported
         if (!supported && loggedUnsupportedVersion.compareAndSet(false, true)) {
-            HookLog.w(TAG, "Athena version $versionCode is unsupported; expected 700")
+            HookLog.w(TAG, "Athena version $versionCode is unsupported; expected $expected")
         }
         return supported
     }

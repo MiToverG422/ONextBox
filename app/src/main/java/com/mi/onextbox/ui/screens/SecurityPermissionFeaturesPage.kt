@@ -4,6 +4,7 @@ import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
 
+
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -22,7 +23,6 @@ import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsSection
 import com.mi.onextbox.ui.settings.SettingsToggleRow
-import com.mi.onextbox.ui.settings.Material3ExpressiveSegmentPosition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -75,16 +75,14 @@ internal fun SecurityPermissionFeaturesPage() {
                 mutableStateOf(LspConfig.isPermissionFeatureEnabled(context, feature))
             }
             if (index > 0) SettingsDivider()
-            Material3ExpressiveSegmentPosition(index = index, count = options.size) {
-                SettingsToggleRow(
+            run {SettingsToggleRow(
                     title = stringResource(title),
                     summary = stringResource(summary),
                     checked = checked,
                     onCheckedChange = { checked = it; save(feature, it) },
                     hasDividerAbove = index > 0,
                     hasDividerBelow = index < options.lastIndex,
-                )
-            }
+                )}
         }
     }
 

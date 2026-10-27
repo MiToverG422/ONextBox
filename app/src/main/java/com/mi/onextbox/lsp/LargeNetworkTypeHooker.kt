@@ -17,6 +17,16 @@ internal object LargeNetworkTypeHooker {
     fun hook(loader: ClassLoader) {
         LargeNetworkArtworkHooker.hook(loader)
         hookFont(loader)
+        hookNativeFeature(loader)
+    }
+
+    fun hookColorOs16(loader: ClassLoader) {
+        // C16 uses drawable network labels, with no C17 text typeface helper or Compose ABI.
+        LargeNetworkArtworkHooker.hookColorOs16()
+        hookNativeFeature(loader)
+    }
+
+    private fun hookNativeFeature(loader: ClassLoader) {
         runCatching {
             val provider = Class.forName("com.oplus.coreapp.appfeature.AppFeatureProviderUtils", false, loader)
             val methods = provider.declaredMethods.filter {

@@ -122,6 +122,10 @@ internal object LargeNetworkArtworkHooker {
         runCatching { hookCompose(loader, true) }.onFailure(::failure)
     }
 
+    fun hookColorOs16() {
+        runCatching { hookResources() }.onFailure(::failure)
+    }
+
     private fun hookResources() {
         val method = Resources::class.java.getDeclaredMethod("getDrawableForDensity", Int::class.javaPrimitiveType,
             Int::class.javaPrimitiveType, Resources.Theme::class.java)

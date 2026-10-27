@@ -25,6 +25,7 @@ internal object QsTileCornerHooker {
     private val mediaClips = WeakHashMap<View, MediaClip>()
     private val reported = ConcurrentHashMap.newKeySet<String>()
     private var hierarchy: QsCornerHierarchyObservers? = null
+    private val animationCapture = ThreadLocal<Boolean>()
 
     fun hook(loader: ClassLoader) {
         // Class lookup must not initialize launcher/SystemUI configuration during package loading.
@@ -91,22 +92,28 @@ internal object QsTileCornerHooker {
                 }.onFailure { diagnose("Hook ${type.simpleName}.${method.name}", it) }
             }
             if (name.startsWith(RESIZEABLE) || name.endsWith("OplusQSResizeableThreeStageView") || name == MEDIA) {
-                val radiusMethods = if (name == MEDIA) setOf("getViewRadius", "getContainerCornerRadius") else setOf("getCornerRadius", "getTransitionRadius")
+                val radiusMethods = if (name == MEDIA) setOf("getViewRadius", "getContainerCornerRadius") else setOf("getCornerRadius", "getTransitionRadius", "getCornerWeight")
                 type.declaredMethods.filter { it.name in radiusMethods && it.parameterCount == 0 }.forEach { method ->
                     runCatching {
                         ModernHookRegistry.installCompat("$TAG:${type.name}:${method.name}", method, object : ModernMethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
                                 if (param.throwable != null || HotReloadLifecycle.isRetiring) return
-                                val dp = QsTileCornerSettings.radiusXposed() ?: return
                                 val view = param.thisObject as? View ?: return
                                 runCatching {
-                                    // Do not replace an in-flight deformation's animated radius.
-                                    if (method.name == "getTransitionRadius" && Reflect.callMethod(view, "getDeformPathProvider") != null) return@runCatching
+                                    // Change the animation endpoints, never geometry getters used by layout.
+                                    if (method.name in setOf("getCornerRadius", "getCornerWeight") && animationCapture.get() != true) return@runCatching
+                                    val size = QsCornerSizeResolver.resolve(view) ?: return@runCatching
+                                    val percent = QsTileCornerSettings.radiusXposed(size) ?: return@runCatching
+                                    if (method.name == "getCornerWeight") {
+                                        param.result = QsCornerSmoothness.weight((param.result as? Number)?.toFloat())
+                                        return@runCatching
+                                    }
+                                    if (animationCapture.get() != true && target(view)?.let { isAnimating(it.drawable) } == true) return@runCatching
                                     val bg = runCatching { Reflect.callMethod(view, "getBg") as? View }.getOrNull()
                                     // Constructors cache getCornerRadius() in viewRadius. Keep that
                                     // native cache untouched so disabling also restores animations.
                                     if (bg == null || bg.width <= 0 || bg.height <= 0) return@runCatching
-                                    QsTileCornerRules.pixels(dp, view.resources.displayMetrics.density, bg.width, bg.height)
+                                    QsTileCornerRules.pixels(percent, bg.width, bg.height)
                                         ?.let { param.result = it }
                                 }.onFailure { diagnose("Tile animation radius", it) }
                             }
@@ -121,6 +128,15 @@ internal object QsTileCornerHooker {
             "com.oplus.systemui.plugins.qs.customize.view.animation.deform.tile.threestage.ThreeStageRadiusShareProperty",
         ).forEach { name ->
             Reflect.findClassIfExists(name, loader)?.declaredMethods?.forEach { method ->
+                if (method.name == "captureValues") {
+                    ModernHookRegistry.installFast("$TAG:capture:${method.toGenericString()}", method) { chain ->
+                        val previous = animationCapture.get()
+                        animationCapture.set(true)
+                        try { chain.proceed() } finally {
+                            if (previous == null) animationCapture.remove() else animationCapture.set(previous)
+                        }
+                    }
+                }
                 runCatching { ModernHookRuntime.requireModule().deoptimize(method) }
                     .onFailure { diagnose("Tile animation caller deoptimization", it) }
             }
@@ -146,7 +162,7 @@ internal object QsTileCornerHooker {
                     ModernHookRegistry.installCompat("$TAG:media-draw", method, object : ModernMethodHook() {
                         override fun beforeHookedMethod(param: MethodHookParam) {
                             if (HotReloadLifecycle.isRetiring) return
-                            if (QsTileCornerSettings.radiusXposed() == null && synchronized(owned) { owned.isEmpty() }) return
+                            if (!QsTileCornerSettings.enabledXposed() && synchronized(owned) { owned.isEmpty() }) return
                             val drawable = param.thisObject as? Drawable ?: return
                             runCatching {
                                 val state = synchronized(owned) { owned[drawable] } ?: return@runCatching
@@ -176,7 +192,7 @@ internal object QsTileCornerHooker {
             .firstOrNull { it.javaClass.name == "com.oplus.systemui.plugins.qs.OplusQSRootView" }
         (root as? android.view.ViewGroup)?.let { hierarchy?.watch(it) }
         QsDeviceCardCorners.discover(view)
-        if (QsTileCornerSettings.radiusXposed() == null && synchronized(owned) { owned.isEmpty() } &&
+        if (!QsTileCornerSettings.enabledXposed() && synchronized(owned) { owned.isEmpty() } &&
             synchronized(mediaClips) { mediaClips.isEmpty() }) return true
         return runCatching { update(view, provider, refreshChildren) }
             .onFailure { diagnose("Native tile corner update", it) }.getOrDefault(false)
@@ -207,6 +223,9 @@ internal object QsTileCornerHooker {
     private fun contentState(view: View): List<Any?>? {
         val target = target(view) ?: return null
         val bg = target.bg
+        val percent = QsCornerSizeResolver.resolve(view)?.let { QsTileCornerSettings.radiusXposed(it) }
+        if (percent == null && synchronized(owned) { !owned.containsKey(target.drawable) } &&
+            synchronized(mediaClips) { !mediaClips.containsKey(view) && !mediaClips.containsKey(bg) }) return emptyList()
         if (bg.width <= 0 || bg.height <= 0) return null
         val delegate = Reflect.getObjectField(target.drawable, "delegate") ?: return null
         // Ignore temporary press/deformation overrides; only observe the persistent provider.
@@ -216,15 +235,35 @@ internal object QsTileCornerHooker {
             Reflect.callMethod(path, "getCornerRadius", target.drawable),
             Reflect.callMethod(path, "getCornerWeight", target.drawable),
             System.identityHashCode(view.outlineProvider), view.clipToOutline,
-            System.identityHashCode(bg.outlineProvider))
+            System.identityHashCode(bg.outlineProvider),
+            percent,
+            isAnimating(target.drawable))
     }
 
     private fun update(view: View, provider: Class<*>, refreshChildren: Boolean): Boolean {
         val target = target(view) ?: return false
         val drawable = target.drawable
         val bg = target.bg
-        if (QsTileCornerSettings.radiusXposed() != null && (bg.width <= 0 || bg.height <= 0)) return false
-        if (updateDrawable(drawable, provider, view.resources.displayMetrics.density, bg.width, bg.height)) {
+        val size = QsCornerSizeResolver.resolve(view)
+        val percent = size?.let { QsTileCornerSettings.radiusXposed(it) }
+        if (percent == null) {
+            // Restore only our own changes, then leave this size entirely to the system.
+            val state = synchronized(owned) { owned[drawable] }
+            if (state != null) {
+                if (isAnimating(drawable)) return false
+                restore(drawable, state)
+                synchronized(owned) { owned.remove(drawable) }
+                bg.invalidateOutline()
+                bg.invalidate()
+            }
+            restoreMediaClip(bg)
+            restoreMediaClip(view)
+            return true
+        }
+        if (bg.width <= 0 || bg.height <= 0) return false
+        // The block provider owns interpolation until the native animation releases it.
+        if (isAnimating(drawable)) return false
+        if (updateDrawable(drawable, provider, bg.width, bg.height, percent)) {
             bg.invalidateOutline()
             bg.invalidate()
         }
@@ -234,22 +273,25 @@ internal object QsTileCornerHooker {
             Reflect.callMethod(drawable, "invalidatePath")
             bg.invalidate()
         }
+        updateMediaClip(bg, drawable)
         if (target.media) updateMediaClip(view, drawable)
         return true
     }
 
     private fun updateMediaClip(view: View, drawable: Drawable) {
-        if (QsTileCornerSettings.radiusXposed() == null) { restoreMediaClip(view); return }
-        val state = synchronized(owned) { owned[drawable] } ?: return
+        val state = synchronized(owned) { owned[drawable] }
+        if (state == null) { restoreMediaClip(view); return }
         val previous = synchronized(mediaClips) { mediaClips[view] }
         if (previous?.radius == state.radius && previous.weight == state.weight &&
-            view.outlineProvider === previous.custom && view.clipToOutline) return
-        val custom = QsCornerClipOutline(state.radius, state.weight, view.javaClass.classLoader ?: ClassLoader.getSystemClassLoader())
+            view.outlineProvider === previous.custom && view.clipToOutline &&
+            (previous.custom as? QsCornerDrawableOutline)?.usesDrawable(drawable) == true) return
+        // Keep native clipping flags and reuse the drawable's smooth/animated outline.
+        if (!view.clipToOutline) return
+        val custom = QsCornerDrawableOutline(drawable)
         val original = if (previous != null && view.outlineProvider === previous.custom) previous.original else view.outlineProvider
         val clipped = if (previous != null && view.outlineProvider === previous.custom) previous.clipped else view.clipToOutline
         synchronized(mediaClips) { mediaClips[view] = MediaClip(original, clipped, custom, state.radius, state.weight) }
         view.outlineProvider = custom
-        view.clipToOutline = true
         view.invalidateOutline()
     }
     private fun restoreMediaClip(view: View) {
@@ -261,23 +303,22 @@ internal object QsTileCornerHooker {
         }
     }
 
-    private fun updateDrawable(drawable: Drawable, provider: Class<*>, density: Float, width: Int, height: Int): Boolean {
+    private fun isAnimating(drawable: Drawable): Boolean {
+        val delegate = requireNotNull(Reflect.getObjectField(drawable, "delegate"))
+        val persistent = requireNotNull(Reflect.getObjectField(delegate, "pathProvider"))
+        return Reflect.callMethod(drawable, "getPathProvider") !== persistent
+    }
+
+    private fun updateDrawable(drawable: Drawable, provider: Class<*>, width: Int, height: Int, percent: Int): Boolean {
         // getPathProvider() may return a temporary press-animation override. Read only
         // the underlying provider so deformation can neither be captured nor discarded.
         val delegate = requireNotNull(Reflect.getObjectField(drawable, "delegate"))
         val current = requireNotNull(Reflect.getObjectField(delegate, "pathProvider"))
         val state = synchronized(owned) { owned[drawable] }
-        val dp = QsTileCornerSettings.radiusXposed()
-        if (dp == null) {
-            if (state != null) {
-                restore(drawable, state)
-                synchronized(owned) { owned.remove(drawable) }
-            }
-            return state != null
-        }
-        val radius = QsTileCornerRules.pixels(dp, density, width, height) ?: return false
+        val radius = QsTileCornerRules.pixels(percent, width, height) ?: return false
         val original = state?.originalFor(current) ?: current
-        val weight = (Reflect.callMethod(original, "getCornerWeight", drawable) as? Number)?.toFloat()
+        // Full/circular native corners can use 1/null; custom radii need the smooth QS weight.
+        val weight = QsCornerSmoothness.weight((Reflect.callMethod(original, "getCornerWeight", drawable) as? Number)?.toFloat())
         if (state?.matches(current, radius, weight) == true) {
             syncMediaLight(drawable, current)
             return false
@@ -303,7 +344,7 @@ internal object QsTileCornerHooker {
         if (reported.add("applied:${drawable.javaClass.name}")) {
             val effective = Reflect.callMethod(drawable, "getPathProvider")
             val actual = effective?.let { Reflect.callMethod(it, "getCornerRadius", drawable) }
-            HookLog.i(TAG, "Native tile corners applied: ${drawable.javaClass.simpleName}, requested=${dp}dp/${radius}px, effective=${actual}px")
+            HookLog.i(TAG, "Native tile corners applied: ${drawable.javaClass.simpleName}, requested=${percent}%/${radius}px, effective=${actual}px")
             if (reported.add("evidence:observed")) HookEvidence.report("qs_corner", "observed")
         }
         return true

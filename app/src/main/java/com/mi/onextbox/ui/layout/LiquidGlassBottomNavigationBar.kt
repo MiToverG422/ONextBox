@@ -5,6 +5,8 @@ import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,6 +23,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
@@ -35,10 +39,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -65,6 +74,7 @@ import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
 import com.mi.onextbox.ui.common.BottomTab
+import com.mi.onextbox.ui.LocalBottomBarContentOpacity
 import com.mi.onextbox.ui.common.DampedDragAnimation
 import com.mi.onextbox.ui.common.InteractiveHighlight
 import io.github.suqi8.coui.kmp.theme.COUITheme
@@ -84,8 +94,20 @@ fun LiquidGlassBottomNavigationBar(
     onTabSelected: (Int) -> Unit,
     backdrop: Backdrop,
     modifier: Modifier = Modifier,
+    hideLabels: Boolean = false,
+    onCapsuleBoundsChanged: (Rect) -> Unit = {},
+    startupRevealProgress: () -> Float = { 1f },
 ) {
     if (tabs.isEmpty()) return
+    val contentOpacity = LocalBottomBarContentOpacity.current
+    val latestOnCapsuleBoundsChanged by rememberUpdatedState(onCapsuleBoundsChanged)
+    val latestStartupRevealProgress by rememberUpdatedState(startupRevealProgress)
+    val startupInteractionReady by remember {
+        derivedStateOf { latestStartupRevealProgress() >= 1f }
+    }
+    DisposableEffect(Unit) {
+        onDispose { latestOnCapsuleBoundsChanged(Rect.Zero) }
+    }
 
     val colors = COUITheme.colorScheme
     val isLightTheme = colors.background.red + colors.background.green + colors.background.blue > 1.5f
@@ -105,6 +127,18 @@ fun LiquidGlassBottomNavigationBar(
                 layout(placeable.width, placeable.height) {
                     placeable.place(0, 0)
                 }
+            }
+            .bottomBarStartupReveal(startupRevealProgress)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    if (latestStartupRevealProgress() >= 1f) return@awaitEachGesture
+                    down.consume()
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        event.changes.forEach { it.consume() }
+                    } while (event.changes.any { it.pressed })
+                }
             },
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -112,6 +146,9 @@ fun LiquidGlassBottomNavigationBar(
         val tabWidth = with(density) {
             ((constraints.maxWidth.toFloat() - 8.dp.toPx()) / tabs.size).coerceAtLeast(1f)
         }
+        val barWidthPx = constraints.maxWidth.toFloat()
+        val horizontalPaddingPx = with(density) { 4.dp.toPx() }
+        val innerWidthPx = (barWidthPx - horizontalPaddingPx * 2f).coerceAtLeast(0f)
         val animationScope = rememberCoroutineScope()
         val offsetAnimation = remember { Animatable(0f) }
         val panelOffset by remember(density, constraints.maxWidth) {
@@ -188,16 +225,21 @@ fun LiquidGlassBottomNavigationBar(
             tabs.forEachIndexed { index, tab ->
                 val scale = lerp(1f, 1.05f, dampedDragAnimation.pressProgress)
                 val icon = if (index == currentIndex) tab.selectedIcon else tab.unselectedIcon
+                val logicalCenter = horizontalPaddingPx + (index + 0.5f) * tabWidth
+                val physicalCenter = if (isLtr) logicalCenter else barWidthPx - logicalCenter
+                val startupCenterOffset = barWidthPx / 2f - physicalCenter
                 Column(
                     Modifier
-                        .clip(capsuleShape)
-                        .clickable { onTabSelected(index) }
-                        .fillMaxHeight()
-                        .weight(1f)
                         .graphicsLayer {
+                            translationX = startupCenterOffset *
+                                (1f - latestStartupRevealProgress().coerceIn(0f, 1f))
                             scaleX = scale
                             scaleY = scale
-                        },
+                        }
+                        .clip(capsuleShape)
+                        .clickable(enabled = startupInteractionReady) { latestOnTabSelected(index) }
+                        .fillMaxHeight()
+                        .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -213,29 +255,35 @@ fun LiquidGlassBottomNavigationBar(
                             },
                         colorFilter = iconColorFilter,
                     )
-                    BasicText(
-                        text = stringResource(tab.titleRes),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer {
-                                scaleX = contentScale
-                                scaleY = contentScale
-                            },
-                        style = TextStyle(
-                            color = contentColor,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center,
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        softWrap = false,
-                    )
+                    if (!hideLabels) {
+                        BasicText(
+                            text = stringResource(tab.titleRes),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer {
+                                    scaleX = contentScale
+                                    scaleY = contentScale
+                                },
+                            style = TextStyle(
+                                color = contentColor,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center,
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false,
+                        )
+                    }
                 }
             }
         }
 
-        Row(
+
+        Box(
             Modifier
+                .height(64.dp)
+                .fillMaxWidth()
+                .bottomBarStartupMaterialWidth(startupRevealProgress)
                 .graphicsLayer { translationX = panelOffset }
                 .drawBackdrop(
                     backdrop = backdrop,
@@ -254,8 +302,31 @@ fun LiquidGlassBottomNavigationBar(
                     onDrawSurface = { drawRect(containerColor) },
                 )
                 .then(interactiveHighlight.modifier)
+                .onGloballyPositioned { coordinates ->
+                    latestOnCapsuleBoundsChanged(Rect(
+                        coordinates.localToWindow(Offset.Zero),
+                        coordinates.localToWindow(Offset(
+                            coordinates.size.width.toFloat(),
+                            coordinates.size.height.toFloat(),
+                        )),
+                    ))
+                },
+        )
+
+        Row(
+            Modifier
                 .height(64.dp)
                 .fillMaxWidth()
+                .graphicsLayer {
+                    translationX = panelOffset
+                    alpha = contentOpacity().coerceIn(0f, 1f)
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                    val scale = lerp(1f, 1f + 16.dp.toPx() / size.width,
+                        dampedDragAnimation.pressProgress)
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .bottomBarStartupContentClip(startupRevealProgress)
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = content,
@@ -264,48 +335,68 @@ fun LiquidGlassBottomNavigationBar(
         CompositionLocalProvider(
             LocalLiquidBottomTabScale provides { lerp(1f, 1.2f, dampedDragAnimation.pressProgress) },
         ) {
-            Row(
+            Box(
                 Modifier
                     .clearAndSetSemantics {}
                     .alpha(0f)
                     .layerBackdrop(tabsBackdrop)
-                    .graphicsLayer { translationX = panelOffset }
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { capsuleShape },
-                        highlight = {
-                            Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
-                        },
-                        effects = {
-                            val progress = dampedDragAnimation.pressProgress
-                            vibrancy()
-                            blur(8.dp.toPx())
-                            lens(24.dp.toPx() * progress, 24.dp.toPx() * progress)
-                        },
-                        onDrawSurface = { drawRect(containerColor) },
-                    )
-                    .then(interactiveHighlight.modifier)
                     .height(56.dp)
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp)
-                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content,
-            )
+                    .fillMaxWidth(),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .bottomBarStartupMaterialWidth(startupRevealProgress)
+                        .graphicsLayer { translationX = panelOffset }
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { capsuleShape },
+                            highlight = {
+                                Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
+                            },
+                            effects = {
+                                val progress = dampedDragAnimation.pressProgress
+                                vibrancy()
+                                blur(8.dp.toPx())
+                                lens(24.dp.toPx() * progress, 24.dp.toPx() * progress)
+                            },
+                            onDrawSurface = { drawRect(containerColor) },
+                        )
+                        .then(interactiveHighlight.modifier),
+                )
+                Row(
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { translationX = panelOffset }
+                        .bottomBarStartupContentClip(startupRevealProgress)
+                        .padding(horizontal = 4.dp)
+                        .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = content,
+                )
+            }
         }
 
         Box(
             Modifier
                 .padding(horizontal = 4.dp)
                 .graphicsLayer {
-                    translationX = if (isLtr) {
-                        dampedDragAnimation.value * tabWidth + panelOffset
+                    alpha = contentOpacity().coerceIn(0f, 1f)
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                    val targetCenter = if (isLtr) {
+                        (dampedDragAnimation.value + 0.5f) * tabWidth
                     } else {
-                        size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
+                        innerWidthPx - (dampedDragAnimation.value + 0.5f) * tabWidth
                     }
+                    val center = lerp(innerWidthPx / 2f, targetCenter,
+                        latestStartupRevealProgress().coerceIn(0f, 1f))
+                    translationX = center - tabWidth / 2f + panelOffset
                 }
-                .then(interactiveHighlight.gestureModifier)
-                .then(dampedDragAnimation.modifier)
+                .then(if (startupInteractionReady) interactiveHighlight.gestureModifier else Modifier)
+                .then(if (startupInteractionReady) dampedDragAnimation.modifier else Modifier)
+                .height(56.dp)
+                .fillMaxWidth(1f / tabs.size)
+                .bottomBarStartupMaterialWidth(startupRevealProgress)
                 .drawBackdrop(
                     backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
                     shape = { capsuleShape },
@@ -342,9 +433,7 @@ fun LiquidGlassBottomNavigationBar(
                         )
                         drawRect(Color.Black.copy(alpha = 0.03f * progress))
                     },
-                )
-                .height(56.dp)
-                .fillMaxWidth(1f / tabs.size),
+                ),
         )
     }
 }

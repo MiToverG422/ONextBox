@@ -38,30 +38,24 @@ class SettingsInteractionContractTest {
         listOf(".alpha(", "graphicsLayer", "Color.", "if (!interactionEnabled) return", "key(interactionEnabled)")
             .forEach { assertFalse(it, gate.contains(it)) }
         val switches = source("settings/SettingsPreferenceRows").substringBefore("internal fun SettingsWindowDropdownPreference")
-        assertEquals(3, Regex("enabled = enabled && switchEnabled,").findAll(switches).count())
-        assertEquals(3, Regex("modifier = Modifier.settingsInteractionGate\\(interactionEnabled\\)").findAll(switches).count())
+        assertEquals(1, Regex("enabled = enabled && switchEnabled,").findAll(switches).count())
+        assertEquals(1, Regex("modifier = Modifier.settingsInteractionGate\\(interactionEnabled\\)").findAll(switches).count())
         assertTrue(switches.contains("if (currentInteractionEnabled && currentSwitchEnabled) currentOnCheckedChange(it)"))
         assertFalse(switches.contains("enabled && switchEnabled && interactionEnabled"))
     }
 
     @Test fun popupCallbacksGuardTheSeparateWindowAndPreserveUnavailableItems() {
         val rows = source("settings/SettingsPreferenceRows")
-        assertTrue(rows.contains("interactionEnabled && actualEnabled && item.enabled"))
-        assertTrue(rows.contains("enabled = item.enabled"))
-        val miuix = source("settings/MiuixSettingsComponents")
-        assertTrue(miuix.contains("item.enabled && enabled && interactionEnabled"))
+        assertTrue(rows.contains("ColorOsWindowDropdownPreference("))
         val coui = source("settings/ColorOsDropdownPreference")
         assertTrue(coui.contains("if (interactionEnabled && actualEnabled)"))
         assertTrue(coui.contains("takeIf { it.enabled }"))
     }
 
-    @Test fun auxiliaryContentDoesNotReparentTheMaterialRow() {
-        val row = source("settings/SettingsComponents").substringAfter("internal fun Material3ExpressivePreferenceRow(")
-            .substringBefore("private fun Modifier.settingsRowHighlight(")
-        assertFalse(row.contains("if (bottomAction"))
-        assertEquals(1, Regex("\\brow\\(\\)").findAll(row).count())
-        assertTrue(row.contains("bottomAction?.invoke()"))
-        assertTrue(row.indexOf("MaterialSurface(") < row.indexOf("row()"))
+    @Test fun onlyCouiPreferenceRowsRemain() {
+        val row = source("settings/SettingsPreferenceRows")
+        assertTrue(row.contains("ColorOsSwitch("))
+        assertFalse(row.contains("Material3ExpressivePreferenceRow"))
     }
 
     @Test fun groupAnimationRetainsSemanticKeysAndOnlyFadesVisibilityTransitions() {

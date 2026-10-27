@@ -34,6 +34,18 @@ class SettingsFixedRefreshRateRulesTest {
         }
     }
 
+    @Test fun colorOs16NativeModesDoNotDependOnTheC17GearOrEnableModeEight() {
+        val selections = mapOf(1 to 90f, 2 to 60f, 3 to 120f, 4 to 144f, 7 to 165f)
+        selections.forEach { (mode, rate) ->
+            assertEquals(rate, SettingsFixedRefreshRateRules.selectedHertzColorOs16(mode), 0f)
+            assertEquals(rate, SettingsFixedRefreshRateRules.effectiveHertz(
+                SettingsFixedRefreshRateRules.selectedHertzColorOs16(mode), rates, true, false), 0f)
+        }
+        for (mode in listOf(-1, 0, 5, 6, 8, 9, 999)) {
+            assertEquals(0f, SettingsFixedRefreshRateRules.selectedHertzColorOs16(mode), 0f)
+        }
+    }
+
     @Test fun eachSupportedSelectionStaysAtItsOwnRateNotThePanelMaximum() {
         for (selected in rates) {
             assertEquals(selected, SettingsFixedRefreshRateRules.effectiveHertz(selected, rates, true, false), 0f)

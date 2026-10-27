@@ -5,7 +5,7 @@ import org.luckypray.dexkit.result.MethodData
 import java.lang.reflect.Method
 
 /** Strict, independently verifiable lookups for obfuscated OEM methods. */
-internal class TrafficManagementTargets(private val dex: DexKitBridge) {
+internal class TrafficManagementTargets(private val dex: DexKitBridge, private val colorOs16: Boolean = false) {
     /** Only host reflection objects survive a module reload; no DexKit/JNI object is exported. */
     fun resolve(loader: ClassLoader): Map<String, Array<Method>> {
         val resolved = linkedMapOf<String, Array<Method>>()
@@ -33,7 +33,8 @@ internal class TrafficManagementTargets(private val dex: DexKitBridge) {
             matcher { usingStrings(text); returnType = result; paramTypes(parameters.toList()) }
         }.single()
 
-    fun google(): MethodData = anchored("IgnoreGmsUserSet", "boolean")
+    fun google(): MethodData = if (colorOs16) anchored("IgnoreGmsUserSet", "boolean", "java.lang.String")
+        else anchored("IgnoreGmsUserSet", "boolean")
 
     fun ota(): List<MethodData> {
         val packageCheck = anchored("isKeepWifiAppByPackageInfo: context or packageInfo is null",
@@ -48,7 +49,17 @@ internal class TrafficManagementTargets(private val dex: DexKitBridge) {
         return listOf(nameCheck, packageCheck, uidCheck)
     }
 
-    fun preinstalled(): List<MethodData> = listOf(
+    fun preinstalled(): List<MethodData> = if (colorOs16) listOf(
+        dex.findMethod {
+            matcher {
+                declaredClass = "V2.a"; returnType = "boolean"; paramTypes(CONTEXT, "java.lang.String")
+                usingStrings("android.permission.INTERNET")
+            }
+        }.single(),
+        dex.findMethod {
+            matcher { declaredClass = "V2.a"; name = "w"; returnType = "int"; paramTypes() }
+        }.single(),
+    ) else listOf(
         dex.findMethod {
             matcher {
                 declaredClass = MODEL; returnType = "boolean"; paramTypes(CONTEXT, "java.lang.String")

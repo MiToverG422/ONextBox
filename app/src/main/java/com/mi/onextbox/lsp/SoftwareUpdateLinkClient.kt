@@ -17,13 +17,13 @@ import kotlinx.serialization.json.intOrNull
 internal class SoftwareUpdateLinkClient(context: Context, private val cancellation: CancellationSignal, attestation: Method?) {
     private val authentication = SoftwareUpdateDownloadAuth(context, attestation)
     private val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(25)
-    private var serverTime: Pair<Long, Long>? = null
+    private val serverTimes = hashMapOf<String, Pair<Long, Long>>()
     private var attempts = 0
 
     fun resolve(packages: List<SoftwareUpdatePackageInfo>): List<SoftwareUpdatePackageInfo> = packages.map { item ->
         cancellation.throwIfCanceled()
         val direct = item.links.filterNot(SoftwareUpdateDownloadLinks::isCheckUrl)
-        if (direct.isNotEmpty()) return@map item.copy(downloadLinks = direct)
+        if (direct.isNotEmpty()) return@map item.copy(downloadLinks = direct, linkFailures = emptyList())
         val failures = arrayListOf<SoftwareUpdateLinkFailure>()
         var found: String? = null
         for (link in item.links) {
@@ -58,14 +58,14 @@ internal class SoftwareUpdateLinkClient(context: Context, private val cancellati
     }
 
     private fun timestamp(url: String): String {
-        serverTime?.let { return (it.first + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - it.second)).toString() }
         val source = URI(url)
         val clockUrl = URI(source.scheme, null, source.host, source.port, "/ts", null, null).toString()
+        serverTimes[clockUrl]?.let { return (it.first + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - it.second)).toString() }
         return connect(clockUrl, false, range = false) { connection ->
             if (connection.responseCode != 200) throw SoftwareUpdateAuthenticationUnavailable()
             val value = connection.inputStream.use { readLimited(it, 128) }.toString(Charsets.UTF_8).trim()
             if (!value.matches(Regex("[0-9]{13}"))) throw SoftwareUpdateAuthenticationUnavailable()
-            serverTime = value.toLong() to System.nanoTime()
+            serverTimes[clockUrl] = value.toLong() to System.nanoTime()
             value
         }
     }

@@ -1,6 +1,4 @@
 system
-com.xiaomi.touchservice
-com.miui.securitycenter
 com.android.systemui
 com.oplus.screenshot
 com.oplus.screenrecorder
@@ -35,3 +33,7 @@ com.coloros.filemanager
 com.heytap.mcs
 com.nearme.instant.platform
 com.coloros.assistantscreen
+com.coloros.translate
+com.oplus.appdetail
+com.android.packageinstaller
+com.oplus.camera

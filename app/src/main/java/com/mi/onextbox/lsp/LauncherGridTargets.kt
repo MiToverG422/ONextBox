@@ -60,6 +60,7 @@ internal class LauncherGridTargets(val values: Array<*>) {
         private const val ITEM = "com.android.launcher.togglebar.item.ToggleBarLayoutConfigItem"
 
         fun resolve(loader: ClassLoader, apkPath: String): LauncherGridTargets {
+            if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16) return resolveColorOs16(loader)
             System.loadLibrary("dexkit")
             return DexKitBridge.create(apkPath).use { dex ->
                 dex.setThreadNum(1)
@@ -146,6 +147,43 @@ internal class LauncherGridTargets(val values: Array<*>) {
                     all, index, wordless, recycler, simple, mode, largeStyle, draw, preview,
                     busy.toTypedArray(), (callers + constructor).distinct().toTypedArray(), supported.getMethodInstance(loader)))
             }
+        }
+
+        private fun resolveColorOs16(loader: ClassLoader): LauncherGridTargets {
+            val adapter = ModernReflect.findClass(ADAPTER, loader)
+            val item = ModernReflect.findClass(ITEM, loader)
+            val launcher = ModernReflect.findClass("com.android.launcher.Launcher", loader)
+            val selection = ModernReflect.findClass("com.android.launcher.togglebar.item.TemporarySelectionStateInfo", loader)
+            val config = ModernReflect.findClass("com.android.launcher.UiConfig", loader)
+            val wordless = ModernReflect.findClass("com.android.launcher.togglebar.WordlessDesktopHelper", loader)
+                .getDeclaredMethod("isOpened")
+            val options = config.getDeclaredMethod("getSupportLayout")
+            require(List::class.java.isAssignableFrom(options.returnType) && Modifier.isStatic(options.modifiers))
+            val supported = config.getDeclaredMethod("isSupportLayout", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+            val modeType = ModernReflect.findClass("com.android.launcher.mode.LauncherModeManager", loader)
+            val preview = ModernReflect.findClass("com.android.launcher.togglebar.views.ToggleBarLayoutItemPreview", loader)
+            // C16 onDraw delegates to drawPreviewCell; hook its field-owning implementation.
+            val draw = preview.getDeclaredMethod("drawPreviewCell", Canvas::class.java)
+            val helper = ModernReflect.findClass("com.android.launcher.togglebar.LayoutSettingsHelper", loader)
+            val busy = listOf("getSIsSwitchingCurrentCellLayout", "isInApplySwitchLayout", "isCurrentCellLayoutInAdjustment")
+                .map { helper.getDeclaredMethod(it).also { method ->
+                    require(method.returnType == Boolean::class.javaPrimitiveType && Modifier.isStatic(method.modifiers))
+                } }
+            val constructor = adapter.getDeclaredConstructor(launcher, selection)
+            val callers = (adapter.declaredMethods.toList() + config.declaredMethods + helper.declaredMethods + preview.declaredMethods)
+                .filter { !Modifier.isAbstract(it.modifiers) && !Modifier.isNative(it.modifiers) }
+            return LauncherGridTargets(arrayOf(
+                constructor, options,
+                config.getDeclaredMethod("getCurrentLayoutSettings", Context::class.java),
+                adapter.getDeclaredMethod("updateLayoutConfigs", Boolean::class.javaPrimitiveType), item.getDeclaredConstructor(),
+                item.getDeclaredField("mColumn"), item.getDeclaredField("mRow"), item.getDeclaredField("mRowForWordlessDesktop"),
+                item.getDeclaredField("mSelected"), adapter.getDeclaredField("mLayoutConfigs"), adapter.getDeclaredField("mAllLayoutConfigs"),
+                adapter.getDeclaredField("mSelectedPos"), wordless, adapter.getMethod("getMRecyclerView"),
+                modeType.getDeclaredMethod("isInSimpleMode"), modeType.getDeclaredMethod("getInstance"),
+                adapter.getDeclaredField("isWordlessOnlyDevice"), draw,
+                LauncherGridPreviewFields.resolve(preview, preview.declaredFields.toList(), colorOs16 = true),
+                busy.toTypedArray(), (callers + constructor).toTypedArray(), supported,
+            ))
         }
     }
 }

@@ -6,6 +6,6 @@ MaterialKolor（jordond）は MIT ライセンスです。
 
 CorePatch N（LSPosed）は上流の表明により GNU GPL v2.0 です。統合によってライセンスは変更されません。
 
-ランタイム コンポーネントには、Apache-2.0 での AndroidX、Jetpack Compose、Kotlin および kotlinx ライブラリ、COUI/Miuix、Kyant0 Shapes、AndroidLiquidGlass、libsu、HiddenApiBypass、libxused、マテリアル カラー ユーティリティ、および Poko が含まれます。
+ランタイム コンポーネントには、Apache-2.0 での AndroidX、Jetpack Compose、Kotlin および kotlinx ライブラリ、COUI、Kyant0 Shapes、AndroidLiquidGlass、libsu、HiddenApiBypass、libxused、マテリアル カラー ユーティリティ、および Poko が含まれます。
 
 Android、ColorOS/OPlus ソフトウェア、ルート マネージャー、および LSPosed は互換性ターゲットまたはプラットフォームであり、ONextBox によって再ライセンスされません。各プロジェクトによって提供される著作権表示および完全なライセンス テキストがこの概要より優先されます。ソースの可用性と帰属リンクには、About ページから引き続きアクセスできます。

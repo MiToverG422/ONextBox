@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.settings
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.getValue
+
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Column
@@ -8,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.key as contentKey
 import androidx.compose.ui.Modifier
@@ -16,9 +19,7 @@ import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.AppUiTokens
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.colorOsScrollEntrance
 import io.github.suqi8.coui.kmp.basic.CardDefaults
 import io.github.suqi8.coui.kmp.squircle.squircleSurface
@@ -33,21 +34,16 @@ internal fun SettingsLazyGroupItem(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val last = index == count - 1
-    val material = LocalAppUiStyle.current == AppUiStyle.Material3Expressive
-    val miuix = LocalAppUiStyle.current == AppUiStyle.Miuix
-    val groupBottom = if (bottomPadding == 16.dp) { if (miuix) 12.dp else if (material) 13.dp else bottomPadding } else bottomPadding
+
+
+    val groupBottom = bottomPadding
     val rowModifier = modifier
         .fillMaxWidth()
-        .padding(horizontal = if (miuix) 12.dp else 16.dp)
-        .padding(bottom = if (last) groupBottom else if (material) 2.dp else 0.dp)
-    if (material) {
-        Material3ExpressiveAnimatedSegmentPosition(index, count, durationMillis = 280) {
-            Column(modifier = rowModifier, content = content)
-        }
-        return
-    }
+        .padding(horizontal = 16.dp)
+        .padding(bottom = if (last) groupBottom else 0.dp)
+
     val colors = CardDefaults.defaultColors()
-    val cornerRadius = if (LocalAppUiStyle.current == AppUiStyle.Miuix) top.yukonga.miuix.kmp.basic.CardDefaults.CornerRadius else AppUiTokens.CardCornerRadius
+    val cornerRadius = AppUiTokens.CardCornerRadius
     val top by animateDpAsState(
         targetValue = if (index == 0) cornerRadius else 0.dp,
         animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
@@ -75,20 +71,7 @@ internal fun <T> SettingsListGroup(
     content: @Composable ColumnScope.(index: Int, item: T) -> Unit,
 ) {
     if (items.isEmpty()) return
-    if (LocalAppUiStyle.current == AppUiStyle.Miuix) {
-        SettingsGroup(bottomPadding = bottomPadding) {
-            items.forEachIndexed { index, item -> contentKey(key(item)) { content(index, item) } }
-        }
-        return
-    }
-    if (LocalAppUiStyle.current == AppUiStyle.Material3Expressive) {
-        SettingsGroup(bottomPadding = bottomPadding) {
-            items.forEachIndexed { index, item ->
-                contentKey(key(item)) { content(index, item) }
-            }
-        }
-        return
-    }
+
 
     val groupIdentity = remember { Any() }
     val colors = CardDefaults.defaultColors()

@@ -31,6 +31,7 @@ internal class ColorOsTopBarMaterialView(
     darkTheme: Boolean,
     fallbackColor: Int,
     private val searchCapsule: Boolean = false,
+    nativeBlurEnabled: Boolean = true,
 ) : View(context) {
     private val density = resources.displayMetrics.density
     private val fallbackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -49,6 +50,7 @@ internal class ColorOsTopBarMaterialView(
 
     private var darkTheme = darkTheme
     private var fallbackColor = fallbackColor
+    private var nativeBlurEnabled = nativeBlurEnabled
     private var nativeBackgroundApplied = false
     private var nativeCausticApplied = false
     private var searchProgress = .4f
@@ -56,6 +58,7 @@ internal class ColorOsTopBarMaterialView(
 
     init {
         setWillNotDraw(false)
+        isForceDarkAllowed = false
         clipToOutline = true
         outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
@@ -68,13 +71,15 @@ internal class ColorOsTopBarMaterialView(
                 )
             }
         }
-        background = ColorDrawable(fallbackColor)
+        background = ColorDrawable(Color.TRANSPARENT)
     }
 
-    fun updateAppearance(darkTheme: Boolean, fallbackColor: Int) {
-        if (this.darkTheme == darkTheme && this.fallbackColor == fallbackColor) return
+    fun updateAppearance(darkTheme: Boolean, fallbackColor: Int, nativeBlurEnabled: Boolean) {
+        if (this.darkTheme == darkTheme && this.fallbackColor == fallbackColor &&
+            this.nativeBlurEnabled == nativeBlurEnabled) return
         this.darkTheme = darkTheme
         this.fallbackColor = fallbackColor
+        this.nativeBlurEnabled = nativeBlurEnabled
         updateColorOsEdgeShader(width.toFloat(), height.toFloat())
         applyColorOsMaterial()
     }
@@ -92,10 +97,8 @@ internal class ColorOsTopBarMaterialView(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        post {
-            applyShadowClipExpansion()
-            applyColorOsMaterial()
-        }
+        applyShadowClipExpansion()
+        applyColorOsMaterial()
     }
 
     override fun onDetachedFromWindow() {
@@ -107,7 +110,7 @@ internal class ColorOsTopBarMaterialView(
         super.onSizeChanged(width, height, oldWidth, oldHeight)
         updateColorOsEdgeShader(width.toFloat(), height.toFloat())
         invalidateOutline()
-        post(::applyColorOsMaterial)
+        applyColorOsMaterial()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -133,12 +136,12 @@ internal class ColorOsTopBarMaterialView(
     private fun applyColorOsMaterial() {
         if (!isAttachedToWindow || width <= 0 || height <= 0) return
 
-        // C17 installs the transparent state background before applying the RenderEffect.
-        // Replacing the background afterwards can rebuild the RenderNode and drop vendor state.
-        background = ColorDrawable(Color.TRANSPARENT)
-        nativeBackgroundApplied = applyBackgroundRenderEffect()
-        if (!nativeBackgroundApplied) {
-            background = ColorDrawable(if (searchCapsule) Color.TRANSPARENT else fallbackColor)
+        // Keep the original background/RenderNode across size and appearance updates.
+        // Moving detail pages draw the theme material locally instead of sampling the window.
+        if (nativeBlurEnabled) {
+            nativeBackgroundApplied = applyBackgroundRenderEffect()
+        } else {
+            clearBackgroundRenderEffect()
         }
         applyMaterialCornerAndShadow()
         nativeCausticApplied = applyCausticShadow()
@@ -149,31 +152,13 @@ internal class ColorOsTopBarMaterialView(
     private fun applyBackgroundRenderEffect(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
         return runCatching {
-            // COUIMaterialBlurEffect.TYPE_FRAMEWORK_TOP_BAR (materialType = 0).
-            val colorLayer1: Int
-            val blendModeLayer1: BlendMode
-            val colorLayer2: Int
-            val blendModeLayer2: BlendMode
-            if (searchCapsule) {
-                // ToolbarMaterialEffectResolver materialType=1: C17's translucent glass
-                // preset, shared across light/dark themes, rather than the opaque TOP_BAR.
-                colorLayer1 = Color.parseColor("#1A6E6E6E")
-                blendModeLayer1 = BlendMode.COLOR_DODGE
-                colorLayer2 = Color.parseColor("#24F1F1F1")
-                blendModeLayer2 = BlendMode.LUMINOSITY
-            } else if (darkTheme) {
-                colorLayer1 = Color.parseColor("#CC262626")
-                blendModeLayer1 = BlendMode.SRC_OVER
-                colorLayer2 = Color.parseColor("#B37F7F7F")
-                blendModeLayer2 = BlendMode.OVERLAY
-            } else {
-                colorLayer1 = Color.parseColor("#66333333")
-                blendModeLayer1 = BlendMode.COLOR_DODGE
-                colorLayer2 = Color.parseColor("#99F5F5F5")
-                blendModeLayer2 = BlendMode.LUMINOSITY
-            }
-
-            val blurRadius = if (searchCapsule) 25f else 0f
+            // Share the ordinary COUI bottom-bar material with the search capsule.
+            // Geometry, edge highlights and touch feedback remain button-specific.
+            val colorLayer1 = ColorOsToolbarGlass.firstTint(darkTheme)
+            val blendModeLayer1 = if (darkTheme) BlendMode.OVERLAY else BlendMode.COLOR_DODGE
+            val colorLayer2 = ColorOsToolbarGlass.luminosityTint(darkTheme)
+            val blendModeLayer2 = BlendMode.LUMINOSITY
+            val blurRadius = ColorOsToolbarGlass.BlurRadiusPx
             val blur = RenderEffect.createBlurEffect(blurRadius, blurRadius, Shader.TileMode.MIRROR)
             val firstLayer = RenderEffect.createColorFilterEffect(
                 BlendModeColorFilter(colorLayer1, blendModeLayer1),
@@ -483,9 +468,10 @@ internal class ColorOsTopBarMaterialView(
 
     private fun drawFallbackMaterial(canvas: Canvas) {
         val radius = min(width, height) / 2f
-        val surfaceColor = if (searchCapsule) {
-            Color.argb(if (darkTheme) 72 else 115, Color.red(fallbackColor), Color.green(fallbackColor), Color.blue(fallbackColor))
-        } else fallbackColor
+        val surfaceColor = Color.argb(
+            ColorOsToolbarGlass.FallbackAlpha,
+            Color.red(fallbackColor), Color.green(fallbackColor), Color.blue(fallbackColor),
+        )
         fallbackPaint.shader = LinearGradient(
             0f,
             0f,

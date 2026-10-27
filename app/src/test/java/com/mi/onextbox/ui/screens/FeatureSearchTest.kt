@@ -4,6 +4,19 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FeatureSearchTest {
+    @Test fun sideVolumePercentagesUseTheirIndependentVolumePageAndPropertiesRoute() {
+        val toggle = FeatureSearchIndex.entries.single { it.title == com.mi.onextbox.R.string.side_volume_percentage_title }
+        assertEquals(FeaturePageMode.SystemUiVolume, toggle.page)
+        assertTrue(FeaturePageMode.SystemUiSideVolumePercentageSettings.isNestedPage)
+        for (title in listOf(com.mi.onextbox.R.string.qs_slider_percentage_properties,
+            com.mi.onextbox.R.string.qs_slider_percentage_size, com.mi.onextbox.R.string.qs_slider_percentage_color,
+            com.mi.onextbox.R.string.qs_slider_percentage_offset)) {
+            assertEquals(1, FeatureSearchIndex.entries.count {
+                it.page == FeaturePageMode.SystemUiSideVolumePercentageSettings && it.title == title
+            })
+        }
+    }
+
     @Test fun enhancementThermalSwitchesUseTheInterfaceAndDisplayPage() {
         listOf(com.mi.onextbox.R.string.display_enhancement_sr_thermal_title,
             com.mi.onextbox.R.string.display_enhancement_color_thermal_title).forEach { title ->
@@ -147,11 +160,18 @@ class FeatureSearchTest {
     @Test fun batteryOptimizationFeaturesHaveAnIndependentDestination() {
         listOf(
             com.mi.onextbox.R.string.battery_show_cycle_count_title to
-                com.mi.onextbox.R.string.battery_show_cycle_count_summary,
+                0,
+            com.mi.onextbox.R.string.battery_show_health_status_title to 0,
+            com.mi.onextbox.R.string.battery_show_full_charge_capacity_title to 0,
+            com.mi.onextbox.R.string.battery_show_rated_capacity_title to 0,
+            com.mi.onextbox.R.string.battery_show_typical_capacity_title to 0,
+            com.mi.onextbox.R.string.battery_show_calculated_health_title to 0,
             com.mi.onextbox.R.string.battery_remove_restrict_plugin_title to
                 com.mi.onextbox.R.string.battery_remove_restrict_plugin_summary,
             com.mi.onextbox.R.string.battery_restore_default_whitelist_title to
                 com.mi.onextbox.R.string.battery_restore_default_whitelist_summary,
+            com.mi.onextbox.R.string.battery_block_whitelist_restore_title to
+                com.mi.onextbox.R.string.battery_block_whitelist_restore_summary,
         ).forEach { (title, description) ->
             val entry = FeatureSearchIndex.entries.single { it.title == title }
             assertEquals(FeaturePageMode.Battery, entry.page)
