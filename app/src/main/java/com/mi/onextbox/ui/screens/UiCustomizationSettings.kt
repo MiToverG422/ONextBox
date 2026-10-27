@@ -107,6 +107,25 @@ internal fun SettingsAccountCardSizeGroup() {
 }
 
 @Composable
+internal fun CameraFeaturesPage() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(CameraGallerySettings.keys, CameraGallerySettings::state)
+    val feature = SharedFeatureDefinitions.cameraDefaultGallery
+    SettingsSection(title = stringResource(R.string.camera_preview_group))
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(CameraGallerySettings.FOLLOW_DEFAULT) { above, below ->
+            SettingsToggleRow(title = stringResource(feature.title), summary = stringResource(feature.summary),
+                checked = editor.state[CameraGallerySettings.FOLLOW_DEFAULT] == true,
+                interactionEnabled = editor.savingKey == null, hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { enabled -> editor.save(CameraGallerySettings.FOLLOW_DEFAULT,
+                    editor.state + (CameraGallerySettings.FOLLOW_DEFAULT to enabled)) {
+                    CameraGallerySettings.set(context, enabled)
+                } })
+        }
+    }
+}
+
+@Composable
 internal fun TranslationFeaturesPage() {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(ScreenTranslationSettings.keys, ScreenTranslationSettings::state)

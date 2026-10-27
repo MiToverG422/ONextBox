@@ -1495,4 +1495,8 @@
     <string name="installer_block_network_title">安装器禁止联网</string>
     <string name="installer_block_network_summary">禁止应用安装器联网，并跳过安装前的联网预加载</string>
     <string name="package_installer_title">软件包安装程序</string>
+    <string name="camera_page_title">相机</string>
+    <string name="camera_preview_group">照片预览</string>
+    <string name="camera_default_gallery_title">照片预览跟随默认相册</string>
+    <string name="camera_default_gallery_summary">使用系统“默认应用”中选择的相册查看照片和视频</string>
 </resources>

@@ -118,6 +118,8 @@ internal object FeatureSearchIndex {
         SharedFeatureDefinitions.volumeSafetyWarning.searchEntry(),
         Entry(FeaturePageMode.SystemUiNative, R.string.feature_group_native),
         SharedFeatureDefinitions.nativeLiveUpdate.searchEntry(),
+        Entry(FeaturePageMode.Camera, R.string.camera_page_title),
+        SharedFeatureDefinitions.cameraDefaultGallery.searchEntry(),
         SharedFeatureDefinitions.translationFloating.searchEntry(),
         SharedFeatureDefinitions.translationBlacklist.searchEntry(),
         SharedFeatureDefinitions.translationPages.searchEntry(),

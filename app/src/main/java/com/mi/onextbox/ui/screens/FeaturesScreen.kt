@@ -181,6 +181,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Translation,
     AppInstaller,
     PackageInstaller,
+    Camera,
 }
 
 data class FeatureLaunchOrigin(
@@ -622,6 +623,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Aod -> stringResource(R.string.feature_aod_enhance_title)
     FeaturePageMode.Screenshot -> stringResource(R.string.feature_screenshot_title)
     FeaturePageMode.ScreenRecording -> stringResource(R.string.feature_screen_recording_title)
+    FeaturePageMode.Camera -> stringResource(R.string.camera_page_title)
     FeaturePageMode.Translation -> stringResource(R.string.feature_translation_title)
     FeaturePageMode.AppInstaller -> stringResource(R.string.installer_cleanup_title)
     FeaturePageMode.PackageInstaller -> stringResource(R.string.package_installer_title)
@@ -654,6 +656,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.SystemUiNavigationBar -> listOf("android", "system", "com.android.systemui")
     FeaturePageMode.Screenshot -> listOf("android", "system", "com.oplus.screenshot")
     FeaturePageMode.ScreenRecording -> listOf("android", "system", "com.android.systemui", "com.oplus.screenrecorder")
+    FeaturePageMode.Camera -> listOf(com.mi.onextbox.lsp.CameraGallerySettings.PACKAGE_NAME)
     FeaturePageMode.Translation -> listOf(com.mi.onextbox.lsp.ScreenTranslationSettings.PACKAGE_NAME)
     FeaturePageMode.AppInstaller -> listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.APP_DETAIL)
     FeaturePageMode.PackageInstaller -> listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.PACKAGE_INSTALLER)
@@ -986,6 +989,13 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
                 titleRes = R.string.theme_store_title,
                 iconPackages = listOf(ThemeStoreSettings.PACKAGE_NAME),
                 pageMode = FeaturePageMode.ThemeStore,
+            )
+        )
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.camera_page_title,
+                iconPackages = listOf(com.mi.onextbox.lsp.CameraGallerySettings.PACKAGE_NAME),
+                pageMode = FeaturePageMode.Camera,
             )
         )
         add(
@@ -1501,6 +1511,7 @@ private fun FeatureSubPage(
         FeaturePageMode.SystemUiNavigationBar -> NavigationBarFeaturesPage()
         FeaturePageMode.Screenshot -> CaptureFeaturesPage(LspConfig.KeyguardFeature.AodScreenshot)
         FeaturePageMode.ScreenRecording -> CaptureFeaturesPage(LspConfig.KeyguardFeature.ScreenOffRecording)
+        FeaturePageMode.Camera -> CameraFeaturesPage()
         FeaturePageMode.Translation -> TranslationFeaturesPage()
         FeaturePageMode.AppInstaller, FeaturePageMode.PackageInstaller -> InstallerCleanupPage(mode, onOpenSubPage)
         FeaturePageMode.SystemUiNative,

@@ -1421,4 +1421,8 @@
     <string name="installer_block_network_title">安裝器禁止連線</string>
     <string name="installer_block_network_summary">禁止應用程式安裝器連線，並略過安裝前嘅連線預載入</string>
     <string name="package_installer_title">套件安裝程式</string>
+    <string name="camera_page_title">相機</string>
+    <string name="camera_preview_group">相片預覽</string>
+    <string name="camera_default_gallery_title">相片預覽跟隨預設相簿</string>
+    <string name="camera_default_gallery_summary">用系統「預設應用程式」揀嘅相簿睇相同影片</string>
 </resources>

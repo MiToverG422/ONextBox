@@ -1446,4 +1446,8 @@
     <string name="installer_block_network_title">インストーラーのネット接続を禁止</string>
     <string name="installer_block_network_summary">アプリインストーラーのネット接続を禁止し、オンライン事前読み込みをスキップ</string>
     <string name="package_installer_title">パッケージインストーラー</string>
+    <string name="camera_page_title">カメラ</string>
+    <string name="camera_preview_group">写真のプレビュー</string>
+    <string name="camera_default_gallery_title">既定のギャラリーで開く</string>
+    <string name="camera_default_gallery_summary">システムの「デフォルトのアプリ」で選択したギャラリーで写真や動画を開きます</string>
 </resources>

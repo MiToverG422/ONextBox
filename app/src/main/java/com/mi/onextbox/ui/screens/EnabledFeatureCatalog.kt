@@ -25,6 +25,7 @@ internal object EnabledFeatureCatalog {
         SharedFeatureDefinitions.sideVolumeKeepWide.catalogEntry(),
         SharedFeatureDefinitions.volumeSafetyWarning.catalogEntry(),
         SharedFeatureDefinitions.nativeLiveUpdate.catalogEntry(),
+        SharedFeatureDefinitions.cameraDefaultGallery.catalogEntry(),
         SharedFeatureDefinitions.translationFloating.catalogEntry(),
         SharedFeatureDefinitions.translationBlacklist.catalogEntry(),
         SharedFeatureDefinitions.translationPages.catalogEntry(),

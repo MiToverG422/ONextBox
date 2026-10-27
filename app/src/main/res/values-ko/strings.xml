@@ -1446,4 +1446,8 @@
     <string name="installer_block_network_title">설치 프로그램 네트워크 차단</string>
     <string name="installer_block_network_summary">앱 설치 프로그램의 네트워크를 차단하고 설치 전 온라인 사전 로드를 건너뜁니다</string>
     <string name="package_installer_title">패키지 설치 프로그램</string>
+    <string name="camera_page_title">카메라</string>
+    <string name="camera_preview_group">사진 미리보기</string>
+    <string name="camera_default_gallery_title">기본 갤러리로 열기</string>
+    <string name="camera_default_gallery_summary">시스템 기본 앱에서 선택한 갤러리로 사진과 동영상을 엽니다</string>
 </resources>

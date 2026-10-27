@@ -1421,4 +1421,8 @@
     <string name="installer_block_network_title">Chặn truy cập mạng của trình cài đặt</string>
     <string name="installer_block_network_summary">Chặn mạng của trình cài đặt ứng dụng và bỏ qua tải trước qua mạng</string>
     <string name="package_installer_title">Trình cài đặt gói</string>
+    <string name="camera_page_title">Máy ảnh</string>
+    <string name="camera_preview_group">Xem trước ảnh</string>
+    <string name="camera_default_gallery_title">Mở bằng thư viện mặc định</string>
+    <string name="camera_default_gallery_summary">Mở ảnh và video bằng thư viện đã chọn trong mục ứng dụng mặc định của hệ thống</string>
 </resources>

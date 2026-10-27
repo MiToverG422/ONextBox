@@ -64,6 +64,7 @@ internal class EnabledFeatureActions {
         SharedFeatureDefinitions.sideVolumeKeepWide.action(),
         SharedFeatureDefinitions.volumeSafetyWarning.action(),
         SharedFeatureDefinitions.nativeLiveUpdate.action(),
+        SharedFeatureDefinitions.cameraDefaultGallery.action(),
         SharedFeatureDefinitions.translationFloating.action(),
         SharedFeatureDefinitions.translationBlacklist.action(),
         SharedFeatureDefinitions.translationPages.action(),

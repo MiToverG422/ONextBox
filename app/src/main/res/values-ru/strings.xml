@@ -1448,4 +1448,8 @@
     <string name="installer_block_network_title">Запретить установщику доступ к сети</string>
     <string name="installer_block_network_summary">Блокировать сеть для установщика приложений и пропускать сетевую предзагрузку</string>
     <string name="package_installer_title">Установщик пакетов</string>
+    <string name="camera_page_title">Камера</string>
+    <string name="camera_preview_group">Просмотр фото</string>
+    <string name="camera_default_gallery_title">Использовать галерею по умолчанию</string>
+    <string name="camera_default_gallery_summary">Открывать фото и видео в галерее, выбранной в системных настройках приложений по умолчанию</string>
 </resources>

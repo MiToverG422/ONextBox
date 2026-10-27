@@ -2746,6 +2746,7 @@ object LspConfig {
             setNavigationHandleAutoHideEnabled(context, false)
             setSettingsTitleCollapsedEnabled(context, false)
             SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.TITLE_LOCK, false)
+            CameraGallerySettings.set(context, false)
             ScreenTranslationSettings.keys.forEach { ScreenTranslationSettings.set(context, it, false) }
             InstallerCleanupSettings.reset(context)
             SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.ACCOUNT_SIZE, false)

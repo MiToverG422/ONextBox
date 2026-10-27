@@ -1518,4 +1518,8 @@
     <string name="installer_block_network_title">Block installer network access</string>
     <string name="installer_block_network_summary">Block App installer network access and skip online preloading before installation</string>
     <string name="package_installer_title">Package installer</string>
+    <string name="camera_page_title">Camera</string>
+    <string name="camera_preview_group">Photo preview</string>
+    <string name="camera_default_gallery_title">Follow default gallery</string>
+    <string name="camera_default_gallery_summary">Open photos and videos with the gallery selected in system Default apps</string>
 </resources>

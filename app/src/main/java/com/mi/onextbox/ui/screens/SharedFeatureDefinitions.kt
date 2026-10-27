@@ -28,6 +28,10 @@ internal object SharedFeatureDefinitions {
         FeaturePageMode.MobileNetwork, { NetworkIdentitySettings.state(it).enabled },
         { context, enabled -> NetworkIdentitySettings.setEnabled(context, enabled) })
 
+    val cameraDefaultGallery = Toggle(R.string.camera_default_gallery_title, R.string.camera_default_gallery_summary,
+        FeaturePageMode.Camera, { com.mi.onextbox.lsp.CameraGallerySettings.enabled(it) },
+        { context, enabled -> com.mi.onextbox.lsp.CameraGallerySettings.set(context, enabled) })
+
     private fun translation(key: String, title: Int, summary: Int) = Toggle(title, summary,
         FeaturePageMode.Translation, { ScreenTranslationSettings.enabled(it, key) },
         { context, enabled -> ScreenTranslationSettings.set(context, key, enabled) })

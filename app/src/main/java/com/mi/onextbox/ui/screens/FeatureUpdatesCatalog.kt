@@ -19,6 +19,7 @@ internal object FeatureUpdatesCatalog {
         R.string.battery_show_typical_capacity_title,
         R.string.battery_show_calculated_health_title,
         R.string.battery_block_whitelist_restore_title,
+        R.string.camera_default_gallery_title,
         R.string.translation_allow_floating_title,
         R.string.translation_bypass_app_blacklist_title,
         R.string.translation_allow_restricted_pages_title,

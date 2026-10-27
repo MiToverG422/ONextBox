@@ -321,6 +321,7 @@ class OosLspModuleEntry : XposedModule() {
                 BatteryOptimizationHooker.hookBattery(classLoader, target.sourceDir)
             }
 
+            CameraGallerySettings.PACKAGE_NAME -> CameraGalleryHooker.hook(classLoader, target.sourceDir)
             ScreenTranslationSettings.PACKAGE_NAME -> ScreenTranslationHooker.hook(classLoader, target.sourceDir)
             InstallerCleanupSettings.APP_DETAIL, InstallerCleanupSettings.PACKAGE_INSTALLER ->
                 InstallerCleanupHooker.hook(classLoader, target.sourceDir, packageName)

@@ -51,6 +51,7 @@
         <package android:name="com.oplus.wallpapers" />
         <package android:name="com.heytap.colorfulengine" />
         <package android:name="com.heytap.themestore" />
+        <package android:name="com.oplus.camera" />
         <package android:name="com.coloros.gallery3d" />
         <package android:name="com.oplus.launcher" />
         <package android:name="com.oneplus.launcher" />

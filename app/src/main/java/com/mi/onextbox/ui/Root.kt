@@ -437,6 +437,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureScreenRecording : RootRoute
 
     @Serializable
+    data object FeatureCamera : RootRoute
+
+    @Serializable
     data object FeatureTranslation : RootRoute
 
     @Serializable
@@ -539,6 +542,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Aod -> RootRoute.FeatureAod
     FeaturePageMode.Screenshot -> RootRoute.FeatureScreenshot
     FeaturePageMode.ScreenRecording -> RootRoute.FeatureScreenRecording
+    FeaturePageMode.Camera -> RootRoute.FeatureCamera
     FeaturePageMode.Translation -> RootRoute.FeatureTranslation
     FeaturePageMode.AppInstaller -> RootRoute.FeatureAppInstaller
     FeaturePageMode.PackageInstaller -> RootRoute.FeaturePackageInstaller
@@ -1151,6 +1155,7 @@ fun Root(
                     subclass(RootRoute.FeatureAod::class)
                     subclass(RootRoute.FeatureScreenshot::class)
                     subclass(RootRoute.FeatureScreenRecording::class)
+                    subclass(RootRoute.FeatureCamera::class)
                     subclass(RootRoute.FeatureTranslation::class)
                     subclass(RootRoute.FeatureAppInstaller::class)
                     subclass(RootRoute.FeaturePackageInstaller::class)
@@ -2480,6 +2485,9 @@ fun Root(
             }
             entry<RootRoute.FeatureScreenRecording> {
                 featureEntryContent(FeaturePageMode.ScreenRecording)
+            }
+            entry<RootRoute.FeatureCamera> {
+                featureEntryContent(FeaturePageMode.Camera)
             }
             entry<RootRoute.FeatureTranslation> {
                 featureEntryContent(FeaturePageMode.Translation)
