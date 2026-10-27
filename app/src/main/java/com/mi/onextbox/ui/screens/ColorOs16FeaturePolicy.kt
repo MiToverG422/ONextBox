@@ -11,6 +11,7 @@ internal object ColorOs16FeaturePolicy {
         FeaturePageMode.SystemUi to listOf(
             FeaturePageMode.SystemUiNative,
             FeaturePageMode.SystemUiStatusBar,
+            FeaturePageMode.SystemUiClock,
             FeaturePageMode.SystemUiFluidCloud,
             FeaturePageMode.SystemUiNotificationCenter,
             FeaturePageMode.SystemUiControlCenter,
@@ -19,6 +20,14 @@ internal object ColorOs16FeaturePolicy {
             FeaturePageMode.SystemUiLockScreen,
             FeaturePageMode.SystemUiNavigationBar,
             FeaturePageMode.SystemUiDynamicColor,
+        ),
+        FeaturePageMode.SystemUiStatusBar to listOf(
+            FeaturePageMode.SystemUiStatusBarLayout,
+            FeaturePageMode.SystemUiStatusBarNetwork,
+            FeaturePageMode.SystemUiStatusBarSpeed,
+            FeaturePageMode.SystemUiStatusBarPower,
+            FeaturePageMode.SystemUiStatusBarBattery,
+            FeaturePageMode.SystemUiStatusBarInteraction,
         ),
         FeaturePageMode.Settings to listOf(
             FeaturePageMode.SettingsAppearance,
@@ -38,14 +47,16 @@ internal object ColorOs16FeaturePolicy {
     }
 
     val categories: Map<FeaturePageMode, List<FeaturePageMode>> by lazy {
-            val groups = candidateCategories.mapValues { (_, children) -> children.filter { it in featureTitles } }
+            fun available(page: FeaturePageMode): Boolean = page in featureTitles ||
+                candidateCategories[page].orEmpty().any(::available)
+            val groups = candidateCategories.mapValues { (_, children) -> children.filter(::available) }
                 .filterValues { it.isNotEmpty() }
             val nested = groups.values.flatten().toSet() + setOf(FeaturePageMode.SystemUiIconOrder,
                 FeaturePageMode.SystemUiCornerSettings, FeaturePageMode.SystemUiPercentageSettings,
                 FeaturePageMode.SystemUiSideVolumePercentageSettings, FeaturePageMode.SystemUiFluidCloudMediaBlacklist,
                 FeaturePageMode.DesktopHiddenApps, FeaturePageMode.EsimDiagnostics, FeaturePageMode.NotificationRemoval,
                 FeaturePageMode.Installer, FeaturePageMode.CorePatch)
-            val main = groups.keys.toList() + FeaturePageMode.entries.filter { page ->
+            val main = groups.keys.filter { it !in nested } + FeaturePageMode.entries.filter { page ->
                 page in featureTitles && page !in nested && page !in groups && page != FeaturePageMode.EnabledFeatures
             }
             linkedMapOf(FeaturePageMode.Main to main) + groups

@@ -1463,4 +1463,20 @@
     <string name="network_speed_follow_font_weight">Системная толщина шрифта</string>
     <string name="network_speed_custom_font_size">Свой размер шрифта</string>
     <string name="network_speed_font_size">Размер шрифта</string>
+    <string name="clock_period_title">Показывать время суток</string>
+    <string name="clock_period_format">Формат времени суток</string>
+    <string name="clock_period_am_pm">AM / PM</string>
+    <string name="clock_period_detailed">Подробный</string>
+    <string name="clock_period_small">Мелкий текст времени суток</string>
+    <string name="clock_compact_spacing">Компактные отступы часов</string>
+    <string name="clock_period_shade">Показывать период суток в центре уведомлений</string>
+    <string name="clock_lock_seconds">Зафиксировать показ часов, минут и секунд</string>
+    <string name="clock_page_title">Часы</string>
+    <string name="clock_page_summary">Отображение времени, периоды суток и отступы</string>
+    <string name="statusbar_category_layout_summary">Порядок значков и отступы экрана</string>
+    <string name="statusbar_category_network_summary">Оператор, тип сети и значки сигнала</string>
+    <string name="statusbar_category_speed_summary">Интервал обновления, единицы и шрифт</string>
+    <string name="statusbar_category_power_summary">Потребление энергии и температура</string>
+    <string name="statusbar_category_battery_summary">Заряд батареи в процентах</string>
+    <string name="statusbar_category_interaction_summary">Двойное касание и ограничения</string>
 </resources>

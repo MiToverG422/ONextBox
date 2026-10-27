@@ -173,11 +173,17 @@ internal fun SystemUiFeaturesPage(
                 )
             }
         }
-        FeaturePageMode.SystemUiStatusBar -> {
+        FeaturePageMode.SystemUiClock -> {
+            ClockPeriodSettingsGroup()
+        }
+        FeaturePageMode.SystemUiStatusBar -> StatusBarCategoriesPage(onOpenSubPage)
+        FeaturePageMode.SystemUiStatusBarLayout -> {
             StatusBarLayoutSettingsGroup { onOpenSubPage(FeaturePageMode.SystemUiIconOrder) }
+        }
+        FeaturePageMode.SystemUiStatusBarPower -> PowerIndicatorSettingsGroup()
+        FeaturePageMode.SystemUiStatusBarSpeed -> NetworkSpeedSettingsGroup()
+        FeaturePageMode.SystemUiStatusBarNetwork -> {
             CarrierNameSettingsGroup()
-            PowerIndicatorSettingsGroup()
-            NetworkSpeedSettingsGroup()
             SettingsSection(title = stringResource(R.string.feature_large_network_type_title))
             SettingsGroup {
                 LargeNetworkTypeSettingsRow()
@@ -222,16 +228,14 @@ internal fun SystemUiFeaturesPage(
                 DisconnectedBluetoothIconSettingsRow(hasDividerAbove = true)
             }
 
-            SettingsSection(title = stringResource(R.string.status_bar_group_battery))
+        }
+        FeaturePageMode.SystemUiStatusBarBattery -> {
             SettingsGroup {
                 FluidCloudBatterySettingsRow()
             }
 
-            SettingsSection(title = stringResource(R.string.status_bar_group_time))
-            SettingsGroup {
-                PermanentClockSecondsSettingsRow()
-            }
-            SettingsSection(title = stringResource(R.string.status_bar_group_interaction))
+        }
+        FeaturePageMode.SystemUiStatusBarInteraction -> {
             SettingsGroup {
                 StatusBarInteractionSettingsRows()
             }

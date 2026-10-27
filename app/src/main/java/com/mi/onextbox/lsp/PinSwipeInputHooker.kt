@@ -31,6 +31,12 @@ internal object PinSwipeInputHooker {
     fun hook(loader: ClassLoader) {
         runCatching {
             val keyClass = ModernReflect.findClass(KEY, loader)
+            ModernHookRegistry.installCompat("$TAG:release-click", View::class.java.getDeclaredMethod("performClick"),
+                object : ModernMethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        if (PinSwipeNativeClick.suppressesClick(param.thisObject)) param.result = false
+                    }
+                })
             ModernHookRegistry.installCompat(TAG, keyClass.getDeclaredMethod("dispatchTouchEvent", MotionEvent::class.java),
                 object : ModernMethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
@@ -46,7 +52,7 @@ internal object PinSwipeInputHooker {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         gestures.entries.removeAll {
                             if (it.value.dial !== param.thisObject) false
-                            else { nativeTouch { it.value.feedback.release() }; true }
+                            else { nativeTouch { it.value.feedback.release(cancelled = true) }; true }
                         }
                     }
                 })
@@ -54,7 +60,7 @@ internal object PinSwipeInputHooker {
                 capture = { null },
                 detach = {
                     gestures.forEach { (key, gesture) ->
-                        nativeTouch { gesture.feedback.release() }
+                        nativeTouch { gesture.feedback.release(cancelled = true) }
                         key.parent?.requestDisallowInterceptTouchEvent(false)
                     }
                     gestures.clear()
@@ -106,7 +112,7 @@ internal object PinSwipeInputHooker {
 
     private fun handle(key: View, event: MotionEvent): Boolean {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-            gestures.remove(key)?.let { nativeTouch { it.feedback.release() } }
+            gestures.remove(key)?.let { nativeTouch { it.feedback.release(cancelled = true) } }
             if (!enabled() || !available(key) || event.pointerCount != 1 ||
                 key.context.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true) return false
             val dial = dialFor(key) ?: return false
@@ -121,13 +127,13 @@ internal object PinSwipeInputHooker {
         val action = event.actionMasked
         if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
             gestures.remove(key)
-            nativeTouch { gesture.feedback.release() }
+            nativeTouch { gesture.feedback.release(cancelled = action == MotionEvent.ACTION_CANCEL) }
             key.parent?.requestDisallowInterceptTouchEvent(false)
             return gesture.state.sliding || gesture.cancelled
         }
         if (gesture.cancelled) return true
         if (!enabled() || event.pointerCount != 1 || !gesture.dial.isShown || !available(key)) {
-            nativeTouch { gesture.feedback.release() }
+            nativeTouch { gesture.feedback.release(cancelled = true) }
             cancelNative(key, event)
             gesture.cancelled = true
             return true
@@ -144,7 +150,7 @@ internal object PinSwipeInputHooker {
             val clicks = gesture.state.move(hit, dx * dx + dy * dy > gesture.slop * gesture.slop)
             if (hit < 0) nativeTouch { gesture.feedback.release() }
             if (!wasSliding && gesture.state.sliding) {
-                cancelNative(key, event)
+                nativeTouch { PinSwipeNativeClick.releaseInitial(key, event) }
                 key.parent?.requestDisallowInterceptTouchEvent(true)
             }
             for ((position, index) in clicks.withIndex()) {

@@ -1436,4 +1436,20 @@
     <string name="network_speed_follow_font_weight">系統字重に従う</string>
     <string name="network_speed_custom_font_size">字級を自訂</string>
     <string name="network_speed_font_size">文字寸法</string>
+    <string name="clock_period_title">時間帯を表示</string>
+    <string name="clock_period_format">時間帯の形式</string>
+    <string name="clock_period_am_pm">午前 / 午後</string>
+    <string name="clock_period_detailed">詳細な時間帯</string>
+    <string name="clock_period_small">時間帯の文字を小さくする</string>
+    <string name="clock_compact_spacing">時計の余白を詰める</string>
+    <string name="clock_period_shade">通知中心显示时段</string>
+    <string name="clock_lock_seconds">锁定时分秒显示</string>
+    <string name="clock_page_title">時鐘</string>
+    <string name="clock_page_summary">時分秒顯示、時段與間距</string>
+    <string name="statusbar_category_layout_summary">圖示排序與螢幕邊距</string>
+    <string name="statusbar_category_network_summary">電信業者、網路類型與訊號圖示</string>
+    <string name="statusbar_category_speed_summary">重新整理間隔、單位與文字樣式</string>
+    <string name="statusbar_category_power_summary">功耗讀數與溫度顯示</string>
+    <string name="statusbar_category_battery_summary">電量百分比顯示</string>
+    <string name="statusbar_category_interaction_summary">點兩下操作與限制</string>
 </resources>

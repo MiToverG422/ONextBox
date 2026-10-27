@@ -2797,6 +2797,10 @@ object LspConfig {
             BatteryFeature.entries.forEach { setBatteryFeatureEnabled(context, it, false) }
             TrafficFeature.entries.forEach { setTrafficFeatureEnabled(context, it, false) }
             setPermanentClockSecondsEnabled(context, false)
+            ClockPeriodSettings.setEnabled(context, false)
+            ClockPeriodSettings.setCompact(context, false)
+            ClockPeriodSettings.setShade(context, false)
+            ClockPeriodSettings.setSecondsLocked(context, false)
             SmallWindowFeature.entries.forEach { setSmallWindowFeatureEnabled(context, it, false) }
             LauncherFeature.entries.forEach { setLauncherFeatureEnabled(context, it, false) }
             KeyguardFeature.entries.forEach { setKeyguardFeatureEnabled(context, it, false) }

@@ -101,7 +101,7 @@ internal object SharedFeatureDefinitions {
         { context, enabled -> VolumeSafetyWarningSettings.set(context, enabled) },
     )
     val powerIndicator = Toggle(R.string.power_indicator_title, R.string.power_indicator_summary,
-        FeaturePageMode.SystemUiStatusBar, { com.mi.onextbox.lsp.PowerIndicatorSettings.state(it).enabled },
+        FeaturePageMode.SystemUiStatusBarPower, { com.mi.onextbox.lsp.PowerIndicatorSettings.state(it).enabled },
         { context, enabled -> com.mi.onextbox.lsp.PowerIndicatorSettings.setEnabled(context, enabled) })
     val phoneManagerRiskCloud = Toggle(R.string.phone_manager_risk_cloud_title, R.string.phone_manager_risk_cloud_summary,
         FeaturePageMode.PhoneManager, { com.mi.onextbox.lsp.PhoneManagerRiskCloudSettings.enabled(it) },

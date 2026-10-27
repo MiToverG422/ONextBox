@@ -1461,4 +1461,20 @@
     <string name="network_speed_follow_font_weight">시스템 글꼴 굵기 따르기</string>
     <string name="network_speed_custom_font_size">글꼴 크기 설정</string>
     <string name="network_speed_font_size">글꼴 크기</string>
+    <string name="clock_period_title">시간대 표시</string>
+    <string name="clock_period_format">시간대 형식</string>
+    <string name="clock_period_am_pm">오전 / 오후</string>
+    <string name="clock_period_detailed">자세한 시간대</string>
+    <string name="clock_period_small">시간대 글자 작게 표시</string>
+    <string name="clock_compact_spacing">시계 간격 줄이기</string>
+    <string name="clock_period_shade">알림 센터에 시간대 표시</string>
+    <string name="clock_lock_seconds">시·분·초 표시 고정</string>
+    <string name="clock_page_title">시계</string>
+    <string name="clock_page_summary">시간 표시, 시간대 및 간격</string>
+    <string name="statusbar_category_layout_summary">아이콘 순서 및 화면 여백</string>
+    <string name="statusbar_category_network_summary">통신사, 네트워크 유형 및 신호 아이콘</string>
+    <string name="statusbar_category_speed_summary">새로고침 간격, 단위 및 글꼴</string>
+    <string name="statusbar_category_power_summary">소비 전력 및 온도 표시</string>
+    <string name="statusbar_category_battery_summary">배터리 잔량 표시</string>
+    <string name="statusbar_category_interaction_summary">두 번 탭 동작 및 제한</string>
 </resources>

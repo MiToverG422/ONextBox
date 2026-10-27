@@ -1436,4 +1436,20 @@
     <string name="network_speed_follow_font_weight">Theo độ đậm phông hệ thống</string>
     <string name="network_speed_custom_font_size">Tùy chỉnh cỡ chữ</string>
     <string name="network_speed_font_size">Cỡ chữ</string>
+    <string name="clock_period_title">Hiển thị buổi trong ngày</string>
+    <string name="clock_period_format">Định dạng buổi trong ngày</string>
+    <string name="clock_period_am_pm">SA / CH</string>
+    <string name="clock_period_detailed">Chi tiết</string>
+    <string name="clock_period_small">Chữ buổi trong ngày nhỏ hơn</string>
+    <string name="clock_compact_spacing">Thu gọn khoảng cách đồng hồ</string>
+    <string name="clock_period_shade">Hiển thị buổi trong trung tâm thông báo</string>
+    <string name="clock_lock_seconds">Cố định hiển thị giờ, phút và giây</string>
+    <string name="clock_page_title">Đồng hồ</string>
+    <string name="clock_page_summary">Hiển thị thời gian, buổi và khoảng cách</string>
+    <string name="statusbar_category_layout_summary">Thứ tự biểu tượng và lề màn hình</string>
+    <string name="statusbar_category_network_summary">Nhà mạng, loại mạng và biểu tượng tín hiệu</string>
+    <string name="statusbar_category_speed_summary">Chu kỳ cập nhật, đơn vị và kiểu chữ</string>
+    <string name="statusbar_category_power_summary">Công suất và nhiệt độ</string>
+    <string name="statusbar_category_battery_summary">Hiển thị phần trăm pin</string>
+    <string name="statusbar_category_interaction_summary">Thao tác chạm hai lần và giới hạn</string>
 </resources>

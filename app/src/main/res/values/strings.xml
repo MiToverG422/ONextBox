@@ -1533,4 +1533,20 @@
     <string name="network_speed_follow_font_weight">Follow system font weight</string>
     <string name="network_speed_custom_font_size">Custom font size</string>
     <string name="network_speed_font_size">Font size</string>
+    <string name="clock_period_title">Show time of day</string>
+    <string name="clock_period_format">Time-of-day format</string>
+    <string name="clock_period_am_pm">AM / PM</string>
+    <string name="clock_period_detailed">Detailed</string>
+    <string name="clock_period_small">Smaller time-of-day text</string>
+    <string name="clock_compact_spacing">Compact clock spacing</string>
+    <string name="clock_period_shade">Show day period in notification center</string>
+    <string name="clock_lock_seconds">Lock hours, minutes and seconds display</string>
+    <string name="clock_page_title">Clock</string>
+    <string name="clock_page_summary">Time display, day periods and spacing</string>
+    <string name="statusbar_category_layout_summary">Icon order and screen margins</string>
+    <string name="statusbar_category_network_summary">Carrier, network type and signal icons</string>
+    <string name="statusbar_category_speed_summary">Refresh interval, units and text style</string>
+    <string name="statusbar_category_power_summary">Power readings and temperature</string>
+    <string name="statusbar_category_battery_summary">Battery percentage display</string>
+    <string name="statusbar_category_interaction_summary">Double-tap actions and restrictions</string>
 </resources>

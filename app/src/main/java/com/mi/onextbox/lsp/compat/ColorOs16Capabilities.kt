@@ -2,6 +2,11 @@ package com.mi.onextbox.lsp.compat
 
 internal object ColorOs16Capabilities {
     val featureKeys = setOf(
+        "systemui_clock_compact_spacing",
+        "systemui_clock_period_enabled",
+        "systemui_clock_period_format",
+        "systemui_clock_period_small",
+        "systemui_clock_period_shade",
         "systemui_network_speed_refresh_second",
         "systemui_network_speed_hide_per_second",
         "systemui_network_speed_hide_units",
@@ -297,6 +302,7 @@ internal object ColorOs16Capabilities {
         "system",
     )
     val featureIds = setOf(
+        "systemui:clock_period",
         "systemui:network_speed",
         "framework:framework.native_icon",
         "framework:framework.bubbles",

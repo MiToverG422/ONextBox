@@ -124,6 +124,13 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     SystemUiNative(true),
     SystemUiDynamicColor(true),
     SystemUiStatusBar(true),
+    SystemUiStatusBarLayout(true),
+    SystemUiStatusBarNetwork(true),
+    SystemUiStatusBarSpeed(true),
+    SystemUiStatusBarPower(true),
+    SystemUiStatusBarBattery(true),
+    SystemUiStatusBarInteraction(true),
+    SystemUiClock(true),
     SystemUiIconOrder(true),
     SystemUiFluidCloud(true),
     SystemUiFluidCloudMediaBlacklist(true),
@@ -572,6 +579,13 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.SystemUiNative -> stringResource(R.string.feature_group_native)
     FeaturePageMode.SystemUiVolume -> stringResource(R.string.feature_group_volume)
     FeaturePageMode.SystemUiDynamicColor -> stringResource(R.string.feature_group_dynamic_color)
+    FeaturePageMode.SystemUiClock -> stringResource(R.string.clock_page_title)
+    FeaturePageMode.SystemUiStatusBarLayout -> stringResource(R.string.statusbar_layout_group)
+    FeaturePageMode.SystemUiStatusBarNetwork -> stringResource(R.string.status_bar_group_network)
+    FeaturePageMode.SystemUiStatusBarSpeed -> stringResource(R.string.network_speed_title)
+    FeaturePageMode.SystemUiStatusBarPower -> stringResource(R.string.power_indicator_title)
+    FeaturePageMode.SystemUiStatusBarBattery -> stringResource(R.string.status_bar_group_battery)
+    FeaturePageMode.SystemUiStatusBarInteraction -> stringResource(R.string.status_bar_group_interaction)
     FeaturePageMode.SystemUiStatusBar -> stringResource(R.string.feature_group_beautify)
     FeaturePageMode.SystemUiIconOrder -> stringResource(R.string.statusbar_order_title)
     FeaturePageMode.SystemUiFluidCloud -> stringResource(R.string.feature_fluid_cloud_title)
@@ -643,7 +657,14 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.SystemUiNative,
     FeaturePageMode.SystemUiVolume,
     FeaturePageMode.SystemUiDynamicColor,
+    FeaturePageMode.SystemUiClock,
     FeaturePageMode.SystemUiStatusBar,
+    FeaturePageMode.SystemUiStatusBarLayout,
+    FeaturePageMode.SystemUiStatusBarNetwork,
+    FeaturePageMode.SystemUiStatusBarSpeed,
+    FeaturePageMode.SystemUiStatusBarPower,
+    FeaturePageMode.SystemUiStatusBarBattery,
+    FeaturePageMode.SystemUiStatusBarInteraction,
     FeaturePageMode.SystemUiIconOrder,
     FeaturePageMode.SystemUiFluidCloudMediaBlacklist,
     FeaturePageMode.SystemUiNotificationCenter,
@@ -1517,7 +1538,14 @@ private fun FeatureSubPage(
         FeaturePageMode.SystemUiNative,
         FeaturePageMode.SystemUiVolume,
         FeaturePageMode.SystemUiDynamicColor,
+        FeaturePageMode.SystemUiClock,
         FeaturePageMode.SystemUiStatusBar,
+        FeaturePageMode.SystemUiStatusBarLayout,
+        FeaturePageMode.SystemUiStatusBarNetwork,
+        FeaturePageMode.SystemUiStatusBarSpeed,
+        FeaturePageMode.SystemUiStatusBarPower,
+        FeaturePageMode.SystemUiStatusBarBattery,
+        FeaturePageMode.SystemUiStatusBarInteraction,
         FeaturePageMode.SystemUiNotificationCenter,
         FeaturePageMode.SystemUiControlCenter -> SystemUiFeaturesPage(
             mode = mode,

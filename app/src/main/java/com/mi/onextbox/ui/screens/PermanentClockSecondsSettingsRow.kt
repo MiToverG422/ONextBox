@@ -22,7 +22,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 @Composable
-internal fun PermanentClockSecondsSettingsRow(hasDividerAbove: Boolean = false) {
+internal fun PermanentClockSecondsSettingsRow(hasDividerAbove: Boolean = false, hasDividerBelow: Boolean = false, onEnabledChange: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -41,6 +41,7 @@ internal fun PermanentClockSecondsSettingsRow(hasDividerAbove: Boolean = false) 
         checked = enabled,
         onCheckedChange = { checked ->
             enabled = checked
+            onEnabledChange(checked)
             scope.launch {
                 writeLock.withLock {
                     withContext(Dispatchers.IO) { LspConfig.setPermanentClockSecondsEnabled(context, checked) }
@@ -48,5 +49,6 @@ internal fun PermanentClockSecondsSettingsRow(hasDividerAbove: Boolean = false) 
             }
         },
         hasDividerAbove = hasDividerAbove,
+        hasDividerBelow = hasDividerBelow,
     )
 }

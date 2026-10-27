@@ -17,6 +17,7 @@ internal object PermanentClockSecondsHooker {
     private fun enabled() = LspConfig.isPermanentClockSecondsEnabledXposed()
 
     fun hookSystemUi(loader: ClassLoader) {
+        ClockSecondsLockHooker.hook(loader)
         HotReloadLifecycle.register("clock-seconds:pending-toggle", canReload = { pendingToggles.get() == 0 })
         val key = "$TAG:SystemUI@${System.identityHashCode(loader)}:"
         runCatching {
@@ -78,6 +79,7 @@ internal object PermanentClockSecondsHooker {
                 }
             })
             ModernHookRegistry.installFast("${key}longPress", longPress, XposedInterface.Hooker { chain ->
+                if (ClockPeriodSettings.secondsLockedXposed()) return@Hooker null
                 if (!enabled()) return@Hooker chain.proceed()
                 val target = chain.thisObject ?: return@Hooker chain.proceed()
                 val handler = workHandler.get(target) as Handler
@@ -151,6 +153,7 @@ internal object PermanentClockSecondsHooker {
                 }
             })
             ModernHookRegistry.installFast("${key}checked", getChecked, XposedInterface.Hooker { chain ->
+                if (ClockPeriodSettings.secondsLockedXposed()) return@Hooker 1
                 if (!enabled()) return@Hooker chain.proceed()
                 val resolver = resolverField.get(chain.thisObject) as android.content.ContentResolver
                 PermanentClockSecondsRules.checkedItem(android.provider.Settings.Secure.getInt(
@@ -161,6 +164,10 @@ internal object PermanentClockSecondsHooker {
                 if (enabled()) 0 else chain.proceed()
             })
             ModernHookRegistry.installFast("${key}selection", selection, XposedInterface.Hooker { chain ->
+                if (ClockPeriodSettings.secondsLockedXposed()) {
+                    refresh.invoke(chain.thisObject, chain.getArg(0))
+                    return@Hooker true
+                }
                 val result = chain.proceed()
                 if (enabled()) runCatching { refresh.invoke(chain.thisObject, chain.getArg(0)) }
                     .onFailure { HookLog.w(TAG, "Unable to refresh native clock label", it) }

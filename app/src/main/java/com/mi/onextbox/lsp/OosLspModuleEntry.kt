@@ -242,6 +242,8 @@ class OosLspModuleEntry : XposedModule() {
                 FluidCloudBatteryHooker.hook(classLoader)
                 FluidCloudMaterialHooker.hook(classLoader)
                 PermanentClockSecondsHooker.hookSystemUi(classLoader)
+                ClockPeriodHooker.hook(classLoader)
+                ClockSpacingHooker.hook(classLoader)
                 SystemUiRedOneHooker.hook(classLoader)
                 NotificationRemovalHooker.hookSystemUi(classLoader)
                 NotificationClearButtonHooker.hook(classLoader)

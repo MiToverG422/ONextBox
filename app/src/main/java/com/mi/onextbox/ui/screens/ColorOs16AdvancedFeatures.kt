@@ -61,17 +61,29 @@ internal fun ColorOs16AdvancedFeatureGroups(mode: FeaturePageMode, onOpen: (Feat
             }
         }
         FeaturePageMode.DesktopPages -> if (R.string.event_page_tool_title in supported) ColorOs16AssistantScreen()
-        FeaturePageMode.SystemUiStatusBar -> {
+        FeaturePageMode.SystemUiClock -> {
+            ClockPeriodSettingsGroup()
+            handled += supported
+        }
+        FeaturePageMode.SystemUiStatusBarLayout -> {
             if (R.string.statusbar_order_title in supported && R.string.statusbar_margins_title in supported &&
                 R.string.statusbar_vertical_margins_title in supported) {
                 StatusBarLayoutSettingsGroup { onOpen(FeaturePageMode.SystemUiIconOrder) }
                 handled += setOf(R.string.statusbar_order_title, R.string.statusbar_margins_title,
                     R.string.statusbar_vertical_margins_title)
             }
+        }
+        FeaturePageMode.SystemUiStatusBarNetwork -> {
             if (R.string.carrier_name_title in supported) {
                 CarrierNameSettingsGroup()
                 handled += R.string.carrier_name_title
             }
+        }
+        FeaturePageMode.SystemUiStatusBarSpeed -> {
+            NetworkSpeedSettingsGroup()
+            handled += supported
+        }
+        FeaturePageMode.SystemUiStatusBarPower -> {
             if (R.string.power_indicator_title in supported) {
                 PowerIndicatorSettingsGroup()
                 handled += R.string.power_indicator_title

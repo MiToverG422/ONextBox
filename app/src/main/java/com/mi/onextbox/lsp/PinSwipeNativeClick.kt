@@ -5,6 +5,34 @@ import android.view.MotionEvent
 import android.view.View
 
 internal class PinSwipeNativeClick {
+    companion object {
+        private var releasing: View? = null
+
+        fun suppressesClick(view: Any?) = releasing != null && releasing === view
+
+        fun releaseInitial(target: View, source: MotionEvent) {
+            dispatchRelease(target, source.downTime, source.source, source.metaState, false)
+        }
+
+        private fun dispatchRelease(target: View, down: Long, inputSource: Int, meta: Int, cancelled: Boolean) {
+            val event = MotionEvent.obtain(
+                down, SystemClock.uptimeMillis(),
+                if (cancelled) MotionEvent.ACTION_CANCEL else MotionEvent.ACTION_UP,
+                target.width / 2f, target.height / 2f, meta,
+            ).apply { source = inputSource }
+            val previous = releasing
+            releasing = target
+            try {
+                target.cancelPendingInputEvents()
+                target.isPressed = false
+                target.dispatchTouchEvent(event)
+            } finally {
+                target.cancelPendingInputEvents()
+                releasing = previous
+                event.recycle()
+            }
+        }
+    }
     private var pressed: View? = null
     private var downTime = 0L
     private var inputSource = 0
@@ -24,21 +52,17 @@ internal class PinSwipeNativeClick {
             try {
                 target.dispatchTouchEvent(press)
             } catch (error: Throwable) {
-                release()
+                release(cancelled = true)
                 throw error
             } finally { press.recycle() }
         }
         try { target.performClick() }
-        catch (error: Throwable) { release(); throw error }
+        catch (error: Throwable) { release(cancelled = true); throw error }
     }
 
-    fun release() {
+    fun release(cancelled: Boolean = false) {
         val target = pressed ?: return
         pressed = null
-        val cancel = MotionEvent.obtain(
-            downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL,
-            target.width / 2f, target.height / 2f, metaState,
-        ).apply { source = inputSource }
-        try { target.dispatchTouchEvent(cancel) } finally { cancel.recycle() }
+        dispatchRelease(target, downTime, inputSource, metaState, cancelled)
     }
 }

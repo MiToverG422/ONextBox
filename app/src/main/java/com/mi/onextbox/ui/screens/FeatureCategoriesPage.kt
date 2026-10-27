@@ -52,6 +52,11 @@ internal fun SystemUiCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
                 R.string.feature_system_ui_status_bar_entry_summary,
             ),
             FeatureCategoryLink(
+                FeaturePageMode.SystemUiClock,
+                R.string.clock_page_title,
+                R.string.clock_page_summary,
+            ),
+            FeatureCategoryLink(
                 FeaturePageMode.SystemUiFluidCloud,
                 R.string.feature_fluid_cloud_title,
                 R.string.feature_fluid_cloud_entry_summary,
@@ -81,6 +86,21 @@ internal fun SystemUiCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
                 R.string.feature_group_native,
                 R.string.feature_system_ui_native_entry_summary,
             ),
+        ),
+        onOpen = onOpen,
+    )
+}
+
+@Composable
+internal fun StatusBarCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
+    FeatureCategoryLinks(
+        entries = listOf(
+            FeatureCategoryLink(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_layout_group, R.string.statusbar_category_layout_summary),
+            FeatureCategoryLink(FeaturePageMode.SystemUiStatusBarNetwork, R.string.status_bar_group_network, R.string.statusbar_category_network_summary),
+            FeatureCategoryLink(FeaturePageMode.SystemUiStatusBarSpeed, R.string.network_speed_title, R.string.statusbar_category_speed_summary),
+            FeatureCategoryLink(FeaturePageMode.SystemUiStatusBarPower, R.string.power_indicator_title, R.string.statusbar_category_power_summary),
+            FeatureCategoryLink(FeaturePageMode.SystemUiStatusBarBattery, R.string.status_bar_group_battery, R.string.statusbar_category_battery_summary),
+            FeatureCategoryLink(FeaturePageMode.SystemUiStatusBarInteraction, R.string.status_bar_group_interaction, R.string.statusbar_category_interaction_summary),
         ),
         onOpen = onOpen,
     )

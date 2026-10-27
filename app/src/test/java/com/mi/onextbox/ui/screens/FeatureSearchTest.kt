@@ -388,12 +388,12 @@ class FeatureSearchTest {
         assertEquals(FeaturePageMode.SystemUiStatusBar, destinations.single().page)
         assertEquals(com.mi.onextbox.R.string.feature_fluid_cloud_battery_summary, destinations.single().description)
     }
-    @Test fun permanentClockSecondsIsSearchableOnlyUnderStatusBar() {
+    @Test fun permanentClockSecondsIsSearchableOnlyUnderClock() {
         val destinations = FeatureSearchIndex.entries.filter {
             it.title == com.mi.onextbox.R.string.feature_permanent_clock_seconds_title
         }
         assertEquals(1, destinations.size)
-        assertEquals(FeaturePageMode.SystemUiStatusBar, destinations.single().page)
+        assertEquals(FeaturePageMode.SystemUiClock, destinations.single().page)
         assertEquals(com.mi.onextbox.R.string.feature_permanent_clock_seconds_summary, destinations.single().description)
     }
     @Test fun faceTapControlsAreSearchableOnlyUnderLockScreen() {

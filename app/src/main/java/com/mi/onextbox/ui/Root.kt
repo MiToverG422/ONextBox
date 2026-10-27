@@ -285,6 +285,28 @@ private sealed interface RootRoute : NavKey {
     data object FeatureSystemUiStatusBar : RootRoute
 
     @Serializable
+    data object FeatureSystemUiStatusBarLayout : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiStatusBarNetwork : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiStatusBarSpeed : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiStatusBarPower : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiStatusBarBattery : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiStatusBarInteraction : RootRoute
+
+
+    @Serializable
+    data object FeatureSystemUiClock : RootRoute
+
+    @Serializable
     data object FeatureSystemUiIconOrder : RootRoute
 
     @Serializable
@@ -491,7 +513,14 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.SystemUiNative -> RootRoute.FeatureSystemUiNative
     FeaturePageMode.SystemUiVolume -> RootRoute.FeatureSystemUiVolume
     FeaturePageMode.SystemUiDynamicColor -> RootRoute.FeatureSystemUiDynamicColor
+    FeaturePageMode.SystemUiClock -> RootRoute.FeatureSystemUiClock
     FeaturePageMode.SystemUiStatusBar -> RootRoute.FeatureSystemUiStatusBar
+    FeaturePageMode.SystemUiStatusBarLayout -> RootRoute.FeatureSystemUiStatusBarLayout
+    FeaturePageMode.SystemUiStatusBarNetwork -> RootRoute.FeatureSystemUiStatusBarNetwork
+    FeaturePageMode.SystemUiStatusBarSpeed -> RootRoute.FeatureSystemUiStatusBarSpeed
+    FeaturePageMode.SystemUiStatusBarPower -> RootRoute.FeatureSystemUiStatusBarPower
+    FeaturePageMode.SystemUiStatusBarBattery -> RootRoute.FeatureSystemUiStatusBarBattery
+    FeaturePageMode.SystemUiStatusBarInteraction -> RootRoute.FeatureSystemUiStatusBarInteraction
     FeaturePageMode.SystemUiIconOrder -> RootRoute.FeatureSystemUiIconOrder
     FeaturePageMode.SystemUiFluidCloud -> RootRoute.FeatureSystemUiFluidCloud
     FeaturePageMode.SystemUiFluidCloudMediaBlacklist -> RootRoute.FeatureSystemUiFluidCloudMediaBlacklist
@@ -1103,7 +1132,14 @@ fun Root(
                     subclass(RootRoute.FeatureSystemUiNative::class)
                     subclass(RootRoute.FeatureSystemUiVolume::class)
                     subclass(RootRoute.FeatureSystemUiDynamicColor::class)
+                    subclass(RootRoute.FeatureSystemUiClock::class)
                     subclass(RootRoute.FeatureSystemUiStatusBar::class)
+                    subclass(RootRoute.FeatureSystemUiStatusBarLayout::class)
+                    subclass(RootRoute.FeatureSystemUiStatusBarNetwork::class)
+                    subclass(RootRoute.FeatureSystemUiStatusBarSpeed::class)
+                    subclass(RootRoute.FeatureSystemUiStatusBarPower::class)
+                    subclass(RootRoute.FeatureSystemUiStatusBarBattery::class)
+                    subclass(RootRoute.FeatureSystemUiStatusBarInteraction::class)
                     subclass(RootRoute.FeatureSystemUiIconOrder::class)
                     subclass(RootRoute.FeatureSystemUiFluidCloud::class)
                     subclass(RootRoute.FeatureSystemUiFluidCloudMediaBlacklist::class)
@@ -2321,6 +2357,27 @@ fun Root(
             }
             entry<RootRoute.FeatureSystemUiDynamicColor> {
                 featureEntryContent(FeaturePageMode.SystemUiDynamicColor)
+            }
+            entry<RootRoute.FeatureSystemUiClock> {
+                featureEntryContent(FeaturePageMode.SystemUiClock)
+            }
+            entry<RootRoute.FeatureSystemUiStatusBarLayout> {
+                featureEntryContent(FeaturePageMode.SystemUiStatusBarLayout)
+            }
+            entry<RootRoute.FeatureSystemUiStatusBarNetwork> {
+                featureEntryContent(FeaturePageMode.SystemUiStatusBarNetwork)
+            }
+            entry<RootRoute.FeatureSystemUiStatusBarSpeed> {
+                featureEntryContent(FeaturePageMode.SystemUiStatusBarSpeed)
+            }
+            entry<RootRoute.FeatureSystemUiStatusBarPower> {
+                featureEntryContent(FeaturePageMode.SystemUiStatusBarPower)
+            }
+            entry<RootRoute.FeatureSystemUiStatusBarBattery> {
+                featureEntryContent(FeaturePageMode.SystemUiStatusBarBattery)
+            }
+            entry<RootRoute.FeatureSystemUiStatusBarInteraction> {
+                featureEntryContent(FeaturePageMode.SystemUiStatusBarInteraction)
             }
             entry<RootRoute.FeatureSystemUiStatusBar> {
                 featureEntryContent(FeaturePageMode.SystemUiStatusBar)

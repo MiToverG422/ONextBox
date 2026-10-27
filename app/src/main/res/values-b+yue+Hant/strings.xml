@@ -1436,4 +1436,20 @@
     <string name="network_speed_follow_font_weight">跟隨系統字體粗幼</string>
     <string name="network_speed_custom_font_size">自訂字號</string>
     <string name="network_speed_font_size">字體大小</string>
+    <string name="clock_period_title">顯示時段</string>
+    <string name="clock_period_format">時段格式</string>
+    <string name="clock_period_am_pm">上午 / 下午</string>
+    <string name="clock_period_detailed">詳細時段</string>
+    <string name="clock_period_small">細字時段文字</string>
+    <string name="clock_compact_spacing">緊湊時鐘間距</string>
+    <string name="clock_period_shade">通知中心顯示時段</string>
+    <string name="clock_lock_seconds">鎖定時分秒顯示</string>
+    <string name="clock_page_title">時鐘</string>
+    <string name="clock_page_summary">時分秒顯示、時段同間距</string>
+    <string name="statusbar_category_layout_summary">圖示排序同螢幕邊距</string>
+    <string name="statusbar_category_network_summary">電訊商、網絡類型同訊號圖示</string>
+    <string name="statusbar_category_speed_summary">更新間隔、單位同文字樣式</string>
+    <string name="statusbar_category_power_summary">功耗讀數同溫度顯示</string>
+    <string name="statusbar_category_battery_summary">電量百分比顯示</string>
+    <string name="statusbar_category_interaction_summary">連按兩下操作同限制</string>
 </resources>

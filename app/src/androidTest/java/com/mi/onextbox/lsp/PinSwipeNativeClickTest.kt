@@ -29,7 +29,7 @@ class PinSwipeNativeClickTest {
                 if (isHapticFeedbackEnabled) presses++
                 isPressed = true
             }
-            if (event.actionMasked == MotionEvent.ACTION_CANCEL) isPressed = false
+            if (event.actionMasked == MotionEvent.ACTION_CANCEL || event.actionMasked == MotionEvent.ACTION_UP) isPressed = false
             return true
         }
     }
@@ -65,7 +65,7 @@ class PinSwipeNativeClickTest {
         }
         assertEquals(3, key.presses)
         assertEquals(3, key.clicks)
-        assertEquals(List(3) { listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_CANCEL) }.flatten(), key.actions)
+        assertEquals(List(3) { listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP) }.flatten(), key.actions)
         assertEquals(MotionEvent.ACTION_MOVE, source.actionMasked)
         assertEquals(999f, source.x, 0f)
         assertEquals(888f, source.y, 0f)
@@ -101,7 +101,7 @@ class PinSwipeNativeClickTest {
         feedback.perform(next, source, reuseInitialDown = false)
         assertFalse(first.isPressed)
         assertTrue(next.isPressed)
-        assertEquals(listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_CANCEL), first.actions)
+        assertEquals(listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP), first.actions)
         assertEquals(listOf(MotionEvent.ACTION_DOWN), next.actions)
         assertEquals(1, first.clicks)
         assertEquals(1, next.clicks)
@@ -115,7 +115,7 @@ class PinSwipeNativeClickTest {
         feedback.perform(key, source, reuseInitialDown = false)
         repeat(3) { feedback.release() }
         assertFalse(key.isPressed)
-        assertEquals(listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_CANCEL), key.actions)
+        assertEquals(listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP), key.actions)
         assertEquals(1, key.clicks)
         assertEquals(1, key.presses)
     }
