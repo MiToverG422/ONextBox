@@ -311,6 +311,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.TouchSampling, R.string.feature_touch_rate_auto_start),
         Entry(FeaturePageMode.Wallpapers, R.string.feature_wallpapers_title),
         Entry(FeaturePageMode.Wallpapers, R.string.feature_wallpapers_red_one_entry_title, R.string.feature_wallpapers_red_one_entry_summary),
+        Entry(FeaturePageMode.Wallpapers, R.string.wallpaper_3d_force_title, R.string.wallpaper_3d_force_summary),
         Entry(FeaturePageMode.Wallpapers, R.string.wallpaper_motion_title, R.string.wallpaper_motion_summary),
         Entry(FeaturePageMode.Aod, R.string.feature_aod_enhance_title),
         Entry(FeaturePageMode.Aod, R.string.feature_aod_enhance_toggle_title),

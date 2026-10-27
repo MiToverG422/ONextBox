@@ -1113,6 +1113,8 @@
     <string name="feature_large_network_artwork_summary">네트워크 유형 아이콘을 새로 디자인하여 총 25가지 네트워크 유형 지원</string>
     <string name="feature_large_network_lte_title">4G를 LTE로 표시</string>
     <string name="feature_large_network_lte_summary">사용자 지정 아이콘의 4G 및 4G+를 LTE 및 LTE+로 대체</string>
+    <string name="wallpaper_3d_force_title">3D 배경화면 강제 사용</string>
+    <string name="wallpaper_3d_force_summary">3D 배경화면 스위치가 숨겨진 기기에서 이 기능을 강제로 활성화합니다</string>
     <string name="wallpaper_motion_group">3D 배경화면</string>
     <string name="wallpaper_motion_title">3D 배경화면 감도 (실험적)</string>
     <string name="wallpaper_motion_summary">기존 3D 배경화면의 기울기 감도를 조절합니다. 100%는 원래 감도이며 값이 클수록 반응이 커집니다. 시스템 각도 제한은 변경하지 않습니다. LSPosed에서 배경화면과 Colorful Engine을 활성화한 후 배경화면을 다시 여세요</string>

@@ -1185,6 +1185,8 @@
     <string name="enabled_features_error">读取配置失败，请重新进入此页重试</string>
     <string name="enabled_features_quick_hint">点击开关直接修改，点击名称进入设置。关闭的条目保留至离开此页；部分功能需重启作用域</string>
     <string name="enabled_features_save_failed">保存失败，将重新读取实际配置</string>
+    <string name="wallpaper_3d_force_title">强制开启 3D 壁纸</string>
+    <string name="wallpaper_3d_force_summary">在隐藏 3D 壁纸开关的设备上强制开启该功能</string>
     <string name="wallpaper_motion_group">3D 壁纸</string>
     <string name="wallpaper_motion_title">3D 壁纸灵敏度（实验性）</string>
     <string name="wallpaper_motion_summary">调节已有 3D 壁纸的倾斜灵敏度，100% 为原始灵敏度，数值越大响应越明显，不改变系统角度上限。需在 LSPosed 勾选壁纸与炫彩引擎作用域后重新打开壁纸</string>

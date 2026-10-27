@@ -1113,6 +1113,8 @@
     <string name="feature_large_network_artwork_summary">重繪網絡類型圖示，共支援25種網絡類型</string>
     <string name="feature_large_network_lte_title">4G 顯示為 LTE</string>
     <string name="feature_large_network_lte_summary">將自訂圖示包嘅 4G、4G+ 換成 LTE、LTE+</string>
+    <string name="wallpaper_3d_force_title">強制開啟 3D 桌布</string>
+    <string name="wallpaper_3d_force_summary">喺隱藏咗 3D 桌布開關嘅裝置上強制開啟該功能</string>
     <string name="wallpaper_motion_group">3D 桌布</string>
     <string name="wallpaper_motion_title">3D 桌布靈敏度（實驗性）</string>
     <string name="wallpaper_motion_summary">調校現有 3D 桌布嘅傾斜靈敏度，100% 係原本靈敏度，數值越大反應越明顯，唔會改變系統角度上限。要喺 LSPosed 勾選桌布同炫彩引擎作用域，再重新開啟桌布</string>

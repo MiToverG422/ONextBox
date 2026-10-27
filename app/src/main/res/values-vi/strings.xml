@@ -1113,6 +1113,8 @@
     <string name="feature_large_network_artwork_summary">Vẽ lại biểu tượng loại mạng, hỗ trợ tổng cộng 25 loại mạng</string>
     <string name="feature_large_network_lte_title">Hiển thị 4G thành LTE</string>
     <string name="feature_large_network_lte_summary">Thay biểu tượng 4G và 4G+ bằng LTE và LTE+ trong bộ tùy chỉnh</string>
+    <string name="wallpaper_3d_force_title">Buộc bật hình nền 3D</string>
+    <string name="wallpaper_3d_force_summary">Bật bắt buộc tính năng này trên các thiết bị bị ẩn nút hình nền 3D</string>
     <string name="wallpaper_motion_group">Hình nền 3D</string>
     <string name="wallpaper_motion_title">Độ nhạy hình nền 3D (thử nghiệm)</string>
     <string name="wallpaper_motion_summary">Điều chỉnh độ nhạy khi nghiêng của hình nền 3D hiện có. 100% là độ nhạy gốc; giá trị càng cao, phản hồi càng rõ. Không thay đổi giới hạn góc của hệ thống. Bật Hình nền và Colorful Engine trong LSPosed, rồi mở lại hình nền</string>
