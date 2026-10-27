@@ -108,9 +108,19 @@ internal fun ColorOs16AdvancedFeatureGroups(mode: FeaturePageMode, onOpen: (Feat
                     onClick = { onOpen(FeaturePageMode.NotificationRemoval) })
             }
         }
-        FeaturePageMode.SettingsAppearance -> if (R.string.setting_settings_home_entry in supported) {
-            SettingsHomeEntrySettingsGroup()
-            handled += setOf(R.string.setting_settings_home_entry, R.string.setting_settings_home_entry_style)
+        FeaturePageMode.SettingsAppearance -> {
+            if (R.string.setting_settings_home_entry in supported) {
+                SettingsHomeEntrySettingsGroup()
+                handled += setOf(R.string.setting_settings_home_entry, R.string.setting_settings_home_entry_style)
+            }
+            if (R.string.settings_account_size_title in supported) {
+                SettingsAccountCardSizeGroup()
+                handled += setOf(R.string.settings_account_size_title, R.string.settings_account_size_percent)
+            }
+            if (R.string.settings_title_lock_title in supported) {
+                SettingsTitleCollapseGroup()
+                handled += setOf(R.string.feature_settings_title_collapsed_title, R.string.settings_title_lock_title)
+            }
         }
         FeaturePageMode.Assistant -> if (R.string.feature_assistant_native_combined_title in supported) {
             val context = LocalContext.current
@@ -123,23 +133,6 @@ internal fun ColorOs16AdvancedFeatureGroups(mode: FeaturePageMode, onOpen: (Feat
         FeaturePageMode.MobileNetwork -> if (R.string.network_identity_title in supported) {
             NetworkIdentitySettingsGroup()
             handled += R.string.network_identity_title
-        }
-        FeaturePageMode.AndroidSystem -> {
-            FeatureAnimatedGroup {
-                if (ColorOs16FeaturePolicy.isPageAvailable(FeaturePageMode.CorePatch)) {
-                    row("corepatch") { above, below ->
-                        SettingsCardRow(title = stringResource(R.string.corepatch_title), summary = "", showArrow = true,
-                            onClick = { onOpen(FeaturePageMode.CorePatch) }, hasDividerAbove = above, hasDividerBelow = below)
-                    }
-                }
-                if (ColorOs16FeaturePolicy.isPageAvailable(FeaturePageMode.Installer)) {
-                    row("installer") { above, below ->
-                        SettingsCardRow(title = stringResource(R.string.installer_title),
-                            summary = stringResource(R.string.installer_entry_summary), showArrow = true,
-                            onClick = { onOpen(FeaturePageMode.Installer) }, hasDividerAbove = above, hasDividerBelow = below)
-                    }
-                }
-            }
         }
         FeaturePageMode.Wallpapers -> if (R.string.wallpaper_motion_title in supported) {
             WallpaperMotionGroup()

@@ -437,6 +437,15 @@ private sealed interface RootRoute : NavKey {
     data object FeatureScreenRecording : RootRoute
 
     @Serializable
+    data object FeatureTranslation : RootRoute
+
+    @Serializable
+    data object FeatureAppInstaller : RootRoute
+
+    @Serializable
+    data object FeaturePackageInstaller : RootRoute
+
+    @Serializable
     data object FeatureAssistant : RootRoute
 
 
@@ -530,6 +539,9 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Aod -> RootRoute.FeatureAod
     FeaturePageMode.Screenshot -> RootRoute.FeatureScreenshot
     FeaturePageMode.ScreenRecording -> RootRoute.FeatureScreenRecording
+    FeaturePageMode.Translation -> RootRoute.FeatureTranslation
+    FeaturePageMode.AppInstaller -> RootRoute.FeatureAppInstaller
+    FeaturePageMode.PackageInstaller -> RootRoute.FeaturePackageInstaller
     FeaturePageMode.Assistant -> RootRoute.FeatureAssistant
 }
 
@@ -1139,6 +1151,9 @@ fun Root(
                     subclass(RootRoute.FeatureAod::class)
                     subclass(RootRoute.FeatureScreenshot::class)
                     subclass(RootRoute.FeatureScreenRecording::class)
+                    subclass(RootRoute.FeatureTranslation::class)
+                    subclass(RootRoute.FeatureAppInstaller::class)
+                    subclass(RootRoute.FeaturePackageInstaller::class)
                     subclass(RootRoute.FeatureAssistant::class)
                     subclass(RootRoute.AppSettings::class)
                     subclass(RootRoute.Logs::class)
@@ -2465,6 +2480,15 @@ fun Root(
             }
             entry<RootRoute.FeatureScreenRecording> {
                 featureEntryContent(FeaturePageMode.ScreenRecording)
+            }
+            entry<RootRoute.FeatureTranslation> {
+                featureEntryContent(FeaturePageMode.Translation)
+            }
+            entry<RootRoute.FeatureAppInstaller> {
+                featureEntryContent(FeaturePageMode.AppInstaller)
+            }
+            entry<RootRoute.FeaturePackageInstaller> {
+                featureEntryContent(FeaturePageMode.PackageInstaller)
             }
             entry<RootRoute.FeatureAssistant> {
                 featureEntryContent(FeaturePageMode.Assistant)

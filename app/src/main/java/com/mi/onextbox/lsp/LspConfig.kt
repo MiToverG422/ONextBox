@@ -267,7 +267,8 @@ object LspConfig {
         ShowTypicalCapacity("show_battery_typical_capacity"),
         ShowCalculatedHealth("show_battery_calculated_health"),
         RemoveRestrictPlugin("remove_battery_restrict_plugin"),
-        RestoreDefaultWhitelist("restore_default_battery_optimization_whitelist");
+        RestoreDefaultWhitelist("restore_default_battery_optimization_whitelist"),
+        BlockWhitelistRestore("block_battery_optimization_whitelist_restore");
 
         val propertyKey get() = "oost.$key"
         val persistPropertyKey get() = "persist.sys.$propertyKey"
@@ -2744,6 +2745,11 @@ object LspConfig {
             setNavigationHandleOpacity(context, ImmersiveNavigationRules.SYSTEM_DEFAULT)
             setNavigationHandleAutoHideEnabled(context, false)
             setSettingsTitleCollapsedEnabled(context, false)
+            SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.TITLE_LOCK, false)
+            ScreenTranslationSettings.keys.forEach { ScreenTranslationSettings.set(context, it, false) }
+            InstallerCleanupSettings.reset(context)
+            SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.ACCOUNT_SIZE, false)
+            SettingsAppearanceSettings.setPercent(context, SettingsAppearanceSettings.DEFAULT_PERCENT)
             setSettingsAppInfoCardEnabled(context, false)
             setSystemRootDetectionBlocked(context, false)
             setExpressNoMiniProgramEnabled(context, false)

@@ -178,6 +178,9 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Assistant,
     EnabledFeatures(true),
     Updates(true),
+    Translation,
+    AppInstaller,
+    PackageInstaller,
 }
 
 data class FeatureLaunchOrigin(
@@ -619,6 +622,9 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Aod -> stringResource(R.string.feature_aod_enhance_title)
     FeaturePageMode.Screenshot -> stringResource(R.string.feature_screenshot_title)
     FeaturePageMode.ScreenRecording -> stringResource(R.string.feature_screen_recording_title)
+    FeaturePageMode.Translation -> stringResource(R.string.feature_translation_title)
+    FeaturePageMode.AppInstaller -> stringResource(R.string.installer_cleanup_title)
+    FeaturePageMode.PackageInstaller -> stringResource(R.string.package_installer_title)
     FeaturePageMode.Assistant -> stringResource(R.string.feature_assistant_title)
 }
 
@@ -648,6 +654,9 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.SystemUiNavigationBar -> listOf("android", "system", "com.android.systemui")
     FeaturePageMode.Screenshot -> listOf("android", "system", "com.oplus.screenshot")
     FeaturePageMode.ScreenRecording -> listOf("android", "system", "com.android.systemui", "com.oplus.screenrecorder")
+    FeaturePageMode.Translation -> listOf(com.mi.onextbox.lsp.ScreenTranslationSettings.PACKAGE_NAME)
+    FeaturePageMode.AppInstaller -> listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.APP_DETAIL)
+    FeaturePageMode.PackageInstaller -> listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.PACKAGE_INSTALLER)
     FeaturePageMode.NotificationRemoval -> listOf("android", "system", "com.android.systemui")
     FeaturePageMode.MobileNetwork -> listOf("com.android.phone")
     FeaturePageMode.AndroidSystem -> listOf("android", "system")
@@ -1077,6 +1086,27 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         )
         add(
             FeatureMainEntry(
+                titleRes = R.string.feature_translation_title,
+                iconPackages = listOf(com.mi.onextbox.lsp.ScreenTranslationSettings.PACKAGE_NAME),
+                pageMode = FeaturePageMode.Translation,
+            )
+        )
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.installer_cleanup_title,
+                iconPackages = listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.APP_DETAIL),
+                pageMode = FeaturePageMode.AppInstaller,
+            )
+        )
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.package_installer_title,
+                iconPackages = listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.PACKAGE_INSTALLER),
+                pageMode = FeaturePageMode.PackageInstaller,
+            )
+        )
+        add(
+            FeatureMainEntry(
                 titleRes = R.string.feature_android_system_title,
                 // The framework package supplies the Android system icon shown in the scope UI.
                 iconPackages = listOf("android"),
@@ -1471,6 +1501,8 @@ private fun FeatureSubPage(
         FeaturePageMode.SystemUiNavigationBar -> NavigationBarFeaturesPage()
         FeaturePageMode.Screenshot -> CaptureFeaturesPage(LspConfig.KeyguardFeature.AodScreenshot)
         FeaturePageMode.ScreenRecording -> CaptureFeaturesPage(LspConfig.KeyguardFeature.ScreenOffRecording)
+        FeaturePageMode.Translation -> TranslationFeaturesPage()
+        FeaturePageMode.AppInstaller, FeaturePageMode.PackageInstaller -> InstallerCleanupPage(mode, onOpenSubPage)
         FeaturePageMode.SystemUiNative,
         FeaturePageMode.SystemUiVolume,
         FeaturePageMode.SystemUiDynamicColor,

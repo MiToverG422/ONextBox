@@ -25,6 +25,16 @@ internal object EnabledFeatureCatalog {
         SharedFeatureDefinitions.sideVolumeKeepWide.catalogEntry(),
         SharedFeatureDefinitions.volumeSafetyWarning.catalogEntry(),
         SharedFeatureDefinitions.nativeLiveUpdate.catalogEntry(),
+        SharedFeatureDefinitions.translationFloating.catalogEntry(),
+        SharedFeatureDefinitions.translationBlacklist.catalogEntry(),
+        SharedFeatureDefinitions.translationPages.catalogEntry(),
+        SharedFeatureDefinitions.translationLandscape.catalogEntry(),
+        SharedFeatureDefinitions.translationBrowser.catalogEntry(),
+        SharedFeatureDefinitions.installerNative.catalogEntry(),
+        SharedFeatureDefinitions.installerSkipScan.catalogEntry(),
+        SharedFeatureDefinitions.installerRemoveAds.catalogEntry(),
+        SharedFeatureDefinitions.installerHideCollectionNotice.catalogEntry(),
+        SharedFeatureDefinitions.installerBlockNetwork.catalogEntry(),
         SharedFeatureDefinitions.powerIndicator.catalogEntry(),
         SharedFeatureDefinitions.phoneManagerRiskCloud.catalogEntry(),
         SharedFeatureDefinitions.rotationSuggestion.catalogEntry(),
@@ -114,6 +124,11 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_permission_disable_malicious_title, FeaturePageMode.SecurityPermission) { context -> LspConfig.isPermissionFeatureEnabled(context, LspConfig.PermissionFeature.DisableMaliciousAppIntercept) },
         Entry(R.string.feature_wallpapers_red_one_entry_title, FeaturePageMode.Wallpapers) { context -> LspConfig.isWallpapersRedOneEntryEnabled(context) },
         Entry(R.string.feature_settings_title_collapsed_title, FeaturePageMode.SettingsAppearance) { context -> LspConfig.isSettingsTitleCollapsedEnabled(context) },
+        Entry(R.string.settings_title_lock_title, FeaturePageMode.SettingsAppearance,
+            parents = setOf(R.string.feature_settings_title_collapsed_title)) { context ->
+            com.mi.onextbox.lsp.SettingsAppearanceSettings.state(context).titleLocked },
+        Entry(R.string.settings_account_size_title, FeaturePageMode.SettingsAppearance) { context ->
+            com.mi.onextbox.lsp.SettingsAppearanceSettings.state(context).accountSize },
         Entry(R.string.settings_home_hide_account_title, FeaturePageMode.SettingsAppearance) { SettingsHomeCleanupSettings.enabled(it, SettingsHomeCleanupSettings.ACCOUNT) },
         Entry(R.string.settings_show_process_manager_title, FeaturePageMode.SettingsRealme) { com.mi.onextbox.lsp.SettingsProcessManager.enabled(it) },
         Entry(R.string.settings_realme_app_volume, FeaturePageMode.SettingsRealme) { com.mi.onextbox.lsp.SettingsRealmeFeatures.enabled(it, com.mi.onextbox.lsp.SettingsRealmeFeature.AppVolume) },
@@ -205,6 +220,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.battery_show_calculated_health_title, FeaturePageMode.Battery) { context -> LspConfig.isBatteryFeatureEnabled(context, LspConfig.BatteryFeature.ShowCalculatedHealth) },
         Entry(R.string.battery_remove_restrict_plugin_title, FeaturePageMode.Battery) { context -> LspConfig.isBatteryFeatureEnabled(context, LspConfig.BatteryFeature.RemoveRestrictPlugin) },
         Entry(R.string.battery_restore_default_whitelist_title, FeaturePageMode.Battery) { context -> LspConfig.isBatteryFeatureEnabled(context, LspConfig.BatteryFeature.RestoreDefaultWhitelist) },
+        Entry(R.string.battery_block_whitelist_restore_title, FeaturePageMode.Battery) { context -> LspConfig.isBatteryFeatureEnabled(context, LspConfig.BatteryFeature.BlockWhitelistRestore) },
         Entry(R.string.feature_status_bar_double_tap_to_top_title, FeaturePageMode.SystemUiStatusBar) { context -> LspConfig.isStatusBarInteractionFeatureEnabled(context, LspConfig.StatusBarInteractionFeature.DoubleTapToTop) },
         Entry(R.string.feature_status_bar_remove_to_top_whitelist_title, FeaturePageMode.SystemUiStatusBar) { context -> LspConfig.isStatusBarInteractionFeatureEnabled(context, LspConfig.StatusBarInteractionFeature.RemoveToTopWhitelist) },
         Entry(R.string.keyguard_aod_screenshot_title, FeaturePageMode.Screenshot) { LspConfig.isKeyguardFeatureEnabled(it, LspConfig.KeyguardFeature.AodScreenshot) },
@@ -282,7 +298,7 @@ internal object EnabledFeatureCatalog {
         page.name.startsWith("Desktop") -> FeaturePageMode.Desktop
         page.name.startsWith("SystemUi") || page == FeaturePageMode.NotificationRemoval -> FeaturePageMode.SystemUi
         page.name.startsWith("Settings") -> FeaturePageMode.Settings
-        page == FeaturePageMode.Installer || page == FeaturePageMode.CorePatch -> FeaturePageMode.AndroidSystem
+        page == FeaturePageMode.Installer || page == FeaturePageMode.CorePatch -> FeaturePageMode.PackageInstaller
         else -> page
     }
 }

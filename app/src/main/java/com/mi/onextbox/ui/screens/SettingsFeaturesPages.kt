@@ -77,9 +77,6 @@ internal fun SettingsFeaturesPage(
     var settingsInternationalEnabled by rememberSaveable {
         mutableStateOf(LspConfig.isSettingsInternationalEnabled(context))
     }
-    var settingsTitleCollapsed by rememberSaveable {
-        mutableStateOf(LspConfig.isSettingsTitleCollapsedEnabled(context))
-    }
     var settingsAppInfoCard by rememberSaveable {
         mutableStateOf(LspConfig.isSettingsAppInfoCardEnabled(context))
     }
@@ -143,20 +140,8 @@ internal fun SettingsFeaturesPage(
 
     if (mode == FeaturePageMode.SettingsAppearance) {
         SettingsHomeCleanupGroup()
-        SettingsSection(title = stringResource(R.string.feature_group_settings_interface))
-        SettingsGroup {
-            SettingsToggleRow(
-                title = stringResource(R.string.feature_settings_title_collapsed_title),
-                summary = stringResource(R.string.feature_settings_title_collapsed_summary),
-                checked = settingsTitleCollapsed,
-                onCheckedChange = { enabled ->
-                    settingsTitleCollapsed = enabled
-                    scope.launch {
-                        withContext(Dispatchers.IO) { LspConfig.setSettingsTitleCollapsedEnabled(context, enabled) }
-                    }
-                },
-            )
-        }
+        SettingsAccountCardSizeGroup()
+        SettingsTitleCollapseGroup()
     }
 
     if (mode == FeaturePageMode.SettingsPermissions) {

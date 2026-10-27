@@ -22,12 +22,17 @@ class ColorOs16FeaturePolicyTest {
         }
     }
 
-    @Test fun c16SearchAndInventoryContainOnlyAuditedPageAndTitlePairs() {
+    @Test fun c16SearchAndInventoryContainAuditedFeaturesAndTheRelocatedInstallerCategory() {
         val search = featureSearchEntries(SystemAdaptationVersion.ColorOs16)
         val inventory = enabledFeatureEntries(SystemAdaptationVersion.ColorOs16)
         assertTrue(search.size > 7)
         assertTrue(inventory.size > 7)
-        search.forEach { assertTrue(it.title.toString(), it.title in ColorOs16FeatureRegistry.titlesForPage(it.page)) }
+        search.forEach {
+            if (it.page == FeaturePageMode.PackageInstaller && it.title == R.string.package_installer_title) {
+                assertEquals(listOf(FeaturePageMode.Installer, FeaturePageMode.CorePatch),
+                    ColorOs16FeaturePolicy.categories[it.page])
+            } else assertTrue(it.title.toString(), it.title in ColorOs16FeatureRegistry.titlesForPage(it.page))
+        }
         inventory.forEach { assertTrue(it.title.toString(), it.title in ColorOs16FeatureRegistry.titlesForPage(it.page)) }
         assertFalse(ColorOs16FeaturePolicy.isFeatureAvailable(SystemAdaptationVersion.ColorOs16,
             FeaturePageMode.DesktopIcons, R.string.feature_hide_disconnected_bluetooth_title))

@@ -30,7 +30,7 @@ class BatteryFeaturesUiTest {
                     node.children.sumOf(::count)
             count(root)
         }
-        // Two headings, eight titles and the two optimization descriptions.
-        assertTrue(text == 12)
+        // Two headings, nine titles and three optimization descriptions.
+        assertTrue(text == 14)
     }
 }

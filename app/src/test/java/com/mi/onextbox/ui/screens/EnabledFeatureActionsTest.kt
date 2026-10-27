@@ -17,7 +17,7 @@ class EnabledFeatureActionsTest {
         EnabledFeatureCatalog.entries.forEach {
             if (it.page == FeaturePageMode.CorePatch) {
                 assertFalse("Core Patch options use their dedicated settings page", actions.supports(it.title))
-                assertEquals(FeaturePageMode.AndroidSystem, EnabledFeatureCatalog.group(it.page))
+                assertEquals(FeaturePageMode.PackageInstaller, EnabledFeatureCatalog.group(it.page))
             } else {
                 assertTrue("Missing writer: ${it.title}", actions.supports(it.title))
             }

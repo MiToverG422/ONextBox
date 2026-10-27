@@ -7,6 +7,11 @@ internal object BatteryOptimizationRules {
     fun isRestrictLoader(returnType: String, parameters: List<String>, isStatic: Boolean): Boolean =
         returnType == "void" && parameters.isEmpty() && !isStatic
 
+    fun isWhitelistRestore(returnType: String, parameters: List<String>, isStatic: Boolean, isAbstract: Boolean): Boolean =
+        returnType == "void" && isStatic && !isAbstract && parameters == listOf(
+            "android.os.IDeviceIdleController", "java.lang.String", "android.content.Context",
+        )
+
     /** Build off to the side so a failed OEM extension never leaves the caller's list half-written. */
     fun defaultWhitelist(
         defaults: List<String>,

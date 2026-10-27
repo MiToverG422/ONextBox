@@ -261,6 +261,7 @@ class OosLspModuleEntry : XposedModule() {
                     classLoader = classLoader,
                 )
                 SettingsTitleCollapseHooker.hook(classLoader)
+                SettingsAccountCardSizeHooker.hook(classLoader)
                 SettingsHomeEntryHooker.hook(classLoader)
                 SettingsHomeCleanupHooker.hook(classLoader)
                 SettingsProcessManager.hook(classLoader)
@@ -319,6 +320,10 @@ class OosLspModuleEntry : XposedModule() {
                 BatteryCycleCountHooker.hook(classLoader)
                 BatteryOptimizationHooker.hookBattery(classLoader, target.sourceDir)
             }
+
+            ScreenTranslationSettings.PACKAGE_NAME -> ScreenTranslationHooker.hook(classLoader, target.sourceDir)
+            InstallerCleanupSettings.APP_DETAIL, InstallerCleanupSettings.PACKAGE_INSTALLER ->
+                InstallerCleanupHooker.hook(classLoader, target.sourceDir, packageName)
 
             FileManagerCardRules.PACKAGE_NAME -> FileManagerHooker.hook(classLoader)
 

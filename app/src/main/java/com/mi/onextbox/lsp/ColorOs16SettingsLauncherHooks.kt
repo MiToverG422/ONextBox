@@ -8,6 +8,7 @@ internal object ColorOs16SettingsLauncherHooks {
         group("settings-core") { ColorOs16SettingsHooks.hook(loader) }
         group("settings-entries") { SettingsHooker.hookColorOs16VerifiedEntries(loader) }
         group("settings-title") { SettingsTitleCollapseHooker.hook(loader) }
+        group("settings-account-size") { SettingsAccountCardSizeHooker.hook(loader) }
         group("settings-home-entry") { SettingsHomeEntryHooker.hook(loader) }
         group("settings-home-cleanup") { SettingsHomeCleanupHooker.hook(loader) }
         group("settings-process-manager") { SettingsProcessManager.hook(loader) }

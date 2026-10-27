@@ -17,6 +17,13 @@ internal object BatteryOptimizationHooker {
     private const val TAG = "ONextBox-Battery"
 
     fun hookBattery(loader: ClassLoader, apkPath: String) {
+        ApkDexSession.withSession(apkPath) { open ->
+            hookRestrictPlugin(loader, open)
+            BatteryWhitelistRestoreHooker.hook(loader) { BatteryWhitelistRestoreTargets.resolve(open(), loader) }
+        }
+    }
+
+    private fun hookRestrictPlugin(loader: ClassLoader, open: () -> DexKitBridge) {
         // The plugin can initialize during Application.onCreate, so resolve before that point.
         // Scanning is unnecessary while disabled; loading a plugin already resident is not reversible.
         val key = "$TAG:App@${System.identityHashCode(loader)}:"
@@ -25,8 +32,7 @@ internal object BatteryOptimizationHooker {
         if (!LspConfig.isBatteryFeatureEnabledXposed(BatteryFeature.RemoveRestrictPlugin) && saved == null) return
         runCatching {
             val targets = saved ?: run {
-                System.loadLibrary("dexkit")
-                DexKitBridge.create(apkPath).use { bridge ->
+                val bridge = open()
                 val supporters = bridge.findClass {
                     matcher {
                         addFieldForType(Context::class.java)
@@ -60,7 +66,6 @@ internal object BatteryOptimizationHooker {
                     }
                     method
                     }.distinct()
-                }
             }
             require(targets.isNotEmpty() && targets.map { it.declaringClass }.distinct().size == 1) {
                 "Restrict plugin loader missing or ambiguous"

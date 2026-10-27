@@ -71,6 +71,125 @@ private fun <T> rememberCustomization(keys: Set<String>, read: (Context) -> T): 
 }
 
 @Composable
+internal fun SettingsAccountCardSizeGroup() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(SettingsAppearanceSettings.keys, SettingsAppearanceSettings::state)
+    val value = editor.state
+    SettingsSection(title = stringResource(R.string.settings_account_size_group))
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(SettingsAppearanceSettings.ACCOUNT_SIZE) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.settings_account_size_title),
+                summary = stringResource(R.string.settings_account_size_summary), checked = value.accountSize,
+                interactionEnabled = editor.savingKey == null, hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { next -> editor.save(SettingsAppearanceSettings.ACCOUNT_SIZE, value.copy(accountSize = next)) {
+                    SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.ACCOUNT_SIZE, next)
+                } })
+        }
+        row(SettingsAppearanceSettings.ACCOUNT_PERCENT, visible = value.accountSize) { above, below ->
+            FeatureSliderRow(heading = stringResource(R.string.settings_account_size_percent),
+                currentValue = "${value.accountPercent}%", value = value.accountPercent.toFloat(),
+                valueRange = SettingsAppearanceSettings.MIN_PERCENT.toFloat()..SettingsAppearanceSettings.MAX_PERCENT.toFloat(),
+                steps = 17, enabled = value.accountSize,
+                interactionEnabled = value.accountSize && editor.savingKey == null,
+                onValueChange = { editor.state = editor.state.copy(accountPercent = it.roundToInt()) },
+                onValueChangeFinished = {
+                    val selected = editor.state
+                    editor.save(SettingsAppearanceSettings.ACCOUNT_PERCENT, selected) {
+                        SettingsAppearanceSettings.setPercent(context, selected.accountPercent)
+                    }
+                },
+                onReset = { editor.save(SettingsAppearanceSettings.ACCOUNT_PERCENT,
+                    value.copy(accountPercent = SettingsAppearanceSettings.DEFAULT_PERCENT)) {
+                    SettingsAppearanceSettings.setPercent(context, SettingsAppearanceSettings.DEFAULT_PERCENT)
+                } }, hasDividerAbove = above, hasDividerBelow = below)
+        }
+    }
+}
+
+@Composable
+internal fun TranslationFeaturesPage() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(ScreenTranslationSettings.keys, ScreenTranslationSettings::state)
+    SettingsSection(title = stringResource(R.string.translation_screen_group))
+    FeatureAnimatedGroup(animateChanges = true) {
+        SharedFeatureDefinitions.translationRows.forEach { (key, feature) ->
+            row(key) { above, below ->
+                SettingsToggleRow(title = stringResource(feature.title), summary = stringResource(feature.summary),
+                    checked = editor.state[key] == true,
+                    interactionEnabled = editor.savingKey == null, hasDividerAbove = above, hasDividerBelow = below,
+                    onCheckedChange = { enabled -> editor.save(key, editor.state + (key to enabled)) {
+                        ScreenTranslationSettings.set(context, key, enabled)
+                    } })
+            }
+        }
+    }
+}
+
+@Composable
+internal fun InstallerCleanupPage(page: FeaturePageMode, onOpen: (FeaturePageMode) -> Unit) {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(InstallerCleanupSettings.keys + InstallerCleanupSettings.legacyKeys, InstallerCleanupSettings::state)
+    val rows = if (page == FeaturePageMode.AppInstaller) SharedFeatureDefinitions.appInstallerRows
+        else SharedFeatureDefinitions.packageInstallerRows
+    SettingsSection(title = stringResource(R.string.installer_cleanup_group))
+    FeatureAnimatedGroup(animateChanges = true) {
+        rows.forEach { (key, feature) ->
+            row(key) { above, below ->
+                SettingsToggleRow(title = stringResource(feature.title),
+                    summary = if (page == FeaturePageMode.AppInstaller) "" else stringResource(feature.summary),
+                    checked = editor.state[key] == true, interactionEnabled = editor.savingKey == null,
+                    hasDividerAbove = above, hasDividerBelow = below,
+                    onCheckedChange = { enabled -> editor.save(key, editor.state + (key to enabled)) {
+                        InstallerCleanupSettings.set(context, key, enabled)
+                    } })
+            }
+        }
+    }
+    if (page == FeaturePageMode.PackageInstaller) InstallerManagementGroup(onOpen)
+}
+
+@Composable
+internal fun InstallerManagementGroup(onOpen: (FeaturePageMode) -> Unit) {
+    val entries = SharedFeatureDefinitions.installerSubPages
+    SettingsSection(title = stringResource(R.string.installer_group))
+    FeatureAnimatedGroup(animateChanges = true) {
+        entries.forEach { (page, title) ->
+            row(page.name) { above, below ->
+                SettingsCardRow(title = stringResource(title), summary = "", showArrow = true,
+                    onClick = { onOpen(page) }, hasDividerAbove = above, hasDividerBelow = below)
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SettingsTitleCollapseGroup() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(SettingsAppearanceSettings.keys, SettingsAppearanceSettings::state)
+    val value = editor.state
+    SettingsSection(title = stringResource(R.string.feature_group_settings_interface))
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(SettingsAppearanceSettings.TITLE_COLLAPSED) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.feature_settings_title_collapsed_title),
+                summary = stringResource(R.string.feature_settings_title_collapsed_summary), checked = value.titleCollapsed,
+                interactionEnabled = editor.savingKey == null, hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { next -> editor.save(SettingsAppearanceSettings.TITLE_COLLAPSED, value.copy(titleCollapsed = next)) {
+                    LspConfig.setSettingsTitleCollapsedEnabled(context, next)
+                } })
+        }
+        row(SettingsAppearanceSettings.TITLE_LOCK, visible = value.titleCollapsed) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.settings_title_lock_title),
+                summary = stringResource(R.string.settings_title_lock_summary), checked = value.titleLocked,
+                interactionEnabled = value.titleCollapsed && editor.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { next -> editor.save(SettingsAppearanceSettings.TITLE_LOCK, value.copy(titleLocked = next)) {
+                    SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.TITLE_LOCK, next)
+                } })
+        }
+    }
+}
+
+@Composable
 internal fun QsTileCornerSettingsGroup(onOpenCorners: () -> Unit, onOpenPercentage: () -> Unit) {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(QsTileCornerSettings.keys, QsTileCornerSettings::state)

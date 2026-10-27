@@ -170,6 +170,8 @@ class FeatureSearchTest {
                 com.mi.onextbox.R.string.battery_remove_restrict_plugin_summary,
             com.mi.onextbox.R.string.battery_restore_default_whitelist_title to
                 com.mi.onextbox.R.string.battery_restore_default_whitelist_summary,
+            com.mi.onextbox.R.string.battery_block_whitelist_restore_title to
+                com.mi.onextbox.R.string.battery_block_whitelist_restore_summary,
         ).forEach { (title, description) ->
             val entry = FeatureSearchIndex.entries.single { it.title == title }
             assertEquals(FeaturePageMode.Battery, entry.page)

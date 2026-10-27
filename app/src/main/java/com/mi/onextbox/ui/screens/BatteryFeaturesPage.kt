@@ -51,7 +51,7 @@ internal fun BatteryFeaturesPage() {
             BatteryFeature.ShowCalculatedHealth,
         ),
         R.string.battery_optimization_group to listOf(
-            BatteryFeature.RemoveRestrictPlugin, BatteryFeature.RestoreDefaultWhitelist,
+            BatteryFeature.RemoveRestrictPlugin, BatteryFeature.RestoreDefaultWhitelist, BatteryFeature.BlockWhitelistRestore,
         ),
     )
     groups.forEach { (title, features) ->
@@ -69,10 +69,12 @@ internal fun BatteryFeaturesPage() {
                         BatteryFeature.ShowCalculatedHealth -> R.string.battery_show_calculated_health_title
                         BatteryFeature.RemoveRestrictPlugin -> R.string.battery_remove_restrict_plugin_title
                         BatteryFeature.RestoreDefaultWhitelist -> R.string.battery_restore_default_whitelist_title
+                        BatteryFeature.BlockWhitelistRestore -> R.string.battery_block_whitelist_restore_title
                     }),
                     summary = when (feature) {
                         BatteryFeature.RemoveRestrictPlugin -> stringResource(R.string.battery_remove_restrict_plugin_summary)
                         BatteryFeature.RestoreDefaultWhitelist -> stringResource(R.string.battery_restore_default_whitelist_summary)
+                        BatteryFeature.BlockWhitelistRestore -> stringResource(R.string.battery_block_whitelist_restore_summary)
                         else -> ""
                     },
                     checked = states[feature] == true,
