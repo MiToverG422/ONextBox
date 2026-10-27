@@ -1499,4 +1499,15 @@
     <string name="camera_preview_group">照片预览</string>
     <string name="camera_default_gallery_title">照片预览跟随默认相册</string>
     <string name="camera_default_gallery_summary">使用系统“默认应用”中选择的相册查看照片和视频</string>
+
+    <string name="network_speed_title">网速指示器</string>
+    <string name="network_speed_refresh_second">自定义刷新间隔</string>
+    <string name="network_speed_hide_per_second">隐藏 /s</string>
+    <string name="network_speed_hide_units">隐藏速度单位</string>
+    <string name="network_speed_single_line">单行显示</string>
+
+    <string name="network_speed_interval">刷新间隔</string>
+    <string name="network_speed_follow_font_weight">跟随系统字体字重</string>
+    <string name="network_speed_custom_font_size">自定义字号</string>
+    <string name="network_speed_font_size">字体大小</string>
 </resources>

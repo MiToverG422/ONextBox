@@ -1425,4 +1425,15 @@
     <string name="camera_preview_group">写真のプレビュー</string>
     <string name="camera_default_gallery_title">既定のギャラリーで開く</string>
     <string name="camera_default_gallery_summary">システムの「デフォルトのアプリ」で選択したギャラリーで写真や動画を開きます</string>
+
+    <string name="network_speed_title">通信速度表示</string>
+    <string name="network_speed_refresh_second">更新間隔を自訂</string>
+    <string name="network_speed_hide_per_second">/s を非表示</string>
+    <string name="network_speed_hide_units">速度単位を非表示</string>
+    <string name="network_speed_single_line">単行表示</string>
+
+    <string name="network_speed_interval">更新間隔</string>
+    <string name="network_speed_follow_font_weight">系統字重に従う</string>
+    <string name="network_speed_custom_font_size">字級を自訂</string>
+    <string name="network_speed_font_size">文字寸法</string>
 </resources>

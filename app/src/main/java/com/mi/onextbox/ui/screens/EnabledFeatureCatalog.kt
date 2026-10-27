@@ -45,6 +45,12 @@ internal object EnabledFeatureCatalog {
         SharedFeatureDefinitions.hideScreenshotFloating.catalogEntry(),
         SharedFeatureDefinitions.galleryAiRetouch.catalogEntry(),
         Entry(R.string.statusbar_order_title, FeaturePageMode.SystemUiStatusBar) { StatusBarLayoutSettings.state(it).orderEnabled },
+        Entry(R.string.network_speed_refresh_second, FeaturePageMode.SystemUiStatusBar) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.CustomRefreshInterval) },
+        Entry(R.string.network_speed_hide_per_second, FeaturePageMode.SystemUiStatusBar) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.HidePerSecond) },
+        Entry(R.string.network_speed_hide_units, FeaturePageMode.SystemUiStatusBar) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.HideUnits) },
+        Entry(R.string.network_speed_single_line, FeaturePageMode.SystemUiStatusBar) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.SingleLine) },
+        Entry(R.string.network_speed_follow_font_weight, FeaturePageMode.SystemUiStatusBar) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.FollowSystemFontWeight) },
+        Entry(R.string.network_speed_custom_font_size, FeaturePageMode.SystemUiStatusBar) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.CustomFontSize) },
         Entry(R.string.statusbar_sim_order_title, FeaturePageMode.SystemUiIconOrder, parents = setOf(R.string.statusbar_order_title)) {
             StatusBarLayoutSettings.state(it).simEnabled
         },

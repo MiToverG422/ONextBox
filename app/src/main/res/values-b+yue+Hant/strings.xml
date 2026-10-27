@@ -1425,4 +1425,15 @@
     <string name="camera_preview_group">相片預覽</string>
     <string name="camera_default_gallery_title">相片預覽跟隨預設相簿</string>
     <string name="camera_default_gallery_summary">用系統「預設應用程式」揀嘅相簿睇相同影片</string>
+
+    <string name="network_speed_title">網速指示器</string>
+    <string name="network_speed_refresh_second">自訂更新間隔</string>
+    <string name="network_speed_hide_per_second">隱藏 /s</string>
+    <string name="network_speed_hide_units">隱藏速度單位</string>
+    <string name="network_speed_single_line">單行顯示</string>
+
+    <string name="network_speed_interval">更新間隔</string>
+    <string name="network_speed_follow_font_weight">跟隨系統字體粗幼</string>
+    <string name="network_speed_custom_font_size">自訂字號</string>
+    <string name="network_speed_font_size">字體大小</string>
 </resources>

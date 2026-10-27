@@ -6,6 +6,11 @@ internal object ColorOs16FeatureRegistry {
     data class Entry(val id: String, val titles: Set<Int>, val pages: Set<FeaturePageMode>, val packages: Set<String>)
 
     val entries = listOf(
+        Entry("systemui:network_speed", setOf(R.string.network_speed_title, R.string.network_speed_refresh_second,
+            R.string.network_speed_hide_per_second, R.string.network_speed_hide_units, R.string.network_speed_single_line,
+            R.string.network_speed_interval, R.string.network_speed_follow_font_weight, R.string.network_speed_custom_font_size,
+            R.string.network_speed_font_size),
+            setOf(FeaturePageMode.SystemUiStatusBar), setOf("com.android.systemui")),
         Entry("framework:framework.native_icon", setOf(R.string.feature_native_notify_icon_title),
             setOf(FeaturePageMode.SystemUiNative), setOf("system")),
         Entry("framework:framework.bubbles", setOf(R.string.feature_native_notification_bubbles_title),

@@ -247,6 +247,7 @@ class OosLspModuleEntry : XposedModule() {
                 NotificationClearButtonHooker.hook(classLoader)
                 HideNotificationClearHooker.hook(classLoader)
                 SmallWindowHooker.hookSystemUi(classLoader)
+                NetworkSpeedHooker.hook(classLoader)
                 FaceTapUnlockHooker.hook(classLoader)
                 KeyguardCaptureHooker.hookSystemUi(classLoader)
                 PasswordDialHighlightHooker.hook(classLoader)

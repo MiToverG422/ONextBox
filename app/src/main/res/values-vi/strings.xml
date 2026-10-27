@@ -1425,4 +1425,15 @@
     <string name="camera_preview_group">Xem trước ảnh</string>
     <string name="camera_default_gallery_title">Mở bằng thư viện mặc định</string>
     <string name="camera_default_gallery_summary">Mở ảnh và video bằng thư viện đã chọn trong mục ứng dụng mặc định của hệ thống</string>
+
+    <string name="network_speed_title">Chỉ báo tốc độ mạng</string>
+    <string name="network_speed_refresh_second">Tùy chỉnh chu kỳ cập nhật</string>
+    <string name="network_speed_hide_per_second">Ẩn /s</string>
+    <string name="network_speed_hide_units">Ẩn đơn vị tốc độ</string>
+    <string name="network_speed_single_line">Hiển thị một dòng</string>
+
+    <string name="network_speed_interval">Chu kỳ cập nhật</string>
+    <string name="network_speed_follow_font_weight">Theo độ đậm phông hệ thống</string>
+    <string name="network_speed_custom_font_size">Tùy chỉnh cỡ chữ</string>
+    <string name="network_speed_font_size">Cỡ chữ</string>
 </resources>

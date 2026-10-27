@@ -9,6 +9,7 @@ internal object ColorOs16SystemUiFeatureHooks {
         install("data-sim") { DataSimSignalHooker.hook(loader) }
         install("statusbar-layout") { StatusBarLayoutHooker.hookColorOs16(loader) }
         install("power-indicator") { PowerIndicatorHooker.hook(loader) }
+        install("network-speed") { NetworkSpeedHooker.hook(loader) }
         install("carrier-name") { CarrierNameHooker.hook(loader) }
         install("qs-corners") { QsTileCornerHooker.hook(loader) }
         install("qs-percentage") { QsSliderPercentageHooker.hook(loader) }

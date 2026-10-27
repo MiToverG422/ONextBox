@@ -177,6 +177,7 @@ internal fun SystemUiFeaturesPage(
             StatusBarLayoutSettingsGroup { onOpenSubPage(FeaturePageMode.SystemUiIconOrder) }
             CarrierNameSettingsGroup()
             PowerIndicatorSettingsGroup()
+            NetworkSpeedSettingsGroup()
             SettingsSection(title = stringResource(R.string.feature_large_network_type_title))
             SettingsGroup {
                 LargeNetworkTypeSettingsRow()

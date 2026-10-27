@@ -2,6 +2,15 @@ package com.mi.onextbox.lsp.compat
 
 internal object ColorOs16Capabilities {
     val featureKeys = setOf(
+        "systemui_network_speed_refresh_second",
+        "systemui_network_speed_hide_per_second",
+        "systemui_network_speed_hide_units",
+        "systemui_network_speed_single_line",
+        "systemui_network_speed_interval_ms",
+        "systemui_network_speed_follow_font_weight",
+        "systemui_network_speed_custom_font_size",
+        "systemui_network_speed_font_size_sp",
+        "systemui_network_speed_font_size_dp",
         "allow_secure_window_capture",
         "aod_enhance_enabled",
         "aod_init_bright_brightness",
@@ -288,6 +297,7 @@ internal object ColorOs16Capabilities {
         "system",
     )
     val featureIds = setOf(
+        "systemui:network_speed",
         "framework:framework.native_icon",
         "framework:framework.bubbles",
         "framework:framework.refresh165",

@@ -1452,4 +1452,15 @@
     <string name="camera_preview_group">Просмотр фото</string>
     <string name="camera_default_gallery_title">Использовать галерею по умолчанию</string>
     <string name="camera_default_gallery_summary">Открывать фото и видео в галерее, выбранной в системных настройках приложений по умолчанию</string>
+
+    <string name="network_speed_title">Индикатор скорости сети</string>
+    <string name="network_speed_refresh_second">Свой интервал обновления</string>
+    <string name="network_speed_hide_per_second">Скрыть /s</string>
+    <string name="network_speed_hide_units">Скрыть единицы скорости</string>
+    <string name="network_speed_single_line">Отображать в одну строку</string>
+
+    <string name="network_speed_interval">Интервал обновления</string>
+    <string name="network_speed_follow_font_weight">Системная толщина шрифта</string>
+    <string name="network_speed_custom_font_size">Свой размер шрифта</string>
+    <string name="network_speed_font_size">Размер шрифта</string>
 </resources>

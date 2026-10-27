@@ -33,6 +33,12 @@ internal class EnabledFeatureActions {
     private val writers: Map<Int, suspend (Context, Boolean) -> Unit> = mapOf<Int, suspend (Context, Boolean) -> Unit>(
         SharedFeatureDefinitions.networkIdentity.action(),
         R.string.statusbar_order_title to { context, enabled -> StatusBarLayoutSettings.setOrderEnabled(context, enabled) },
+        R.string.network_speed_refresh_second to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.CustomRefreshInterval, enabled) },
+        R.string.network_speed_hide_per_second to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.HidePerSecond, enabled) },
+        R.string.network_speed_hide_units to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.HideUnits, enabled) },
+        R.string.network_speed_single_line to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.SingleLine, enabled) },
+        R.string.network_speed_follow_font_weight to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.FollowSystemFontWeight, enabled) },
+        R.string.network_speed_custom_font_size to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.CustomFontSize, enabled) },
         R.string.statusbar_sim_order_title to { context, enabled -> StatusBarLayoutSettings.saveSimOrder(context, enabled, StatusBarLayoutSettings.state(context).simOrder) },
         R.string.statusbar_margins_title to { context, enabled -> StatusBarLayoutSettings.save(context, StatusBarLayoutSettings.state(context).copy(marginsEnabled = enabled)) },
         R.string.statusbar_vertical_margins_title to { context, enabled -> StatusBarLayoutSettings.setVerticalMarginsEnabled(context, enabled) },

@@ -289,6 +289,31 @@ object LspConfig {
         feature.persistPropertyKey, feature.propertyKey, feature.settingsKey, feature.key, false,
     )
 
+    enum class NetworkSpeedFeature(val key: String) {
+        CustomRefreshInterval("systemui_network_speed_refresh_second"),
+        HidePerSecond("systemui_network_speed_hide_per_second"),
+        HideUnits("systemui_network_speed_hide_units"),
+        SingleLine("systemui_network_speed_single_line"),
+        FollowSystemFontWeight("systemui_network_speed_follow_font_weight"),
+        CustomFontSize("systemui_network_speed_custom_font_size");
+
+        val propertyKey get() = "oost.$key"
+        val persistPropertyKey get() = "persist.sys.$propertyKey"
+        val settingsKey get() = "oost_$key"
+    }
+
+    fun isNetworkSpeedFeatureEnabled(context: Context, feature: NetworkSpeedFeature): Boolean =
+        LspPreferenceStore.readBoolean(context, feature.key, false)
+
+    fun setNetworkSpeedFeatureEnabled(context: Context, feature: NetworkSpeedFeature, enabled: Boolean) {
+        setSyncedBooleanPreference(context, feature.key, enabled,
+            listOf(feature.persistPropertyKey, feature.propertyKey), feature.settingsKey)
+    }
+
+    fun isNetworkSpeedFeatureEnabledXposed(feature: NetworkSpeedFeature): Boolean = readXposedBoolean(
+        feature.persistPropertyKey, feature.propertyKey, feature.settingsKey, feature.key, false,
+    )
+
     enum class StatusBarInteractionFeature(val key: String) {
         DoubleTapToTop("systemui_double_tap_scroll_to_top"),
         RemoveToTopWhitelist("systemui_scroll_to_top_whitelist_bypass");
@@ -2767,6 +2792,7 @@ object LspConfig {
             LargeNetworkTypeSettings.setArtwork(context, false)
             LargeNetworkTypeSettings.setLte(context, false)
             setHideDisconnectedBluetoothEnabled(context, false)
+            NetworkSpeedFeature.entries.forEach { setNetworkSpeedFeatureEnabled(context, it, false) }
             StatusBarInteractionFeature.entries.forEach { setStatusBarInteractionFeatureEnabled(context, it, false) }
             BatteryFeature.entries.forEach { setBatteryFeatureEnabled(context, it, false) }
             TrafficFeature.entries.forEach { setTrafficFeatureEnabled(context, it, false) }
@@ -3124,6 +3150,13 @@ object LspConfig {
         BatteryFeature.entries.forEach { feature ->
             syncScalarState(
                 value = if (isBatteryFeatureEnabled(context, feature)) "1" else "0",
+                propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
+                settingsGlobalKey = feature.settingsKey,
+            )
+        }
+        NetworkSpeedFeature.entries.forEach { feature ->
+            syncScalarState(
+                value = if (isNetworkSpeedFeatureEnabled(context, feature)) "1" else "0",
                 propertyKeys = listOf(feature.persistPropertyKey, feature.propertyKey),
                 settingsGlobalKey = feature.settingsKey,
             )

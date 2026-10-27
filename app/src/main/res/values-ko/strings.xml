@@ -1450,4 +1450,15 @@
     <string name="camera_preview_group">사진 미리보기</string>
     <string name="camera_default_gallery_title">기본 갤러리로 열기</string>
     <string name="camera_default_gallery_summary">시스템 기본 앱에서 선택한 갤러리로 사진과 동영상을 엽니다</string>
+
+    <string name="network_speed_title">네트워크 속도 표시</string>
+    <string name="network_speed_refresh_second">새로고침 간격 설정</string>
+    <string name="network_speed_hide_per_second">/s 숨기기</string>
+    <string name="network_speed_hide_units">속도 단위 숨기기</string>
+    <string name="network_speed_single_line">한 줄로 표시</string>
+
+    <string name="network_speed_interval">새로고침 간격</string>
+    <string name="network_speed_follow_font_weight">시스템 글꼴 굵기 따르기</string>
+    <string name="network_speed_custom_font_size">글꼴 크기 설정</string>
+    <string name="network_speed_font_size">글꼴 크기</string>
 </resources>

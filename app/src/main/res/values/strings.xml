@@ -1522,4 +1522,15 @@
     <string name="camera_preview_group">Photo preview</string>
     <string name="camera_default_gallery_title">Follow default gallery</string>
     <string name="camera_default_gallery_summary">Open photos and videos with the gallery selected in system Default apps</string>
+
+    <string name="network_speed_title">Network speed indicator</string>
+    <string name="network_speed_refresh_second">Custom refresh interval</string>
+    <string name="network_speed_hide_per_second">Hide /s</string>
+    <string name="network_speed_hide_units">Hide speed units</string>
+    <string name="network_speed_single_line">Single-line display</string>
+
+    <string name="network_speed_interval">Refresh interval</string>
+    <string name="network_speed_follow_font_weight">Follow system font weight</string>
+    <string name="network_speed_custom_font_size">Custom font size</string>
+    <string name="network_speed_font_size">Font size</string>
 </resources>
