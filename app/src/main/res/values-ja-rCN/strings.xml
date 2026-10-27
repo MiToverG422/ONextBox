@@ -1116,6 +1116,8 @@
     <string name="feature_large_network_artwork_summary">重绘网络类型图标，共支持25种网络类型</string>
     <string name="feature_large_network_lte_title">4G を LTE と表示</string>
     <string name="feature_large_network_lte_summary">カスタムアイコンの 4G・4G+ を LTE・LTE+ に置き換えます</string>
+    <string name="wallpaper_3d_force_title">強制開啟 3D 壁紙</string>
+    <string name="wallpaper_3d_force_summary">於隱藏 3D 壁紙開關之裝置強制開啟該功能</string>
     <string name="wallpaper_motion_group">3D 壁紙</string>
     <string name="wallpaper_motion_title">3D 壁紙感度（實驗性）</string>
     <string name="wallpaper_motion_summary"></string>

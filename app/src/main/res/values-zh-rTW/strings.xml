@@ -1128,6 +1128,8 @@
     <string name="enabled_features_error">讀取設定失敗，請重新進入此頁重試</string>
     <string name="enabled_features_quick_hint">點擊開關直接修改，點擊名稱進入設定。關閉的項目保留至離開此頁；部分功能需重新啟動作用域</string>
     <string name="enabled_features_save_failed">儲存失敗，將重新讀取實際設定</string>
+    <string name="wallpaper_3d_force_title">強制開啟 3D 桌布</string>
+    <string name="wallpaper_3d_force_summary">在隱藏 3D 桌布開關的裝置上強制開啟該功能</string>
     <string name="wallpaper_motion_group">3D 桌布</string>
     <string name="wallpaper_motion_title">3D 桌布靈敏度（實驗性）</string>
     <string name="wallpaper_motion_summary"></string>

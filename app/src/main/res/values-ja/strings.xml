@@ -1116,6 +1116,8 @@
     <string name="feature_large_network_artwork_summary">ネットワーク種別アイコンを再描画し、25種類のネットワーク表示に対応</string>
     <string name="feature_large_network_lte_title">4G を LTE と表示</string>
     <string name="feature_large_network_lte_summary">カスタムアイコンの 4G・4G+ を LTE・LTE+ に置き換えます</string>
+    <string name="wallpaper_3d_force_title">3D 壁紙を強制表示</string>
+    <string name="wallpaper_3d_force_summary">3D 壁紙のスイッチが隠されている端末で、この機能を強制的に有効にします</string>
     <string name="wallpaper_motion_group">3D 壁紙</string>
     <string name="wallpaper_motion_title">3D 壁紙の感度（試験的）</string>
     <string name="wallpaper_motion_summary"></string>

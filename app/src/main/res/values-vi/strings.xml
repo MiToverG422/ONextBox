@@ -1116,6 +1116,8 @@
     <string name="feature_large_network_artwork_summary">Vẽ lại biểu tượng loại mạng, hỗ trợ tổng cộng 25 loại mạng</string>
     <string name="feature_large_network_lte_title">Hiển thị 4G thành LTE</string>
     <string name="feature_large_network_lte_summary">Thay biểu tượng 4G và 4G+ bằng LTE và LTE+ trong bộ tùy chỉnh</string>
+    <string name="wallpaper_3d_force_title">Buộc bật hình nền 3D</string>
+    <string name="wallpaper_3d_force_summary">Bật bắt buộc tính năng này trên các thiết bị bị ẩn nút hình nền 3D</string>
     <string name="wallpaper_motion_group">Hình nền 3D</string>
     <string name="wallpaper_motion_title">Độ nhạy hình nền 3D (thử nghiệm)</string>
     <string name="wallpaper_motion_summary"></string>

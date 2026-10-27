@@ -5,6 +5,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
+import com.mi.onextbox.lsp.Wallpaper3DForceSettings
 import com.mi.onextbox.lsp.WallpaperMotionSettings
 import com.mi.onextbox.ui.settings.FeatureSettingWriteQueue
 import com.mi.onextbox.ui.settings.SettingsSection
@@ -18,9 +19,29 @@ internal fun WallpaperMotionGroup() {
     val context = LocalContext.current
     val application = context.applicationContext
     val scope = rememberCoroutineScope()
+    var forceEnabled by remember { mutableStateOf(Wallpaper3DForceSettings.enabled(context)) }
     var enabled by remember { mutableStateOf(WallpaperMotionSettings.enabled(context)) }
     var amount by remember { mutableIntStateOf(WallpaperMotionSettings.amount(context)) }
     var saving by remember { mutableStateOf(false) }
+    fun saveForce(nextEnabled: Boolean) {
+        forceEnabled = nextEnabled
+        saving = true
+        val write = FeatureSettingWriteQueue.application.enqueue {
+            Wallpaper3DForceSettings.save(application, nextEnabled)
+        }
+        scope.launch {
+            try {
+                write.await()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                forceEnabled = Wallpaper3DForceSettings.enabled(application)
+                Toast.makeText(context, R.string.enabled_features_save_failed, Toast.LENGTH_SHORT).show()
+            } finally {
+                saving = false
+            }
+        }
+    }
     fun save(nextEnabled: Boolean, nextAmount: Int) {
         enabled = nextEnabled
         amount = nextAmount
@@ -46,6 +67,17 @@ internal fun WallpaperMotionGroup() {
     FeatureAnimatedGroup {
         row(0) { above, below ->
             SettingsToggleRow(
+                title = stringResource(R.string.wallpaper_3d_force_title),
+                summary = stringResource(R.string.wallpaper_3d_force_summary),
+                checked = forceEnabled,
+                interactionEnabled = !saving,
+                onCheckedChange = { saveForce(it) },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
+        }
+        row(1) { above, below ->
+            SettingsToggleRow(
                 title = stringResource(R.string.wallpaper_motion_title),
                 summary = stringResource(R.string.wallpaper_motion_summary),
                 checked = enabled,
@@ -55,7 +87,7 @@ internal fun WallpaperMotionGroup() {
                 hasDividerBelow = below,
             )
         }
-        row(1, visible = enabled) { above, below ->
+        row(2, visible = enabled) { above, below ->
             FeatureSliderRow(
                 heading = stringResource(R.string.wallpaper_motion_amount),
                 currentValue = "$amount%",

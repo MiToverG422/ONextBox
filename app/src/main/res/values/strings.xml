@@ -1182,6 +1182,8 @@
     <string name="enabled_features_error">Unable to read configuration. Reopen this page to retry</string>
     <string name="enabled_features_quick_hint">Use switches to change features, or tap their names for settings. Disabled rows stay until you leave. Some features require restarting their scope</string>
     <string name="enabled_features_save_failed">Could not save. The actual configuration will be reloaded</string>
+    <string name="wallpaper_3d_force_title">Force enable 3D wallpaper</string>
+    <string name="wallpaper_3d_force_summary">Force enable the feature on devices where the 3D wallpaper switch is hidden</string>
     <string name="wallpaper_motion_group">3D wallpaper</string>
     <string name="wallpaper_motion_title">3D wallpaper sensitivity (experimental)</string>
     <string name="wallpaper_motion_summary"></string>

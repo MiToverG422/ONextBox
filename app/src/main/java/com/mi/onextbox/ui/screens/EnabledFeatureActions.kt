@@ -112,6 +112,7 @@ internal class EnabledFeatureActions {
         R.string.feature_permission_unlock_restricted_title to { context, enabled -> LspConfig.setPermissionFeatureEnabled(context, LspConfig.PermissionFeature.AutoUnlockRestrictedSettings, enabled) },
         R.string.feature_permission_disable_malicious_title to { context, enabled -> LspConfig.setPermissionFeatureEnabled(context, LspConfig.PermissionFeature.DisableMaliciousAppIntercept, enabled) },
         R.string.feature_wallpapers_red_one_entry_title to { context, enabled -> LspConfig.setWallpapersRedOneEntryEnabled(context, enabled) },
+        R.string.wallpaper_3d_force_title to { context, enabled -> Wallpaper3DForceSettings.save(context, enabled) },
         R.string.wallpaper_motion_title to { context, enabled -> WallpaperMotionSettings.save(context, enabled, WallpaperMotionSettings.amount(context)) },
         R.string.theme_store_vip_title to { context, enabled -> ThemeStoreSettings.set(context, enabled) },
         R.string.theme_store_ads_title to { context, enabled -> ThemeStoreSettings.setAds(context, enabled) },

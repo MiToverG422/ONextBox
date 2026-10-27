@@ -300,6 +300,7 @@ class OosLspModuleEntry : XposedModule() {
             PACKAGE_WALLPAPERS -> {
                 WallpapersRedOneEntryHooker.hook(classLoader)
                 WallpaperMotionHooker.hook(classLoader)
+                Wallpaper3DForceHooker.hook(classLoader)
             }
             WallpaperMotionSettings.ENGINE_PACKAGE -> {
                 WallpaperMotionHooker.hook(classLoader)

@@ -60,6 +60,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.launcher_disable_icon_menu_title, FeaturePageMode.DesktopIcons) { LauncherGestureSettings.menu(it) },
         Entry(R.string.launcher_widgets_menu_title, FeaturePageMode.DesktopIcons) { LauncherGestureSettings.widgets(it) },
         Entry(R.string.launcher_swipe_top_title, FeaturePageMode.DesktopRecent) { LauncherGestureSettings.top(it) },
+        Entry(R.string.wallpaper_3d_force_title, FeaturePageMode.Wallpapers) { context -> Wallpaper3DForceSettings.enabled(context) },
         Entry(R.string.wallpaper_motion_title, FeaturePageMode.Wallpapers) { context -> WallpaperMotionSettings.enabled(context) },
         Entry(R.string.feature_aod_enhance_toggle_title, FeaturePageMode.Aod) { context -> LspConfig.isAodEnhanceEnabled(context) },
         Entry(R.string.feature_aod_all_day_unlock_title, FeaturePageMode.Aod) { context -> LspConfig.isAodAllDayUnlockEnabled(context) },

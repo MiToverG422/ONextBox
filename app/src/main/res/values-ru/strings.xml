@@ -1116,6 +1116,8 @@
     <string name="feature_large_network_artwork_summary">Перерисованные значки сети с поддержкой 25 типов сети</string>
     <string name="feature_large_network_lte_title">Показывать LTE вместо 4G</string>
     <string name="feature_large_network_lte_summary">Заменять значки 4G и 4G+ на LTE и LTE+ в пользовательском наборе</string>
+    <string name="wallpaper_3d_force_title">Принудительно включить 3D-обои</string>
+    <string name="wallpaper_3d_force_summary">Принудительно включать функцию на устройствах, где скрыт переключатель 3D-обоев</string>
     <string name="wallpaper_motion_group">3D-обои</string>
     <string name="wallpaper_motion_title">Чувствительность 3D-обоев (экспериментально)</string>
     <string name="wallpaper_motion_summary"></string>
