@@ -602,8 +602,8 @@
     <string name="small_window_group_performance">性能と制限</string>
     <string name="small_window_group_edge">端に収納したときの外観</string>
     <string name="small_window_group_layout">サイズとレイアウト</string>
-    <string name="small_window_white_bar">端に収納した小ウィンドウを白いバーで表示</string>
-    <string name="small_window_white_bar_summary">収納時はアイコンと細い白いバーが滑らかに切り替わり、タップで標準のアプリ選択アイコンを表示、ドラッグや編集時はアイコンに戻り、途中で操作を反転しても現在の進行度から続行、タッチ領域は変更しない</string>
+    <string name="small_window_white_bar">収納した小窓をサイドバー風の縦バーで表示</string>
+    <string name="small_window_white_bar_summary">スマートサイドバーの色と透明度に合わせます。タップで標準のアプリ選択を開き、ドラッグや編集時はアイコンに戻ります。アニメーションの進行度とタッチ領域を維持します。</string>
     <string name="small_window_safe_inset">上下の安全余白を拡大</string>
     <string name="small_window_safe_inset_summary">収納ハンドルの移動時は上下に最低 48 dp の余白を確保、標準の余白は縮小せず、小さい画面では範囲を自動調整</string>
     <string name="small_window_hide_recents">最近使ったアプリで小ウィンドウを非表示</string>

@@ -63,6 +63,7 @@ internal object FeatureUpdatesCatalog {
         Change(R.string.qs_tile_corner_title, Kind.Changed, R.string.feature_updates_corners_note),
         Change(R.string.feature_settings_c15_about_layout_title, Kind.Changed, R.string.feature_updates_about_note),
         Change(R.string.fluid_browser_title, Kind.Changed, R.string.feature_updates_browser_note),
+        Change(R.string.small_window_white_bar, Kind.Changed),
         Change(R.string.ota_page_title, Kind.Changed, R.string.feature_updates_ota_note),
     )
 

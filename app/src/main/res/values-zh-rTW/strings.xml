@@ -620,8 +620,8 @@
     <string name="small_window_group_performance">效能與限制</string>
     <string name="small_window_group_edge">貼邊外觀</string>
     <string name="small_window_group_layout">尺寸與版面</string>
-    <string name="small_window_white_bar">小窗貼邊顯示為白色直條</string>
-    <string name="small_window_white_bar_summary">貼邊圖示與細白條連貫漸變，點擊展開原生圖示以選擇應用程式，拖曳或編輯時恢復圖示，快速反向操作接著目前進度過渡，不縮小觸控區域</string>
+    <string name="small_window_white_bar">小窗貼邊顯示為側邊直條</string>
+    <string name="small_window_white_bar_summary">顏色與透明度跟隨智慧側邊欄；點按展開原生圖示選擇應用程式，拖曳或編輯時恢復圖示，展開收合延續目前動畫進度，不縮小觸控區域</string>
     <string name="small_window_safe_inset">加大上下安全邊距</string>
     <string name="small_window_safe_inset_summary">移動貼邊控制項時，上下至少預留 48 dp，不減小系統原有邊距，小螢幕自動限制範圍</string>
     <string name="small_window_hide_recents">多工隱藏小窗應用程式</string>

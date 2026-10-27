@@ -670,8 +670,8 @@
     <string name="small_window_group_performance">性能与限制</string>
     <string name="small_window_group_edge">贴边外观</string>
     <string name="small_window_group_layout">尺寸与布局</string>
-    <string name="small_window_white_bar">小窗贴边显示为白色竖条</string>
-    <string name="small_window_white_bar_summary">贴边图标与细白条连贯渐变，点击展开原生图标以选择应用，拖动或编辑时恢复图标，快速反向操作接着当前进度过渡，不缩小触摸区域</string>
+    <string name="small_window_white_bar">小窗贴边显示为侧边竖条</string>
+    <string name="small_window_white_bar_summary">颜色和透明度跟随智能侧边栏；点按展开原生图标选择应用，拖动或编辑时恢复图标，展开收起延续当前动画进度，不缩小触摸区域</string>
     <string name="small_window_safe_inset">加大上下安全边距</string>
     <string name="small_window_safe_inset_summary">移动贴边控件时，上下至少预留 48 dp，不减小系统原有边距，小屏幕自动限制范围</string>
     <string name="small_window_hide_recents">多任务隐藏小窗应用</string>

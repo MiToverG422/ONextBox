@@ -602,8 +602,8 @@
     <string name="small_window_group_performance">성능 및 제한</string>
     <string name="small_window_group_edge">가장자리 보관 모양</string>
     <string name="small_window_group_layout">크기 및 레이아웃</string>
-    <string name="small_window_white_bar">가장자리에 보관한 작은 창을 흰색 막대로 표시</string>
-    <string name="small_window_white_bar_summary">보관된 앱 아이콘과 가는 흰색 막대를 부드럽게 전환, 탭하면 기본 앱 선택 아이콘을 표시하고 드래그나 편집 시 아이콘으로 복원, 반대 방향 조작도 현재 진행도에서 계속하며 터치 영역은 유지</string>
+    <string name="small_window_white_bar">접힌 작은 창을 사이드바 스타일 세로 막대로 표시</string>
+    <string name="small_window_white_bar_summary">스마트 사이드바의 색상과 투명도를 따릅니다. 탭하면 기본 앱 선택을 열고, 드래그하거나 편집할 때는 아이콘을 복원합니다. 애니메이션 진행 상태와 터치 영역을 유지합니다.</string>
     <string name="small_window_safe_inset">상하 안전 여백 확대</string>
     <string name="small_window_safe_inset_summary">보관 핸들을 이동할 때 위아래 최소 48 dp 확보, 기존 시스템 여백은 줄이지 않으며 작은 화면에서는 범위를 자동 조정</string>
     <string name="small_window_hide_recents">최근 앱에서 작은 창 숨기기</string>

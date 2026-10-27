@@ -1,5 +1,7 @@
 package com.mi.onextbox.lsp
 
+import kotlin.math.roundToInt
+
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToLong
@@ -65,6 +67,25 @@ internal object SmallWindowRules {
         !highThermal && ((unlimited && smallWindowProcess) || (keepRunning && exclusivelyStashed))
 
     fun barProgress(value: Float): Float = if (value.isFinite()) value.coerceIn(0f, 1f) else 0f
+
+    fun sidebarOpacity(percent: Int?, legacyPercent: Int = 40, permanent: Boolean = true): Float {
+        if (!permanent) return 0.4f
+        val selected = percent ?: when {
+            legacyPercent < 20 -> 0
+            legacyPercent >= 60 -> 80
+            else -> 40
+        }
+        val valid = selected.takeIf { it in 0..80 } ?: 40
+        return valid * 0.65f / 100f + 0.15f
+    }
+
+    fun barAlpha(color: Int, sidebarOpacity: Float, drawableAlpha: Int, progress: Float, transitionAlpha: Float = 1f): Int {
+        val opacity = sidebarOpacity.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: return 0
+        if (!transitionAlpha.isFinite() || transitionAlpha <= 0f) return 0
+        val target = ((color ushr 24) * opacity * drawableAlpha.coerceIn(0, 255) / 255f * barProgress(progress)).toInt()
+        // The native stashed container applies a second fade; compensate only our bar paint.
+        return (target / transitionAlpha.coerceAtMost(1f)).roundToInt().coerceIn(0, 255)
+    }
 
     /** Scale time by the remaining distance, so reversing mid-fade never restarts a full animation. */
     fun barTransitionDuration(from: Float, to: Float): Long =

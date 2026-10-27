@@ -602,8 +602,8 @@
     <string name="small_window_group_performance">Hiệu năng và giới hạn</string>
     <string name="small_window_group_edge">Giao diện khi thu vào cạnh</string>
     <string name="small_window_group_layout">Kích thước và bố cục</string>
-    <string name="small_window_white_bar">Hiển thị thanh trắng khi thu vào cạnh</string>
-    <string name="small_window_white_bar_summary">Chuyển mượt giữa biểu tượng ứng dụng và thanh trắng mảnh, chạm để mở biểu tượng chọn ứng dụng mặc định, kéo hoặc chỉnh sửa để khôi phục biểu tượng, thao tác đảo chiều tiếp tục từ tiến độ hiện tại, giữ nguyên vùng chạm</string>
+    <string name="small_window_white_bar">Hiển thị cửa sổ thu gọn dạng thanh cạnh</string>
+    <string name="small_window_white_bar_summary">Dùng màu và độ trong suốt của Thanh bên thông minh. Chạm để mở bộ chọn ứng dụng gốc; kéo hoặc chỉnh sửa sẽ khôi phục biểu tượng. Giữ tiến trình chuyển động và vùng chạm.</string>
     <string name="small_window_safe_inset">Tăng khoảng cách an toàn trên dưới</string>
     <string name="small_window_safe_inset_summary">Chừa ít nhất 48 dp ở trên và dưới khi di chuyển tay nắm thu gọn, không giảm khoảng cách mặc định, tự điều chỉnh phạm vi trên màn hình nhỏ</string>
     <string name="small_window_hide_recents">Ẩn cửa sổ nhỏ trong ứng dụng gần đây</string>

@@ -602,8 +602,8 @@
     <string name="small_window_group_performance">性能と制限</string>
     <string name="small_window_group_edge">貼辺外観</string>
     <string name="small_window_group_layout">寸法と配置</string>
-    <string name="small_window_white_bar">小窓貼辺を白色縦条で表示</string>
-    <string name="small_window_white_bar_summary">貼辺図標と細白条を連続漸変、点撃で原生図標を展開して応用選択、拖動や編集時は図標に復帰、反向操作は現在進度から継続、触控範囲は縮小しない</string>
+    <string name="small_window_white_bar">収納した小窓をサイドバー風の縦バーで表示</string>
+    <string name="small_window_white_bar_summary">スマートサイドバーの色と透明度に合わせます。タップで標準のアプリ選択を開き、ドラッグや編集時はアイコンに戻ります。アニメーションの進行度とタッチ領域を維持します。</string>
     <string name="small_window_safe_inset">上下安全辺距を拡大</string>
     <string name="small_window_safe_inset_summary">貼辺控件移動時は上下に最低 48 dp を確保、系統原有辺距は縮小せず、小屏幕では範囲を自動調整</string>
     <string name="small_window_hide_recents">多任務で小窓応用を非表示</string>

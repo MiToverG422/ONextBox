@@ -602,8 +602,8 @@
     <string name="small_window_group_performance">Производительность и ограничения</string>
     <string name="small_window_group_edge">Вид у края экрана</string>
     <string name="small_window_group_layout">Размер и расположение</string>
-    <string name="small_window_white_bar">Белая полоска вместо свёрнутых значков</string>
-    <string name="small_window_white_bar_summary">Плавно заменять значки у края тонкой белой полоской, касание открывает стандартный выбор приложения, перетаскивание и редактирование возвращают значки, обратный переход продолжается с текущего положения, область касания не уменьшается</string>
+    <string name="small_window_white_bar">Боковая полоска для свёрнутого мини-окна</string>
+    <string name="small_window_white_bar_summary">Цвет и прозрачность соответствуют умной боковой панели. Нажатие открывает штатный выбор приложений, перетаскивание и редактирование возвращают значки. Прогресс анимации и область касания сохраняются.</string>
     <string name="small_window_safe_inset">Увеличить безопасные отступы сверху и снизу</string>
     <string name="small_window_safe_inset_summary">Оставлять не менее 48 dp сверху и снизу при перемещении свёрнутого окна, не уменьшать системные отступы, автоматически ограничивать их на небольших экранах</string>
     <string name="small_window_hide_recents">Скрыть малые окна в недавних приложениях</string>

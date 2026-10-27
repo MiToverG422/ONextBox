@@ -4,6 +4,39 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SmallWindowRulesTest {
+    @Test fun sidebarOpacityUsesNativeSettingRangeAndLegacyMigration() {
+        assertEquals(0.41f, SmallWindowRules.sidebarOpacity(40), 0.0001f)
+        assertEquals(0.15f, SmallWindowRules.sidebarOpacity(0), 0.0001f)
+        assertEquals(0.67f, SmallWindowRules.sidebarOpacity(80), 0.0001f)
+        assertEquals(0.41f, SmallWindowRules.sidebarOpacity(81), 0.0001f)
+        assertEquals(0.41f, SmallWindowRules.sidebarOpacity(-5), 0.0001f)
+        assertEquals(0.15f, SmallWindowRules.sidebarOpacity(null, 19), 0.0001f)
+        assertEquals(0.41f, SmallWindowRules.sidebarOpacity(null, 20), 0.0001f)
+        assertEquals(0.67f, SmallWindowRules.sidebarOpacity(null, 60), 0.0001f)
+        assertEquals(0.4f, SmallWindowRules.sidebarOpacity(80, permanent = false), 0.0001f)
+    }
+
+    @Test fun sidebarOpacityMultipliesTheExistingDrawableAndTransitionAlpha() {
+        val gray = 0xffcacaca.toInt()
+        assertEquals(104, SmallWindowRules.barAlpha(gray, 0.41f, 255, 1f))
+        assertEquals(52, SmallWindowRules.barAlpha(gray, 0.41f, 255, 0.5f))
+        assertEquals(26, SmallWindowRules.barAlpha(gray, 0.41f, 128, 0.5f))
+        assertEquals(52, SmallWindowRules.barAlpha(0x80cacaca.toInt(), 0.41f, 255, 1f))
+        assertEquals(0, SmallWindowRules.barAlpha(gray, 0.41f, 255, 0f))
+        assertEquals(0, SmallWindowRules.barAlpha(gray, 0.41f, 0, 1f))
+        assertEquals(0, SmallWindowRules.barAlpha(gray, Float.NaN, 255, 1f))
+    }
+
+    @Test fun nativeStashedFadeDoesNotHalveTheSidebarOpacityAgain() {
+        val gray = 0xffcacaca.toInt()
+        assertEquals(208, SmallWindowRules.barAlpha(gray, 0.41f, 255, 1f, 0.5f))
+        assertEquals(104, SmallWindowRules.barAlpha(gray, 0.41f, 255, 0.5f, 0.5f))
+        assertEquals(52, SmallWindowRules.barAlpha(gray, 0.41f, 128, 0.5f, 0.5f))
+        assertEquals(255, SmallWindowRules.barAlpha(gray, 0.41f, 255, 1f, 0.1f))
+        assertEquals(0, SmallWindowRules.barAlpha(gray, 0.41f, 255, 1f, 0f))
+        assertEquals(0, SmallWindowRules.barAlpha(gray, 0.41f, 255, 1f, Float.NaN))
+    }
+
     @Test fun recentsClassificationDoesNotHideSplitOrEmbeddedTasks() {
         assertTrue(SmallWindowRules.isSmallWindowTask(100, 0, false, false))
         assertTrue(SmallWindowRules.isSmallWindowTask(1, 1, false, true))

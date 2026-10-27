@@ -672,8 +672,8 @@
     <string name="small_window_group_performance">Performance and limits</string>
     <string name="small_window_group_edge">Edge-stash appearance</string>
     <string name="small_window_group_layout">Size and layout</string>
-    <string name="small_window_white_bar">White bar when edge-stashed</string>
-    <string name="small_window_white_bar_summary">Smoothly cross-fade stashed app icons into a slim white bar, tap to reveal the stock app picker, dragging or editing restores icons, reversing continues from the current progress, touch areas stay unchanged</string>
+    <string name="small_window_white_bar">Show a sidebar-style handle for stashed windows</string>
+    <string name="small_window_white_bar_summary">Match the Smart Sidebar color and opacity. Tap to expand the original app picker; dragging or editing restores the icons. Transitions keep their current progress and touch area.</string>
     <string name="small_window_safe_inset">Increase vertical safe spacing</string>
     <string name="small_window_safe_inset_summary">Keep at least 48 dp from the top and bottom when moving a stashed handle, preserve larger system margins, smaller screens automatically bound the spacing</string>
     <string name="small_window_hide_recents">Hide small windows from recents</string>
