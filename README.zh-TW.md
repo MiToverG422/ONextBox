@@ -174,6 +174,9 @@ chmod +x gradlew
 | [OShin](https://github.com/suqi8/OShin) | suqi8 及貢獻者 · AGPL-3.0 |
 | [LuckyTool](https://github.com/luckyzyx/LuckyTool) | luckyzyx 及貢獻者 · GPL-3.0 |
 | [InxLocker](https://github.com/Chimioo/InxLocker) | Chimioo 及貢獻者 · GPL-3.0 |
+| [oppo-browser-purify](https://github.com/fentia/oppo-browser-purify) | Roy（fentia） · MIT · 瀏覽器淨化功能移植與改良 |
+
+瀏覽器淨化基於該專案的底欄、我的頁面、下載管理、AI 視界、廣告 SDK 與搜尋相關實作移植，已接入 ONextBox 的 Modern Xposed、設定熱載入與 COUI 介面，並適配新版瀏覽器介面。上游版本及修改說明見 [NOTICE](third_party/oppo-browser-purify/NOTICE)，完整 MIT 版權及授權聲明見 [LICENSE](third_party/oppo-browser-purify/LICENSE)，同時隨 APK 分發。
 
 ### 📦 基礎函式庫與執行元件
 

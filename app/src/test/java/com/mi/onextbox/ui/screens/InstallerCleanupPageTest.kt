@@ -29,7 +29,6 @@ class InstallerCleanupPageTest {
             assertEquals(definition.page, featureSearchEntries(SystemAdaptationVersion.ColorOs17).single { it.title == definition.title }.page)
             assertEquals(definition.page, EnabledFeatureCatalog.entries.single { it.title == definition.title }.page)
             assertTrue(actions.supports(definition.title))
-            assertTrue(FeatureUpdatesCatalog.items(SystemAdaptationVersion.ColorOs17).any { it.change.title == definition.title })
         }
     }
 

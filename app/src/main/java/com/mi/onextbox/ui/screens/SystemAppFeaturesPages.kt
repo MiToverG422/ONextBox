@@ -64,20 +64,6 @@ internal fun AppMarketFeaturesPage() {
     var regionRestrictionBypass by rememberSaveable {
         mutableStateOf(LspConfig.isAppMarketRegionRestrictionBypassEnabled(context))
     }
-    var simplifyRecommendations by rememberSaveable {
-        mutableStateOf(LspConfig.isAppMarketSimplifyRecommendationsEnabled(context))
-    }
-
-    // A legacy install may have only some of the former switches enabled. Collapse that mixed
-    // state into the single visible setting without losing any previously enabled cleanup.
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            LspConfig.setAppMarketSimplifyRecommendationsEnabled(
-                context,
-                simplifyRecommendations,
-            )
-        }
-    }
 
     SettingsSection(title = stringResource(R.string.feature_group_app_market_region))
     SettingsGroup {
@@ -96,22 +82,7 @@ internal fun AppMarketFeaturesPage() {
         )
     }
 
-    SettingsSection(title = stringResource(R.string.feature_group_app_market_recommendations))
-    SettingsGroup {
-        SettingsToggleRow(
-            title = stringResource(R.string.feature_app_market_simplify_recommendations_title),
-            summary = stringResource(R.string.feature_app_market_simplify_recommendations_summary),
-            checked = simplifyRecommendations,
-            onCheckedChange = { enabled ->
-                simplifyRecommendations = enabled
-                scope.launch {
-                    withContext(Dispatchers.IO) {
-                        LspConfig.setAppMarketSimplifyRecommendationsEnabled(context, enabled)
-                    }
-                }
-            },
-        )
-    }
+    AppMarketCleanupGroups()
 }
 
 @Composable

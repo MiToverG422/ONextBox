@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +29,7 @@ import com.mi.onextbox.ui.home.HomePage
 import com.mi.onextbox.ui.common.ScrollResetEffect
 import com.mi.onextbox.ui.layout.BlurredChromeBar
 import io.github.suqi8.coui.kmp.basic.TopAppBar
+import io.github.suqi8.coui.kmp.basic.TopAppBarState
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.rememberTopAppBarState
@@ -43,13 +45,18 @@ fun Page(
     rootGranted: Boolean,
     bottomChromePadding: Dp,
     onHomeHeroLongPress: () -> Unit,
+    onOpenDeviceDetails: () -> Unit,
     blurBackdrop: LayerBackdrop?,
     scrollResetKey: Int? = null,
+    externalScrollState: ScrollState? = null,
+    externalTopAppBarState: TopAppBarState? = null,
 ) {
 
 
-    val scrollState = rememberScrollState()
-    val topAppBarState = rememberTopAppBarState()
+    val internalScrollState = rememberScrollState()
+    val scrollState = externalScrollState ?: internalScrollState
+    val internalTopAppBarState = rememberTopAppBarState()
+    val topAppBarState = externalTopAppBarState ?: internalTopAppBarState
     ScrollResetEffect(scrollResetKey) {
         scrollState.scrollTo(0)
         topAppBarState.heightOffset = 0f
@@ -118,6 +125,7 @@ fun Page(
                 0 -> HomePage(
                     rootGranted = rootGranted,
                     onHeroLongPress = onHomeHeroLongPress,
+                    onOpenDeviceDetails = onOpenDeviceDetails,
                 )
             }
         }

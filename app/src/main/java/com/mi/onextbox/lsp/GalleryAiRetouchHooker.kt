@@ -13,10 +13,10 @@ internal object GalleryAiRetouchHooker {
     fun hook(loader: ClassLoader, apkPath: String) {
         val prefix = "$TAG@${System.identityHashCode(loader)}:"
         val stateKey = "${prefix}targets"
-        if (!GalleryAiRetouchSettings.enabledXposed() && HotReloadLifecycle.restoredState(stateKey) == null) return
+        if (!GalleryAiRetouchSettings.enabledXposed() && DexTargetCache.restoredState(stateKey) == null) return
         runCatching {
             @Suppress("UNCHECKED_CAST")
-            val saved = HotReloadLifecycle.restoredState(stateKey) as? Map<String, Array<Method>>
+            val saved = DexTargetCache.restoredState(stateKey) as? Map<String, Array<Method>>
             val targets = saved ?: run {
                 System.loadLibrary("dexkit")
                 GalleryAiRetouchDex.open(apkPath).use { GalleryAiRetouchTargets(it).resolve(loader) }

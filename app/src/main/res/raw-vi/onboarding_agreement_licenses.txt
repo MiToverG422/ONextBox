@@ -9,3 +9,29 @@ CorePatch N (LSPosed) dùng GNU GPL v2.0 theo công bố gốc; việc tích h�
 Các thành phần thời gian chạy bao gồm thư viện AndroidX, Jetpack Compose, Kotlin và kotlinx, COUI, Kyant0 Shapes, AndroidLiquidGlass, libsu, HiddenApiBypass, libxpose, Material Color Utilities và Poko trong Apache-2.0.
 
 Phần mềm Android, ColorOS/OPlus, Trình quản lý gốc và LSPosed là các mục tiêu hoặc nền tảng tương thích và không được ONextBox cấp phép lại. Thông báo bản quyền và văn bản giấy phép đầy đủ do mỗi dự án cung cấp sẽ được ưu tiên áp dụng cho bản tóm tắt này. Tính khả dụng của nguồn và các liên kết ghi công vẫn có thể truy cập được từ trang Giới thiệu.
+
+Các chức năng làm sạch trình duyệt được chuyển đổi và cải tiến từ oppo-browser-purify của Roy (fentia), theo giấy phép MIT.
+https://github.com/fentia/oppo-browser-purify
+Upstream: adb32d0aa7c7f34cbd030316258fb3828fb5be2b
+
+MIT License
+
+Copyright (c) 2026 Roy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

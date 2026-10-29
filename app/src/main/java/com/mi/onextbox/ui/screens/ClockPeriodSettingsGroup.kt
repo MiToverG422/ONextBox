@@ -78,5 +78,10 @@ internal fun ClockPeriodSettingsGroup() {
                 interactionEnabled = !saving, onCheckedChange = { save(state.copy(compact = it)) },
                 hasDividerAbove = above, hasDividerBelow = below)
         }
+        row("clock-tabular-digits") { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.clock_tabular_digits), summary = "", checked = state.tabularDigits,
+                interactionEnabled = !saving, onCheckedChange = { save(state.copy(tabularDigits = it)) },
+                hasDividerAbove = above, hasDividerBelow = below)
+        }
     }
 }

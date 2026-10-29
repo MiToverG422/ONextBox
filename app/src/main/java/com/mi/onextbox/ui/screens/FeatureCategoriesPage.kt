@@ -46,6 +46,7 @@ internal fun SystemUiCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
                 R.string.feature_group_navigation_bar,
                 R.string.feature_system_ui_navigation_bar_entry_summary,
             ),
+            FeatureCategoryLink(FeaturePageMode.SystemUiBackGesture, R.string.back_gesture_title, R.string.back_gesture_summary),
             FeatureCategoryLink(
                 FeaturePageMode.SystemUiStatusBar,
                 R.string.feature_group_beautify,

@@ -26,6 +26,8 @@ internal open class HookPreferenceSnapshot(private val systemVersion: () -> Syst
     val isListening: Boolean
         get() = attachedPreferences != null
 
+    fun controlBoolean(key: String, defaultValue: Boolean): Boolean = values?.get(key) as? Boolean ?: defaultValue
+
     /** True only when updates are subscribed; a readable snapshot alone is not reload-ready. */
     @Synchronized
     fun attach(preferences: SharedPreferences): Boolean {
@@ -92,6 +94,7 @@ internal open class HookPreferenceSnapshot(private val systemVersion: () -> Syst
 
     private fun refresh(preferences: SharedPreferences) {
         val current = runCatching { preferences.all }.getOrNull() ?: return
+        val previousValues = values
         // Before the app-side service performs its first API 102 sync, retain the legacy mirrors
         // for upgrade compatibility. Once marked ready, an empty map is a valid all-default config.
         values = if (current[MODERN_PREFERENCES_READY_KEY] == true) {
@@ -102,6 +105,9 @@ internal open class HookPreferenceSnapshot(private val systemVersion: () -> Syst
                 }
         } else {
             null
+        }
+        if (values != null && values != previousValues) runCatching {
+            com.mi.onextbox.diagnostics.RuntimeDiagnostics.config(values!!)
         }
     }
 }

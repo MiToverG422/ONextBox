@@ -16,7 +16,16 @@ internal object EnabledFeatureCatalog {
         val excludes: Set<Int> = emptySet(),
         val read: suspend (Context) -> Boolean,
     )
-    val entries = listOf(
+    val entries = KeyboardPictorialSettings.options.map { option ->
+        Entry(option.title, if (option.key.startsWith("keyboard_")) FeaturePageMode.Keyboard else FeaturePageMode.Pictorial) { context -> KeyboardPictorialSettings.enabled(context, option.key) }
+    } + BrowserSettings.options.map { option ->
+        Entry(option.title, FeaturePageMode.Browser) { context -> BrowserSettings.enabled(context, option.key) }
+    } + AppMarketCleanupSettings.options.map { option ->
+        Entry(option.title, FeaturePageMode.AppMarket) { context -> AppMarketCleanupSettings.enabled(context, option.key) }
+    } + SystemExtrasSettings.options.map { option ->
+        Entry(option.title, systemExtrasPage(option.pkg)) { context -> SystemExtrasSettings.enabled(context, option.key) }
+    } + listOf(
+        Entry(R.string.coui_hide_dividers_title, FeaturePageMode.Coui) { CouiDividerSettings.enabled(it) },
         Entry(R.string.app_lock_delay_title, FeaturePageMode.SecurityPermission) { AppLockDelaySettings.enabled(it) },
         SharedFeatureDefinitions.networkIdentity.catalogEntry(),
         SharedFeatureDefinitions.qsCorner.catalogEntry(),
@@ -31,6 +40,8 @@ internal object EnabledFeatureCatalog {
         SharedFeatureDefinitions.translationPages.catalogEntry(),
         SharedFeatureDefinitions.translationLandscape.catalogEntry(),
         SharedFeatureDefinitions.translationBrowser.catalogEntry(),
+        SharedFeatureDefinitions.sidebarApps.catalogEntry(),
+        SharedFeatureDefinitions.sidebarDisplay.catalogEntry(),
         SharedFeatureDefinitions.installerNative.catalogEntry(),
         SharedFeatureDefinitions.installerSkipScan.catalogEntry(),
         SharedFeatureDefinitions.installerRemoveAds.catalogEntry(),
@@ -46,6 +57,7 @@ internal object EnabledFeatureCatalog {
         SharedFeatureDefinitions.galleryAiRetouch.catalogEntry(),
         Entry(R.string.statusbar_order_title, FeaturePageMode.SystemUiStatusBarLayout) { StatusBarLayoutSettings.state(it).orderEnabled },
         Entry(R.string.network_speed_refresh_second, FeaturePageMode.SystemUiStatusBarSpeed) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.CustomRefreshInterval) },
+        Entry(R.string.network_speed_hide_low_speed, FeaturePageMode.SystemUiStatusBarSpeed) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.HideLowSpeed) },
         Entry(R.string.network_speed_hide_per_second, FeaturePageMode.SystemUiStatusBarSpeed) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.HidePerSecond) },
         Entry(R.string.network_speed_hide_units, FeaturePageMode.SystemUiStatusBarSpeed) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.HideUnits) },
         Entry(R.string.network_speed_single_line, FeaturePageMode.SystemUiStatusBarSpeed) { LspConfig.isNetworkSpeedFeatureEnabled(it, LspConfig.NetworkSpeedFeature.SingleLine) },
@@ -87,6 +99,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_esim_confirmation_prompt_title, FeaturePageMode.Esim) { context -> LspConfig.isEsimConfirmationCodePromptEnabled(context) },
         Entry(R.string.feature_file_manager_hide_secure_access_tip_title, FeaturePageMode.FileManager) { context -> LspConfig.isFileManagerHideSecureAccessTipEnabled(context) },
         Entry(R.string.feature_file_manager_native_picker_title, FeaturePageMode.FileManager) { context -> LspConfig.isFileManagerNativePickerEnabled(context) },
+        Entry(R.string.file_manager_default_title, FeaturePageMode.FileManager) { context -> DefaultFileManagerSettings.enabled(context) },
         Entry(R.string.feature_fluid_cloud_battery_title, FeaturePageMode.SystemUiStatusBarBattery) { context -> LspConfig.isFluidCloudBatteryEnabled(context) },
         Entry(R.string.feature_fluid_cloud_material_title, FeaturePageMode.SystemUiFluidCloud) { context -> LspConfig.isFluidCloudMaterialEnabled(context) },
         Entry(R.string.fluid_media_blacklist_title, FeaturePageMode.SystemUiFluidCloud) { context -> FluidCloudMediaSettings.isEnabled(context) },
@@ -113,6 +126,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_round_notification_clear_button_title, FeaturePageMode.SystemUiNotificationCenter) { context -> LspConfig.isRoundNotificationClearButtonEnabled(context) },
         Entry(R.string.oshare_unlimited_title, FeaturePageMode.OShare) { context -> OShareSettings.isEnabled(context) },
         Entry(R.string.clock_compact_spacing, FeaturePageMode.SystemUiClock) { ClockPeriodSettings.state(it).compact },
+        Entry(R.string.clock_tabular_digits, FeaturePageMode.SystemUiClock) { ClockPeriodSettings.state(it).tabularDigits },
         Entry(R.string.clock_lock_seconds, FeaturePageMode.SystemUiClock) { LspConfig.isPermanentClockSecondsEnabled(it) && ClockPeriodSettings.state(it).lockSeconds },
         Entry(R.string.clock_period_title, FeaturePageMode.SystemUiClock) { ClockPeriodSettings.state(it).enabled },
         Entry(R.string.clock_period_shade, FeaturePageMode.SystemUiClock) { ClockPeriodSettings.state(it).let { state -> state.enabled && state.shade } },
@@ -173,7 +187,6 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_settings_restore_domestic_auxiliary_functions_title, FeaturePageMode.SettingsRegion, parents = setOf(R.string.feature_settings_international_title)) { context -> LspConfig.isSettingsRestoreDomesticAuxiliaryFunctionsEnabled(context) },
         Entry(R.string.feature_settings_gms_region_bypass_title, FeaturePageMode.AndroidSystem) { context -> LspConfig.isGmsRegionRestrictionBypassEnabled(context) },
         Entry(R.string.feature_app_market_region_bypass_title, FeaturePageMode.AppMarket) { context -> LspConfig.isAppMarketRegionRestrictionBypassEnabled(context) },
-        Entry(R.string.feature_app_market_simplify_recommendations_title, FeaturePageMode.AppMarket) { context -> LspConfig.isAppMarketSimplifyRecommendationsEnabled(context) },
         Entry(R.string.feature_mobile_network_hide_phone_number_title, FeaturePageMode.MobileNetwork) { context -> LspConfig.isMobileNetworkHidePhoneNumberEnabled(context) },
         Entry(R.string.feature_mobile_network_force_carrier_options_title, FeaturePageMode.MobileNetwork) { context -> LspConfig.isMobileNetworkForceCarrierOptionsEnabled(context) },
         Entry(R.string.feature_mobile_network_hide_ai_link_boost_title, FeaturePageMode.MobileNetwork) { context -> LspConfig.isMobileNetworkHideAiLinkBoostEnabled(context) },
@@ -196,7 +209,10 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_hide_qs_settings_title, FeaturePageMode.SystemUiControlCenter) { context -> LspConfig.isSystemUiHideQsSettingsEnabled(context) },
         Entry(R.string.feature_hide_qs_top_carrier_title, FeaturePageMode.SystemUiControlCenter) { context -> LspConfig.isSystemUiHideQsTopCarrierEnabled(context) },
         Entry(R.string.feature_hide_qs_more_title, FeaturePageMode.SystemUiControlCenter) { context -> LspConfig.isSystemUiHideQsMoreEnabled(context) },
-        Entry(R.string.feature_aosp_back_panel_title, FeaturePageMode.SystemUiNative) { context -> LspConfig.isAospBackPanelEnabled(context) },
+        Entry(R.string.back_gesture_style, FeaturePageMode.SystemUiBackGesture) { context -> com.mi.onextbox.lsp.BackGestureSettings.state(context).selectedStyle != 1 },
+        Entry(R.string.back_gesture_release, FeaturePageMode.SystemUiBackGesture) { context -> com.mi.onextbox.lsp.BackGestureSettings.state(context).release },
+        Entry(R.string.back_gesture_predictive_style, FeaturePageMode.SystemUiBackGesture) { context -> com.mi.onextbox.lsp.BackGestureSettings.state(context).predictive == 1 },
+        Entry(R.string.back_gesture_area_custom, FeaturePageMode.SystemUiBackGestureArea) { context -> com.mi.onextbox.lsp.BackGestureSettings.state(context).area },
         Entry(R.string.small_window_hide_recents, FeaturePageMode.SystemUiSmallWindow) { context -> LspConfig.isSmallWindowFeatureEnabled(context, LspConfig.SmallWindowFeature.HideRecents) },
         Entry(R.string.small_window_mute_stashed, FeaturePageMode.SystemUiSmallWindow) { context -> LspConfig.isSmallWindowFeatureEnabled(context, LspConfig.SmallWindowFeature.MuteStashed) },
         Entry(R.string.small_window_unlimited_count, FeaturePageMode.SystemUiSmallWindow) { context -> LspConfig.isSmallWindowFeatureEnabled(context, LspConfig.SmallWindowFeature.UnlimitedCount) },

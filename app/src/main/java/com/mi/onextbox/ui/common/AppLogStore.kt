@@ -95,7 +95,9 @@ object AppLogStore {
         }
     }
 
-    fun d(tag: String, message: String) = append(AppLogLevel.DEBUG, tag, message)
+    fun d(tag: String, message: String) {
+        if (com.mi.onextbox.diagnostics.DeveloperDiagnostics.logEnabled(tag)) append(AppLogLevel.DEBUG, tag, message)
+    }
     fun i(tag: String, message: String) = append(AppLogLevel.INFO, tag, message)
     fun w(tag: String, message: String) = append(AppLogLevel.WARN, tag, message)
     fun e(tag: String, message: String) = append(AppLogLevel.ERROR, tag, message)

@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -43,6 +45,7 @@ internal fun SettingsSwitchPreference(
     switchEnabled: Boolean = enabled,
     interactionEnabled: Boolean = true,
 ) {
+    var switchPressed by remember { mutableStateOf(false) }
     val currentOnCheckedChange by rememberUpdatedState(onCheckedChange)
     val currentInteractionEnabled by rememberUpdatedState(interactionEnabled)
     val currentSwitchEnabled by rememberUpdatedState(enabled && switchEnabled)
@@ -104,12 +107,13 @@ internal fun SettingsSwitchPreference(
                 modifier = Modifier.settingsInteractionGate(interactionEnabled),
                 onCheckedChange = onChange.takeIf { enabled && switchEnabled && !hiddenHoldEnabled },
                 enabled = enabled && switchEnabled,
+                onPressStateChange = { switchPressed = it },
             )
         },
         bottomAction = bottomAction,
         onClick = rowClick,
         role = if (onRowClick == null) Role.Switch else Role.Button,
-        holdDownState = holdDownState,
+        holdDownState = holdDownState || switchPressed,
         enabled = enabled,
     )
 }

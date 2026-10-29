@@ -30,8 +30,10 @@ internal object ModernHotReloadSession {
                 val id = ids.next(executable)
                 val delegate = if (staging) null else installer(executable, id, hooker)
                 if (delegate != null) hasCommittedHooks = true
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.target(executable.toString(), staging)
                 ManagedHandle(executable, id, hooker, delegate).also(handles::add)
             } catch (error: Throwable) {
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("failure", executable.toString(), error.toString())
                 failed.set(true)
                 throw error
             }
@@ -58,6 +60,7 @@ internal object ModernHotReloadSession {
                     hasCommittedHooks = true
                 }
                 staging = false
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("committed", "Hot reload", "targets=${live.size}")
                 precedingTargets = emptyList()
             } catch (error: Throwable) {
                 markFailed()

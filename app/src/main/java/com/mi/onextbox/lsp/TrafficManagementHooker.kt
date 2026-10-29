@@ -22,10 +22,10 @@ internal object TrafficManagementHooker {
 
     fun hook(loader: ClassLoader, apkPath: String, colorOs16: Boolean = false) {
         val stateKey = "$TAG:targets@${System.identityHashCode(loader)}"
-        if (TrafficFeature.entries.none(::enabled) && HotReloadLifecycle.restoredState(stateKey) == null) return
+        if (TrafficFeature.entries.none(::enabled) && DexTargetCache.restoredState(stateKey) == null) return
         runCatching {
             @Suppress("UNCHECKED_CAST")
-            val saved = HotReloadLifecycle.restoredState(stateKey) as? Map<String, Array<Method>>
+            val saved = DexTargetCache.restoredState(stateKey) as? Map<String, Array<Method>>
             val targets = saved ?: run {
                 System.loadLibrary("dexkit")
                 DexKitBridge.create(apkPath).use { TrafficManagementTargets(it, colorOs16).resolve(loader) }

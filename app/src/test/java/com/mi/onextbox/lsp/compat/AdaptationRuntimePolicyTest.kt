@@ -5,6 +5,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AdaptationRuntimePolicyTest {
+    @Test fun safetyGatePausesAndResumesWithoutChangingBoundProfile() {
+        var enabled = false
+        val gate = AdaptationProfileGate({ enabled }, { SystemAdaptationVersion.ColorOs16 })
+        assertFalse(gate.isBoundProfileActive())
+        val profile = gate.bind()
+        assertFalse(gate.isActive(profile))
+        enabled = true
+        assertTrue(gate.isActive(profile))
+        enabled = false
+        assertFalse(gate.isBoundProfileActive())
+        assertEquals(profile, gate.bind())
+    }
     @Test fun colorOs16OnlyAllowsItsAdaptedPackagesWhileColorOs17KeepsItsExistingScopes() {
         val supported = setOf("com.android.launcher", "com.android.systemui", "com.android.settings",
             "com.coloros.phonemanager", "com.oplus.games", "com.oplus.screenrecorder", "system")

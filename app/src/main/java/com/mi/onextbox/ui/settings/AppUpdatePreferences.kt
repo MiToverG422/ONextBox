@@ -9,6 +9,7 @@ enum class UpdateBuildType {
 }
 
 object AppUpdatePreferences {
+    const val BETA_PLAN_AVAILABLE = false
     private const val PREFS_NAME = "onextbox_prefs"
     private const val KEY_BETA_PLAN = "update_beta_plan"
     private const val KEY_FEATURE_UPDATES_SEEN = "feature_updates_seen"
@@ -29,15 +30,20 @@ object AppUpdatePreferences {
         preferences(context).edit().putString(KEY_FEATURE_UPDATES_SEEN, edition).apply()
     }
 
-    fun getBetaPlanEnabled(context: Context): Boolean = context
-        .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        .getBoolean(KEY_BETA_PLAN, false)
+    fun getBetaPlanEnabled(context: Context): Boolean {
+        val prefs = preferences(context)
+        val enabled = prefs.getBoolean(KEY_BETA_PLAN, false)
+        if (!BETA_PLAN_AVAILABLE && enabled) {
+            prefs.edit().putBoolean(KEY_BETA_PLAN, false).apply()
+        }
+        return BETA_PLAN_AVAILABLE && enabled
+    }
 
     fun setBetaPlanEnabled(context: Context, enabled: Boolean) {
         context
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
-            .putBoolean(KEY_BETA_PLAN, enabled)
+            .putBoolean(KEY_BETA_PLAN, BETA_PLAN_AVAILABLE && enabled)
             .apply()
     }
 

@@ -17,11 +17,19 @@ class AppUpdateSettingsContractTest {
         assertFalse(updater.contains("buildType: UpdateBuildType = UpdateBuildType.Release"))
     }
 
-    @Test fun betaEnrollmentIsDefaultOffAndThereIsNoManualChannelPreference() {
+    @Test fun closedBetaPlanClearsEnrollmentAndCannotBeEnabledThroughTheSetter() {
         val preference = source("ui/settings/AppUpdatePreferences.kt")
         assertTrue(preference.contains("getBoolean(KEY_BETA_PLAN, false)"))
+        assertTrue(preference.contains("const val BETA_PLAN_AVAILABLE = false"))
+        val getter = preference.substringAfter("fun getBetaPlanEnabled").substringBefore("fun setBetaPlanEnabled")
+        assertTrue(getter.contains("if (!BETA_PLAN_AVAILABLE && enabled)"))
+        assertTrue(getter.contains("putBoolean(KEY_BETA_PLAN, false)"))
+        assertTrue(getter.contains("return BETA_PLAN_AVAILABLE && enabled"))
         val setter = preference.substringAfter("fun setBetaPlanEnabled").substringBefore("fun getUpdateNotificationsEnabled")
-        assertTrue(setter.contains("putBoolean(KEY_BETA_PLAN, enabled)"))
+        assertTrue(setter.contains("putBoolean(KEY_BETA_PLAN, BETA_PLAN_AVAILABLE && enabled)"))
+        val row = source("ui/settings/SettingsMainPage.kt").substringAfter("title = stringResource(R.string.update_beta_plan_title)")
+            .substringBefore("SettingsDivider()")
+        assertTrue(row.contains("enabled = false"))
         assertFalse(preference.contains("KEY_UPDATE_CHANNEL"))
         assertFalse(preference.contains("update_channel"))
         assertFalse(preference.contains("enum class UpdateChannel"))

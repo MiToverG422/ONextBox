@@ -47,7 +47,7 @@ class LauncherWidgetMenuContractTest {
         assertTrue(hook.contains("buildPopupData"))
         assertTrue(source("main/java/com/mi/onextbox/lsp/LauncherGestureHooker.kt").contains("LauncherWidgetMenuHooker.hook(loader)"))
         val entry = source("main/java/com/mi/onextbox/lsp/OosLspModuleEntry.kt")
-        assertEquals(1, Regex("LauncherGestureHooker.hook").findAll(entry).count())
+        assertEquals(1, Regex("""LauncherGestureHooker\.hook\(""").findAll(entry).count())
     }
 
     @Test fun bothUiStylesHaveJoinedStableRowsWithoutCrossDisablingOrChangingTheOtherSwitch() {

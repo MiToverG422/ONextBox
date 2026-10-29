@@ -74,11 +74,11 @@ class FeatureSearchTest {
         assertEquals(FeaturePageMode.DesktopLayout, entry.page)
         assertEquals(0, entry.description)
     }
-    @Test fun aospBackPanelUsesTheNativeSystemUiPage() {
+    @Test fun aospBackPanelUsesTheBackGesturePage() {
         val entry = FeatureSearchIndex.entries.single {
             it.title == com.mi.onextbox.R.string.feature_aosp_back_panel_title
         }
-        assertEquals(FeaturePageMode.SystemUiNative, entry.page)
+        assertEquals(FeaturePageMode.SystemUiBackGesture, entry.page)
         assertEquals(com.mi.onextbox.R.string.feature_aosp_back_panel_summary, entry.description)
     }
     @Test fun batchNotificationPermissionsUseTheToolsDestination() {
@@ -115,12 +115,11 @@ class FeatureSearchTest {
         assertEquals(com.mi.onextbox.R.string.keyboard_bottom_lift_fix_summary, entry.description)
     }
 
-    @Test fun hiddenKeyboardEmojiGroupIsNotSearchable() {
-        assertFalse(KeyboardFeatureVisibility.emojiGroupVisible)
-        assertFalse(FeatureSearchIndex.entries.any {
-            it.title == com.mi.onextbox.R.string.keyboard_emoji_group ||
-                it.title == com.mi.onextbox.R.string.keyboard_flag_emoji_title
-        })
+    @Test fun restoredKeyboardEmojiGroupIsSearchable() {
+        assertTrue(KeyboardFeatureVisibility.emojiGroupVisible)
+        listOf(com.mi.onextbox.R.string.keyboard_emoji_group, com.mi.onextbox.R.string.keyboard_flag_emoji_title).forEach { title ->
+            assertEquals(FeaturePageMode.Keyboard, FeatureSearchIndex.entries.single { it.title == title }.page)
+        }
         listOf(
             com.mi.onextbox.R.string.keyboard_page_title,
             com.mi.onextbox.R.string.keyboard_material_group,

@@ -1,6 +1,7 @@
 package com.mi.onextbox.lsp
 
 import android.app.Activity
+import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernHookBridge as XposedBridge
 import com.mi.onextbox.lsp.compat.ModernMethodHook as XC_MethodHook
 import com.mi.onextbox.lsp.compat.ModernReflect as XposedHelpers
@@ -27,7 +28,7 @@ internal object AppMarketHooker {
     private const val SPLASH_TRANSACTION_CLASS = "a.a.a.w4f"
     private const val SPLASH_DTO_V4_CLASS =
         "com.heytap.cdo.splash.domain.dto.v4.SplashDtoV4"
-    private const val CARD_DATA_PROCESSOR_CLASS = "a.a.a.sl2"
+    private val CARD_DATA_PROCESSOR_CLASSES = listOf("a.a.a.wo2", "a.a.a.sl2")
     private const val CARD_ADAPTER_PRESENTER_CLASS =
         "com.heytap.cdo.client.cards.page.base.adapter.CardAdapterPresenter"
     private const val CARD_API_ADAPTER_CLASS =
@@ -107,6 +108,7 @@ internal object AppMarketHooker {
 
         installSplashRecommendationHook(classLoader)
         installCardRecommendationHook(classLoader)
+        installManagementRecommendationHooks(classLoader)
         installSearchHomeRecommendationHook(classLoader)
         installSearchResultRecommendationHook(classLoader)
         installDetailRecommendationHook(classLoader)
@@ -234,17 +236,11 @@ internal object AppMarketHooker {
     }
 
     private fun installCardRecommendationHook(classLoader: ClassLoader) {
-        val processorClass = XposedHelpers.findClassIfExists(
-            CARD_DATA_PROCESSOR_CLASS,
-            classLoader,
-        ) ?: run {
-            HookLog.w(TAG, "App Market card data processor was not found")
-            return
-        }
-        val target = processorClass.declaredMethods.singleOrNull { method ->
-            method.name == "processData" &&
-                method.parameterTypes.size == 4 &&
-                List::class.java.isAssignableFrom(method.returnType)
+        val target = CARD_DATA_PROCESSOR_CLASSES.firstNotNullOfOrNull { name ->
+            XposedHelpers.findClassIfExists(name, classLoader)?.declaredMethods?.singleOrNull { method ->
+                method.name == "processData" && method.parameterTypes.size == 4 &&
+                    List::class.java.isAssignableFrom(method.returnType)
+            }
         } ?: run {
             HookLog.w(TAG, "App Market card data processor method was not found uniquely")
             return
@@ -255,22 +251,16 @@ internal object AppMarketHooker {
                 target,
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        val hideUpdateDownload = LspConfig
-                            .isAppMarketRemoveUpdateDownloadRecommendationsEnabledXposed()
+                        val hideUpdate = AppMarketCleanupSettings.active(AppMarketCleanupRules.Page.UPDATE)
+                        val hideDownload = AppMarketCleanupSettings.active(AppMarketCleanupRules.Page.DOWNLOAD)
                         val hideSearchHome = LspConfig
                             .isAppMarketHideSearchHomeRecommendationsEnabledXposed()
-                        if (!hideUpdateDownload && !hideSearchHome) return
+                        if (!hideUpdate && !hideDownload && !hideSearchHome) return
 
-                        if (hideUpdateDownload) {
-                            val isUpdateOrDownloadPage =
-                                Thread.currentThread().stackTrace.any { frame ->
-                                    frame.className.startsWith(
-                                        "com.heytap.market.appmanage.core.upgrade.",
-                                    ) || frame.className.startsWith(
-                                        "com.heytap.market.appmanage.core.download.",
-                                    )
-                                }
-                            if (isUpdateOrDownloadPage) {
+                        if (hideUpdate || hideDownload) {
+                            val page = AppMarketCleanupRules.page(Thread.currentThread().stackTrace.asSequence().map { it.className })
+                            if ((page == AppMarketCleanupRules.Page.UPDATE && hideUpdate) ||
+                                (page == AppMarketCleanupRules.Page.DOWNLOAD && hideDownload)) {
                                 param.result = emptyList<Any>()
                                 return
                             }
@@ -296,6 +286,54 @@ internal object AppMarketHooker {
             HookLog.i(TAG, "App Market C17 card recommendation hook installed")
         }.onFailure { error ->
             HookLog.w(TAG, "Failed to hook App Market card recommendations", error)
+        }
+    }
+
+    private fun installManagementRecommendationHooks(classLoader: ClassLoader) {
+        val prefix = "com.heytap.market.appmanage.core.upgrade.upgrademgr."
+        listOf("BaseRecyclerViewDownloadFragment", "BaseDownloadFragment").forEach { name ->
+            val base = XposedHelpers.findClassIfExists(prefix + name, classLoader) ?: return@forEach
+            val target = base.declaredMethods.singleOrNull { method ->
+                method.returnType == Void.TYPE && method.parameterTypes.map { it.name } ==
+                    listOf("java.lang.Object", VIEW_LAYER_WRAP_DTO_CLASS, "java.lang.String")
+            } ?: return@forEach
+            runCatching {
+                XposedBridge.hookMethod(target, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val fragment = param.thisObject ?: return
+                        val hierarchy = generateSequence(fragment.javaClass as Class<*>?) { it.superclass }.map { it.name }
+                        val page = AppMarketCleanupRules.page(hierarchy) ?: return
+                        if (!AppMarketCleanupSettings.active(page)) return
+                        val dto = param.args.getOrNull(1) ?: return
+                        // This DTO contains recommendations only; native updates and downloads
+                        // are populated from separate local task models.
+                        filterViewLayerCards(dto, page.name.lowercase(Locale.ROOT)) { true }
+                    }
+                })
+                // The response callbacks can inline this small statistics boundary.
+                base.declaredClasses.flatMap { it.declaredMethods.toList() }.forEach { caller ->
+                    runCatching { ModernHookRuntime.requireModule().deoptimize(caller) }
+                }
+                HookLog.i(TAG, "App Market $name recommendation response boundary hooked")
+            }.onFailure { HookLog.w(TAG, "Failed to hook $name recommendations", it) }
+        }
+
+        listOf("UpdateListAdapter", "ExpUpdateListAdapter").forEach { name ->
+            val adapter = XposedHelpers.findClassIfExists(prefix + "recyclerview." + name, classLoader)
+                ?: return@forEach
+            val target = adapter.declaredMethods.singleOrNull { method ->
+                method.name == "addDataAndNotifyChanged" && method.parameterTypes.contentEquals(arrayOf(List::class.java))
+            } ?: return@forEach
+            runCatching {
+                XposedBridge.hookMethod(target, object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        if (AppMarketCleanupSettings.active(AppMarketCleanupRules.Page.UPDATE)) {
+                            param.args[0] = emptyList<Any>()
+                        }
+                    }
+                })
+                HookLog.i(TAG, "App Market $name cached recommendation boundary hooked")
+            }.onFailure { HookLog.w(TAG, "Failed to hook $name recommendations", it) }
         }
     }
 

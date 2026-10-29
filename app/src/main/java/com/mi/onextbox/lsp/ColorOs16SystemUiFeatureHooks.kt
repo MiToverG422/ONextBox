@@ -10,6 +10,7 @@ internal object ColorOs16SystemUiFeatureHooks {
         install("statusbar-layout") { StatusBarLayoutHooker.hookColorOs16(loader) }
         install("power-indicator") { PowerIndicatorHooker.hook(loader) }
         install("clock-period") { ClockPeriodHooker.hook(loader) }
+        install("clock-tabular-digits") { ClockTabularDigitsHooker.hook(loader) }
         install("clock-spacing") { ClockSpacingHooker.hook(loader) }
         install("network-speed") { NetworkSpeedHooker.hook(loader) }
         install("carrier-name") { CarrierNameHooker.hook(loader) }

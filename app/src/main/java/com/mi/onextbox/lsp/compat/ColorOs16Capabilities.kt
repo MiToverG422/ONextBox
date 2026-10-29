@@ -2,7 +2,13 @@ package com.mi.onextbox.lsp.compat
 
 internal object ColorOs16Capabilities {
     val featureKeys = setOf(
+        "developer_trace_until",
+        "developer_trace_tags",
+        "developer_debug_logging",
+        "developer_dex_cache_generation",
+        "system_apps_hide_coui_dividers",
         "systemui_clock_compact_spacing",
+        "systemui_clock_tabular_digits",
         "systemui_clock_period_enabled",
         "systemui_clock_period_format",
         "systemui_clock_period_small",
@@ -16,6 +22,8 @@ internal object ColorOs16Capabilities {
         "systemui_network_speed_custom_font_size",
         "systemui_network_speed_font_size_sp",
         "systemui_network_speed_font_size_dp",
+        "systemui_network_speed_hide_low_speed",
+        "systemui_network_speed_low_speed_threshold_kbps",
         "allow_secure_window_capture",
         "aod_enhance_enabled",
         "aod_init_bright_brightness",
@@ -33,6 +41,8 @@ internal object ColorOs16Capabilities {
         "app_market_remove_mine_recommendations",
         "app_market_remove_splash_recommendations",
         "app_market_remove_update_download_recommendations",
+        "app_market_remove_update_recommendations",
+        "app_market_remove_download_recommendations",
         "assistant_international_power_chord_enabled",
         "assistant_native_power_enabled",
         "athena_c17_vpn_protection_enabled",
@@ -49,6 +59,7 @@ internal object ColorOs16Capabilities {
         "express_no_mini_program",
         "extreme_refresh_165_enabled",
         "file_manager_native_picker",
+        "file_manager_default_package",
         "fluid_cloud_default_browser_enabled",
         "game_assistant_block_realme_startup_animation",
         "game_assistant_block_root",
@@ -209,6 +220,7 @@ internal object ColorOs16Capabilities {
         "statusbar_power_hide_charging",
         "statusbar_power_hide_discharge_sign",
         "statusbar_power_interval",
+        "statusbar_power_only_charging",
         "statusbar_power_scale",
         "statusbar_power_show_temperature",
         "statusbar_power_source",
@@ -302,6 +314,7 @@ internal object ColorOs16Capabilities {
         "system",
     )
     val featureIds = setOf(
+        "coui:hide_dividers",
         "systemui:clock_period",
         "systemui:network_speed",
         "framework:framework.native_icon",
@@ -314,6 +327,7 @@ internal object ColorOs16Capabilities {
         "framework:framework.malicious",
         "framework:framework.start_allow_reset",
         "framework:framework.file_picker",
+        "framework:framework.default_file_manager",
         "framework:framework.secure_capture",
         "framework:framework.gms",
         "framework:framework.scroll_whitelist",

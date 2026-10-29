@@ -25,12 +25,10 @@ internal object GameAssistantSettings {
     fun skinXposed(): String = GameAssistantRules.skin(HookConfigSnapshot.string(SKIN, GameAssistantRules.DEFAULT_SKIN))
     fun set(context: Context, key: String, enabled: Boolean) {
         require(key in toggles)
-        check(LspPreferenceStore.prefs(context).edit().putBoolean(key, enabled).commit())
-        LspConfig.syncReadableState(context)
+        ModernXposedPreferenceSync.setBooleanAndSync(context, key, enabled)
     }
     fun setSkin(context: Context, skin: String) {
         require(skin in GameAssistantRules.skins)
-        check(LspPreferenceStore.prefs(context).edit().putString(SKIN, skin).commit())
-        LspConfig.syncReadableState(context)
+        ModernXposedPreferenceSync.setStringAndSync(context, SKIN, skin)
     }
 }

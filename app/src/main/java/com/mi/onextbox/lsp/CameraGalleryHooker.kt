@@ -16,7 +16,7 @@ internal object CameraGalleryHooker {
         val key = "$TAG@${System.identityHashCode(loader)}"
         val stateKey = "$key:preview-v1"
         runCatching {
-            val saved = HotReloadLifecycle.restoredState(stateKey) as? Map<*, *>
+            val saved = DexTargetCache.restoredState(stateKey) as? Map<*, *>
             val groups = saved?.takeIf { it.containsKey(CameraGalleryTargets.SCHEMA) }?.mapNotNull { (name, value) ->
                 (name as? String)?.let { it to ((value as? Array<*>)?.filterIsInstance<Method>()?.toTypedArray() ?: emptyArray()) }
             }?.toMap() ?: ApkDexSession.withSession(apkPath) { open -> CameraGalleryTargets.resolveAll(open(), loader) }

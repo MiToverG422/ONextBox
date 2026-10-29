@@ -38,10 +38,11 @@ class SettingsAppInfoRulesTest {
         assertEquals(Int.MAX_VALUE, SettingsAppInfoRules.shiftedOrder(Int.MAX_VALUE, 2))
     }
 
-    @Test fun exposesExactlyTheSixRequestedFields() {
-        assertEquals(6, SettingsAppInfoRules.Field.entries.size)
-        assertEquals(SettingsAppInfoRules.Field.PackageName, SettingsAppInfoRules.Field.entries.first())
-        assertEquals(SettingsAppInfoRules.Field.Installer, SettingsAppInfoRules.Field.entries.last())
+    @Test fun appNamePrecedesTheSixExistingFields() {
+        assertEquals(listOf(SettingsAppInfoRules.Field.AppName, SettingsAppInfoRules.Field.PackageName,
+            SettingsAppInfoRules.Field.Version, SettingsAppInfoRules.Field.Sdk,
+            SettingsAppInfoRules.Field.FirstInstalled, SettingsAppInfoRules.Field.LastUpdated,
+            SettingsAppInfoRules.Field.Installer), SettingsAppInfoRules.Field.entries)
     }
 
     @Test fun titleDividerFollowsNativeBodyHeightInBothDirections() {

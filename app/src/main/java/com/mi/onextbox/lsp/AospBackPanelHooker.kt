@@ -162,6 +162,7 @@ internal object AospBackPanelHooker {
         }
 
         fun interceptVisual(index: Int, owner: Any?, args: List<Any?>): Boolean {
+            if (index == 3) BackGestureHooker.recordFinished(owner, args.firstOrNull())
             val current = frame.get() ?: return false
             val gesture = current.gesture ?: return false
             if (owner !== gesture.manager) return false

@@ -42,6 +42,7 @@ import com.mi.onextbox.ui.layout.topBarColors
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.basic.TopAppBar
+import io.github.suqi8.coui.kmp.basic.TopAppBarState
 import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
 import io.github.suqi8.coui.kmp.basic.rememberTopAppBarState
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
@@ -65,6 +66,7 @@ fun SettingsPageSurface(
     scrollEntranceEnabled: Boolean = false,
     edgeToEdgeBottom: Boolean = false,
     externalScrollState: ScrollState? = null,
+    externalTopAppBarState: TopAppBarState? = null,
     scrollResetKey: Int? = null,
     backgroundContent: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
@@ -74,10 +76,8 @@ fun SettingsPageSurface(
     val internalScrollState = rememberScrollState()
     val scrollState = externalScrollState ?: internalScrollState
     val cardEntrance = rememberColorOsScrollEntrance(scrollState)
-    // Save the app-bar collapse state together with the list scroll state. NavDisplay removes
-    // the parent entry while a detail page is active, so a plain remember would restore the
-    // scrolled list but recreate an expanded title when returning.
-    val topAppBarState = rememberTopAppBarState()
+    val internalTopAppBarState = rememberTopAppBarState()
+    val topAppBarState = externalTopAppBarState ?: internalTopAppBarState
     ScrollResetEffect(scrollResetKey) {
         scrollState.scrollTo(0)
         topAppBarState.heightOffset = 0f

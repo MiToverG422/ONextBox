@@ -14,7 +14,7 @@ internal object LauncherGridHooker {
 
     fun hook(loader: ClassLoader, apkPath: String) {
         val key = "$TAG:state@${System.identityHashCode(loader)}"
-        val saved = HotReloadLifecycle.restoredState(key) as? Array<*>
+        val saved = DexTargetCache.restoredState(key) as? Array<*>
         val session = LauncherGridApplySession(loader, apkPath)
         session.restoreTargets(saved)
         HotReloadLifecycle.register(key,

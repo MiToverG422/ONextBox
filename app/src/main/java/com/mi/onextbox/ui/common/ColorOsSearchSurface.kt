@@ -2,15 +2,12 @@ package com.mi.onextbox.ui.common
 
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.Canvas
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -18,9 +15,13 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
@@ -50,24 +51,18 @@ internal fun ColorOsSearchSurface(
     background: Color,
     focused: Boolean,
     editorEmpty: Boolean = false,
+    trailingActionWidth: androidx.compose.ui.unit.Dp = 0.dp,
+    revealProgress: () -> Float = { 1f },
     content: @Composable BoxScope.() -> Unit,
 ) {
     val dark = COUITheme.colorScheme.background.luminance() < .5f
     val nativeBlurEnabled = LocalChromeNativeBlurEnabled.current
     val fallbackColor = ColorOsToolbarGlass.fallbackColor(background, COUITheme.colorScheme.surface)
-    // Observe animation frames only in AndroidView.update, not in the editor's
-    // composable scope. Material/spotlight redraws must not restart cursor/IME state.
-    val materialProgress = animateFloatAsState(if (focused) .5f else .4f,
-        spring(dampingRatio = .8f, stiffness = 194.955f), label = "Search material")
     val motion = remember { SearchMotion() }
     val editing = rememberUpdatedState(focused)
     val emptyEditor = rememberUpdatedState(editorEmpty)
-    LaunchedEffect(focused) {
-        // The waterdrop handle is a Popup anchored to the editor's visible bounds.
-        // A tap's scale/rebound can move that anchor across its clip edge every frame.
-        // Settle it once when entering editing; spotlight rendering stays independent.
-        if (focused) motion.snapToRest()
-    }
+    val trailingWidth = rememberUpdatedState(trailingActionWidth)
+    val direction = rememberUpdatedState(LocalLayoutDirection.current)
     val host = LocalView.current
     val redraw = remember { mutableIntStateOf(0) }
     val light = remember(host) {
@@ -89,29 +84,40 @@ internal fun ColorOsSearchSurface(
                 val down = awaitFirstDown(false, PointerEventPass.Initial)
                 val origin = down.position
                 var last = origin
-                var draggingCapsule = false
                 var emptyDragEligible = emptyEditor.value
                 var slopChecked = false
                 var decorativeEmptyDrag = false
+                var verticalDrag = false
+                val verticalDragEligible = if (direction.value == LayoutDirection.Rtl) {
+                    origin.x >= trailingWidth.value.toPx()
+                } else {
+                    origin.x < size.width - trailingWidth.value.toPx()
+                }
                 fun lightPosition(x: Float, y: Float): Pair<Float, Float> = colorOsSearchLocalPosition(
                     x, y, size.width.toFloat(), size.height.toFloat(),
                     motion.press.value * motion.xScale.value, motion.press.value * motion.yScale.value,
                     motion.x.value, motion.y.value,
                 )
-                if (colorOsSearchMotionAllowed(editing.value, false, false)) {
-                    motion.press.to(colorOsSearchPressScale(size.width / density, size.height / density), 0f, .25f)
-                } else motion.snapToRest()
+                val elongated = size.width.toFloat() / size.height.coerceAtLeast(1) > 2f
+                motion.press.to(colorOsSearchPressScale(size.width / density, size.height / density), 0f, if (elongated) .3f else .25f)
                 lightPosition(origin.x, origin.y).let { light.onDown(it.first, it.second) }
                 try {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         last = change.position
-                        if (!change.pressed) break
+                        if (!change.pressed) {
+                            if (verticalDrag) change.consume()
+                            break
+                        }
                         val singlePointer = event.changes.none {
                             it.id != down.id && (it.pressed || it.previousPressed)
                         }
-                        if (!emptyEditor.value || !singlePointer) {
+                        if (!singlePointer) {
+                            verticalDrag = false
+                            break
+                        }
+                        if (!emptyEditor.value) {
                             emptyDragEligible = false
                             if (decorativeEmptyDrag) motion.snapToRest()
                             decorativeEmptyDrag = false
@@ -119,13 +125,11 @@ internal fun ColorOsSearchSurface(
                         val dx = last.x - origin.x
                         val dy = last.y - origin.y
                         lightPosition(last.x, last.y).let { light.onMove(it.first, it.second) }
-                        // Observe, never consume: selection, clear button and page scroll retain ownership.
-                        val finalChange = awaitPointerEvent(PointerEventPass.Final).changes
-                            .firstOrNull { it.id == down.id } ?: break
-                        val pastSlop = abs(dx) + abs(dy) > 5f * density
+                        val pastSlop = abs(dx) > 5f || abs(dy) > 5f
                         if (pastSlop && !slopChecked) {
                             slopChecked = true
-                            // Empty horizontal drags have no text or handle to move.
+                            verticalDrag = verticalDragEligible && abs(dy) > abs(dx) &&
+                                (emptyEditor.value || change.uptimeMillis - down.uptimeMillis < viewConfiguration.longPressTimeoutMillis)
                             decorativeEmptyDrag = colorOsSearchEmptyDragAllowed(
                                 editorEmpty = emptyDragEligible,
                                 singlePointer = singlePointer,
@@ -134,10 +138,12 @@ internal fun ColorOsSearchSurface(
                                 longPressTimeoutMillis = viewConfiguration.longPressTimeoutMillis,
                             )
                         }
-                        if (!colorOsSearchMotionAllowed(
+                        if (verticalDrag) change.consume()
+                        val finalChange = awaitPointerEvent(PointerEventPass.Final).changes
+                            .firstOrNull { it.id == down.id } ?: break
+                        if (!verticalDrag && !colorOsSearchMotionAllowed(
                             editing.value, pastSlop, finalChange.isConsumed, decorativeEmptyDrag,
                         )) continue
-                        draggingCapsule = draggingCapsule || pastSlop
                         val deform = colorOsSearchDeformation(dx, dy, size.width.toFloat(), size.height.toFloat(), density)
                         motion.x.to(colorOsSearchRubber(dx, .05f, 28f * density), .15f, .15f)
                         motion.y.to(colorOsSearchRubber(dy, .05f, 28f * density), .15f, .15f)
@@ -146,14 +152,11 @@ internal fun ColorOsSearchSurface(
                     }
                 } finally {
                     lightPosition(last.x, last.y).let { light.onUp(it.first, it.second) }
-                    if (editing.value && !draggingCapsule) motion.snapToRest()
-                    else {
-                        motion.press.to(1f, .6f, .5f)
-                        motion.x.to(0f, .65f, .45f)
-                        motion.y.to(0f, .65f, .45f)
-                        motion.xScale.to(1f, .65f, .45f)
-                        motion.yScale.to(1f, .65f, .45f)
-                    }
+                    motion.press.to(1f, if (elongated) .5f else .6f, .5f)
+                    motion.x.to(0f, .65f, .45f)
+                    motion.y.to(0f, .65f, .45f)
+                    motion.xScale.to(1f, .65f, .45f)
+                    motion.yScale.to(1f, .65f, .45f)
                 }
             }
         }
@@ -170,18 +173,31 @@ internal fun ColorOsSearchSurface(
                 },
                 update = {
                     it.updateAppearance(dark, fallbackColor.toArgb(), nativeBlurEnabled)
-                    it.updateSearchProgress(materialProgress.value)
+                    it.updateSearchProgress(1f)
+                    val progress = revealProgress().coerceIn(0f, 1f)
+                    it.alpha = if (nativeBlurEnabled) (progress / .2f).coerceAtMost(1f) else progress
                 },
                 modifier = Modifier.fillMaxSize(),
             )
-            content()
+            Box(Modifier.matchParentSize().graphicsLayer {
+                val progress = revealProgress().coerceIn(0f, 1f)
+                alpha = if (nativeBlurEnabled) (progress / .2f).coerceAtMost(1f) * progress else progress
+                val radius = (1f - progress) * 30f
+                renderEffect = if (nativeBlurEnabled && radius > .01f) {
+                    android.graphics.RenderEffect.createBlurEffect(
+                        radius, radius, android.graphics.Shader.TileMode.DECAL,
+                    ).asComposeRenderEffect()
+                } else null
+            }) {
+                content()
+            }
             // A draw-only overlay cannot claim touch input like the old AndroidView overlay.
             // It composites the native C17 shader after the translucent material and content.
             Canvas(Modifier.matchParentSize().clip(RoundedCornerShape(50)).onSizeChanged {
                 light.onSizeChanged(it.width, it.height)
             }) {
                 redraw.intValue // Subscribe in draw, not composition: don't restart the editor.
-                light.draw(drawContext.canvas.nativeCanvas)
+                if (revealProgress() > .99f) light.draw(drawContext.canvas.nativeCanvas)
             }
         }
     }

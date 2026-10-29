@@ -77,7 +77,14 @@ internal fun PowerIndicatorSettingsGroup() {
         row("power-charging", visible = state.enabled) { above, below ->
             SettingsToggleRow(title = stringResource(R.string.power_indicator_hide_charging),
                 summary = stringResource(R.string.power_indicator_charging_notice), checked = state.hideCharging, interactionEnabled = !saving,
-                onCheckedChange = { save(state.copy(hideCharging = it)) }, hasDividerAbove = above, hasDividerBelow = below)
+                onCheckedChange = { save(state.copy(hideCharging = it, onlyCharging = if (it) false else state.onlyCharging)) },
+                hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(PowerIndicatorSettings.ONLY_CHARGING, visible = state.enabled) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.power_indicator_only_charging),
+                summary = "", checked = state.onlyCharging, interactionEnabled = !saving,
+                onCheckedChange = { save(state.copy(onlyCharging = it, hideCharging = if (it) false else state.hideCharging)) },
+                hasDividerAbove = above, hasDividerBelow = below)
         }
         row("power-font", visible = state.enabled) { above, below ->
             FeatureSliderRow(heading = stringResource(R.string.power_indicator_font), currentValue = "${state.fontSize} sp",

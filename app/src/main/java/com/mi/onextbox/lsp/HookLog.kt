@@ -8,6 +8,11 @@ internal object HookLog {
     private const val LOGCAT_TAG = "ONextBox-LSP"
 
     fun d(tag: String, message: String, throwable: Throwable? = null) {
+        val config = com.mi.onextbox.lsp.compat.HookConfigSnapshot
+        if (config.boolean("developer_debug_logging", false) != true &&
+            !com.mi.onextbox.diagnostics.DiagnosticRules.temporaryLogging(
+                config.long("developer_trace_until", 0L) ?: 0L, System.currentTimeMillis(),
+                config.stringSet("developer_trace_tags", emptySet()).orEmpty(), tag)) return
         write("D", tag, message, throwable)
     }
 
@@ -30,6 +35,7 @@ internal object HookLog {
             .trim()
             .ifBlank { "Hook" }
         val line = "[$scopedTag] $message"
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.event(if (level == "E" || level == "W") "hook_log" else "log", tag, line + (throwable?.let { ": $it" } ?: ""))
         val priority = when (level) {
             "D" -> Log.DEBUG
             "W" -> Log.WARN

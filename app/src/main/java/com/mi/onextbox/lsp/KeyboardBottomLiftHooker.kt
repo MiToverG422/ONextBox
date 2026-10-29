@@ -21,7 +21,7 @@ internal object KeyboardBottomLiftHooker {
 
     fun hook(loader: ClassLoader, apkPath: String) {
         val stateKey = "$TAG:state@${System.identityHashCode(loader)}"
-        val saved = HotReloadLifecycle.restoredState(stateKey) as? Array<*>
+        val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
         if (!LspConfig.isKeyboardBottomLiftFixEnabledXposed() && saved == null) return
         val hookKey = "$TAG@${System.identityHashCode(loader)}"
         val keys = listOf("$hookKey:insets", "$hookKey:shown", "$hookKey:detached")

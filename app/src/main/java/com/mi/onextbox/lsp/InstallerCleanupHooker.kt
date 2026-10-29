@@ -25,10 +25,11 @@ internal object InstallerCleanupHooker {
     private fun scan(context: Context? = context()) = InstallerCleanupSettings.active(InstallerCleanupSettings.APP_SKIP_SCAN) && maySkip(context)
 
     fun hook(loader: ClassLoader, apkPath: String, packageName: String) {
+        if (packageName == InstallerCleanupSettings.PACKAGE_INSTALLER) NativeInstallerThemeHooker.hook()
         val key = "$TAG@${System.identityHashCode(loader)}:$packageName"
         val stateKey = "$key:targets-v1"
         runCatching {
-            val saved = (HotReloadLifecycle.restoredState(stateKey) as? Map<*, *>)?.mapNotNull { (name, value) ->
+            val saved = (DexTargetCache.restoredState(stateKey) as? Map<*, *>)?.mapNotNull { (name, value) ->
                 val methods = (value as? Array<*>)?.filterIsInstance<Method>()?.toTypedArray()
                 if (name is String && methods != null) name to methods else null
             }?.toMap()

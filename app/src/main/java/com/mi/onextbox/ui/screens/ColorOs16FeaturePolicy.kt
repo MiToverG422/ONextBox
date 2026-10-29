@@ -55,7 +55,7 @@ internal object ColorOs16FeaturePolicy {
                 FeaturePageMode.SystemUiCornerSettings, FeaturePageMode.SystemUiPercentageSettings,
                 FeaturePageMode.SystemUiSideVolumePercentageSettings, FeaturePageMode.SystemUiFluidCloudMediaBlacklist,
                 FeaturePageMode.DesktopHiddenApps, FeaturePageMode.EsimDiagnostics, FeaturePageMode.NotificationRemoval,
-                FeaturePageMode.Installer, FeaturePageMode.CorePatch)
+                FeaturePageMode.Installer, FeaturePageMode.CorePatch, FeaturePageMode.Coui, FeaturePageMode.Tools)
             val main = groups.keys.filter { it !in nested } + FeaturePageMode.entries.filter { page ->
                 page in featureTitles && page !in nested && page !in groups && page != FeaturePageMode.EnabledFeatures
             }

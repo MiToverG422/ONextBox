@@ -1,0 +1,16 @@
+oppo-browser-purify
+Source: https://github.com/fentia/oppo-browser-purify
+Revision: adb32d0aa7c7f34cbd030316258fb3828fb5be2b
+Copyright (c) 2026 Roy
+License: MIT (see LICENSE in this directory)
+
+ONextBox adapts the bottom-tab, profile-page, download-cleanup, AI Vision,
+advertising SDK and search purification hooks from this project.
+The adapted implementation is in BrowserPurifyHooker.kt and BrowserPurifyRules.kt.
+Changes: Kotlin and Modern Xposed API integration; ONextBox configuration, hot
+reload and COUI controls; support for browser 40.10.24.1 interfaces; independent
+badge/reward controls; native search initialization retained; no persistent
+override of the browser's saved default-tab preference.
+
+The original MIT copyright and permission notice remain applicable to the
+adapted portions. ONextBox's other code retains its existing license.

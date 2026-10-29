@@ -4,9 +4,19 @@ import androidx.compose.animation.core.TargetBasedAnimation
 import androidx.compose.animation.core.VectorConverter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class RootPageMotionTest {
+    @Test fun consecutiveBackTransfersGestureWithoutFreezingOutgoingPages() {
+        assertTrue(rootLayerFollowsGesture("detail", "detail", "category", true))
+        assertTrue(rootLayerFollowsGesture("category", "detail", "category", true))
+        assertFalse(rootLayerFollowsGesture("detail", "category", "system", true))
+        assertTrue(rootLayerFollowsGesture("category", "category", "system", true))
+        assertTrue(rootLayerFollowsGesture("system", "category", "system", true))
+        assertFalse(rootLayerFollowsGesture("category", "category", "system", false))
+    }
+
     @Test fun reversalKeepsItsInitialPositionAndVelocity() {
         val motion = TargetBasedAnimation(RootPageSpring, Float.VectorConverter, 0.6f, 1f, -2f)
         assertEquals(0.6f, motion.getValueFromNanos(0), 0.0001f)

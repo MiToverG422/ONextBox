@@ -36,7 +36,7 @@ class LauncherRecentMemoryHookContractTest {
 
     @Test fun targetsAndOriginalsSurviveReloadWithoutExportingModuleOwnedObjects() {
         val text = source("LauncherRecentMemoryHooker.kt")
-        assertTrue(text.contains("HotReloadLifecycle.restoredState(stateKey)"))
+        assertTrue(text.contains("DexTargetCache.restoredState(stateKey)"))
         assertTrue(text.contains("arrayOf(targets?.values, memory?.export(), panels.keys.toTypedArray())"))
         assertTrue(text.contains("session.restoreTargets(saved)"))
         assertTrue(text.contains("HotReloadLifecycle.afterCommit"))

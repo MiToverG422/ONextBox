@@ -39,8 +39,18 @@ internal object NetworkSpeedHooker {
             val type = Reflect.findClass(VIEW, loader)
             type.getDeclaredField("mSpeedNumber")
             type.getDeclaredField("mSpeedUnit")
+            val stateType = Reflect.findClass(STATE, loader)
+            val visibility = runCatching { NetworkSpeedVisibility(type, stateType) }
+                .onFailure { HookLog.w(TAG, "Low-speed visibility interface unavailable; native visibility retained", it) }.getOrNull()
+            fun refresh(view: Any?) {
+                val host = view as? FrameLayout ?: return
+                restore(host)
+                runCatching { visibility?.refresh(host) }
+                    .onFailure { HookLog.w(TAG, "Network-speed visibility refresh failed", it) }
+                apply(host)
+            }
             val methods = mutableListOf(
-                Reflect.findDeclaredMethodExact(type, "applyNetworkState", Reflect.findClass(STATE, loader)),
+                Reflect.findDeclaredMethodExact(type, "applyNetworkState", stateType),
                 Reflect.findDeclaredMethodExact(type, "onFinishInflate"),
                 Reflect.findDeclaredMethodExact(type, "onAttachedToWindow"),
             )
@@ -51,7 +61,12 @@ internal object NetworkSpeedHooker {
             methods += type.declaredMethods.filter { it.name == "setFontTypeface" }
             methods.forEach { method ->
                 ModernHookRegistry.installCompat("network-speed:${method.name}:${method.parameterCount}", method, object : ModernMethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) { restore(param.thisObject) }
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        restore(param.thisObject)
+                        if (method.name == "applyNetworkState" && visibility != null) {
+                            param.args[0] = visibility.filter(param.thisObject as FrameLayout, param.args[0])
+                        }
+                    }
                     override fun afterHookedMethod(param: MethodHookParam) {
                         if (param.throwable == null) apply(param.thisObject)
                     }
@@ -61,6 +76,7 @@ internal object NetworkSpeedHooker {
                 Reflect.findDeclaredMethodExact(type, "onDetachedFromWindow"), object : ModernMethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         restore(param.thisObject)
+                        visibility?.restore(param.thisObject as FrameLayout)
                         hosts.remove(param.thisObject)
                     }
                 })
@@ -70,9 +86,10 @@ internal object NetworkSpeedHooker {
                     bootstrap?.let(main::removeCallbacks)
                     bootstrap = null
                     appearances.keys.toList().forEach(::restore)
+                    visibility?.restoreAll()
                     hosts.clear()
                 },
-                restore = { state -> (state as? Array<*>)?.forEach(::apply) },
+                restore = { state -> (state as? Array<*>)?.forEach(::refresh) },
             )
             bootstrap = Runnable {
                 bootstrap = null
@@ -80,7 +97,7 @@ internal object NetworkSpeedHooker {
                     val global = Reflect.callStaticMethod(Reflect.findClass("android.view.WindowManagerGlobal", loader), "getInstance")
                     val roots = global?.let { Reflect.getObjectField(it, "mViews") } as? List<*> ?: return@runCatching
                     fun visit(view: View) {
-                        if (type.isInstance(view)) apply(view)
+                        if (type.isInstance(view)) refresh(view)
                         else if (view is ViewGroup) for (index in 0 until view.childCount) visit(view.getChildAt(index))
                     }
                     roots.filterIsInstance<View>().forEach(::visit)

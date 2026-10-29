@@ -3,6 +3,11 @@ package com.mi.onextbox.lsp
 internal object NetworkSpeedRules {
     data class Text(val number: String, val unit: String, val singleLine: Boolean)
 
+    fun hideLowSpeed(bytesPerSecond: Long, enabled: Boolean, thresholdKbps: Int): Boolean =
+        enabled && bytesPerSecond >= 0 && bytesPerSecond < thresholdKbps.coerceIn(
+            NetworkSpeedSettings.MIN_THRESHOLD_KBPS, NetworkSpeedSettings.MAX_THRESHOLD_KBPS,
+        ).toLong() * 1024L
+
     fun refreshDelay(original: Long, custom: Boolean, intervalMs: Int = 1000): Long =
         if (custom && original > 0L) intervalMs.coerceIn(500, 10000).toLong() else original
 

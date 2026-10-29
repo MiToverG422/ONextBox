@@ -174,6 +174,9 @@ Special thanks to [LuckyTool](https://github.com/luckyzyx/LuckyTool) and [OShin]
 | [OShin](https://github.com/suqi8/OShin) | suqi8 and contributors · AGPL-3.0 |
 | [LuckyTool](https://github.com/luckyzyx/LuckyTool) | luckyzyx and contributors · GPL-3.0 |
 | [InxLocker](https://github.com/Chimioo/InxLocker) | Chimioo and contributors · GPL-3.0 |
+| [oppo-browser-purify](https://github.com/fentia/oppo-browser-purify) | Roy (fentia) · MIT · Adapted browser purification features |
+
+Browser purification adapts this project's bottom tabs, profile page, downloads, AI Vision, advertising SDK and search hooks. The port uses ONextBox's Modern Xposed integration, configuration hot reload and COUI interface, with updated browser interfaces. See [NOTICE](third_party/oppo-browser-purify/NOTICE) for the upstream revision and modifications, and [LICENSE](third_party/oppo-browser-purify/LICENSE) for the original MIT copyright and permission notice, also included in the APK.
 
 ### 📦 Libraries & runtime components
 

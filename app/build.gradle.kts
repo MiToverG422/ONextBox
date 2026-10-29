@@ -37,6 +37,13 @@ val prepareCouiLicenses by tasks.registering(Sync::class) {
 }
 tasks.named("preBuild").configure { dependsOn(prepareCouiLicenses) }
 
+val browserLicenseAssets = layout.buildDirectory.dir("generated/browserLicenses/assets")
+val prepareBrowserLicenses by tasks.registering(Sync::class) {
+    from(rootProject.file("third_party/oppo-browser-purify")) { include("LICENSE", "NOTICE") }
+    into(browserLicenseAssets.map { it.dir("third_party/oppo-browser-purify") })
+}
+tasks.named("preBuild").configure { dependsOn(prepareBrowserLicenses) }
+
 val ciVersionName = (project.findProperty("ONEXTBOX_VERSION_NAME") as String?)
     ?.takeIf { it.isNotBlank() }
     ?: "17.0"
@@ -81,6 +88,7 @@ val hasExternalReleaseSigning =
 android {
     sourceSets.getByName("main").assets.srcDir(c16Assets.get().asFile)
     sourceSets.getByName("main").assets.srcDir(couiLicenseAssets.get().asFile)
+    sourceSets.getByName("main").assets.srcDir(browserLicenseAssets.get().asFile)
     namespace = "com.mi.onextbox"
     compileSdk {
         version = release(37)

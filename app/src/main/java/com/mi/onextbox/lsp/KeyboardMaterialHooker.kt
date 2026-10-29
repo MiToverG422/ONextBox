@@ -14,7 +14,7 @@ internal object KeyboardMaterialHooker {
 
     fun hook(loader: ClassLoader, apkPath: String) {
         val stateKey = "$TAG:targets@${System.identityHashCode(loader)}"
-        val saved = HotReloadLifecycle.restoredState(stateKey) as? Array<*>
+        val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
         if (!LspConfig.isKeyboardMaterialUnlockedXposed() && saved == null) return
         val hookKey = "$TAG@${System.identityHashCode(loader)}:material-allowlist"
         runCatching {

@@ -21,6 +21,7 @@ internal object AdaptationRuntimePolicy {
 
 /** One module generation must never mix hooks belonging to different system versions. */
 internal open class AdaptationProfileGate(
+    private val enabled: () -> Boolean = { true },
     private val selectedVersion: () -> SystemAdaptationVersion,
 ) {
     @Volatile private var owner: SystemAdaptationVersion? = null
@@ -29,9 +30,9 @@ internal open class AdaptationProfileGate(
     fun bind(): SystemAdaptationVersion = owner ?: selectedVersion().also { owner = it }
 
     fun isActive(profile: SystemAdaptationVersion): Boolean =
-        AdaptationRuntimePolicy.allowsHook(profile, selectedVersion())
+        enabled() && AdaptationRuntimePolicy.allowsHook(profile, selectedVersion())
 
-    fun isBoundProfileActive(): Boolean = owner?.let(::isActive) ?: true
+    fun isBoundProfileActive(): Boolean = enabled() && (owner?.let(::isActive) ?: true)
 }
 
-internal object AdaptationHookGate : AdaptationProfileGate(HookConfigSnapshot::adaptationVersion)
+internal object AdaptationHookGate : AdaptationProfileGate({ !SafeModeRuntime.blocked }, HookConfigSnapshot::adaptationVersion)

@@ -28,7 +28,7 @@ internal object BatteryOptimizationHooker {
         // Scanning is unnecessary while disabled; loading a plugin already resident is not reversible.
         val key = "$TAG:App@${System.identityHashCode(loader)}:"
         val stateKey = key + "resolved-targets"
-        val saved = (HotReloadLifecycle.restoredState(stateKey) as? Array<*>)?.filterIsInstance<Method>()
+        val saved = (DexTargetCache.restoredState(stateKey) as? Array<*>)?.filterIsInstance<Method>()
         if (!LspConfig.isBatteryFeatureEnabledXposed(BatteryFeature.RemoveRestrictPlugin) && saved == null) return
         runCatching {
             val targets = saved ?: run {
@@ -91,6 +91,7 @@ internal object BatteryOptimizationHooker {
     }
 
     fun hookSystemServer(loader: ClassLoader) {
+        BatteryWhitelistSystemHooker.hook(loader)
         val key = "$TAG:System@${System.identityHashCode(loader)}:whitelist"
         runCatching {
             val helper = ModernReflect.findClass("com.android.server.OplusDeviceIdleHelper", loader)

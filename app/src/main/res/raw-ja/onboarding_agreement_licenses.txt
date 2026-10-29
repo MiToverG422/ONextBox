@@ -9,3 +9,29 @@ CorePatch N（LSPosed）は上流の表明により GNU GPL v2.0 です。統合
 ランタイム コンポーネントには、Apache-2.0 での AndroidX、Jetpack Compose、Kotlin および kotlinx ライブラリ、COUI、Kyant0 Shapes、AndroidLiquidGlass、libsu、HiddenApiBypass、libxused、マテリアル カラー ユーティリティ、および Poko が含まれます。
 
 Android、ColorOS/OPlus ソフトウェア、ルート マネージャー、および LSPosed は互換性ターゲットまたはプラットフォームであり、ONextBox によって再ライセンスされません。各プロジェクトによって提供される著作権表示および完全なライセンス テキストがこの概要より優先されます。ソースの可用性と帰属リンクには、About ページから引き続きアクセスできます。
+
+ブラウザ浄化機能は、Roy（fentia）による oppo-browser-purify を移植・改良したもので、MIT ライセンスに基づきます。
+https://github.com/fentia/oppo-browser-purify
+Upstream: adb32d0aa7c7f34cbd030316258fb3828fb5be2b
+
+MIT License
+
+Copyright (c) 2026 Roy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

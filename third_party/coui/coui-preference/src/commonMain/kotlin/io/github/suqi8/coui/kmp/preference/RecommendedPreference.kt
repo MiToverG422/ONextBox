@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,8 @@ fun RecommendedPreference(
     cornerRadius: Dp = RecommendedPreferenceDefaults.CornerRadius,
     colors: RecommendedPreferenceColors = RecommendedPreferenceDefaults.recommendedPreferenceColors(),
     insideMargin: PaddingValues = RecommendedPreferenceDefaults.InsideMargin,
+    titleTextStyle: TextStyle = COUITheme.textStyles.main.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+    itemTextStyle: TextStyle = COUITheme.textStyles.main.copy(fontSize = COUITheme.textStyles.body2.fontSize, fontWeight = FontWeight.Medium),
 ) {
     if (items.isEmpty()) return
 
@@ -71,8 +74,7 @@ fun RecommendedPreference(
         ) {
             Text(
                 text = title,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
+                style = titleTextStyle,
                 color = colors.titleColor,
             )
         }
@@ -103,8 +105,7 @@ fun RecommendedPreference(
             ) {
                 Text(
                     text = item.text,
-                    fontSize = COUITheme.textStyles.body2.fontSize,
-                    fontWeight = FontWeight.Medium,
+                    style = itemTextStyle,
                     color = colors.itemColor,
                 )
             }

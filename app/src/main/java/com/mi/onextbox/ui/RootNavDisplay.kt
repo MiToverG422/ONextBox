@@ -32,7 +32,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.rememberLifecycleOwner
 import androidx.navigation3.runtime.NavEntry
-import androidx.navigation3.scene.NavigationBackHandler
+import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.scene.rememberNavigationEventState
@@ -60,18 +60,23 @@ internal fun <T : Any> RootNavDisplay(
     entries: List<NavEntry<T>>,
     modifier: Modifier = Modifier,
     animate: Boolean = true,
+    handleBack: Boolean = true,
     transitionEffects: NavDisplayTransitionEffects = NavDisplayTransitionEffects.Default,
     onBack: () -> Unit,
 ) {
     val strategies = remember { listOf(SinglePaneSceneStrategy<T>()) }
     val sceneState = rememberSceneState(entries, strategies, onBack = onBack)
-    val navigationState = rememberNavigationEventState(sceneState)
-    NavigationBackHandler(sceneState, navigationState, onBack)
+    val navigationState = key(handleBack) { rememberNavigationEventState(sceneState) }
+    NavigationBackHandler(
+        state = navigationState,
+        isBackEnabled = handleBack && sceneState.currentScene.previousEntries.isNotEmpty(),
+        onBackCompleted = { if (handleBack) onBack() },
+    )
 
     val scene = sceneState.currentScene
     val previousScene = sceneState.previousScenes.lastOrNull()
-    val dragging by remember(previousScene != null) {
-        derivedStateOf { previousScene != null && navigationState.transitionState is InProgress }
+    val dragging by remember(previousScene != null, navigationState, handleBack) {
+        derivedStateOf { handleBack && previousScene != null && navigationState.transitionState is InProgress }
     }
     val currentKey by rememberUpdatedState(scene.key)
     val currentDragging by rememberUpdatedState(dragging)
@@ -95,7 +100,7 @@ internal fun <T : Any> RootNavDisplay(
             else -> 1f
         }
         ensureLayer(scene, start)
-        if (!dragging) {
+        run {
             layers.forEach { layer ->
                 val index = stackKeys.indexOf(layer.scene.key)
                 if (index >= 0) layer.order = index
@@ -105,7 +110,7 @@ internal fun <T : Any> RootNavDisplay(
                     else -> 1f
                 }
             }
-            if (!animate) layers.removeAll { it.scene.key != scene.key }
+            if (!animate && !dragging) layers.removeAll { it.scene.key != scene.key }
         }
         previousKeys.clear()
         previousKeys.addAll(stackKeys)
@@ -124,7 +129,7 @@ internal fun <T : Any> RootNavDisplay(
         }
     }
 
-    LaunchedEffect(dragging, sceneState) {
+    LaunchedEffect(dragging, navigationState, scene.key, previousScene?.key) {
         if (!dragging || previousScene == null) return@LaunchedEffect
         val front = ensureLayer(scene, 0f)
         val behind = ensureLayer(previousScene, RootCoveredPageOffset)
@@ -160,8 +165,9 @@ internal fun <T : Any> RootNavDisplay(
         val top = orderedLayers.lastOrNull()
         orderedLayers.forEachIndexed { drawOrder, layer ->
             key(layer.scene.key) {
-                LaunchedEffect(layer.target, dragging, animate) {
-                    if (dragging) return@LaunchedEffect
+                val followsGesture = rootLayerFollowsGesture(layer.scene.key, scene.key, previousScene?.key, dragging)
+                LaunchedEffect(layer.target, followsGesture, animate) {
+                    if (followsGesture) return@LaunchedEffect
                     if (animate) {
                         layer.offset.animateTo(
                             layer.target,

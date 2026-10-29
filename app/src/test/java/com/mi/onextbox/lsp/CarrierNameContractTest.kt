@@ -10,7 +10,7 @@ class CarrierNameContractTest {
 
     @Test fun hooksAreSystemUiOnlyAndPreserveNativeFormattingAndNetworkState() {
         val entry = source("main/java/com/mi/onextbox/lsp/OosLspModuleEntry.kt")
-        assertEquals(1, Regex("CarrierNameHooker.hook").findAll(entry).count())
+        assertEquals(1, Regex("""CarrierNameHooker\.hook\(""").findAll(entry).count())
         assertTrue(entry.substringAfter("PACKAGE_SYSTEM_UI -> {").substringBefore("PACKAGE_SETTINGS").contains("CarrierNameHooker.hook(classLoader)"))
         val hook = source("main/java/com/mi/onextbox/lsp/CarrierNameHooker.kt")
         assertTrue(hook.contains("val owner = scope.owner() ?: return@Hooker original"))

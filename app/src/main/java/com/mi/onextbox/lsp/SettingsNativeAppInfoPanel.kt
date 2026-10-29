@@ -31,6 +31,9 @@ internal class SettingsNativeAppInfoPanel(
     val view = ModernReflect.newInstance(type("com.coui.appcompat.cardlist.COUICardListSelectedItemLayout"), context) as LinearLayout
     private val list = ModernReflect.newInstance(type("com.coui.appcompat.expandable.COUIExpandableRecyclerView"), context) as ViewGroup
     private val holders = WeakHashMap<Any, Any>()
+    private val rowPadding = WeakHashMap<View, IntArray>()
+    private var cardTopInset = 0
+    private var cardBottomInset = 0
     private val observers = mutableListOf<Any>()
     private val main = Handler(Looper.getMainLooper())
     private var expanded = false
@@ -47,13 +50,12 @@ internal class SettingsNativeAppInfoPanel(
         // Inner native rows remain rectangular; no corner flags are switched on click.
         view.orientation = LinearLayout.VERTICAL
         call(view, "setPositionInGroup", 4)
-        // In both states the native mask covers the whole card, including its padding
-        // and expanded body. Dispatch observation does not intercept child clicks/copy.
-        call(view, "consumeDispatchingEventForState", true)
-        view.setOnClickListener {
-            if (!disposed && canToggle()) setExpanded(!expanded, true)
-        }
-        call(view, "setBackgroundAnimationEnabled", true)
+        cardTopInset = view.paddingTop
+        cardBottomInset = view.paddingBottom
+        view.setPaddingRelative(view.paddingStart, 0, view.paddingEnd, 0)
+        call(view, "consumeDispatchingEventForState", false)
+        view.isClickable = false
+        call(view, "setBackgroundAnimationEnabled", false)
         list.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         list.isNestedScrollingEnabled = false
         list.overScrollMode = View.OVER_SCROLL_NEVER
@@ -128,6 +130,7 @@ internal class SettingsNativeAppInfoPanel(
         ).forEach { cleanup -> runCatching(cleanup).onFailure { if (failure == null) failure = it else failure?.addSuppressed(it) } }
         dividerInstances.remove(decoration)
         holders.clear()
+        rowPadding.clear()
         headerView = null
         observers.clear()
         failure?.let { throw it }
@@ -165,8 +168,7 @@ internal class SettingsNativeAppInfoPanel(
     private fun changeState(value: Boolean, animate: Boolean) {
         if (expanded == value) return
         expanded = value
-        // Do not reset the outer press animation on expansion: COUI owns its release
-        // fade and resizes the native card mask with the animated layout bounds.
+        // Leave the header's native release animation running during expansion.
         onStateChanged(value, animate)
     }
 
@@ -190,7 +192,14 @@ internal class SettingsNativeAppInfoPanel(
             "onGroupCollapsed" -> { changeState(false, true); null }
             "registerAdapterDataObserver" -> { observers.add(args!![0]!!); null }
             "unregisterAdapterDataObserver" -> { observers.remove(args!![0]); null }
-            "onViewRecycled" -> { holders.remove(args!![0]); null }
+            "onViewRecycled" -> {
+                val holder = args!![0]!!
+                val root = ModernReflect.getObjectField(holder, "itemView") as View
+                call(root, "resetBackgroundAnimation")
+                rowPadding.remove(root)
+                holders.remove(holder)
+                null
+            }
             "setHasStableIds", "onRestoreView" -> null
             else -> error("Unsupported native expandable callback: $name")
         }
@@ -201,11 +210,12 @@ internal class SettingsNativeAppInfoPanel(
         val root = LayoutInflater.from(context).inflate(layout, parent, false)
         if (isHeader) {
             call(root, "setPositionInGroup", 2)
+            root.setPaddingRelative(root.paddingStart, root.paddingTop + cardTopInset,
+                root.paddingEnd, root.paddingBottom + cardBottomInset)
             root.measure(View.MeasureSpec.makeMeasureSpec(context.resources.displayMetrics.widthPixels, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
-            // Keep a native footer inset below the header. COUI intentionally skips expansion
-            // animation when the last group exactly touches the RecyclerView's lower edge.
-            list.minimumHeight = root.measuredHeight + maxOf(1, view.paddingBottom)
+            // The native expansion requires the group to end before the list's lower edge.
+            list.minimumHeight = root.measuredHeight + 1
         }
         return ModernReflect.newInstance(type("androidx.preference.PreferenceViewHolder"), root)
     }
@@ -215,15 +225,24 @@ internal class SettingsNativeAppInfoPanel(
         call(preference, "onBindViewHolder", holder)
         val root = ModernReflect.getObjectField(holder, "itemView") as View
         call(root, "setPositionInGroup", 2)
-        // One outer surface owns both color and press feedback. Rebinding must not
-        // restore a header-only mask or darken a child twice; keep its click listeners.
+        rowPadding[root] = intArrayOf(root.paddingStart, root.paddingTop, root.paddingEnd, root.paddingBottom)
+        applyRowInsets(root, preference)
+        // Keep the shared card surface while each native row owns its press mask.
         root.background = null
-        call(root, "resetBackgroundAnimation")
-        call(root, "setBackgroundAnimationEnabled", false)
+        if (holders[holder] !== preference) call(root, "resetBackgroundAnimation")
+        call(root, "consumeDispatchingEventForState", false)
+        call(root, "setBackgroundAnimationEnabled", true)
         if (preference === header) {
             headerView = WeakReference(root)
         }
         holders[holder] = preference
+    }
+
+    private fun applyRowInsets(root: View, preference: Any) {
+        val padding = rowPadding[root] ?: return
+        val top = if (preference === header) cardTopInset else 0
+        val bottom = if (preference === header || preference === rows.lastOrNull()) cardBottomInset else 0
+        root.setPaddingRelative(padding[0], padding[1] + top, padding[2], padding[3] + bottom)
     }
 
     private fun connector(): Any = requireNotNull(ModernReflect.getObjectField(list, "mConnector"))

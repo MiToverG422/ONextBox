@@ -14,6 +14,50 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Mirrors the app's feature preferences into framework-owned modern preferences. */
 object ModernXposedPreferenceSync : XposedServiceHelper.OnServiceListener {
+    @Volatile var lastDiagnosticWrite: Long = 0L
+        private set
+    @Volatile var lastDiagnosticError: String? = null
+        private set
+
+    fun diagnosticReadback(context: Context): Pair<Map<String, *>, Map<String, *>?> {
+        initialize(context)
+        return initializer.submit<Pair<Map<String, *>, Map<String, *>?>> {
+            val local = checkNotNull(localPreferences).all
+            val binding = remoteBinding.get()
+            local to binding?.takeIf { LspFrameworkService.isCurrent(it.service) }?.preferences?.all
+        }.get()
+    }
+
+    fun replaceDiagnosticValues(context: Context, values: Map<String, *>, featuresOnly: Boolean) {
+        initialize(context)
+        initializer.submit {
+            val local = checkNotNull(localPreferences)
+            val bound = checkNotNull(remoteBinding.get()) { "Xposed service is not connected" }
+            check(LspFrameworkService.isCurrent(bound.service)) { "Xposed service changed" }
+            val before = local.all
+            val editor = local.edit()
+            if (featuresOnly) before.keys.filter { !it.startsWith("developer_") && !it.startsWith("__") }.forEach(editor::remove)
+            values.forEach { (key, value) -> putValue(editor, key, value) }
+            try {
+                com.mi.onextbox.diagnostics.diagnosticTransaction(
+                    write = { check(editor.commit()) { "Local configuration write failed" } },
+                    publish = {
+                        copyAll(local, bound.preferences)
+                        check(LspFrameworkService.isCurrent(bound.service)) { "Xposed service changed during synchronization" }
+                    },
+                    rollback = {
+                        val rollback = local.edit().clear()
+                        before.forEach { (key, value) -> putValue(rollback, key, value) }
+                        check(rollback.commit()) { "Local rollback failed" }
+                    },
+                    republish = { copyAll(local, bound.preferences) },
+                )
+            } catch (error: Throwable) {
+                lastDiagnosticError = error.toString()
+                throw error
+            }
+        }.get()
+    }
     private const val TAG = "ONextBox-XposedService"
     private const val GROUP = "lsp_features"
 
@@ -65,6 +109,22 @@ object ModernXposedPreferenceSync : XposedServiceHelper.OnServiceListener {
                 val local = checkNotNull(localPreferences) { "Local preferences are not ready" }
                 val bound = checkNotNull(remoteBinding.get()) { "Xposed service is not connected" }
                 commitConfirmedIntPreference(local, bound.preferences, key, value) {
+                    LspFrameworkService.isCurrent(bound.service)
+                }
+            } catch (error: Throwable) {
+                ConfigSyncStatus.failed("framework preferences")
+                throw error
+            }
+        }.get()
+    }
+
+    fun setStringAndSync(context: Context, key: String, value: String) {
+        initialize(context)
+        initializer.submit {
+            try {
+                val local = checkNotNull(localPreferences) { "Local preferences are not ready" }
+                val bound = checkNotNull(remoteBinding.get()) { "Xposed service is not connected" }
+                commitConfirmedStringPreference(local, bound.preferences, key, value) {
                     LspFrameworkService.isCurrent(bound.service)
                 }
             } catch (error: Throwable) {
@@ -159,7 +219,14 @@ object ModernXposedPreferenceSync : XposedServiceHelper.OnServiceListener {
             .putBoolean(MODERN_PREFERENCES_READY_KEY, true)
         source.all.forEach { (key, value) -> putValue(editor, key, value) }
         if (!SideKeyFeaturePolicy.available) editor.putBoolean(SideKeySettings.ENABLED, false)
-        check(editor.commit()) { "Framework preference commit failed" }
+        try {
+            check(editor.commit()) { "Framework preference commit failed" }
+            lastDiagnosticWrite = System.currentTimeMillis()
+            lastDiagnosticError = null
+        } catch (error: Throwable) {
+            lastDiagnosticError = error.toString()
+            throw error
+        }
     }
 
     private fun putValue(editor: SharedPreferences.Editor, key: String, value: Any?) {

@@ -2,8 +2,20 @@ package com.mi.onextbox.ui.common
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -46,6 +58,7 @@ fun ColorOsSwitch(
     onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    onPressStateChange: (Boolean) -> Unit = {},
 ) {
     val currentOnCheckedChange by rememberUpdatedState(onCheckedChange)
     val interactionSource = remember { MutableInteractionSource() }
@@ -56,20 +69,62 @@ fun ColorOsSwitch(
     val colorScheme = COUITheme.colorScheme
     val darkTheme = colorScheme.surface.luminance() < .5f
 
-    val thumbOffset by animateDpAsState(
-        targetValue = if (checked) ThumbEndOffset else ThumbStartOffset,
-        animationSpec = tween(durationMillis = 383, easing = easing),
-        label = "colorOsSwitchThumbOffset",
-    )
-    val trackColor by animateColorAsState(
-        targetValue = when {
-            checked && enabled -> colorScheme.primary
-            checked -> colorScheme.disabledPrimary
-            enabled -> colorScheme.secondary
-            else -> colorScheme.disabledSecondary
-        },
-        animationSpec = tween(durationMillis = 450, easing = easing),
-        label = "colorOsSwitchTrackColor",
+    val position = remember { Animatable(if (checked) 1f else 0f) }
+    var dragOffset by remember { mutableStateOf<Float?>(null) }
+    val density = LocalDensity.current
+    val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
+    val startPx = with(density) { ThumbStartOffset.toPx() }
+    val endPx = with(density) { ThumbEndOffset.toPx() }
+    val currentChecked by rememberUpdatedState(checked)
+    val currentHaptic by rememberUpdatedState(haptic)
+    val dragModifier = if (enabled && onCheckedChange != null) {
+        Modifier.pointerInput(enabled, startPx, endPx, direction) {
+            try {
+                detectHorizontalDragGestures(
+                    onDragStart = { dragOffset = startPx + position.value.coerceIn(0f, 1f) * (endPx - startPx) },
+                    onDragCancel = { dragOffset = null },
+                    onDragEnd = {
+                        val progress = ((dragOffset ?: startPx) - startPx) / (endPx - startPx)
+                        val next = if (currentChecked) progress > 0.35f else progress >= 0.65f
+                        dragOffset = null
+                        if (next != currentChecked) {
+                            currentOnCheckedChange?.invoke(next)
+                            currentHaptic(CouiHapticEffect.Switch)
+                        }
+                    },
+                    onHorizontalDrag = { change, amount ->
+                        dragOffset = ((dragOffset ?: startPx) + amount * direction).coerceIn(startPx, endPx)
+                        change.consume()
+                    },
+                )
+            } finally {
+                dragOffset = null
+            }
+        }
+    } else Modifier
+    LaunchedEffect(dragOffset, checked, enabled) {
+        val drag = dragOffset
+        if (drag != null && enabled) {
+            position.animateTo(
+                ((drag - startPx) / (endPx - startPx)).coerceIn(0f, 1f),
+                spring(dampingRatio = 1f, stiffness = 438.65f, visibilityThreshold = 0.005f),
+            )
+        } else {
+            position.animateTo(
+                if (checked) 1f else 0f,
+                spring(dampingRatio = 0.8f, stiffness = 246.74f, visibilityThreshold = 0.005f),
+            )
+        }
+    }
+    val visualProgress = position.value.coerceIn(0f, 1f)
+    val thumbOffset = ThumbStartOffset + (ThumbEndOffset - ThumbStartOffset) * visualProgress
+    val uncheckedTrack = if (enabled) colorScheme.secondary else colorScheme.disabledSecondary
+    val checkedTrack = if (enabled) colorScheme.primary else colorScheme.disabledPrimary
+    val trackColor = Color(
+        red = uncheckedTrack.red + (checkedTrack.red - uncheckedTrack.red) * visualProgress,
+        green = uncheckedTrack.green + (checkedTrack.green - uncheckedTrack.green) * visualProgress,
+        blue = uncheckedTrack.blue + (checkedTrack.blue - uncheckedTrack.blue) * visualProgress,
+        alpha = uncheckedTrack.alpha + (checkedTrack.alpha - uncheckedTrack.alpha) * visualProgress,
     )
     val thumbColor by animateColorAsState(
         targetValue = colorOsSwitchThumbColor(
@@ -83,15 +138,23 @@ fun ColorOsSwitch(
         animationSpec = tween(durationMillis = 450, easing = easing),
         label = "colorOsSwitchThumbColor",
     )
-    val overlayColor by animateColorAsState(
+    val pressed = enabled && (isPressed || dragOffset != null)
+    val currentOnPressStateChange by rememberUpdatedState(onPressStateChange)
+    SideEffect { currentOnPressStateChange(pressed) }
+    DisposableEffect(Unit) {
+        onDispose { currentOnPressStateChange(false) }
+    }
+    val overlayAlpha by animateFloatAsState(
         targetValue = when {
-            !enabled -> Color.Transparent
-            isPressed -> colorScheme.onSurface.copy(alpha = 0.12f)
-            isHovered -> colorScheme.onSurface.copy(alpha = 0.078f)
-            else -> Color.Transparent
+            !enabled -> 0f
+            pressed -> if (darkTheme) 0.2f else 0.12f
+            isHovered -> if (darkTheme) 0.15f else 0.078f
+            else -> 0f
         },
-        label = "colorOsSwitchOverlayColor",
+        animationSpec = tween(durationMillis = if (pressed) 100 else 250, easing = easing),
+        label = "colorOsSwitchOverlayAlpha",
     )
+    val overlayColor = (if (darkTheme) Color.White else Color.Black).copy(alpha = overlayAlpha)
 
     val toggleModifier = if (onCheckedChange != null) {
         Modifier.toggleable(
@@ -123,7 +186,8 @@ fun ColorOsSwitch(
                 drawRect(overlayColor)
             }
             .hoverable(interactionSource = interactionSource, enabled = enabled)
-            .then(toggleModifier),
+            .then(toggleModifier)
+            .then(dragModifier),
     ) {
         Box(
             modifier = Modifier

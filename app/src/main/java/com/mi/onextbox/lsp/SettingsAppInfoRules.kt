@@ -6,7 +6,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 internal object SettingsAppInfoRules {
-    enum class Field { PackageName, Version, Sdk, FirstInstalled, LastUpdated, Installer }
+    enum class Field { AppName, PackageName, Version, Sdk, FirstInstalled, LastUpdated, Installer }
 
     data class Snapshot(
         val packageName: String,
@@ -17,6 +17,7 @@ internal object SettingsAppInfoRules {
         val firstInstalled: Long,
         val lastUpdated: Long,
         val uid: Int,
+        val appName: String = packageName,
     )
 
     fun version(name: String?, code: Long, unknown: String): String {

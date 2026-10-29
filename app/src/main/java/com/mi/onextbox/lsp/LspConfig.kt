@@ -91,18 +91,28 @@ object LspConfig {
     private const val PERSIST_PROP_AOSP_BACK_PANEL = "persist.sys.$PROP_AOSP_BACK_PANEL"
     private const val SETTINGS_AOSP_BACK_PANEL = "oost_$KEY_AOSP_BACK_PANEL"
 
-    fun isAospBackPanelEnabled(context: Context): Boolean =
-        LspPreferenceStore.readBoolean(context, KEY_AOSP_BACK_PANEL, false)
+    fun isAospBackPanelEnabled(context: Context): Boolean {
+        val style = LspPreferenceStore.prefs(context).getInt(BackGestureSettings.STYLE, -1)
+        return BackGestureRules.style(LspPreferenceStore.readBoolean(context, KEY_AOSP_BACK_PANEL, false), style) == 0
+    }
 
     fun setAospBackPanelEnabled(context: Context, enabled: Boolean) {
+        if (LspPreferenceStore.prefs(context).contains(BackGestureSettings.STYLE)) {
+            BackGestureSettings.set(context, BackGestureSettings.STYLE, if (enabled) 0 else 1)
+            return
+        }
         setSyncedBooleanPreference(context, KEY_AOSP_BACK_PANEL, enabled,
             listOf(PERSIST_PROP_AOSP_BACK_PANEL, PROP_AOSP_BACK_PANEL), SETTINGS_AOSP_BACK_PANEL)
     }
 
-    fun isAospBackPanelEnabledXposed(): Boolean = readXposedBoolean(
-        PERSIST_PROP_AOSP_BACK_PANEL, PROP_AOSP_BACK_PANEL,
-        SETTINGS_AOSP_BACK_PANEL, KEY_AOSP_BACK_PANEL, false,
-    )
+    fun isAospBackPanelEnabledXposed(): Boolean {
+        val style = com.mi.onextbox.lsp.compat.HookConfigSnapshot.int(BackGestureSettings.STYLE, -1) ?: -1
+        if (style in 0..2) return style == 0
+        return readXposedBoolean(
+            PERSIST_PROP_AOSP_BACK_PANEL, PROP_AOSP_BACK_PANEL,
+            SETTINGS_AOSP_BACK_PANEL, KEY_AOSP_BACK_PANEL, false,
+        )
+    }
 
     private const val KEY_ROUND_NOTIFICATION_CLEAR_BUTTON = "systemui_round_notification_clear_button"
     private const val PROP_ROUND_NOTIFICATION_CLEAR_BUTTON = "oost.$KEY_ROUND_NOTIFICATION_CLEAR_BUTTON"
@@ -295,7 +305,8 @@ object LspConfig {
         HideUnits("systemui_network_speed_hide_units"),
         SingleLine("systemui_network_speed_single_line"),
         FollowSystemFontWeight("systemui_network_speed_follow_font_weight"),
-        CustomFontSize("systemui_network_speed_custom_font_size");
+        CustomFontSize("systemui_network_speed_custom_font_size"),
+        HideLowSpeed("systemui_network_speed_hide_low_speed");
 
         val propertyKey get() = "oost.$key"
         val persistPropertyKey get() = "persist.sys.$propertyKey"
@@ -2770,9 +2781,11 @@ object LspConfig {
             setNavigationHandleOpacity(context, ImmersiveNavigationRules.SYSTEM_DEFAULT)
             setNavigationHandleAutoHideEnabled(context, false)
             setSettingsTitleCollapsedEnabled(context, false)
+            CouiDividerSettings.setEnabled(context, false)
             SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.TITLE_LOCK, false)
             CameraGallerySettings.set(context, false)
             ScreenTranslationSettings.keys.forEach { ScreenTranslationSettings.set(context, it, false) }
+            SmartSidebarSettings.keys.forEach { SmartSidebarSettings.set(context, it, false) }
             InstallerCleanupSettings.reset(context)
             SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.ACCOUNT_SIZE, false)
             SettingsAppearanceSettings.setPercent(context, SettingsAppearanceSettings.DEFAULT_PERCENT)
@@ -2783,6 +2796,7 @@ object LspConfig {
             setFluidCloudMaterialEnabled(context, false)
             setRoundNotificationClearButtonEnabled(context, false)
             setAospBackPanelEnabled(context, false)
+            BackGestureSettings.reset(context)
             AospVolumeSettings.set(context, false)
             VolumeSafetyWarningSettings.set(context, false)
             ScreenCaptureSettings.set(context, false)
@@ -2799,6 +2813,7 @@ object LspConfig {
             setPermanentClockSecondsEnabled(context, false)
             ClockPeriodSettings.setEnabled(context, false)
             ClockPeriodSettings.setCompact(context, false)
+            ClockPeriodSettings.setTabularDigits(context, false)
             ClockPeriodSettings.setShade(context, false)
             ClockPeriodSettings.setSecondsLocked(context, false)
             SmallWindowFeature.entries.forEach { setSmallWindowFeatureEnabled(context, it, false) }
@@ -2939,6 +2954,7 @@ object LspConfig {
             )
             setFileManagerHideSecureAccessTipEnabled(context, false)
             setFileManagerNativePickerEnabled(context, false)
+            DefaultFileManagerSettings.setEnabled(context, false)
             setKeyboardMaterialUnlocked(context, false)
             setKeyboardFlagEmojiEnabled(context, false)
             setKeyboardBottomLiftFixEnabled(context, false)

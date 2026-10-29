@@ -11,5 +11,8 @@ internal val RootPageSpring = spring<Float>(
 
 internal const val RootCoveredPageOffset = -0.25f
 
+internal fun rootLayerFollowsGesture(key: Any, current: Any, previous: Any?, dragging: Boolean): Boolean =
+    dragging && (key == current || key == previous)
+
 internal fun rootGesturePageOffset(start: Float, end: Float, progress: Float): Float =
     start + (end - start) * progress.coerceIn(0f, 1f)

@@ -118,6 +118,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.recordFirstDraw(window.decorView)
         val appLaunchReveal = AppLaunchRevealState(restored = savedInstanceState != null)
         installAppLaunchAnimation(
             animate = savedInstanceState == null,
@@ -203,6 +204,12 @@ class MainActivity : ComponentActivity() {
                     .putBoolean(PREF_BOTTOM_BAR_HIDE_LABELS, value)
                     .commitOrReport()
                 AppLogStore.i("Settings", "Bottom bar hide labels: $value")
+            }
+            var mainPageSwipeEnabled by rememberConfigState(prefs.getBoolean("main_page_swipe_enabled", true)) { value ->
+                prefs.edit().putBoolean("main_page_swipe_enabled", value).commitOrReport()
+            }
+            var subPageSwipeEnabled by rememberConfigState(prefs.getBoolean("sub_page_swipe_enabled", true)) { value ->
+                prefs.edit().putBoolean("sub_page_swipe_enabled", value).commitOrReport()
             }
             var currentTab by rememberSaveable {
                 mutableIntStateOf(0)
@@ -625,7 +632,11 @@ class MainActivity : ComponentActivity() {
                 liquidGlassBottomBarEnabled = liquidGlassBottomBarEnabled,
                 onLiquidGlassBottomBarEnabledChange = { liquidGlassBottomBarEnabled = it },
                 bottomBarHideLabels = bottomBarHideLabels,
+                mainPageSwipeEnabled = mainPageSwipeEnabled,
+                subPageSwipeEnabled = subPageSwipeEnabled,
                 onBottomBarHideLabelsChange = { bottomBarHideLabels = it },
+                onMainPageSwipeEnabledChange = { mainPageSwipeEnabled = it },
+                onSubPageSwipeEnabledChange = { subPageSwipeEnabled = it },
                 appLanguageTag = appLanguageTag,
                 onAppLanguageChange = { languageTag ->
                     changeAppAppearance(appLanguageTag != languageTag) {

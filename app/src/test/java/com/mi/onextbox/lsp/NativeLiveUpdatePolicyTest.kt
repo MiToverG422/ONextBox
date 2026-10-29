@@ -28,7 +28,7 @@ class NativeLiveUpdatePolicyTest {
                 "getBoolean(KEY, false)", "createDumpManager", "getDumpables", "adjustVisibility.invoke(null, view, model)",
                 "if (!enabled && !modeApplied) return", "if (!applyingViews) views[view] = original")) assertTrue(required, source.contains(required))
         val entry = File("src/main/java/com/mi/onextbox/lsp/OosLspModuleEntry.kt").readText()
-        assertEquals(1, Regex("NativeLiveUpdateHooker.hook").findAll(entry).count())
+        assertEquals(1, Regex("""NativeLiveUpdateHooker\.hook\(""").findAll(entry).count())
     }
     @Test fun pageSearchInventoryAndQuickSwitchShareOneDefinition() {
         fun source(name: String) = File("src/main/java/com/mi/onextbox/ui/screens/$name.kt").readText()

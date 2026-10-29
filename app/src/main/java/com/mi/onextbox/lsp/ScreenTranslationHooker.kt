@@ -14,14 +14,14 @@ internal object ScreenTranslationHooker {
         val oldStateKey = "$key:floating-targets"
         val stateKey = "$key:restrictions-v1"
         runCatching {
-            val saved = (HotReloadLifecycle.restoredState(stateKey) as? Map<*, *>)?.mapNotNull { (name, value) ->
+            val saved = (DexTargetCache.restoredState(stateKey) as? Map<*, *>)?.mapNotNull { (name, value) ->
                 (name as? String)?.let { it to ((value as? Array<*>)?.filterIsInstance<Method>()?.toTypedArray() ?: emptyArray()) }
             }?.toMap()
             val targets = if (saved?.containsKey(ScreenTranslationTargets.SCHEMA) == true) saved else {
                 ApkDexSession.withSession(apkPath) { open -> ScreenTranslationTargets.resolveAll(open(), loader) }
             }.toMutableMap()
             if (targets["floating"].isNullOrEmpty()) {
-                (HotReloadLifecycle.restoredState(oldStateKey) as? Array<*>)?.filterIsInstance<Method>()
+                (DexTargetCache.restoredState(oldStateKey) as? Array<*>)?.filterIsInstance<Method>()
                     ?.takeIf { it.isNotEmpty() }?.let { targets["floating"] = it.toTypedArray() }
             }
 

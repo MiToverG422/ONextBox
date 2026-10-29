@@ -21,7 +21,7 @@ internal object LauncherRecentMemoryHooker {
 
     fun hook(loader: ClassLoader, apkPath: String) {
         val stateKey = "$TAG:state@${System.identityHashCode(loader)}"
-        val saved = HotReloadLifecycle.restoredState(stateKey) as? Array<*>
+        val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
         val session = Session(loader, apkPath)
         HotReloadLifecycle.register(stateKey,
             capture = session::capture,

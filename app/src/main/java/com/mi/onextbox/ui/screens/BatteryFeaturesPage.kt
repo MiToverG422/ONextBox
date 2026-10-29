@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 internal fun BatteryFeaturesPage() {
+    SystemExtrasGroups("com.oplus.battery")
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()

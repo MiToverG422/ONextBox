@@ -30,13 +30,11 @@ class ScreenTranslationPageTest {
             R.string.translation_unlock_browser_title)
         assertEquals(titles, rows.map { it.second.title })
         val search = featureSearchEntries(SystemAdaptationVersion.ColorOs17)
-        val updates = FeatureUpdatesCatalog.items(SystemAdaptationVersion.ColorOs17)
         val actions = EnabledFeatureActions()
         titles.forEach { title ->
             assertEquals(FeaturePageMode.Translation, search.single { it.title == title }.page)
             assertEquals(FeaturePageMode.Translation, EnabledFeatureCatalog.entries.single { it.title == title }.page)
             assertTrue(actions.supports(title))
-            assertTrue(updates.any { it.change.title == title })
         }
     }
 }

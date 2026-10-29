@@ -20,6 +20,10 @@ internal object GameAssistantHooker {
     private val musicPlayersOnly = ThreadLocal<Boolean>()
 
     fun hook(loader: ClassLoader, apkPath: String, colorOs16: Boolean = false) {
+        if (!colorOs16 && ModernReflect.findClassIfExists("business.gamedock.sort.AppDataProviderCommon", loader) == null) {
+            GameAssistantCurrentHooker.hook(loader, apkPath)
+            return
+        }
         fun adapter(name: String, action: () -> Unit) = runCatching(action)
             .onFailure { HookLog.w(TAG, "$name unavailable; stock behavior retained", it) }
         adapter("Sidebar") { sidebar(loader, colorOs16) }

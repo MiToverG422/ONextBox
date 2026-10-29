@@ -2,6 +2,7 @@ package com.mi.onextbox.lsp
 
 import android.content.Intent
 import android.content.pm.ResolveInfo
+import android.os.Binder
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernMethodHook
 import com.mi.onextbox.lsp.compat.ModernReflect
@@ -29,12 +30,19 @@ internal object NativeFilePickerHooker {
                 callback = object : ModernMethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         if (param.throwable != null) return
+                        val intent = param.args.firstOrNull() as? Intent ?: return
+                        val query = param.args.getOrNull(1) as? List<*> ?: return
+                        DefaultFileManagerRouting.preferredPicker(intent, query,
+                            DefaultFileManagerSettings.selectedXposed())
+                            ?.takeUnless { it.activityInfo.applicationInfo.uid == Binder.getCallingUid() }
+                            ?.let { preferred ->
+                            param.result = preferred
+                            return
+                        }
                         val selected = (param.result as? ResolveInfo)?.activityInfo ?: return
                         if (selected.packageName != NativeFilePickerRules.FILE_MANAGER_PACKAGE ||
                             selected.name != NativeFilePickerRules.FILE_MANAGER_PICKER
                         ) return
-                        val intent = param.args.firstOrNull() as? Intent ?: return
-                        val query = param.args.getOrNull(1) as? List<*> ?: return
                         val first = (query.firstOrNull() as? ResolveInfo)?.activityInfo ?: return
                         if (NativeFilePickerRules.shouldRestore(
                                 enabled = LspConfig.isFileManagerNativePickerEnabledXposed(),

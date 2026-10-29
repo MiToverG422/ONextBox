@@ -115,19 +115,26 @@ internal fun ColumnScope.FeatureUpdatesContent(
     val filtered = remember(items, query, configuration, resources) {
         if (query.isBlank()) items else items.filter {
             featureSearchScore(query, resources.getString(it.change.title),
-                if (it.destination.description == 0) "" else resources.getString(it.destination.description)) > 0
+                listOf(it.destination.description, it.change.note).filter { id -> id != 0 }
+                    .joinToString(" ") { id -> resources.getString(id) }) > 0
+        }
+    }
+    val overview = remember(query, configuration, resources) {
+        FeatureUpdatesCatalog.overview.filter {
+            query.isBlank() || featureSearchScore(query, resources.getString(it.title), resources.getString(it.note)) > 0
         }
     }
     SettingsGroup {
         SettingsCardRow(
             title = stringResource(R.string.feature_updates_version, BuildConfig.VERSION_NAME),
-            summary = stringResource(R.string.feature_updates_counts,
+            summary = stringResource(R.string.feature_updates_baseline, FeatureUpdatesCatalog.BASE_VERSION) + "\n" +
+                stringResource(R.string.feature_updates_counts,
                 items.count { it.change.kind == FeatureUpdatesCatalog.Kind.Added },
                 items.count { it.change.kind == FeatureUpdatesCatalog.Kind.Changed }),
         )
     }
     FeatureSearchBar(search)
-    if (filtered.isEmpty()) {
+    if (filtered.isEmpty() && overview.isEmpty()) {
         SettingsGroup {
             SettingsCardRow(stringResource(R.string.feature_updates_empty), "")
         }
@@ -149,6 +156,17 @@ internal fun ColumnScope.FeatureUpdatesContent(
                     hasDividerBelow = index < group.lastIndex,
                 )
             }
+        }
+    }
+    if (overview.isNotEmpty()) {
+        SettingsSection(stringResource(R.string.feature_updates_app_changes))
+        SettingsListGroup(overview, key = { it.title }) { index, item ->
+            SettingsCardRow(
+                title = stringResource(item.title),
+                summary = stringResource(item.note),
+                hasDividerAbove = index > 0,
+                hasDividerBelow = index < overview.lastIndex,
+            )
         }
     }
 }

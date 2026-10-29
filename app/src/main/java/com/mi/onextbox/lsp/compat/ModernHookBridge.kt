@@ -104,6 +104,8 @@ internal object ModernHookBridge {
                 val suppressed = failures.record(
                     FailureKey(phase, executable, error.javaClass), android.os.SystemClock.uptimeMillis(),
                 )
+                if (suppressed != null) com.mi.onextbox.diagnostics.RuntimeDiagnostics.event(
+                    "callback_failure", executable.toString(), "$phase: $error")
                 if (suppressed != null) ModernHookRuntime.log(
                     priority = android.util.Log.ERROR,
                     tag = "ONextBox-LSP",

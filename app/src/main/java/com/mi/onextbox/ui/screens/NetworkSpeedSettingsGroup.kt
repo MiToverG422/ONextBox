@@ -54,6 +54,22 @@ internal fun NetworkSpeedSettingsGroup() {
                 onValueChange = { state = state.copy(intervalMs = it.toInt()) }, onValueChangeFinished = { save(state) },
                 onReset = { save(state.copy(intervalMs = 1000)) }, hasDividerAbove = above, hasDividerBelow = below)
         }
+        row("speed-hide-low") { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.network_speed_hide_low_speed), summary = "",
+                checked = state.hideLowSpeed, interactionEnabled = !saving,
+                onCheckedChange = { save(state.copy(hideLowSpeed = it)) }, hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row("speed-low-threshold", visible = state.hideLowSpeed) { above, below ->
+            FeatureSliderRow(heading = stringResource(R.string.network_speed_low_speed_threshold),
+                currentValue = "${state.lowSpeedThresholdKbps} KB/s", value = state.lowSpeedThresholdKbps.toFloat(),
+                valueRange = NetworkSpeedSettings.MIN_THRESHOLD_KBPS.toFloat()..NetworkSpeedSettings.MAX_THRESHOLD_KBPS.toFloat(),
+                steps = NetworkSpeedSettings.MAX_THRESHOLD_KBPS - NetworkSpeedSettings.MIN_THRESHOLD_KBPS - 1,
+                interactionEnabled = !saving,
+                onValueChange = { state = state.copy(lowSpeedThresholdKbps = it.toInt()) },
+                onValueChangeFinished = { save(state) },
+                onReset = { save(state.copy(lowSpeedThresholdKbps = NetworkSpeedSettings.DEFAULT_THRESHOLD_KBPS)) },
+                hasDividerAbove = above, hasDividerBelow = below)
+        }
         row("speed-hide-rate") { above, below ->
             SettingsToggleRow(title = stringResource(R.string.network_speed_hide_per_second), summary = "",
                 checked = state.hidePerSecond, interactionEnabled = !saving,

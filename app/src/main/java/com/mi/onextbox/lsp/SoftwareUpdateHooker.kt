@@ -25,7 +25,7 @@ internal object SoftwareUpdateHooker {
     fun hook(loader: ClassLoader, apkPath: String) {
         val prefix = "$TAG@${System.identityHashCode(loader)}"
         @Suppress("UNCHECKED_CAST")
-        val saved = HotReloadLifecycle.restoredState("$prefix:targets") as? Map<String, Array<Method>>
+        val saved = DexTargetCache.restoredState("$prefix:targets") as? Map<String, Array<Method>>
         val targets = if (saved?.containsKey(SoftwareUpdateTargets.CACHE_SCHEMA) == true) saved else {
             val refreshed = runCatching {
                 System.loadLibrary("dexkit")

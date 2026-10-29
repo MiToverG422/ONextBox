@@ -18,19 +18,25 @@ class FeatureUpdatesCatalogTest {
 
     @Test fun existingFeatureAdjustmentsAreSeparatedFromNewFunctions() {
         val kinds = FeatureUpdatesCatalog.changes.associate { it.title to it.kind }
-        assertEquals(FeatureUpdatesCatalog.Kind.Changed, kinds[R.string.launcher_custom_grid_title])
-        assertFalse(kinds.containsKey(R.string.qs_tile_corner_title))
-        assertFalse(kinds.containsKey(R.string.feature_settings_c15_about_layout_title))
-        assertEquals(FeatureUpdatesCatalog.Kind.Changed, kinds[R.string.keyguard_swipe_pin_title])
-        assertFalse(kinds.containsKey(R.string.hide_screenshot_floating_title))
-        assertFalse(kinds.containsKey(R.string.power_indicator_title))
-        assertEquals(FeatureUpdatesCatalog.Kind.Added, kinds[R.string.wallpaper_3d_force_title])
-        assertEquals(FeatureUpdatesCatalog.Kind.Added, kinds[R.string.camera_default_gallery_title])
+        assertEquals("17.0.0.96", FeatureUpdatesCatalog.BASE_VERSION)
+        assertEquals(FeatureUpdatesCatalog.Kind.Changed, kinds[R.string.keyboard_flag_emoji_title])
+        assertEquals(FeatureUpdatesCatalog.Kind.Changed, kinds[R.string.clock_compact_spacing])
+        assertEquals(FeatureUpdatesCatalog.Kind.Changed, kinds[R.string.feature_app_market_title])
+        assertEquals(FeatureUpdatesCatalog.Kind.Changed, kinds[R.string.battery_block_whitelist_restore_title])
+        assertEquals(FeatureUpdatesCatalog.Kind.Added, kinds[R.string.browser_page_title])
+        assertEquals(FeatureUpdatesCatalog.Kind.Added, kinds[R.string.power_indicator_only_charging])
+        assertEquals(FeatureUpdatesCatalog.Kind.Added, kinds[R.string.clock_tabular_digits])
+        listOf(R.string.camera_default_gallery_title, R.string.wallpaper_3d_force_title,
+            R.string.battery_show_health_status_title, R.string.corepatch_title,
+            R.string.network_speed_refresh_second, R.string.clock_period_title).forEach {
+            assertFalse("Already released feature: $it", kinds.containsKey(it))
+        }
+        assertEquals(FeatureUpdatesCatalog.overview.size, FeatureUpdatesCatalog.overview.map { it.title }.distinct().size)
     }
 
     @Test fun colorOs16ShowsAuditedFeaturesAndOmitsUnsupportedPinInput() {
         val items = FeatureUpdatesCatalog.items(SystemAdaptationVersion.ColorOs16)
-        assertTrue(items.any { it.destination.title == R.string.network_speed_refresh_second })
+        assertTrue(items.any { it.destination.title == R.string.network_speed_hide_low_speed })
         assertFalse(items.any { it.destination.title == R.string.hide_screenshot_floating_title })
         assertFalse(items.any { it.destination.title == R.string.keyguard_swipe_pin_title })
         assertFalse(items.any { it.destination.title == R.string.wallpaper_3d_force_title })
@@ -62,7 +68,8 @@ class FeatureUpdatesCatalogTest {
         val root = listOf(File("src/main/res"), File("app/src/main/res")).first { it.isDirectory }
         val parser = DocumentBuilderFactory.newInstance().newDocumentBuilder()
         val baseline = strings(parser.parse(File(root, "values/strings.xml")))
-        assertEquals(11, baseline.size)
+        assertTrue(baseline.containsKey("feature_updates_baseline"))
+        assertTrue(baseline.containsKey("feature_updates_app_changes"))
         root.listFiles()!!.filter { it.isDirectory && File(it, "strings.xml").isFile }.forEach { folder ->
             val localized = strings(parser.parse(File(folder, "strings.xml")))
             assertEquals(folder.name, baseline.keys, localized.keys)

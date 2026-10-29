@@ -65,6 +65,7 @@ internal fun FileManagerFeaturesPage() {
     }
     SettingsSection(title = stringResource(R.string.feature_file_manager_picker_group))
     SettingsGroup {
+        DefaultFileManagerPreference()
         SettingsToggleRow(
             title = stringResource(R.string.feature_file_manager_native_picker_title),
             summary = stringResource(R.string.feature_file_manager_native_picker_summary),

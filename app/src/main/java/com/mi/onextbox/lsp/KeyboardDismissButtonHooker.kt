@@ -16,7 +16,7 @@ internal object KeyboardDismissButtonHooker {
 
     fun hook(loader: ClassLoader) {
         val stateKey = "$TAG:state@${System.identityHashCode(loader)}"
-        val saved = HotReloadLifecycle.restoredState(stateKey) as? Array<*>
+        val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
         if (!LspConfig.isKeyboardDismissHiddenXposed() && saved == null) return
         val hookKey = "$TAG@${System.identityHashCode(loader)}"
         val keys = listOf("$hookKey:icons", "$hookKey:shown", "$hookKey:detached")

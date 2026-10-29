@@ -23,7 +23,7 @@ class KeyboardMaterialHookContractTest {
 
     @Test fun reloadRetainsOnlyHostTargetsAndReinstallsTheRuntimeGate() {
         val source = source("lsp/KeyboardMaterialHooker.kt")
-        assertTrue(source.contains("HotReloadLifecycle.restoredState(stateKey)"))
+        assertTrue(source.contains("DexTargetCache.restoredState(stateKey)"))
         assertTrue(source.contains("HotReloadLifecycle.register(stateKey, capture = { targets })"))
         assertTrue(source.contains("DexKitBridge.create(apkPath).use"))
         assertTrue(source.contains("deoptimize(it as Method)"))

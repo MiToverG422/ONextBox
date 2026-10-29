@@ -60,6 +60,7 @@
         <package android:name="com.heytap.market" />
         <package android:name="com.oplus.battery" />
         <package android:name="com.coloros.translate" />
+        <package android:name="com.coloros.smartsidebar" />
         <package android:name="com.oplus.appdetail" />
         <package android:name="com.android.packageinstaller" />
         <package android:name="com.oplus.trafficmonitor" />
@@ -117,6 +118,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ONextBox">
+        <activity
+            android:name=".diagnostics.DiagnosticActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ONextBox" />
+        <activity
+            android:name=".diagnostics.CrashReportActivity"
+            android:process=":diagnostics"
+            android:exported="false"
+            android:theme="@style/Theme.ONextBox" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

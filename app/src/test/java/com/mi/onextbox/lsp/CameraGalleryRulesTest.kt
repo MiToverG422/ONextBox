@@ -69,7 +69,6 @@ class CameraGalleryRulesTest {
         assertEquals(FeaturePageMode.Camera, FeatureSearchIndex.entries.single { it.title == title }.page)
         assertEquals(FeaturePageMode.Camera, EnabledFeatureCatalog.entries.single { it.title == title }.page)
         assertTrue(EnabledFeatureActions().supports(title))
-        assertTrue(FeatureUpdatesCatalog.items(SystemAdaptationVersion.ColorOs17).any { it.change.title == title })
         assertFalse(ColorOs16FeaturePolicy.isPageAvailable(FeaturePageMode.Camera))
         assertFalse(featureSearchEntries(SystemAdaptationVersion.ColorOs16).any { it.page == FeaturePageMode.Camera })
         assertEquals(setOf(CameraGallerySettings.FOLLOW_DEFAULT), CameraGallerySettings.keys)

@@ -5,12 +5,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class KeyboardFlagEmojiHookContractTest {
-    @Test fun disabledFreshScopesDoNotScanOrInstallHooks() {
+    @Test fun disabledFreshScopesKeepTheHookReadyForLaterEnabling() {
         val text = source("lsp/KeyboardFlagEmojiHooker.kt")
-        val guard = text.indexOf("if (!LspConfig.isKeyboardFlagEmojiEnabledXposed() && saved == null) return")
-        assertTrue(guard >= 0)
-        assertTrue(guard < text.indexOf("resolve(loader, apkPath)"))
-        assertTrue(guard < text.indexOf("ModernHookRegistry.installCompat("))
+        assertFalse(text.contains("if (!LspConfig.isKeyboardFlagEmojiEnabledXposed() && saved == null) return"))
+        assertTrue(text.contains("if (!LspConfig.isKeyboardFlagEmojiEnabledXposed()) return"))
+        assertTrue(text.contains("ModernHookRegistry.installCompat("))
     }
 
     @Test fun onlyTheHostFlagPanelPayloadIsChanged() {
@@ -27,10 +26,15 @@ class KeyboardFlagEmojiHookContractTest {
 
     @Test fun reloadExportsOnlyHostTargetsAndReinstallsTheToggleGate() {
         val text = source("lsp/KeyboardFlagEmojiHooker.kt")
-        assertTrue(text.contains("HotReloadLifecycle.restoredState(stateKey)"))
+        assertTrue(text.contains("DexTargetCache.restoredState(stateKey)"))
         assertTrue(text.contains("HotReloadLifecycle.register(stateKey, capture = { targets })"))
-        assertTrue(text.contains("DexFile(apkPath)"))
-        assertTrue(text.contains("finally { dex.close() }"))
+        assertTrue(text.contains("ApkDexSession.withSession(apkPath)"))
+        assertFalse(text.contains("DexFile("))
+        assertTrue(text.contains("usingStrings(\"emojiCategory\")"))
+        assertTrue(text.contains("usingStrings(\"Emoji(value=\")"))
+        assertTrue(text.contains("usingStrings(\"EmojiList(emojis=\")"))
+        assertTrue(text.contains("collector.first.callers"))
+        assertTrue(text.contains("deoptimize(target)"))
         assertFalse(text.contains("System.loadLibrary"))
         assertTrue(source("lsp/OosLspModuleEntry.kt").contains("KeyboardFlagEmojiHooker.hook(classLoader, target.sourceDir)"))
         assertTrue(ModuleHotReloadPolicy.supportedPackages.contains(KeyboardMaterialRules.PACKAGE_NAME))

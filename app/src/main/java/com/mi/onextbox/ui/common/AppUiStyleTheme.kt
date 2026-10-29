@@ -1,5 +1,7 @@
 package com.mi.onextbox.ui.common
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -20,6 +22,7 @@ fun AppUiStyleAppTheme(
     colorSpec: Int = 0,
     content: @Composable () -> Unit,
 ) {
+    val couiIndication = LocalIndication.current
     val coui = COUITheme.colorScheme
     val base = if (coui.background.luminance() < .5f) darkColorScheme() else lightColorScheme()
     MaterialTheme(
@@ -31,6 +34,9 @@ fun AppUiStyleAppTheme(
             onSurface = coui.onSurface,
             onSurfaceVariant = coui.onSurfaceVariantSummary,
         ),
-        content = content,
-    )
+    ) {
+        CompositionLocalProvider(LocalIndication provides couiIndication) {
+            content()
+        }
+    }
 }

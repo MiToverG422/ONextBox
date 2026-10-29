@@ -4,6 +4,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PowerIndicatorRulesTest {
+    @Test fun chargingOnlyAndHideWhilePluggedRespectBothPowerStates() {
+        assertTrue(PowerIndicatorRules.visibleForPower(true, false, false))
+        assertTrue(PowerIndicatorRules.visibleForPower(false, false, false))
+        assertFalse(PowerIndicatorRules.visibleForPower(true, true, false))
+        assertTrue(PowerIndicatorRules.visibleForPower(false, true, false))
+        assertTrue(PowerIndicatorRules.visibleForPower(true, false, true))
+        assertFalse(PowerIndicatorRules.visibleForPower(false, false, true))
+    }
+
+    @Test fun chargingOnlyDefaultsOffAndNormalizesConflictingImportedSettings() {
+        assertFalse(PowerIndicatorSettings.State().onlyCharging)
+        val conflicting = PowerIndicatorSettings.State(onlyCharging = true, hideCharging = true)
+        val resolved = PowerIndicatorSettings.normalize(conflicting)
+        assertTrue(resolved.onlyCharging)
+        assertFalse(resolved.hideCharging)
+        assertTrue(PowerIndicatorRules.visibleForPower(true, true, true))
+        assertFalse(PowerIndicatorRules.visibleForPower(false, true, true))
+    }
+
     @Test fun fontWeightChoicePreservesOtherSettingsAndDefaultsToFollowingClock() {
         val defaults = PowerIndicatorSettings.State()
         assertTrue(defaults.followFontWeight)

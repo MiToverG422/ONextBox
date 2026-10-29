@@ -46,12 +46,14 @@ internal fun KeyboardFeaturesPage() {
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    SettingsSection(title = stringResource(R.string.keyboard_material_group))
-    SettingsGroup {
+    val extended = com.mi.onextbox.lsp.SystemAdaptationDetector.current() == com.mi.onextbox.lsp.SystemAdaptationVersion.ColorOs17
+    if (extended) KeyboardPictorialOptions(com.mi.onextbox.lsp.KeyboardPictorialSettings.keyboard.filter { it.group == "配色" })
+    val materialRow: @Composable () -> Unit = {
         SettingsToggleRow(
             title = stringResource(R.string.keyboard_material_unlock_title),
             summary = stringResource(R.string.keyboard_material_unlock_summary),
             checked = enabled,
+            hasDividerBelow = extended,
             onCheckedChange = { checked ->
                 enabled = checked
                 scope.launch {
@@ -61,6 +63,12 @@ internal fun KeyboardFeaturesPage() {
                 }
             },
         )
+    }
+    if (extended) {
+        KeyboardPictorialOptions(com.mi.onextbox.lsp.KeyboardPictorialSettings.keyboard.filter { it.group == "材质" }, leading = materialRow)
+    } else {
+        SettingsSection(title = stringResource(R.string.keyboard_material_group))
+        SettingsGroup { materialRow() }
     }
     SettingsSection(title = stringResource(R.string.keyboard_layout_group))
     SettingsGroup {
@@ -94,6 +102,7 @@ internal fun KeyboardFeaturesPage() {
             },
         )
     }
+    if (extended) KeyboardPictorialOptions(com.mi.onextbox.lsp.KeyboardPictorialSettings.keyboard.filter { it.group in setOf("工具栏", "按键", "角标") })
     if (KeyboardFeatureVisibility.emojiGroupVisible) {
         SettingsSection(title = stringResource(R.string.keyboard_emoji_group))
         SettingsGroup {

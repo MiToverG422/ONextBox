@@ -58,25 +58,25 @@ class FeatureUpdatesUiTest {
 
     @Test fun collectionLinksToTheExactFeatureAndCanFilterOtherEntries() {
         var opened: FeatureUpdatesCatalog.Item? = null
-        lateinit var pinTitle: String
+        lateinit var clockTitle: String
         lateinit var otherTitle: String
         compose.setContent {
-            pinTitle = LocalResources.current.getString(R.string.keyguard_swipe_pin_title)
-            otherTitle = LocalResources.current.getString(R.string.corepatch_title)
+            clockTitle = LocalResources.current.getString(R.string.clock_tabular_digits)
+            otherTitle = LocalResources.current.getString(R.string.browser_page_title)
             COUITheme {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     FeatureUpdatesContent(FeatureUpdatesCatalog.items(SystemAdaptationVersion.ColorOs17)) { opened = it }
                 }
             }
         }
-        compose.onNodeWithText(pinTitle).performScrollTo().performClick()
+        compose.onNodeWithText(clockTitle).performScrollTo().performClick()
         compose.runOnIdle {
-            assertEquals(FeaturePageMode.SystemUiLockScreen, opened?.destination?.page)
-            assertEquals(R.string.keyguard_swipe_pin_title, opened?.destination?.title)
+            assertEquals(FeaturePageMode.SystemUiClock, opened?.destination?.page)
+            assertEquals(R.string.clock_tabular_digits, opened?.destination?.title)
         }
-        compose.onNode(hasSetTextAction()).performScrollTo().performTextReplacement(pinTitle)
+        compose.onNode(hasSetTextAction()).performScrollTo().performTextReplacement(clockTitle)
         compose.onAllNodesWithText(otherTitle).assertCountEquals(0)
-        compose.onAllNodesWithText(pinTitle).assertCountEquals(2)
+        compose.onAllNodesWithText(clockTitle).assertCountEquals(2)
     }
 
     @Test fun targetScrollsIntoViewWithoutChangingTheSwitch() {

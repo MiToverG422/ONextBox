@@ -178,7 +178,7 @@ internal object PowerIndicatorHooker {
             if (status !in listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_DISCHARGING,
                     BatteryManager.BATTERY_STATUS_NOT_CHARGING, BatteryManager.BATTERY_STATUS_FULL)) return null
             val plugged = battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
-            if (plugged && s.hideCharging) return null
+            if (!PowerIndicatorRules.visibleForPower(plugged, s.hideCharging, s.onlyCharging)) return null
             val charging = status == BatteryManager.BATTERY_STATUS_CHARGING
             val current = if (s.source == 0) context.getSystemService(BatteryManager::class.java)
                 .getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
@@ -222,6 +222,7 @@ internal object PowerIndicatorHooker {
             text.addOnLayoutChangeListener(layoutListener)
             context.registerReceiver(receiver, IntentFilter().apply {
                 addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED)
             }, Context.RECEIVER_NOT_EXPORTED)
             registered = true
             main.post(tick)

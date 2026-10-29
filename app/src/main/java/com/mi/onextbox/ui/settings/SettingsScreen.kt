@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +33,7 @@ import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
+import io.github.suqi8.coui.kmp.basic.TopAppBarState
 
 enum class AboutPageMode {
     Main,
@@ -51,6 +53,8 @@ fun AboutMainRoute(
     blurBackdrop: LayerBackdrop?,
     bottomContentPadding: Dp,
     scrollResetKey: Int? = null,
+    externalScrollState: ScrollState? = null,
+    externalTopAppBarState: TopAppBarState? = null,
     onOpenAppSettings: () -> Unit,
     onOpenSoftwareUpdate: () -> Unit,
     onOpenLogs: () -> Unit,
@@ -62,6 +66,8 @@ fun AboutMainRoute(
         blurBackdrop = blurBackdrop,
         bottomContentPadding = bottomContentPadding,
         scrollResetKey = scrollResetKey,
+        externalScrollState = externalScrollState,
+        externalTopAppBarState = externalTopAppBarState,
         modifier = modifier.fillMaxSize(),
     ) {
         AboutMainPage(
@@ -90,7 +96,11 @@ fun AboutSubRoute(
     liquidGlassBottomBarEnabled: Boolean,
     onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
     bottomBarHideLabels: Boolean,
+    mainPageSwipeEnabled: Boolean,
+    subPageSwipeEnabled: Boolean,
     onBottomBarHideLabelsChange: (Boolean) -> Unit,
+    onMainPageSwipeEnabledChange: (Boolean) -> Unit,
+    onSubPageSwipeEnabledChange: (Boolean) -> Unit,
     appLanguageTag: String,
     onAppLanguageChange: (String) -> Unit,
     appThemeMode: AppThemeMode,
@@ -179,7 +189,11 @@ fun AboutSubRoute(
                     liquidGlassBottomBarEnabled = liquidGlassBottomBarEnabled,
                     onLiquidGlassBottomBarEnabledChange = onLiquidGlassBottomBarEnabledChange,
                     bottomBarHideLabels = bottomBarHideLabels,
+                    mainPageSwipeEnabled = mainPageSwipeEnabled,
+                    subPageSwipeEnabled = subPageSwipeEnabled,
                     onBottomBarHideLabelsChange = onBottomBarHideLabelsChange,
+                    onMainPageSwipeEnabledChange = onMainPageSwipeEnabledChange,
+                    onSubPageSwipeEnabledChange = onSubPageSwipeEnabledChange,
                     onOpenDeveloperOptions = onOpenDeveloperOptions,
                 )
                 AboutPageMode.DeveloperOptions -> DeveloperOptionsPage(

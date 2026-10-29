@@ -646,7 +646,7 @@ fun rememberSoftwareUpdateUiState(
         },
         onBetaPlanEnabledChange = { enabled ->
             if (checkingUpdates || downloadingUpdate) return@SoftwareUpdateUiState
-            betaPlanEnabled = enabled
+            betaPlanEnabled = AppUpdatePreferences.BETA_PLAN_AVAILABLE && enabled
             availableUpdate = null
             downloadedApk = null
             downloadProgress = null
@@ -1345,7 +1345,7 @@ fun SoftwareUpdateAutoSettingsPage(
                 title = stringResource(R.string.update_beta_plan_title),
                 summary = stringResource(R.string.update_beta_plan_summary),
                 checked = state.betaPlanEnabled,
-                enabled = settingsEditable,
+                enabled = false,
                 hasDividerAbove = true,
                 onCheckedChange = { enabled ->
                     if (enabled) showBetaConfirmation = true else state.onBetaPlanEnabledChange(false)
@@ -1623,6 +1623,11 @@ fun AboutReferencesPage() {
             titleRes = R.string.about_reference_nrfr_title,
             summaryRes = R.string.about_reference_nrfr_summary,
             url = "https://github.com/Ackites/Nrfr",
+        ),
+        AboutLinkItem(
+            titleRes = R.string.about_reference_browser_purify_title,
+            summaryRes = R.string.about_reference_browser_purify_summary,
+            url = "https://github.com/fentia/oppo-browser-purify",
         ),
     )
     val libraries = listOf(
@@ -1982,7 +1987,11 @@ fun AppSettingsPage(
     liquidGlassBottomBarEnabled: Boolean,
     onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
     bottomBarHideLabels: Boolean,
+    mainPageSwipeEnabled: Boolean,
+    subPageSwipeEnabled: Boolean,
     onBottomBarHideLabelsChange: (Boolean) -> Unit,
+    onMainPageSwipeEnabledChange: (Boolean) -> Unit,
+    onSubPageSwipeEnabledChange: (Boolean) -> Unit,
     onOpenDeveloperOptions: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -2095,6 +2104,7 @@ fun AppSettingsPage(
         },
     )
 
+    val (backgroundStyle, setBackgroundStyle) = com.mi.onextbox.ui.screens.rememberFeatureBackgroundSelection()
     SettingsSection(title = stringResource(R.string.settings_section_display))
     run {
     SettingsGroup {
@@ -2196,6 +2206,15 @@ fun AppSettingsPage(
             hasDividerBelow = true,
         )
         SettingsDivider()
+        SettingsThemeTextDropdown(
+            title = stringResource(R.string.setting_feature_background),
+            labels = androidx.compose.ui.res.stringArrayResource(R.array.feature_background_styles).toList(),
+            selectedIndex = com.mi.onextbox.ui.screens.FeatureBackgroundStyleIds.indexOf(backgroundStyle),
+            onSelectedIndexChange = { setBackgroundStyle(com.mi.onextbox.ui.screens.FeatureBackgroundStyleIds[it]) },
+            hasDividerAbove = true,
+            hasDividerBelow = true,
+        )
+        SettingsDivider()
         SettingsToggleRow(
             title = stringResource(R.string.setting_liquid_glass_bottom_bar),
             summary = stringResource(R.string.setting_liquid_glass_bottom_bar_summary),
@@ -2215,6 +2234,24 @@ fun AppSettingsPage(
             summary = "",
             checked = bottomBarHideLabels,
             onCheckedChange = onBottomBarHideLabelsChange,
+            hasDividerAbove = true,
+            hasDividerBelow = true,
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = stringResource(R.string.setting_main_page_swipe),
+            summary = "",
+            checked = mainPageSwipeEnabled,
+            onCheckedChange = onMainPageSwipeEnabledChange,
+            hasDividerAbove = true,
+            hasDividerBelow = true,
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = stringResource(R.string.setting_sub_page_swipe),
+            summary = "",
+            checked = subPageSwipeEnabled,
+            onCheckedChange = onSubPageSwipeEnabledChange,
             hasDividerAbove = true,
             hasDividerBelow = false,
         )
@@ -2271,6 +2308,7 @@ fun DeveloperOptionsPage(
     onShowFpsMonitorChange: (Boolean) -> Unit,
 ) {
     DeveloperActivationEntry()
+    DeveloperDiagnosticsEntry()
     SettingsSection(title = stringResource(R.string.settings_section_display))
     SettingsGroup {
         SettingsToggleRow(

@@ -1,6 +1,7 @@
 package com.mi.onextbox.ui.home
 
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxWidth
 
 import androidx.compose.runtime.getValue
 
@@ -19,6 +20,7 @@ import androidx.lifecycle.LifecycleOwner
 fun HomePage(
     rootGranted: Boolean,
     onHeroLongPress: () -> Unit,
+    onOpenDeviceDetails: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = remember(context) {
@@ -62,4 +64,11 @@ fun HomePage(
         versionInfo = versionInfo,
     )
     HomeInfoCard()
+    io.github.suqi8.coui.kmp.basic.Card(
+        modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+        cornerRadius = com.mi.onextbox.ui.common.AppUiTokens.CardCornerRadius,
+    ) {
+        com.mi.onextbox.ui.settings.SettingsCardRow("设备详细信息", "运行内存、闪存与屏幕", showArrow = true,
+            onClick = onOpenDeviceDetails)
+    }
 }

@@ -34,6 +34,7 @@ internal class EnabledFeatureActions {
         SharedFeatureDefinitions.networkIdentity.action(),
         R.string.statusbar_order_title to { context, enabled -> StatusBarLayoutSettings.setOrderEnabled(context, enabled) },
         R.string.network_speed_refresh_second to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.CustomRefreshInterval, enabled) },
+        R.string.network_speed_hide_low_speed to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.HideLowSpeed, enabled) },
         R.string.network_speed_hide_per_second to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.HidePerSecond, enabled) },
         R.string.network_speed_hide_units to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.HideUnits, enabled) },
         R.string.network_speed_single_line to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.SingleLine, enabled) },
@@ -61,6 +62,7 @@ internal class EnabledFeatureActions {
         R.string.feature_esim_confirmation_prompt_title to { context, enabled -> LspConfig.setEsimConfirmationCodePromptEnabled(context, enabled) },
         R.string.feature_file_manager_hide_secure_access_tip_title to { context, enabled -> LspConfig.setFileManagerHideSecureAccessTipEnabled(context, enabled) },
         R.string.feature_file_manager_native_picker_title to { context, enabled -> LspConfig.setFileManagerNativePickerEnabled(context, enabled) },
+        R.string.file_manager_default_title to { context, enabled -> DefaultFileManagerSettings.setEnabled(context, enabled) },
         R.string.feature_fluid_cloud_battery_title to { context, enabled -> LspConfig.setFluidCloudBatteryEnabled(context, enabled) },
         R.string.feature_fluid_cloud_material_title to { context, enabled -> LspConfig.setFluidCloudMaterialEnabled(context, enabled) },
         R.string.carrier_name_title to { context, enabled -> CarrierNameSettings.setEnabled(context, enabled) },
@@ -76,6 +78,8 @@ internal class EnabledFeatureActions {
         SharedFeatureDefinitions.translationPages.action(),
         SharedFeatureDefinitions.translationLandscape.action(),
         SharedFeatureDefinitions.translationBrowser.action(),
+        SharedFeatureDefinitions.sidebarApps.action(),
+        SharedFeatureDefinitions.sidebarDisplay.action(),
         SharedFeatureDefinitions.installerNative.action(),
         SharedFeatureDefinitions.installerSkipScan.action(),
         SharedFeatureDefinitions.installerRemoveAds.action(),
@@ -102,6 +106,7 @@ internal class EnabledFeatureActions {
         R.string.feature_navigation_handle_auto_hide_title to { context, enabled -> LspConfig.setNavigationHandleAutoHideEnabled(context, enabled) },
         R.string.feature_round_notification_clear_button_title to { context, enabled -> LspConfig.setRoundNotificationClearButtonEnabled(context, enabled) },
         R.string.clock_compact_spacing to { context, enabled -> ClockPeriodSettings.setCompact(context, enabled) },
+        R.string.clock_tabular_digits to { context, enabled -> ClockPeriodSettings.setTabularDigits(context, enabled) },
         R.string.clock_lock_seconds to { context, enabled -> ClockPeriodSettings.setSecondsLocked(context, enabled) },
         R.string.clock_period_title to { context, enabled -> ClockPeriodSettings.setEnabled(context, enabled) },
         R.string.clock_period_shade to { context, enabled -> ClockPeriodSettings.setShade(context, enabled) },
@@ -125,6 +130,7 @@ internal class EnabledFeatureActions {
         R.string.game_assistant_developer_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.DEVELOPER, enabled) },
         R.string.game_assistant_skins_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.SKINS, enabled) },
         R.string.feature_settings_title_collapsed_title to { context, enabled -> LspConfig.setSettingsTitleCollapsedEnabled(context, enabled) },
+        R.string.coui_hide_dividers_title to { context, enabled -> CouiDividerSettings.setEnabled(context, enabled) },
         R.string.settings_title_lock_title to { context, enabled -> com.mi.onextbox.lsp.SettingsAppearanceSettings.setEnabled(
             context, com.mi.onextbox.lsp.SettingsAppearanceSettings.TITLE_LOCK, enabled) },
         R.string.settings_account_size_title to { context, enabled -> com.mi.onextbox.lsp.SettingsAppearanceSettings.setEnabled(
@@ -161,7 +167,6 @@ internal class EnabledFeatureActions {
         R.string.feature_settings_restore_domestic_auxiliary_functions_title to { context, enabled -> LspConfig.setSettingsRestoreDomesticAuxiliaryFunctionsEnabled(context, enabled) },
         R.string.feature_settings_gms_region_bypass_title to { context, enabled -> LspConfig.setGmsRegionRestrictionBypassEnabled(context, enabled) },
         R.string.feature_app_market_region_bypass_title to { context, enabled -> LspConfig.setAppMarketRegionRestrictionBypassEnabled(context, enabled) },
-        R.string.feature_app_market_simplify_recommendations_title to { context, enabled -> LspConfig.setAppMarketSimplifyRecommendationsEnabled(context, enabled) },
         R.string.feature_mobile_network_hide_phone_number_title to { context, enabled -> LspConfig.setMobileNetworkHidePhoneNumberEnabled(context, enabled) },
         R.string.feature_mobile_network_force_carrier_options_title to { context, enabled -> LspConfig.setMobileNetworkForceCarrierOptionsEnabled(context, enabled) },
         R.string.feature_mobile_network_hide_ai_link_boost_title to { context, enabled -> LspConfig.setMobileNetworkHideAiLinkBoostEnabled(context, enabled) },
@@ -187,6 +192,10 @@ internal class EnabledFeatureActions {
         R.string.feature_hide_qs_top_carrier_title to { context, enabled -> LspConfig.setSystemUiHideQsTopCarrierEnabled(context, enabled) },
         R.string.feature_hide_qs_more_title to { context, enabled -> LspConfig.setSystemUiHideQsMoreEnabled(context, enabled) },
         R.string.feature_aosp_back_panel_title to { context, enabled -> LspConfig.setAospBackPanelEnabled(context, enabled) },
+        R.string.back_gesture_style to { context, enabled -> LspConfig.setAospBackPanelEnabled(context, enabled) },
+        R.string.back_gesture_release to { context, enabled -> com.mi.onextbox.lsp.BackGestureSettings.set(context, com.mi.onextbox.lsp.BackGestureSettings.RELEASE, enabled) },
+        R.string.back_gesture_predictive_style to { context, enabled -> com.mi.onextbox.lsp.BackGestureSettings.set(context, com.mi.onextbox.lsp.BackGestureSettings.PREDICTIVE, if (enabled) 1 else 0) },
+        R.string.back_gesture_area_custom to { context, enabled -> com.mi.onextbox.lsp.BackGestureSettings.set(context, com.mi.onextbox.lsp.BackGestureSettings.AREA, enabled) },
         R.string.small_window_hide_recents to { context, enabled -> LspConfig.setSmallWindowFeatureEnabled(context, LspConfig.SmallWindowFeature.HideRecents, enabled) },
         R.string.small_window_mute_stashed to { context, enabled -> LspConfig.setSmallWindowFeatureEnabled(context, LspConfig.SmallWindowFeature.MuteStashed, enabled) },
         R.string.small_window_unlimited_count to { context, enabled -> LspConfig.setSmallWindowFeatureEnabled(context, LspConfig.SmallWindowFeature.UnlimitedCount, enabled) },
@@ -264,7 +273,19 @@ internal class EnabledFeatureActions {
             val next = modes.next(R.string.feature_monet_color_spec_title, LspConfig.getSystemUiMonetColorSpecMode(context), enabled, LspConfig.SYSTEMUI_MONET_COLOR_SPEC_2025)
             LspConfig.setSystemUiMonetColorSpecMode(context, next)
         },
-    ) + LauncherFeatureItems.all.associate { item ->
+    ) + KeyboardPictorialSettings.options.associate { option ->
+        val write: suspend (Context, Boolean) -> Unit = { context, enabled -> KeyboardPictorialSettings.set(context, option.key, enabled) }
+        option.title to write
+    } + BrowserSettings.options.associate { option ->
+        val write: suspend (Context, Boolean) -> Unit = { context, enabled -> BrowserSettings.set(context, option.key, enabled) }
+        option.title to write
+    } + AppMarketCleanupSettings.options.associate { option ->
+        val write: suspend (Context, Boolean) -> Unit = { context, enabled -> AppMarketCleanupSettings.set(context, option.key, enabled) }
+        option.title to write
+    } + SystemExtrasSettings.options.associate { option ->
+        val write: suspend (Context, Boolean) -> Unit = { context, enabled -> SystemExtrasSettings.set(context, option.key, enabled) }
+        option.title to write
+    } + LauncherFeatureItems.all.associate { item ->
         val write: suspend (Context, Boolean) -> Unit = { context, enabled -> LspConfig.setLauncherFeatureEnabled(context, item.feature, enabled) }
         item.title to write
     } + TrafficFeatureItems.all.associate { item ->

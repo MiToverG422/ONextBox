@@ -58,6 +58,8 @@ class OosLspModuleEntry : XposedModule() {
 
     private fun attachRuntime(): Boolean {
         ModernHookRuntime.attach(this)
+        com.mi.onextbox.lsp.compat.SafeModeRuntime.initialize(processName, systemServer)
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("module", "Attached", processName)
         return runCatching {
             val preferences = getRemotePreferences(PREFERENCES_GROUP)
             ModernHookRuntime.attachRemotePreferences(PREFERENCES_GROUP, preferences)
@@ -117,33 +119,34 @@ class OosLspModuleEntry : XposedModule() {
         val profile = AdaptationHookGate.bind()
         if (!AdaptationHookGate.isActive(profile) || !AdaptationRuntimePolicy.allowsSystemServer(profile)) return
         if (profile == SystemAdaptationVersion.ColorOs16) {
-            ColorOs16FrameworkHooks.hook(loader)
+            com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16FrameworkHooks.hook") { ColorOs16FrameworkHooks.hook(loader) }
             return
         }
-        CorePatchIntegration.hook(loader)
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CorePatchIntegration.hook") { CorePatchIntegration.hook(loader) }
         if (LspConfig.isImmersiveNavigationEnabledXposed()) {
-            ImmersiveNavigationHooker.hook()
+            com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ImmersiveNavigationHooker.hook") { ImmersiveNavigationHooker.hook() }
         }
-        FrameworkHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader)
-        SideKeyHooker.hookSystemServer(loader)
-        AppErrorTrackingHooker.hookSystemServer(loader)
-        StatusBarScrollToTopHooker.hookSystemServer(loader)
-        BatteryOptimizationHooker.hookSystemServer(loader)
-        SystemRootDetectionHooker.hookSystemServer(loader)
-        PermissionSystemHooker.hook(loader)
-        AppLockDelaySystemHooker.hook(loader)
-        NotificationRemovalHooker.hookSystemServer(loader)
-        SmallWindowHooker.hookSystemServer(loader)
-        KeyguardCaptureHooker.hookSystemServer(loader)
-        ScreenCaptureHooker.hookSystemServer(loader)
-        InstallerRedirectHooker.hook(loader)
-        NativeFilePickerHooker.hook(loader)
-        SettingsGlobalExtremeRefreshRateHooker.hook(classLoader = loader)
-        DisplayEnhancementThermalHooker.hookSystemServer(loader)
-        AssistantHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader)
-        GmsRegionRestrictionHooker.hook(classLoader = loader)
-        AthenaPolicyHooker.hook(classLoader = loader)
-        OkGoogleHotwordCompatibilityHooker.hookSystemServer(classLoader = loader)
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FrameworkHooker.hook") { FrameworkHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SideKeyHooker.hookSystemServer") { SideKeyHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AppErrorTrackingHooker.hookSystemServer") { AppErrorTrackingHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("StatusBarScrollToTopHooker.hookSystemServer") { StatusBarScrollToTopHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BatteryOptimizationHooker.hookSystemServer") { BatteryOptimizationHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SystemRootDetectionHooker.hookSystemServer") { SystemRootDetectionHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PermissionSystemHooker.hook") { PermissionSystemHooker.hook(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AppLockDelaySystemHooker.hook") { AppLockDelaySystemHooker.hook(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NotificationRemovalHooker.hookSystemServer") { NotificationRemovalHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SmallWindowHooker.hookSystemServer") { SmallWindowHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyguardCaptureHooker.hookSystemServer") { KeyguardCaptureHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ScreenCaptureHooker.hookSystemServer") { ScreenCaptureHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("InstallerRedirectHooker.hook") { InstallerRedirectHooker.hook(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NativeFilePickerHooker.hook") { NativeFilePickerHooker.hook(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("DefaultFileManagerHooker.hook") { DefaultFileManagerHooker.hook(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SettingsGlobalExtremeRefreshRateHooker.hook") { SettingsGlobalExtremeRefreshRateHooker.hook(classLoader = loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("DisplayEnhancementThermalHooker.hookSystemServer") { DisplayEnhancementThermalHooker.hookSystemServer(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AssistantHooker.hook") { AssistantHooker.hook(packageName = PACKAGE_SYSTEM, classLoader = loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GmsRegionRestrictionHooker.hook") { GmsRegionRestrictionHooker.hook(classLoader = loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AthenaPolicyHooker.hook") { AthenaPolicyHooker.hook(classLoader = loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("OkGoogleHotwordCompatibilityHooker.hookSystemServer") { OkGoogleHotwordCompatibilityHooker.hookSystemServer(classLoader = loader) }
     }
 
     override fun onPackageReady(param: XposedModuleInterface.PackageReadyParam) {
@@ -177,6 +180,7 @@ class OosLspModuleEntry : XposedModule() {
             return
         }
         ModernHookRuntime.attach(this)
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("module", "Attached", processName)
         val dispatchKey = "${target.packageName}@${System.identityHashCode(target.classLoader)}"
         if (!dispatchedPackages.add(dispatchKey)) return
         reloadTargets += target
@@ -191,193 +195,214 @@ class OosLspModuleEntry : XposedModule() {
         if (processName.substringBefore(':') == PACKAGE_LAUNCHER && packageName != PACKAGE_LAUNCHER) return
         SystemAdaptationDetector.initialize(packageName, classLoader)
         val profile = AdaptationHookGate.bind()
-        if (!AdaptationHookGate.isActive(profile) || !AdaptationRuntimePolicy.allowsPackage(profile, packageName)) return
+        if (!AdaptationHookGate.isActive(profile)) return
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CouiDividerHooker.hook") { CouiDividerHooker.hook(packageName, classLoader, target.sourceDir) }
+        if (!AdaptationRuntimePolicy.allowsPackage(profile, packageName)) return
         if (profile == SystemAdaptationVersion.ColorOs16) {
-            ColorOs16FrameworkHooks.hookApp()
-            ColorOs16AppHooks.hook(packageName, classLoader, target.sourceDir, processName)
+            com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16FrameworkHooks.hookApp") { ColorOs16FrameworkHooks.hookApp() }
+            com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16AppHooks.hook") { ColorOs16AppHooks.hook(packageName, classLoader, target.sourceDir, processName) }
             when (packageName) {
-                PACKAGE_LAUNCHER -> ColorOs16SettingsLauncherHooks.hookLauncher(classLoader, target.sourceDir)
-                PACKAGE_SYSTEM_UI -> ColorOs16SystemUiHooks.hook(classLoader)
-                PACKAGE_SETTINGS -> ColorOs16SettingsLauncherHooks.hookSettings(classLoader)
-                PACKAGE_OPLUS_AOD -> ColorOs16SettingsLauncherHooks.hookAod(classLoader)
+                PACKAGE_LAUNCHER -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16SettingsLauncherHooks.hookLauncher") { ColorOs16SettingsLauncherHooks.hookLauncher(classLoader, target.sourceDir) }
+                PACKAGE_SYSTEM_UI -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16SystemUiHooks.hook") { ColorOs16SystemUiHooks.hook(classLoader) }
+                PACKAGE_SETTINGS -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16SettingsLauncherHooks.hookSettings") { ColorOs16SettingsLauncherHooks.hookSettings(classLoader) }
+                PACKAGE_OPLUS_AOD -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16SettingsLauncherHooks.hookAod") { ColorOs16SettingsLauncherHooks.hookAod(classLoader) }
                 PACKAGE_WALLPAPERS, WallpaperMotionSettings.ENGINE_PACKAGE ->
-                    ColorOs16SettingsLauncherHooks.hookWallpaperMotion(classLoader)
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16SettingsLauncherHooks.hookWallpaperMotion") { ColorOs16SettingsLauncherHooks.hookWallpaperMotion(classLoader) }
                 ExpressCardRules.PLATFORM, ExpressCardRules.ASSISTANT ->
-                    ColorOs16SettingsLauncherHooks.hookExpress(packageName, classLoader)
-                "com.oplus.screenshot" -> ColorOs16SystemUiFeatureHooks.hookScreenshot(classLoader)
-                "com.oplus.screenrecorder" -> ColorOs16SystemUiFeatureHooks.hookRecorder(classLoader)
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16SettingsLauncherHooks.hookExpress") { ColorOs16SettingsLauncherHooks.hookExpress(packageName, classLoader) }
+                "com.oplus.screenshot" -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16SystemUiFeatureHooks.hookScreenshot") { ColorOs16SystemUiFeatureHooks.hookScreenshot(classLoader) }
+                "com.oplus.screenrecorder" -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16SystemUiFeatureHooks.hookRecorder") { ColorOs16SystemUiFeatureHooks.hookRecorder(classLoader) }
             }
             return
         }
 
-        InstallerRedirectHooker.hookApp()
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("InstallerRedirectHooker.hookApp") { InstallerRedirectHooker.hookApp() }
 
         when (packageName) {
             PACKAGE_SYSTEM_UI -> {
-                LargeNetworkTypeHooker.hook(classLoader)
-                DataSimSignalHooker.hook(classLoader)
-                StatusBarLayoutHooker.hook(classLoader)
-                PowerIndicatorHooker.hook(classLoader)
-                RotationSuggestionHooker.hook(classLoader)
-                CarrierNameHooker.hook(classLoader)
-                runCatching { QsTileCornerHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PictorialCustomizationHooker.hookSystemUi") { PictorialCustomizationHooker.hookSystemUi(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LargeNetworkTypeHooker.hook") { LargeNetworkTypeHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("DataSimSignalHooker.hook") { DataSimSignalHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("StatusBarLayoutHooker.hook") { StatusBarLayoutHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PowerIndicatorHooker.hook") { PowerIndicatorHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("RotationSuggestionHooker.hook") { RotationSuggestionHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CarrierNameHooker.hook") { CarrierNameHooker.hook(classLoader) }
+                runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("QsTileCornerHooker.hook") { QsTileCornerHooker.hook(classLoader) } }
                     .onFailure { HookLog.w("ONextBox-QsTileCorner", "Tile corner adapter unavailable", it) }
-                runCatching { QsSliderPercentageHooker.hook(classLoader) }
+                runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("QsSliderPercentageHooker.hook") { QsSliderPercentageHooker.hook(classLoader) } }
                     .onFailure { HookLog.w("ONextBox-QsPercentage", "Slider percentage adapter unavailable", it) }
-                runCatching { SideVolumePercentageHooker.hook(classLoader) }
+                runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SideVolumePercentageHooker.hook") { SideVolumePercentageHooker.hook(classLoader) } }
                     .onFailure { HookLog.w("ONextBox-SideVolumePercentage", "Volume popup percentage adapter unavailable", it) }
-                runCatching { SideVolumeAppearanceHooker.hook(classLoader) }
+                runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SideVolumeAppearanceHooker.hook") { SideVolumeAppearanceHooker.hook(classLoader) } }
                     .onFailure { HookLog.w("ONextBox-SideVolumeAppearance", "Volume popup appearance adapter unavailable", it) }
-                SideKeySystemUiHooker.hook(classLoader)
-                ImmersiveNavigationHooker.hook(classLoader)
-                AospBackPanelHooker.hook(classLoader)
-                AospVolumeHooker.hook(classLoader)
-                VolumeSafetyWarningHooker.hook(classLoader)
-                NativeLiveUpdateHooker.hook(classLoader)
-                C16StackedSignalHooker.hook(classLoader)
-                AssistantHooker.hook(packageName, classLoader)
-                SystemUiHooker.hook(packageName, classLoader)
-                DisconnectedBluetoothIconHooker.hook(classLoader)
-                StatusBarScrollToTopHooker.hookSystemUi(classLoader)
-                FluidCloudBatteryHooker.hook(classLoader)
-                FluidCloudMaterialHooker.hook(classLoader)
-                PermanentClockSecondsHooker.hookSystemUi(classLoader)
-                ClockPeriodHooker.hook(classLoader)
-                ClockSpacingHooker.hook(classLoader)
-                SystemUiRedOneHooker.hook(classLoader)
-                NotificationRemovalHooker.hookSystemUi(classLoader)
-                NotificationClearButtonHooker.hook(classLoader)
-                HideNotificationClearHooker.hook(classLoader)
-                SmallWindowHooker.hookSystemUi(classLoader)
-                NetworkSpeedHooker.hook(classLoader)
-                FaceTapUnlockHooker.hook(classLoader)
-                KeyguardCaptureHooker.hookSystemUi(classLoader)
-                PasswordDialHighlightHooker.hook(classLoader)
-                PinSwipeInputHooker.hook(classLoader)
-                FluidCloudMediaBlacklistHooker.hook(classLoader)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SideKeySystemUiHooker.hook") { SideKeySystemUiHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ImmersiveNavigationHooker.hook") { ImmersiveNavigationHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AospBackPanelHooker.hook") { AospBackPanelHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BackGestureHooker.hook") { BackGestureHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AospVolumeHooker.hook") { AospVolumeHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("VolumeSafetyWarningHooker.hook") { VolumeSafetyWarningHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NativeLiveUpdateHooker.hook") { NativeLiveUpdateHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("C16StackedSignalHooker.hook") { C16StackedSignalHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AssistantHooker.hook") { AssistantHooker.hook(packageName, classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SystemUiHooker.hook") { SystemUiHooker.hook(packageName, classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("DisconnectedBluetoothIconHooker.hook") { DisconnectedBluetoothIconHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("StatusBarScrollToTopHooker.hookSystemUi") { StatusBarScrollToTopHooker.hookSystemUi(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FluidCloudBatteryHooker.hook") { FluidCloudBatteryHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FluidCloudMaterialHooker.hook") { FluidCloudMaterialHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PermanentClockSecondsHooker.hookSystemUi") { PermanentClockSecondsHooker.hookSystemUi(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ClockPeriodHooker.hook") { ClockPeriodHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ClockTabularDigitsHooker.hook") { ClockTabularDigitsHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ClockSpacingHooker.hook") { ClockSpacingHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SystemUiRedOneHooker.hook") { SystemUiRedOneHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NotificationRemovalHooker.hookSystemUi") { NotificationRemovalHooker.hookSystemUi(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NotificationClearButtonHooker.hook") { NotificationClearButtonHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("HideNotificationClearHooker.hook") { HideNotificationClearHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SmallWindowHooker.hookSystemUi") { SmallWindowHooker.hookSystemUi(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NetworkSpeedHooker.hook") { NetworkSpeedHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FaceTapUnlockHooker.hook") { FaceTapUnlockHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyguardCaptureHooker.hookSystemUi") { KeyguardCaptureHooker.hookSystemUi(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PasswordDialHighlightHooker.hook") { PasswordDialHighlightHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PinSwipeInputHooker.hook") { PinSwipeInputHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FluidCloudMediaBlacklistHooker.hook") { FluidCloudMediaBlacklistHooker.hook(classLoader) }
             }
 
             PACKAGE_SETTINGS -> {
-                AssistantHooker.hook(packageName, classLoader)
-                SettingsHooker.hook(
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AssistantHooker.hook") { AssistantHooker.hook(packageName, classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SettingsHooker.hook") { SettingsHooker.hook(
                     packageName = packageName,
                     classLoader = classLoader,
-                )
-                SettingsTitleCollapseHooker.hook(classLoader)
-                SettingsAccountCardSizeHooker.hook(classLoader)
-                SettingsHomeEntryHooker.hook(classLoader)
-                SettingsHomeCleanupHooker.hook(classLoader)
-                SettingsProcessManager.hook(classLoader)
-                SettingsRealmeFeatures.hook(classLoader)
-                DisplayEnhancementThermalHooker.hookSettings(classLoader)
-                SettingsAppInfoCardHooker.hook(classLoader)
-                PermanentClockSecondsHooker.hookSettings(classLoader)
+                ) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SettingsTitleCollapseHooker.hook") { SettingsTitleCollapseHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SettingsAccountCardSizeHooker.hook") { SettingsAccountCardSizeHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SettingsHomeEntryHooker.hook") { SettingsHomeEntryHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SettingsHomeCleanupHooker.hook") { SettingsHomeCleanupHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SettingsProcessManager.hook") { SettingsProcessManager.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SettingsRealmeFeatures.hook") { SettingsRealmeFeatures.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("DisplayEnhancementThermalHooker.hookSettings") { DisplayEnhancementThermalHooker.hookSettings(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SettingsAppInfoCardHooker.hook") { SettingsAppInfoCardHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PermanentClockSecondsHooker.hookSettings") { PermanentClockSecondsHooker.hookSettings(classLoader) }
             }
 
             PACKAGE_LAUNCHER -> {
-                FrameworkHooker.hook(packageName, classLoader)
-                AssistantHooker.hook(packageName, classLoader)
-                LauncherHooker.hook(classLoader)
-                LauncherFeaturesHooker.hook(classLoader, target.sourceDir)
-                LauncherGestureHooker.hook(classLoader)
-                HideRecentAppsHooker.hook(classLoader)
-                LauncherIconLabelSpacingHooker.hook(classLoader)
-                LauncherNotificationDotColorHooker.hook(classLoader)
-                LauncherNotificationDotShadowHooker.hook(classLoader)
-                ExpressCardHooker.hook(packageName, classLoader)
-                SystemUiRedOneHooker.hookLauncherClock()
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FrameworkHooker.hook") { FrameworkHooker.hook(packageName, classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AssistantHooker.hook") { AssistantHooker.hook(packageName, classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LauncherHooker.hook") { LauncherHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LauncherFeaturesHooker.hook") { LauncherFeaturesHooker.hook(classLoader, target.sourceDir) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LauncherGestureHooker.hook") { LauncherGestureHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LauncherHomePredictionHooker.hook") { LauncherHomePredictionHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("HideRecentAppsHooker.hook") { HideRecentAppsHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LauncherIconLabelSpacingHooker.hook") { LauncherIconLabelSpacingHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LauncherNotificationDotColorHooker.hook") { LauncherNotificationDotColorHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LauncherNotificationDotShadowHooker.hook") { LauncherNotificationDotShadowHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ExpressCardHooker.hook") { ExpressCardHooker.hook(packageName, classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SystemUiRedOneHooker.hookLauncherClock") { SystemUiRedOneHooker.hookLauncherClock() }
             }
 
-            PACKAGE_OPLUS_AOD -> FrameworkHooker.hook(packageName, classLoader)
+            PACKAGE_OPLUS_AOD -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FrameworkHooker.hook") { FrameworkHooker.hook(packageName, classLoader) }
 
-            PACKAGE_ATHENA -> AthenaPolicyHooker.hook(classLoader)
+            PACKAGE_ATHENA -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AthenaPolicyHooker.hook") { AthenaPolicyHooker.hook(classLoader) }
 
             PACKAGE_OPLUS_EUICC -> {
-                EuiccRegionRestrictionHooker.hook(classLoader)
-                EuiccDiagnosticsHooker.hook(classLoader)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccRegionRestrictionHooker.hook") { EuiccRegionRestrictionHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccDiagnosticsHooker.hook") { EuiccDiagnosticsHooker.hook(classLoader) }
             }
 
             PACKAGE_WALLPAPERS -> {
-                WallpapersRedOneEntryHooker.hook(classLoader)
-                WallpaperMotionHooker.hook(classLoader)
-                Wallpaper3DForceHooker.hook(classLoader)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("WallpapersRedOneEntryHooker.hook") { WallpapersRedOneEntryHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("WallpaperMotionHooker.hook") { WallpaperMotionHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("Wallpaper3DForceHooker.hook") { Wallpaper3DForceHooker.hook(classLoader) }
             }
             WallpaperMotionSettings.ENGINE_PACKAGE -> {
-                WallpaperMotionHooker.hook(classLoader)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("WallpaperMotionHooker.hook") { WallpaperMotionHooker.hook(classLoader) }
             }
 
             PACKAGE_PHONE -> {
-                MobileNetworkHooker.hook(classLoader)
-                NetworkIdentityHooker.hook(classLoader, processName)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MobileNetworkHooker.hook") { MobileNetworkHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NetworkIdentityHooker.hook") { NetworkIdentityHooker.hook(classLoader, processName) }
             }
 
-            PACKAGE_APP_MARKET -> AppMarketHooker.hook(classLoader)
+            PACKAGE_APP_MARKET -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AppMarketHooker.hook") { AppMarketHooker.hook(classLoader) }
             TrafficManagementRules.PACKAGE_NAME ->
-                TrafficManagementHooker.hook(classLoader, target.sourceDir)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("TrafficManagementHooker.hook") { TrafficManagementHooker.hook(classLoader, target.sourceDir) }
+            KeyboardPictorialSettings.PICTORIAL -> {
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PictorialCustomizationHooker.hookApp") { PictorialCustomizationHooker.hookApp() }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PictorialDownloadHooker.hook") { PictorialDownloadHooker.hook(classLoader) }
+            }
+            BrowserSettings.PACKAGE_NAME -> {
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BrowserCleanupHooker.hook") { BrowserCleanupHooker.hook(classLoader, target.sourceDir) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BrowserPurifyHooker.hook") { BrowserPurifyHooker.hook(classLoader) }
+            }
+            SystemExtrasSettings.WEATHER -> WeatherHooker.hook(classLoader)
+            SystemExtrasSettings.PICKER -> NativePhotoPickerHooker.hook(classLoader)
+            SystemExtrasSettings.ENGINEER -> EngineerModeHooker.hook(classLoader, target.sourceDir)
             KeyboardMaterialRules.PACKAGE_NAME -> {
-                KeyboardMaterialHooker.hook(classLoader, target.sourceDir)
-                KeyboardFlagEmojiHooker.hook(classLoader, target.sourceDir)
-                KeyboardBottomLiftHooker.hook(classLoader, target.sourceDir)
-                KeyboardDismissButtonHooker.hook(classLoader)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyboardAppearanceHooker.hook") { KeyboardAppearanceHooker.hook(classLoader, target.sourceDir) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyboardMaterialHooker.hook") { KeyboardMaterialHooker.hook(classLoader, target.sourceDir) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyboardFlagEmojiHooker.hook") { KeyboardFlagEmojiHooker.hook(classLoader, target.sourceDir) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyboardBottomLiftHooker.hook") { KeyboardBottomLiftHooker.hook(classLoader, target.sourceDir) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyboardDismissButtonHooker.hook") { KeyboardDismissButtonHooker.hook(classLoader) }
             }
             "com.oplus.battery" -> {
-                BatteryCycleCountHooker.hook(classLoader)
-                BatteryOptimizationHooker.hookBattery(classLoader, target.sourceDir)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BatteryAiAssistantHooker.hook") { BatteryAiAssistantHooker.hook(classLoader, target.sourceDir) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BatteryCycleCountHooker.hook") { BatteryCycleCountHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BatteryOptimizationHooker.hookBattery") { BatteryOptimizationHooker.hookBattery(classLoader, target.sourceDir) }
             }
 
-            CameraGallerySettings.PACKAGE_NAME -> CameraGalleryHooker.hook(classLoader, target.sourceDir)
-            ScreenTranslationSettings.PACKAGE_NAME -> ScreenTranslationHooker.hook(classLoader, target.sourceDir)
+            CameraGallerySettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraGalleryHooker.hook") { CameraGalleryHooker.hook(classLoader, target.sourceDir) }
+            ScreenTranslationSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ScreenTranslationHooker.hook") { ScreenTranslationHooker.hook(classLoader, target.sourceDir) }
+            SmartSidebarSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SmartSidebarHooker.hook") { SmartSidebarHooker.hook(classLoader, target.sourceDir) }
             InstallerCleanupSettings.APP_DETAIL, InstallerCleanupSettings.PACKAGE_INSTALLER ->
-                InstallerCleanupHooker.hook(classLoader, target.sourceDir, packageName)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("InstallerCleanupHooker.hook") { InstallerCleanupHooker.hook(classLoader, target.sourceDir, packageName) }
 
-            FileManagerCardRules.PACKAGE_NAME -> FileManagerHooker.hook(classLoader)
+            FileManagerCardRules.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FileManagerHooker.hook") { FileManagerHooker.hook(classLoader) }
 
-            "com.oplus.securitypermission" -> SecurityPermissionHooker.hook(classLoader)
-            AppLockDelaySettings.PACKAGE -> AppLockDelayMenuHooker.hook(classLoader)
+            "com.oplus.securitypermission" -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SecurityPermissionHooker.hook") { SecurityPermissionHooker.hook(classLoader) }
+            AppLockDelaySettings.PACKAGE -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AppLockDelayMenuHooker.hook") { AppLockDelayMenuHooker.hook(classLoader) }
 
             PhoneManagerSettings.PACKAGE_NAME -> {
-                PhoneManagerCountdownHooker.hook(classLoader, target.sourceDir)
-                PhoneManagerRiskCloudHooker.hook(classLoader, target.sourceDir)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PhoneManagerCountdownHooker.hook") { PhoneManagerCountdownHooker.hook(classLoader, target.sourceDir) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PhoneManagerRiskCloudHooker.hook") { PhoneManagerRiskCloudHooker.hook(classLoader, target.sourceDir) }
             }
 
-            OShareSettings.PACKAGE_NAME -> OShareVisibilityHooker.hook(classLoader)
-            ThemeStoreSettings.PACKAGE_NAME -> ThemeStoreHooker.hook(classLoader)
+            OShareSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("OShareVisibilityHooker.hook") { OShareVisibilityHooker.hook(classLoader) }
+            ThemeStoreSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ThemeStoreHooker.hook") { ThemeStoreHooker.hook(classLoader) }
             GalleryAiRetouchSettings.PACKAGE_NAME -> {
                 if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
-                    GalleryAiRetouchHooker.hook(classLoader, target.sourceDir)
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GalleryAiRetouchHooker.hook") { GalleryAiRetouchHooker.hook(classLoader, target.sourceDir) }
             }
-            SecurePaySettings.PACKAGE_NAME -> SecurePayHooker.hook(classLoader, target.sourceDir)
-            GameAssistantSettings.PACKAGE_NAME -> GameAssistantHooker.hook(classLoader, target.sourceDir)
+            SecurePaySettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SecurePayHooker.hook") { SecurePayHooker.hook(classLoader, target.sourceDir) }
+            GameAssistantSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GameAssistantHooker.hook") { GameAssistantHooker.hook(classLoader, target.sourceDir) }
 
             SoftwareUpdateSettings.PACKAGE_NAME ->
-                SoftwareUpdateHooker.hook(classLoader, target.sourceDir)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SoftwareUpdateHooker.hook") { SoftwareUpdateHooker.hook(classLoader, target.sourceDir) }
 
             SoftwareUpdateSettings.SYSTEM_FILES_PACKAGE_NAME ->
-                SystemFileUpdateHooker.hook(classLoader, target.sourceDir)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SystemFileUpdateHooker.hook") { SystemFileUpdateHooker.hook(classLoader, target.sourceDir) }
 
             FluidCloudBrowserSettings.PACKAGE_NAME,
-            FluidCloudBrowserSettings.METIS_PACKAGE_NAME -> FluidCloudBrowserHooker.hook(classLoader)
+            FluidCloudBrowserSettings.METIS_PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FluidCloudBrowserHooker.hook") { FluidCloudBrowserHooker.hook(classLoader) }
 
             "com.android.permissioncontroller" ->
-                PermissionUiStyleHooker.hookPermissionController(classLoader)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PermissionUiStyleHooker.hookPermissionController") { PermissionUiStyleHooker.hookPermissionController(classLoader) }
 
             PACKAGE_GOOGLE_APP -> {
-                OkGoogleHotwordCompatibilityHooker.hookGoogleApp(classLoader)
-                GoogleLensAiHooker.hookGoogleApp(classLoader)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("OkGoogleHotwordCompatibilityHooker.hookGoogleApp") { OkGoogleHotwordCompatibilityHooker.hookGoogleApp(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GoogleLensAiHooker.hookGoogleApp") { GoogleLensAiHooker.hookGoogleApp(classLoader) }
             }
-            PACKAGE_GOOGLE_MESSAGES -> GoogleMessagesHooker.hook(classLoader)
-            "com.heytap.mcs" -> OppoPushMonitorHooker.hook(classLoader)
+            PACKAGE_GOOGLE_MESSAGES -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GoogleMessagesHooker.hook") { GoogleMessagesHooker.hook(classLoader) }
+            "com.heytap.mcs" -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("OppoPushMonitorHooker.hook") { OppoPushMonitorHooker.hook(classLoader) }
             "com.oplus.screenshot" -> {
-                AodScreenshotHooker.hook(classLoader)
-                HideScreenshotFloatingHooker.hook(classLoader)
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AodScreenshotHooker.hook") { AodScreenshotHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("HideScreenshotFloatingHooker.hook") { HideScreenshotFloatingHooker.hook(classLoader) }
             }
-            "com.oplus.screenrecorder" -> KeyguardCaptureHooker.hookRecorder(classLoader)
-            ExpressCardRules.PLATFORM, ExpressCardRules.ASSISTANT -> ExpressCardHooker.hook(packageName, classLoader)
+            "com.oplus.screenrecorder" -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyguardCaptureHooker.hookRecorder") { KeyguardCaptureHooker.hookRecorder(classLoader) }
+            ExpressCardRules.PLATFORM, ExpressCardRules.ASSISTANT -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ExpressCardHooker.hook") { ExpressCardHooker.hook(packageName, classLoader) }
         }
 
     }
 
     override fun onHotReloading(param: XposedModuleInterface.HotReloadingParam): Boolean {
+        if (com.mi.onextbox.lsp.compat.SafeModeRuntime.blocked) return false
         val session = ModernHotReloadSession.current
         val currentTargets = reloadTargets.toList()
         if (!ModuleHotReloadPolicy.canReload(

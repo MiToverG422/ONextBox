@@ -1,9 +1,22 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -25,9 +38,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.clearText
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -44,6 +54,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.PlatformTextStyle
@@ -66,15 +78,20 @@ internal fun FeatureSearchBar(
     hint: String = stringResource(R.string.feature_search_hint),
 ) {
     val foreground = COUITheme.colorScheme.onSurface
-    val hintColor = COUITheme.colorScheme.onSurface.copy(alpha = .55f)
+    val dark = COUITheme.colorScheme.background.luminance() < .5f
+    val neutral = if (dark) Color.White else Color.Black
+    val hintColor = neutral.copy(alpha = 138f / 255f)
+    val clearColor = neutral.copy(alpha = if (dark) 77f / 255f else 66f / 255f)
     val background = COUITheme.colorScheme.surfaceContainerHigh
     val accent = COUITheme.colorScheme.primary
     val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     val inputFocus = remember { FocusRequester() }
     val capsuleInteraction = remember { MutableInteractionSource() }
     var focused by remember { mutableStateOf(false) }
     val imeVisible = WindowInsets.isImeVisible
     val empty = state.text.isEmpty()
+    val clearDescription = stringResource(R.string.feature_search_clear)
     val inputStyle = TextStyle(
         color = foreground,
         fontSize = 15.sp,
@@ -99,9 +116,8 @@ internal fun FeatureSearchBar(
             Box(
                 Modifier.size(36.dp), contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Rounded.Search, contentDescription = null, tint = hintColor, modifier = Modifier.size(22.dp))
+                Icon(painterResource(R.drawable.ic_search_capsule), contentDescription = null, tint = hintColor, modifier = Modifier.size(20.dp))
             }
-            Spacer(Modifier.width(4.dp))
             BasicTextField(
                 state = state,
                 modifier = Modifier.weight(1f).focusRequester(inputFocus).onFocusChanged {
@@ -121,15 +137,83 @@ internal fun FeatureSearchBar(
                 },
             )
             if (!empty) {
-                IconButton(onClick = { state.clearText() }, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Rounded.Close, stringResource(R.string.feature_search_clear), tint = hintColor, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(4.dp))
+                IconButton(
+                    onClick = { state.clearText() },
+                    modifier = Modifier.size(36.dp).semantics {
+                        contentDescription = clearDescription
+                    },
+                ) {
+                    Canvas(Modifier.size(36.dp)) {
+                        drawCircle(clearColor, radius = 9.dp.toPx())
+                        val half = 3.535.dp.toPx()
+                        drawLine(Color.White, center - Offset(half, half), center + Offset(half, half), 1.6.dp.toPx())
+                        drawLine(Color.White, center + Offset(-half, half), center + Offset(half, -half), 1.6.dp.toPx())
+                    }
                 }
+                Spacer(Modifier.width(4.dp))
             } else Spacer(Modifier.width(16.dp))
         }
     }
-    val surfaceModifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-        .height(40.dp)
-    ColorOsSearchSurface(surfaceModifier, background, focused, editorEmpty = empty, content = searchContent)
+    val cancelLabel = stringResource(android.R.string.cancel)
+    val cancelStyle = inputStyle.copy(fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+    val textMeasurer = rememberTextMeasurer()
+    val cancelTextWidth = textMeasurer.measure(cancelLabel, cancelStyle, maxLines = 1).size.width
+    val cancelWidth = with(LocalDensity.current) { cancelTextWidth.toDp() } + 32.dp
+    val editing = focused || !empty
+    val transition = animateFloatAsState(
+        if (editing) 1f else 0f,
+        spring(dampingRatio = .75f, stiffness = 157.91367f, visibilityThreshold = .000001f),
+        label = "Search transition",
+    )
+    val direction = if (androidx.compose.ui.platform.LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
+    Layout(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(40.dp),
+        content = {
+            ColorOsSearchSurface(
+                Modifier.fillMaxSize(), background, focused,
+                editorEmpty = empty, trailingActionWidth = if (empty) 0.dp else 44.dp, content = searchContent,
+            )
+            if (editing || transition.value > .000001f) {
+                ColorOsSearchSurface(
+                    Modifier.width(cancelWidth.coerceAtMost(152.dp)).height(40.dp).graphicsLayer {
+                        val progress = transition.value
+                        translationX = direction * 20f * (1f - progress)
+                        scaleX = .5f + .5f * progress
+                        scaleY = scaleX
+                    },
+                    background, focused = false, revealProgress = { transition.value },
+                ) {
+                    Box(
+                        Modifier.fillMaxSize().clickable(
+                            enabled = editing,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            state.clearText()
+                            keyboard?.hide()
+                            focusManager.clearFocus(force = true)
+                        },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            cancelLabel, style = cancelStyle, maxLines = 1,
+                        )
+                    }
+                }
+            }
+        },
+    ) { measurables, constraints ->
+        val buttonWidth = cancelWidth.coerceAtMost(152.dp).roundToPx().coerceAtMost(constraints.maxWidth)
+        val reserved = ((buttonWidth + 12.dp.roundToPx()) * transition.value).toInt()
+        val searchWidth = (constraints.maxWidth - reserved).coerceIn(0, constraints.maxWidth)
+        val search = measurables[0].measure(Constraints.fixed(searchWidth, constraints.maxHeight))
+        val button = measurables.getOrNull(1)?.measure(Constraints.fixed(buttonWidth, constraints.maxHeight))
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            search.placeRelative(0, 0)
+            button?.placeRelative(constraints.maxWidth - buttonWidth, 0)
+        }
+    }
 }
 
 @Composable

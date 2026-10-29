@@ -72,6 +72,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -81,8 +82,10 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.ui.layout.BottomNavigationBar
 import com.mi.onextbox.ui.layout.LiquidGlassBottomNavigationBar
@@ -91,9 +94,9 @@ import com.mi.onextbox.ui.layout.rememberChromeBlurBackdrop
 import com.mi.onextbox.ui.layout.rememberBottomBarStartupProgress
 import com.mi.onextbox.ui.platform.findActivity
 import com.mi.onextbox.ui.screens.FeatureMainRoute
-import com.mi.onextbox.ui.screens.ToolsMainRoute
+import com.mi.onextbox.ui.common.ScrollResetEffect
+import com.mi.onextbox.ui.common.rememberMainPageScrollState
 import com.mi.onextbox.ui.screens.FeatureLaunchOrigin
-import com.mi.onextbox.ui.screens.FeaturePageAuroraBackground
 import com.mi.onextbox.ui.screens.FeaturePageMode
 import com.mi.onextbox.ui.screens.FeatureSubRoute
 import com.mi.onextbox.ui.screens.FeatureSpotlightPage
@@ -255,6 +258,15 @@ private sealed interface RootRoute : NavKey {
     data object FeatureUpdates : RootRoute
 
     @Serializable
+    data object FeatureCoui : RootRoute
+
+    @Serializable
+    data object FeatureTools : RootRoute
+
+    @Serializable
+    data object FeatureMore : RootRoute
+
+    @Serializable
     data object FeatureDesktopLayout : RootRoute
 
     @Serializable
@@ -274,6 +286,12 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureSystemUiNative : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiBackGesture : RootRoute
+
+    @Serializable
+    data object FeatureSystemUiBackGestureArea : RootRoute
 
     @Serializable
     data object FeatureSystemUiVolume : RootRoute
@@ -397,6 +415,21 @@ private sealed interface RootRoute : NavKey {
     data object FeatureKeyboard : RootRoute
 
     @Serializable
+    data object FeaturePictorial : RootRoute
+
+    @Serializable
+    data object FeatureBrowser : RootRoute
+
+    @Serializable
+    data object FeatureWeather : RootRoute
+
+    @Serializable
+    data object FeaturePhotoPicker : RootRoute
+
+    @Serializable
+    data object FeatureEngineerMode : RootRoute
+
+    @Serializable
     data object FeatureQuickAppServices : RootRoute
 
     @Serializable
@@ -465,6 +498,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureTranslation : RootRoute
 
     @Serializable
+    data object FeatureSmartSidebar : RootRoute
+
+    @Serializable
     data object FeatureAppInstaller : RootRoute
 
     @Serializable
@@ -482,6 +518,9 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object DeveloperOptions : RootRoute
+
+    @Serializable
+    data object DeviceDetails : RootRoute
 
     @Serializable
     data object SoftwareUpdate : RootRoute
@@ -502,6 +541,9 @@ private sealed interface RootRoute : NavKey {
 private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.EnabledFeatures -> RootRoute.FeatureEnabledFeatures
     FeaturePageMode.Updates -> RootRoute.FeatureUpdates
+    FeaturePageMode.Coui -> RootRoute.FeatureCoui
+    FeaturePageMode.Tools -> RootRoute.FeatureTools
+    FeaturePageMode.More -> RootRoute.FeatureMore
     FeaturePageMode.Main -> null
     FeaturePageMode.Desktop -> RootRoute.FeatureDesktop
     FeaturePageMode.DesktopLayout -> RootRoute.FeatureDesktopLayout
@@ -511,6 +553,8 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.DesktopPages -> RootRoute.FeatureDesktopPages
     FeaturePageMode.SystemUi -> RootRoute.FeatureSystemUi
     FeaturePageMode.SystemUiNative -> RootRoute.FeatureSystemUiNative
+    FeaturePageMode.SystemUiBackGesture -> RootRoute.FeatureSystemUiBackGesture
+    FeaturePageMode.SystemUiBackGestureArea -> RootRoute.FeatureSystemUiBackGestureArea
     FeaturePageMode.SystemUiVolume -> RootRoute.FeatureSystemUiVolume
     FeaturePageMode.SystemUiDynamicColor -> RootRoute.FeatureSystemUiDynamicColor
     FeaturePageMode.SystemUiClock -> RootRoute.FeatureSystemUiClock
@@ -551,6 +595,11 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.OShare -> RootRoute.FeatureOShare
     FeaturePageMode.SoftwareUpdate -> RootRoute.FeatureSoftwareUpdate
     FeaturePageMode.Keyboard -> RootRoute.FeatureKeyboard
+    FeaturePageMode.Browser -> RootRoute.FeatureBrowser
+    FeaturePageMode.Weather -> RootRoute.FeatureWeather
+    FeaturePageMode.PhotoPicker -> RootRoute.FeaturePhotoPicker
+    FeaturePageMode.EngineerMode -> RootRoute.FeatureEngineerMode
+    FeaturePageMode.Pictorial -> RootRoute.FeaturePictorial
     FeaturePageMode.QuickAppServices -> RootRoute.FeatureQuickAppServices
     FeaturePageMode.FileManager -> RootRoute.FeatureFileManager
     FeaturePageMode.GoogleMessages -> RootRoute.FeatureGoogleMessages
@@ -573,6 +622,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.ScreenRecording -> RootRoute.FeatureScreenRecording
     FeaturePageMode.Camera -> RootRoute.FeatureCamera
     FeaturePageMode.Translation -> RootRoute.FeatureTranslation
+    FeaturePageMode.SmartSidebar -> RootRoute.FeatureSmartSidebar
     FeaturePageMode.AppInstaller -> RootRoute.FeatureAppInstaller
     FeaturePageMode.PackageInstaller -> RootRoute.FeaturePackageInstaller
     FeaturePageMode.Assistant -> RootRoute.FeatureAssistant
@@ -604,6 +654,8 @@ private data class RootUiState(
     val showFpsMonitor: Boolean,
     val liquidGlassBottomBarEnabled: Boolean,
     val bottomBarHideLabels: Boolean,
+    val mainPageSwipeEnabled: Boolean,
+    val subPageSwipeEnabled: Boolean,
     val appLanguageTag: String,
     val appThemeMode: AppThemeMode,
     val appUiStyle: AppUiStyle,
@@ -656,6 +708,8 @@ private data class RootActions(
     val onShowFpsMonitorChange: (Boolean) -> Unit,
     val onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
     val onBottomBarHideLabelsChange: (Boolean) -> Unit,
+    val onMainPageSwipeEnabledChange: (Boolean) -> Unit,
+    val onSubPageSwipeEnabledChange: (Boolean) -> Unit,
     val onAppLanguageChange: (String) -> Unit,
     val onAppThemeModeChange: (AppThemeMode) -> Unit,
     val onAppUiStyleChange: (AppUiStyle) -> Unit,
@@ -914,7 +968,11 @@ private fun RootAboutEntry(pageMode: AboutPageMode) {
         liquidGlassBottomBarEnabled = ui.liquidGlassBottomBarEnabled,
         onLiquidGlassBottomBarEnabledChange = actions.onLiquidGlassBottomBarEnabledChange,
         bottomBarHideLabels = ui.bottomBarHideLabels,
+        mainPageSwipeEnabled = ui.mainPageSwipeEnabled,
+        subPageSwipeEnabled = ui.subPageSwipeEnabled,
         onBottomBarHideLabelsChange = actions.onBottomBarHideLabelsChange,
+        onMainPageSwipeEnabledChange = actions.onMainPageSwipeEnabledChange,
+        onSubPageSwipeEnabledChange = actions.onSubPageSwipeEnabledChange,
         appLanguageTag = ui.appLanguageTag,
         onAppLanguageChange = actions.onAppLanguageChange,
         appThemeMode = ui.appThemeMode,
@@ -957,7 +1015,11 @@ fun Root(
     liquidGlassBottomBarEnabled: Boolean,
     onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
     bottomBarHideLabels: Boolean,
+    mainPageSwipeEnabled: Boolean,
+    subPageSwipeEnabled: Boolean,
     onBottomBarHideLabelsChange: (Boolean) -> Unit,
+    onMainPageSwipeEnabledChange: (Boolean) -> Unit,
+    onSubPageSwipeEnabledChange: (Boolean) -> Unit,
     appLanguageTag: String,
     onAppLanguageChange: (String) -> Unit,
     appThemeMode: AppThemeMode,
@@ -1067,6 +1129,7 @@ fun Root(
         ) {
             AppUiStyleAppTheme(style = appUiStyle, mode = appThemeMode, keyColor = appThemeKeyColor,
                 paletteStyle = appThemePaletteStyle, colorSpec = appThemeColorSpec) {
+        val (backgroundStyle, _) = com.mi.onextbox.ui.screens.rememberFeatureBackgroundSelection()
         val colors = COUITheme.colorScheme
         val blurBackdrop = rememberChromeBlurBackdrop(blurEffectEnabled)
         val liquidBottomBarSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
@@ -1092,10 +1155,9 @@ fun Root(
         val hapticClick = rememberHapticClick()
         val featureSpotlight = remember { FeatureSpotlightState() }
         val visibleTabs = bottomTabs
-        // An activity restored from the former four-tab layout may still hold tab 4.
-        // Move that selection to Features, where Refresh Rate now lives.
+        // Keep stable tab IDs; retired Tools/Refresh Rate selections return to Features.
         val selectedPagerIndex = visibleTabs.indexOfFirst {
-            it.screenIndex == if (currentTab == 4) 1 else currentTab
+            it.screenIndex == if (currentTab == 2 || currentTab == 4) 1 else currentTab
         }.coerceAtLeast(0)
         val pagerState = rememberPagerState(
             initialPage = selectedPagerIndex,
@@ -1104,6 +1166,7 @@ fun Root(
         val mainPagerState = rememberRootMainPagerState(pagerState)
         LaunchedEffect(mainPagerState.pagerState.currentPage) {
             mainPagerState.syncPage()
+            if (pagerState.isScrollInProgress && !mainPagerState.isNavigating) onTabChange(visibleTabs[pagerState.currentPage].screenIndex)
         }
         LaunchedEffect(selectedPagerIndex) {
             if (mainPagerState.selectedPage != selectedPagerIndex) {
@@ -1111,7 +1174,7 @@ fun Root(
             }
         }
         LaunchedEffect(currentTab) {
-            if (currentTab == 4) onTabChange(1)
+            if (currentTab == 2 || currentTab == 4) onTabChange(1)
         }
         val selectedIndex = mainPagerState.selectedPage
             .coerceIn(0, (visibleTabs.size - 1).coerceAtLeast(0))
@@ -1123,6 +1186,9 @@ fun Root(
                     subclass(RootRoute.FeatureDesktop::class)
                     subclass(RootRoute.FeatureEnabledFeatures::class)
                     subclass(RootRoute.FeatureUpdates::class)
+                    subclass(RootRoute.FeatureCoui::class)
+                    subclass(RootRoute.FeatureTools::class)
+                    subclass(RootRoute.FeatureMore::class)
                     subclass(RootRoute.FeatureDesktopLayout::class)
                     subclass(RootRoute.FeatureDesktopIcons::class)
                     subclass(RootRoute.FeatureDesktopRecent::class)
@@ -1130,6 +1196,8 @@ fun Root(
                     subclass(RootRoute.FeatureDesktopPages::class)
                     subclass(RootRoute.FeatureSystemUi::class)
                     subclass(RootRoute.FeatureSystemUiNative::class)
+                    subclass(RootRoute.FeatureSystemUiBackGesture::class)
+                    subclass(RootRoute.FeatureSystemUiBackGestureArea::class)
                     subclass(RootRoute.FeatureSystemUiVolume::class)
                     subclass(RootRoute.FeatureSystemUiDynamicColor::class)
                     subclass(RootRoute.FeatureSystemUiClock::class)
@@ -1170,6 +1238,11 @@ fun Root(
                     subclass(RootRoute.FeatureOShare::class)
                     subclass(RootRoute.FeatureSoftwareUpdate::class)
                     subclass(RootRoute.FeatureKeyboard::class)
+                    subclass(RootRoute.FeaturePictorial::class)
+                    subclass(RootRoute.FeatureBrowser::class)
+                    subclass(RootRoute.FeatureWeather::class)
+                    subclass(RootRoute.FeaturePhotoPicker::class)
+                    subclass(RootRoute.FeatureEngineerMode::class)
                     subclass(RootRoute.FeatureQuickAppServices::class)
                     subclass(RootRoute.FeatureFileManager::class)
                     subclass(RootRoute.FeatureGoogleMessages::class)
@@ -1193,12 +1266,14 @@ fun Root(
                     subclass(RootRoute.FeatureScreenRecording::class)
                     subclass(RootRoute.FeatureCamera::class)
                     subclass(RootRoute.FeatureTranslation::class)
+                    subclass(RootRoute.FeatureSmartSidebar::class)
                     subclass(RootRoute.FeatureAppInstaller::class)
                     subclass(RootRoute.FeaturePackageInstaller::class)
                     subclass(RootRoute.FeatureAssistant::class)
                     subclass(RootRoute.AppSettings::class)
                     subclass(RootRoute.Logs::class)
                     subclass(RootRoute.DeveloperOptions::class)
+                    subclass(RootRoute.DeviceDetails::class)
                     subclass(RootRoute.SoftwareUpdate::class)
                     subclass(RootRoute.SoftwareUpdateSettings::class)
                     subclass(RootRoute.SoftwareUpdateReleaseNotes::class)
@@ -1248,7 +1323,16 @@ fun Root(
         var featureRouteReadySession by remember { mutableStateOf<FeatureLaunchSession?>(null) }
         val featureLauncherOrigins = remember { mutableStateMapOf<FeaturePageMode, FeatureLaunchOrigin>() }
         var featureLauncherGridPosition by remember { mutableStateOf<Offset?>(null) }
-        val featureLauncherScrollState = rememberScrollState()
+        // Main-page content and title offsets outlive both pager items and detail navigation.
+        val homePageScroll = rememberMainPageScrollState()
+        val featurePageScroll = rememberMainPageScrollState()
+        val aboutPageScroll = rememberMainPageScrollState()
+        val featureLauncherScrollState = featurePageScroll.content
+        ScrollResetEffect(mainPagerState.scrollResetGeneration) {
+            homePageScroll.reset()
+            featurePageScroll.reset()
+            aboutPageScroll.reset()
+        }
         var suppressRootTransition by remember { mutableStateOf(false) }
         val movableFeatureEntries = remember {
             FeaturePageMode.entries.associateWith { mode ->
@@ -1264,29 +1348,16 @@ fun Root(
         val softwareUpdateState = rememberSoftwareUpdateUiState(aboutAutoCheckUpdateRequest)
         val currentRootRoute = navigator.current() as? RootRoute ?: RootRoute.Main
         val featurePagerIndex = visibleTabs.indexOfFirst { it.screenIndex == 1 }
-        var featurePageDynamicBackgroundActive by remember(featurePagerIndex) {
-            mutableStateOf(featurePagerIndex >= 0 && selectedPagerIndex == featurePagerIndex)
-        }
-        LaunchedEffect(
-            selectedPagerIndex,
-            mainPagerState.isNavigating,
-            featurePagerIndex,
-        ) {
-            featurePageDynamicBackgroundActive = when {
-                featurePagerIndex < 0 -> false
-                selectedPagerIndex == featurePagerIndex -> true
-                mainPagerState.isNavigating -> featurePageDynamicBackgroundActive
-                else -> false
+        val featurePageDynamicBackgroundActive by remember(pagerState, featurePagerIndex) {
+            derivedStateOf {
+                featurePagerIndex >= 0 && abs(
+                    featurePagerIndex - pagerState.currentPage - pagerState.currentPageOffsetFraction,
+                ) < 1f
             }
         }
-        val featurePageIsDark =
-            appThemeMode == AppThemeMode.Dark ||
-                (appThemeMode == AppThemeMode.System && systemInDarkTheme)
-        val featurePageAuroraVisible =
-            featurePageNewStyleEnabled &&
-                !appThemeMode.isMonet &&
-                featurePageDynamicBackgroundActive
-        val featurePageDynamicBackgroundVisible = featurePageAuroraVisible
+        val pagerLayoutDirection = LocalLayoutDirection.current
+        val featurePageIsDark = colors.surface.luminance() < .5f
+        val featurePageDynamicBackgroundVisible = backgroundStyle != 0 && featurePageDynamicBackgroundActive
         var bottomNavigationHeightPx by remember { mutableIntStateOf(0) }
         val density = LocalDensity.current
         val bottomNavigationHeight = with(density) {
@@ -1615,8 +1686,8 @@ fun Root(
             val route = mode.toRootRoute() ?: return
             if (featureLaunchAnimation != null) return
             if (navigator.current() == route) return
-            if (mode.isNestedPage) {
-                // Nested feature pages must use NavDisplay for both directions.
+            if (mode.isNestedPage || featureLaunchSession != null) {
+                // Feature-to-feature navigation must use NavDisplay for both directions.
                 // Park the launcher-style leash until the parent itself goes back to
                 // the feature grid; otherwise it covers the nested transition.
                 parkedFeatureLaunchSession = featureLaunchSession ?: parkedFeatureLaunchSession
@@ -1624,7 +1695,11 @@ fun Root(
                 featureRouteReadySession = null
                 suppressRootTransition = false
             }
-            navigator.push(route)
+            if (route in rootBackStack) {
+                navigator.popUntil { it == route }
+            } else {
+                navigator.push(route)
+            }
         }
 
         fun openAppErrorDetail(id: Long) {
@@ -2051,6 +2126,8 @@ fun Root(
             showFpsMonitor = showFpsMonitor,
             liquidGlassBottomBarEnabled = liquidGlassBottomBarEnabled && liquidBackdrop != null,
             bottomBarHideLabels = bottomBarHideLabels,
+            mainPageSwipeEnabled = mainPageSwipeEnabled,
+            subPageSwipeEnabled = subPageSwipeEnabled,
             appLanguageTag = appLanguageTag,
             appThemeMode = appThemeMode,
             appUiStyle = appUiStyle,
@@ -2104,6 +2181,8 @@ fun Root(
             onShowFpsMonitorChange = onShowFpsMonitorChange,
             onLiquidGlassBottomBarEnabledChange = onLiquidGlassBottomBarEnabledChange,
             onBottomBarHideLabelsChange = onBottomBarHideLabelsChange,
+            onMainPageSwipeEnabledChange = onMainPageSwipeEnabledChange,
+            onSubPageSwipeEnabledChange = onSubPageSwipeEnabledChange,
             onAppLanguageChange = onAppLanguageChange,
             onAppThemeModeChange = onAppThemeModeChange,
             onAppUiStyleChange = onAppUiStyleChange,
@@ -2200,7 +2279,7 @@ fun Root(
                         val actions = LocalRootActions.current
                         val mainPagerState = LocalMainPagerState.current
                         val mainSceneContainerColor = if (
-                            ui.featurePageNewStyleEnabled && ui.featurePageDynamicBackgroundActive
+                            ui.featurePageDynamicBackgroundActive
                         ) {
                             Color.Transparent
                         } else run {
@@ -2221,7 +2300,7 @@ fun Root(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 HorizontalPager(
                                     state = mainPagerState.pagerState,
-                                    userScrollEnabled = false,
+                                    userScrollEnabled = ui.mainPageSwipeEnabled,
                                     verticalAlignment = Alignment.Top,
                                     modifier = Modifier.fillMaxSize(),
                                 ) { pageIndex ->
@@ -2232,10 +2311,8 @@ fun Root(
                                             subPageBottomExtension = ui.bottomNavigationHeight,
                                             blurBackdrop = ui.blurBackdrop,
                                             newStyleEnabled = ui.featurePageNewStyleEnabled,
-                                            scrollResetKey = mainPagerState.scrollResetGeneration,
-                                            externalScrollState = if (
-                                                ui.featurePageNewStyleEnabled
-                                            ) featureLauncherScrollState else null,
+                                            externalScrollState = featureLauncherScrollState,
+                                            externalTopAppBarState = featurePageScroll.appBar,
                                             onGridPositionChanged = { position ->
                                                 val transformActive = featureLaunchAnimation != null ||
                                                     featurePredictiveBackMotion != null
@@ -2282,18 +2359,12 @@ fun Root(
                                                 }
                                             },
                                         )
-                                        2 -> ToolsMainRoute(
-                                            modifier = Modifier.fillMaxSize(),
-                                            bottomContentPadding = ui.bottomNavigationHeight,
-                                            blurBackdrop = ui.blurBackdrop,
-                                            scrollResetKey = mainPagerState.scrollResetGeneration,
-                                            onOpen = actions.openFeatureSubPage,
-                                        )
                                         3 -> AboutMainRoute(
                                             modifier = Modifier.fillMaxSize(),
                                             blurBackdrop = ui.blurBackdrop,
                                             bottomContentPadding = ui.bottomNavigationHeight,
-                                            scrollResetKey = mainPagerState.scrollResetGeneration,
+                                            externalScrollState = aboutPageScroll.content,
+                                            externalTopAppBarState = aboutPageScroll.appBar,
                                             onOpenAppSettings = { actions.openAboutSubPage(AboutPageMode.AppSettings) },
                                             onOpenSoftwareUpdate = { actions.openAboutSubPage(AboutPageMode.Update) },
                                             onOpenLogs = { actions.openAboutSubPage(AboutPageMode.Logs) },
@@ -2313,8 +2384,10 @@ fun Root(
                                                 actions.openAboutSubPage(AboutPageMode.Update)
                                                 actions.requestAboutAutoCheckUpdate()
                                             },
+                                            onOpenDeviceDetails = { navigator.push(RootRoute.DeviceDetails) },
                                             blurBackdrop = ui.blurBackdrop,
-                                            scrollResetKey = mainPagerState.scrollResetGeneration,
+                                            externalScrollState = homePageScroll.content,
+                                            externalTopAppBarState = homePageScroll.appBar,
                                         )
                                     }
                                 }
@@ -2330,6 +2403,15 @@ fun Root(
             }
             entry<RootRoute.FeatureUpdates> {
                 featureEntryContent(FeaturePageMode.Updates)
+            }
+            entry<RootRoute.FeatureCoui> {
+                featureEntryContent(FeaturePageMode.Coui)
+            }
+            entry<RootRoute.FeatureTools> {
+                featureEntryContent(FeaturePageMode.Tools)
+            }
+            entry<RootRoute.FeatureMore> {
+                featureEntryContent(FeaturePageMode.More)
             }
             entry<RootRoute.FeatureDesktopLayout> {
                 featureEntryContent(FeaturePageMode.DesktopLayout)
@@ -2351,6 +2433,12 @@ fun Root(
             }
             entry<RootRoute.FeatureSystemUiNative> {
                 featureEntryContent(FeaturePageMode.SystemUiNative)
+            }
+            entry<RootRoute.FeatureSystemUiBackGesture> {
+                featureEntryContent(FeaturePageMode.SystemUiBackGesture)
+            }
+            entry<RootRoute.FeatureSystemUiBackGestureArea> {
+                featureEntryContent(FeaturePageMode.SystemUiBackGestureArea)
             }
             entry<RootRoute.FeatureSystemUiVolume> {
                 featureEntryContent(FeaturePageMode.SystemUiVolume)
@@ -2469,6 +2557,11 @@ fun Root(
             entry<RootRoute.FeatureSoftwareUpdate> {
                 featureEntryContent(FeaturePageMode.SoftwareUpdate)
             }
+            entry<RootRoute.FeatureBrowser> { featureEntryContent(FeaturePageMode.Browser) }
+            entry<RootRoute.FeatureWeather> { featureEntryContent(FeaturePageMode.Weather) }
+            entry<RootRoute.FeaturePhotoPicker> { featureEntryContent(FeaturePageMode.PhotoPicker) }
+            entry<RootRoute.FeatureEngineerMode> { featureEntryContent(FeaturePageMode.EngineerMode) }
+            entry<RootRoute.FeaturePictorial> { featureEntryContent(FeaturePageMode.Pictorial) }
             entry<RootRoute.FeatureKeyboard> {
                 featureEntryContent(FeaturePageMode.Keyboard)
             }
@@ -2549,6 +2642,9 @@ fun Root(
             entry<RootRoute.FeatureTranslation> {
                 featureEntryContent(FeaturePageMode.Translation)
             }
+            entry<RootRoute.FeatureSmartSidebar> {
+                featureEntryContent(FeaturePageMode.SmartSidebar)
+            }
             entry<RootRoute.FeatureAppInstaller> {
                 featureEntryContent(FeaturePageMode.AppInstaller)
             }
@@ -2561,6 +2657,17 @@ fun Root(
             entry<RootRoute.AppSettings> { RootAboutEntry(AboutPageMode.AppSettings) }
             entry<RootRoute.Logs> { RootAboutEntry(AboutPageMode.Logs) }
             entry<RootRoute.DeveloperOptions> { RootAboutEntry(AboutPageMode.DeveloperOptions) }
+            entry<RootRoute.DeviceDetails> {
+                val ui = LocalRootUiState.current
+                val actions = LocalRootActions.current
+                com.mi.onextbox.ui.settings.SettingsPageSurface(
+                    title = "设备详细信息", modifier = Modifier.fillMaxSize(),
+                    showBack = true, onBack = actions.popRootRoute,
+                    blurBackdrop = rememberChromeBlurBackdrop(ui.blurEffectEnabled),
+                ) {
+                    com.mi.onextbox.ui.home.HomeHardwareInfo(rootGranted = ui.rootGranted, refreshKey = 0)
+                }
+            }
             entry<RootRoute.SoftwareUpdate> { RootAboutEntry(AboutPageMode.Update) }
             entry<RootRoute.SoftwareUpdateSettings> { RootAboutEntry(AboutPageMode.UpdateSettings) }
             entry<RootRoute.SoftwareUpdateReleaseNotes> {
@@ -2605,6 +2712,7 @@ fun Root(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .swipeBack(subPageSwipeEnabled && (navigator.current() != RootRoute.Main || featurePredictiveBackMotion != null) && featureLaunchAnimation == null)
                     .onGloballyPositioned { coordinates ->
                         rootViewportBounds = coordinates.boundsInWindow()
                     },
@@ -2630,12 +2738,23 @@ fun Root(
                             .fillMaxSize()
                             .background(colors.surface),
                     ) {
-                        if (featurePageAuroraVisible) {
-                            FeaturePageAuroraBackground(
-                                isDarkTheme = featurePageIsDark,
-                                surfaceColor = colors.surface,
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                        if (featurePageDynamicBackgroundVisible) {
+                            Box(Modifier.matchParentSize().clipToBounds()) {
+                                com.mi.onextbox.ui.screens.FeatureBackgroundEffect(
+                                    style = backgroundStyle,
+                                    dark = featurePageIsDark,
+                                    surface = colors.surface,
+                                    accent = colors.primary,
+                                    modifier = Modifier.fillMaxSize().graphicsLayer {
+                                        val pageExtent = pagerState.layoutInfo.let { it.pageSize + it.pageSpacing }
+                                        val pageOffset = featurePagerIndex - pagerState.currentPage -
+                                            pagerState.currentPageOffsetFraction
+                                        translationX = pageOffset * pageExtent *
+                                            if (pagerLayoutDirection == LayoutDirection.Rtl) -1f else 1f
+                                        clip = true
+                                    },
+                                )
+                            }
                         }
                         RootNavDisplay(
                             entries = rootEntries,
@@ -2654,6 +2773,10 @@ fun Root(
                                 ),
                             onBack = { popRootRoute() },
                             animate = !suppressRootTransition,
+                            handleBack = featureLaunchAnimation == null && featurePredictiveBackMotion == null &&
+                                !(featurePageNewStyleEnabled &&
+                                    (featureLaunchSession ?: parkedFeatureLaunchSession)?.mode?.toRootRoute()
+                                        ?.let { it == navigator.current() } == true),
                             transitionEffects = rootTransitionEffects,
                         )
                     }

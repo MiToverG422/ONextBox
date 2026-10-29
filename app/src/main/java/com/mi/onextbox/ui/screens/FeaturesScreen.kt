@@ -95,8 +95,11 @@ import com.mi.onextbox.ui.common.CouiConfirmDialog
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.restartScopePackages
 import com.mi.onextbox.ui.settings.SettingsCardRow
+import com.mi.onextbox.ui.settings.SettingsDivider
+import com.mi.onextbox.ui.settings.SettingsGroup
 import com.mi.onextbox.ui.settings.SettingsListGroup
 import com.mi.onextbox.ui.settings.SettingsPageSurface
+import io.github.suqi8.coui.kmp.basic.TopAppBarState
 import io.github.suqi8.coui.kmp.basic.Checkbox
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Text
@@ -114,6 +117,9 @@ import kotlin.math.roundToInt
 
 enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Main,
+    Coui(true),
+    Tools(true),
+    More(true),
     Desktop,
     DesktopLayout(true),
     DesktopIcons(true),
@@ -122,6 +128,8 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     DesktopPages(true),
     SystemUi,
     SystemUiNative(true),
+    SystemUiBackGesture(true),
+    SystemUiBackGestureArea(true),
     SystemUiDynamicColor(true),
     SystemUiStatusBar(true),
     SystemUiStatusBarLayout(true),
@@ -162,6 +170,11 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     OShare,
     SoftwareUpdate,
     Keyboard,
+    Pictorial,
+    Browser,
+    Weather,
+    PhotoPicker,
+    EngineerMode,
     QuickAppServices,
     FileManager,
     GoogleMessages,
@@ -186,6 +199,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     EnabledFeatures(true),
     Updates(true),
     Translation,
+    SmartSidebar,
     AppInstaller,
     PackageInstaller,
     Camera,
@@ -219,6 +233,7 @@ fun FeatureMainRoute(
     externalIconScales: Map<FeaturePageMode, () -> Float> = emptyMap(),
     scrollResetKey: Int? = null,
     externalScrollState: ScrollState? = null,
+    externalTopAppBarState: TopAppBarState? = null,
     onGridPositionChanged: (Offset) -> Unit = {},
     onLaunchOriginChanged: (FeaturePageMode, FeatureLaunchOrigin) -> Unit = { _, _ -> },
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
@@ -236,6 +251,7 @@ fun FeatureMainRoute(
             bottomContentPadding = subPageBottomExtension,
             scrollResetKey = scrollResetKey,
             externalScrollState = externalScrollState,
+            externalTopAppBarState = externalTopAppBarState,
             actions = {
                 FeatureUpdatesAction { onOpen(FeaturePageMode.Updates, null) }
                 EnabledFeaturesAction { onOpen(FeaturePageMode.EnabledFeatures, null) }
@@ -246,6 +262,7 @@ fun FeatureMainRoute(
                 FeatureSearchResults(query = searchQuery, onOpen = { onOpen(it, null) })
             } else {
                 ColorOs16FeatureEntry { onOpen(it, null) }
+                FeatureAuxiliaryEntries { onOpen(it, null) }
             }
         }
         return
@@ -265,16 +282,11 @@ fun FeatureMainRoute(
         bottomContentPadding = subPageBottomExtension,
         scrollResetKey = scrollResetKey,
         externalScrollState = externalScrollState,
+        externalTopAppBarState = externalTopAppBarState,
         // Keep the scroll modifier/focus tree stable when the editor first receives IME focus.
         contentScrollable = true,
         scrollEntranceEnabled = !newStyleEnabled,
-        backgroundContent = if (newStyleEnabled) {
-            // The video is owned by Root's stable base scene. Keeping an empty background slot
-            // makes this page transparent without creating a second TextureView/MediaPlayer.
-            {}
-        } else {
-            null
-        },
+        backgroundContent = {},
         actions = {
             FeatureUpdatesAction { onOpen(FeaturePageMode.Updates, null) }
             EnabledFeaturesAction { onOpen(FeaturePageMode.EnabledFeatures, null) }
@@ -297,6 +309,8 @@ fun FeatureMainRoute(
                 onLaunchOriginChanged = onLaunchOriginChanged,
                 onOpen = onOpen,
             )
+            if (newStyleEnabled) Spacer(Modifier.height(12.dp))
+            FeatureAuxiliaryEntries { onOpen(it, null) }
         }
     }
 
@@ -447,7 +461,7 @@ fun FeatureSubRoute(
                     onClick = { pushMonitorRefresh++ },
                 )
             }
-            if (pageMode != FeaturePageMode.EsimDiagnostics && pageMode != FeaturePageMode.TouchSampling && pageMode != FeaturePageMode.SystemMessages) {
+            if (pageMode != FeaturePageMode.Coui && pageMode != FeaturePageMode.Tools && pageMode != FeaturePageMode.More && pageMode != FeaturePageMode.EsimDiagnostics && pageMode != FeaturePageMode.TouchSampling && pageMode != FeaturePageMode.SystemMessages) {
                 FeatureRestartActionButton(
                     contentDescription = stringResource(R.string.feature_restart_scope_confirm_action),
                     onClick = {
@@ -539,6 +553,7 @@ fun FeatureSubRoute(
                 onOpenSubPage = onOpenSubPage,
                 pushMonitorRefresh = pushMonitorRefresh,
             )
+            FeatureRecommendedLinks(pageMode, onOpenSubPage)
         }
     }
 
@@ -566,6 +581,9 @@ private fun Modifier.extendPastBottom(extra: Dp): Modifier = layout { measurable
 
 @Composable
 internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
+    FeaturePageMode.Coui -> stringResource(R.string.coui_page_title)
+    FeaturePageMode.Tools -> stringResource(R.string.tab_tools)
+    FeaturePageMode.More -> stringResource(R.string.tools_more_title)
     FeaturePageMode.EnabledFeatures -> stringResource(R.string.enabled_features_title)
     FeaturePageMode.Updates -> stringResource(R.string.feature_updates_title)
     FeaturePageMode.Main -> stringResource(R.string.tab_features)
@@ -577,6 +595,8 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.DesktopPages -> stringResource(R.string.desktop_category_pages)
     FeaturePageMode.SystemUi -> stringResource(R.string.section_lsp)
     FeaturePageMode.SystemUiNative -> stringResource(R.string.feature_group_native)
+    FeaturePageMode.SystemUiBackGesture -> stringResource(R.string.back_gesture_title)
+    FeaturePageMode.SystemUiBackGestureArea -> stringResource(R.string.back_gesture_area)
     FeaturePageMode.SystemUiVolume -> stringResource(R.string.feature_group_volume)
     FeaturePageMode.SystemUiDynamicColor -> stringResource(R.string.feature_group_dynamic_color)
     FeaturePageMode.SystemUiClock -> stringResource(R.string.clock_page_title)
@@ -617,6 +637,11 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.OShare -> stringResource(R.string.oshare_title)
     FeaturePageMode.SoftwareUpdate -> stringResource(R.string.ota_page_title)
     FeaturePageMode.Keyboard -> stringResource(R.string.keyboard_page_title)
+    FeaturePageMode.Browser -> stringResource(R.string.browser_page_title)
+    FeaturePageMode.Weather -> stringResource(R.string.weather_page_title)
+    FeaturePageMode.PhotoPicker -> stringResource(R.string.photopicker_page_title)
+    FeaturePageMode.EngineerMode -> stringResource(R.string.engineer_page_title)
+    FeaturePageMode.Pictorial -> stringResource(R.string.pictorial_page_title)
     FeaturePageMode.QuickAppServices -> stringResource(R.string.feature_quick_app_services_title)
     FeaturePageMode.FileManager -> stringResource(R.string.feature_file_manager_title)
     FeaturePageMode.GoogleMessages -> stringResource(R.string.feature_google_messages_title)
@@ -639,12 +664,14 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.ScreenRecording -> stringResource(R.string.feature_screen_recording_title)
     FeaturePageMode.Camera -> stringResource(R.string.camera_page_title)
     FeaturePageMode.Translation -> stringResource(R.string.feature_translation_title)
+    FeaturePageMode.SmartSidebar -> stringResource(R.string.sidebar_page_title)
     FeaturePageMode.AppInstaller -> stringResource(R.string.installer_cleanup_title)
     FeaturePageMode.PackageInstaller -> stringResource(R.string.package_installer_title)
     FeaturePageMode.Assistant -> stringResource(R.string.feature_assistant_title)
 }
 
 internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (mode) {
+    FeaturePageMode.Coui -> com.mi.onextbox.lsp.CouiDividerSettings.recommendedPackages.toList()
     FeaturePageMode.Desktop,
     FeaturePageMode.DesktopLayout,
     FeaturePageMode.DesktopRecent,
@@ -653,7 +680,9 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.DesktopPages -> listOf(
         "com.android.launcher",
     )
+    FeaturePageMode.SystemUiBackGesture -> listOf("com.android.systemui", "com.android.launcher")
     FeaturePageMode.SystemUi,
+    FeaturePageMode.SystemUiBackGestureArea,
     FeaturePageMode.SystemUiNative,
     FeaturePageMode.SystemUiVolume,
     FeaturePageMode.SystemUiDynamicColor,
@@ -679,6 +708,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.ScreenRecording -> listOf("android", "system", "com.android.systemui", "com.oplus.screenrecorder")
     FeaturePageMode.Camera -> listOf(com.mi.onextbox.lsp.CameraGallerySettings.PACKAGE_NAME)
     FeaturePageMode.Translation -> listOf(com.mi.onextbox.lsp.ScreenTranslationSettings.PACKAGE_NAME)
+    FeaturePageMode.SmartSidebar -> listOf(com.mi.onextbox.lsp.SmartSidebarSettings.PACKAGE_NAME)
     FeaturePageMode.AppInstaller -> listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.APP_DETAIL)
     FeaturePageMode.PackageInstaller -> listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.PACKAGE_INSTALLER)
     FeaturePageMode.NotificationRemoval -> listOf("android", "system", "com.android.systemui")
@@ -698,6 +728,11 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.GameAssistant -> listOf(GameAssistantSettings.PACKAGE_NAME)
     FeaturePageMode.OShare -> listOf(OShareSettings.PACKAGE_NAME)
     FeaturePageMode.SoftwareUpdate -> listOf(SoftwareUpdateSettings.PACKAGE_NAME, SoftwareUpdateSettings.SYSTEM_FILES_PACKAGE_NAME)
+    FeaturePageMode.Browser -> listOf(com.mi.onextbox.lsp.BrowserSettings.PACKAGE_NAME)
+    FeaturePageMode.Weather -> listOf(com.mi.onextbox.lsp.SystemExtrasSettings.WEATHER)
+    FeaturePageMode.PhotoPicker -> listOf(com.mi.onextbox.lsp.SystemExtrasSettings.PICKER)
+    FeaturePageMode.EngineerMode -> listOf(com.mi.onextbox.lsp.SystemExtrasSettings.ENGINEER)
+    FeaturePageMode.Pictorial -> listOf("com.heytap.pictorial", "com.android.systemui")
     FeaturePageMode.Keyboard -> listOf("com.oplus.keyboard")
     FeaturePageMode.QuickAppServices -> listOf(
         "com.nearme.instant.platform", "com.android.launcher", "com.coloros.assistantscreen",
@@ -726,6 +761,8 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
         "com.google.android.googlequicksearchbox",
     )
     FeaturePageMode.EnabledFeatures,
+    FeaturePageMode.Tools,
+    FeaturePageMode.More,
     FeaturePageMode.Updates,
     FeaturePageMode.Main,
     // C17 flexible handles also live in system_server. Offer no misleading SystemUI-only restart.
@@ -930,11 +967,48 @@ private fun FeatureMainPage(
 }
 
 @Composable
+private fun FeatureAuxiliaryEntries(onOpen: (FeaturePageMode) -> Unit) {
+    SettingsGroup {
+        SettingsCardRow(
+            title = stringResource(R.string.coui_page_title),
+            summary = "",
+            showArrow = true,
+            hasDividerBelow = true,
+            onClick = { onOpen(FeaturePageMode.Coui) },
+        )
+        SettingsDivider()
+        SettingsCardRow(
+            title = stringResource(R.string.tab_tools),
+            summary = "",
+            showArrow = true,
+            hasDividerAbove = true,
+            hasDividerBelow = true,
+            onClick = { onOpen(FeaturePageMode.Tools) },
+        )
+        SettingsDivider()
+        SettingsCardRow(
+            title = stringResource(R.string.tools_more_title), summary = "", showArrow = true,
+            hasDividerAbove = true, onClick = { onOpen(FeaturePageMode.More) },
+        )
+    }
+}
+
+@Composable
 internal fun ToolsMainPage(onOpen: (FeaturePageMode) -> Unit) {
     val entries = remember { colorOs17ToolsMainEntries() }
     run {
         ClassicMainEntryList(entries = entries, onOpen = onOpen)
     }
+}
+
+@Composable
+internal fun MoreMainPage(onOpen: (FeaturePageMode) -> Unit) {
+    val entries = remember { listOf(FeatureMainEntry(
+        titleRes = R.string.feature_google_messages_title,
+        iconPackages = listOf("com.google.android.apps.messaging"),
+        pageMode = FeaturePageMode.GoogleMessages,
+    )) }
+    ClassicMainEntryList(entries = entries, onOpen = onOpen)
 }
 
 @Composable
@@ -1070,6 +1144,26 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         )
         add(
             FeatureMainEntry(
+                titleRes = R.string.browser_page_title,
+                iconPackages = listOf(com.mi.onextbox.lsp.BrowserSettings.PACKAGE_NAME),
+                pageMode = FeaturePageMode.Browser,
+            )
+        )
+        add(FeatureMainEntry(titleRes = R.string.weather_page_title,
+            iconPackages = listOf(com.mi.onextbox.lsp.SystemExtrasSettings.WEATHER), pageMode = FeaturePageMode.Weather))
+        add(FeatureMainEntry(titleRes = R.string.photopicker_page_title,
+            iconPackages = listOf(com.mi.onextbox.lsp.SystemExtrasSettings.PICKER), pageMode = FeaturePageMode.PhotoPicker))
+        add(FeatureMainEntry(titleRes = R.string.engineer_page_title,
+            iconPackages = listOf(com.mi.onextbox.lsp.SystemExtrasSettings.ENGINEER), pageMode = FeaturePageMode.EngineerMode))
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.pictorial_page_title,
+                iconPackages = listOf("com.heytap.pictorial"),
+                pageMode = FeaturePageMode.Pictorial,
+            )
+        )
+        add(
+            FeatureMainEntry(
                 titleRes = R.string.feature_wallpapers_title,
                 iconPackages = listOf("com.oplus.wallpapers"),
                 pageMode = FeaturePageMode.Wallpapers,
@@ -1124,6 +1218,13 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         )
         add(
             FeatureMainEntry(
+                titleRes = R.string.sidebar_page_title,
+                iconPackages = listOf(com.mi.onextbox.lsp.SmartSidebarSettings.PACKAGE_NAME),
+                pageMode = FeaturePageMode.SmartSidebar,
+            )
+        )
+        add(
+            FeatureMainEntry(
                 titleRes = R.string.installer_cleanup_title,
                 iconPackages = listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.APP_DETAIL),
                 pageMode = FeaturePageMode.AppInstaller,
@@ -1163,13 +1264,6 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
                 titleRes = R.string.feature_quick_app_services_title,
                 iconPackages = listOf("com.nearme.instant.platform"),
                 pageMode = FeaturePageMode.QuickAppServices,
-            )
-        )
-        add(
-            FeatureMainEntry(
-                titleRes = R.string.feature_google_messages_title,
-                iconPackages = listOf("com.google.android.apps.messaging"),
-                pageMode = FeaturePageMode.GoogleMessages,
             )
         )
         add(
@@ -1497,11 +1591,14 @@ private fun FeatureSubPage(
     pushMonitorRefresh: Int,
 ) {
     if (rememberSystemAdaptationVersion() == SystemAdaptationVersion.ColorOs16 &&
-        mode != FeaturePageMode.Aod && mode != FeaturePageMode.SystemMessages) {
+        mode != FeaturePageMode.Coui && mode != FeaturePageMode.Aod && mode != FeaturePageMode.SystemMessages) {
         ColorOs16Features(mode, onOpenSubPage)
         return
     }
     when (mode) {
+        FeaturePageMode.Coui -> CouiDividerSettingsGroup()
+        FeaturePageMode.Tools -> ToolsMainPage(onOpenSubPage)
+        FeaturePageMode.More -> MoreMainPage(onOpenSubPage)
         FeaturePageMode.Desktop -> DesktopCategoriesPage(onOpenSubPage)
         FeaturePageMode.DesktopLayout,
         FeaturePageMode.DesktopIcons,
@@ -1530,10 +1627,15 @@ private fun FeatureSubPage(
         FeaturePageMode.SystemUiSmallWindow -> SmallWindowFeaturesPage()
         FeaturePageMode.SystemUiLockScreen -> KeyguardInteractionSettings()
         FeaturePageMode.SystemUiNavigationBar -> NavigationBarFeaturesPage()
+        FeaturePageMode.SystemUiBackGesture, FeaturePageMode.SystemUiBackGestureArea -> BackGestureFeaturesPage(
+            areaPage = mode == FeaturePageMode.SystemUiBackGestureArea,
+            onOpenArea = { onOpenSubPage(FeaturePageMode.SystemUiBackGestureArea) },
+        )
         FeaturePageMode.Screenshot -> CaptureFeaturesPage(LspConfig.KeyguardFeature.AodScreenshot)
         FeaturePageMode.ScreenRecording -> CaptureFeaturesPage(LspConfig.KeyguardFeature.ScreenOffRecording)
         FeaturePageMode.Camera -> CameraFeaturesPage()
         FeaturePageMode.Translation -> TranslationFeaturesPage()
+        FeaturePageMode.SmartSidebar -> SmartSidebarFeaturesPage()
         FeaturePageMode.AppInstaller, FeaturePageMode.PackageInstaller -> InstallerCleanupPage(mode, onOpenSubPage)
         FeaturePageMode.SystemUiNative,
         FeaturePageMode.SystemUiVolume,
@@ -1599,6 +1701,11 @@ private fun FeatureSubPage(
         FeaturePageMode.OShare -> OShareFeaturesPage()
         FeaturePageMode.SoftwareUpdate -> SoftwareUpdateFeaturesPage()
         FeaturePageMode.Keyboard -> KeyboardFeaturesPage()
+        FeaturePageMode.Browser -> BrowserFeaturesPage()
+        FeaturePageMode.Weather -> SystemExtrasGroups(com.mi.onextbox.lsp.SystemExtrasSettings.WEATHER)
+        FeaturePageMode.PhotoPicker -> SystemExtrasGroups(com.mi.onextbox.lsp.SystemExtrasSettings.PICKER)
+        FeaturePageMode.EngineerMode -> SystemExtrasGroups(com.mi.onextbox.lsp.SystemExtrasSettings.ENGINEER)
+        FeaturePageMode.Pictorial -> KeyboardPictorialOptions(com.mi.onextbox.lsp.KeyboardPictorialSettings.pictorial)
         FeaturePageMode.QuickAppServices -> QuickAppServicesFeaturesPage()
         FeaturePageMode.FileManager -> FileManagerFeaturesPage()
         FeaturePageMode.GoogleMessages -> GoogleMessagesFeaturesPage()
@@ -1681,7 +1788,7 @@ private fun FeatureEntryRow(
 }
 
 @Composable
-private fun FeatureIcon(
+internal fun FeatureIcon(
     packageNames: List<String> = emptyList(),
     iconGlyph: ImageVector? = null,
     containerSize: Dp = 52.dp,

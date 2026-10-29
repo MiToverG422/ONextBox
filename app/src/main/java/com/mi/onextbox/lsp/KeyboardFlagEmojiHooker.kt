@@ -4,7 +4,8 @@ import android.view.View
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernMethodHook
-import dalvik.system.DexFile
+import com.mi.onextbox.lsp.compat.ModernHookRuntime
+import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -14,9 +15,8 @@ internal object KeyboardFlagEmojiHooker {
     private const val TAG = "ONextBox-KeyboardEmoji"
 
     fun hook(loader: ClassLoader, apkPath: String) {
-        val stateKey = "$TAG:targets@${System.identityHashCode(loader)}"
-        val saved = HotReloadLifecycle.restoredState(stateKey) as? Array<*>
-        if (!LspConfig.isKeyboardFlagEmojiEnabledXposed() && saved == null) return
+        val stateKey = "$TAG:dexkit-v2:targets@${System.identityHashCode(loader)}"
+        val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
         val hookKey = "$TAG@${System.identityHashCode(loader)}:flags"
         runCatching {
             val targets = saved ?: resolve(loader, apkPath)
@@ -29,57 +29,79 @@ internal object KeyboardFlagEmojiHooker {
                 targets[7] as Constructor<*>, targets[8] as Field,
                 targets[9] as Constructor<*>, targets[10] as Field,
             )
+            (targets[11] as Array<*>).filterIsInstance<Method>().forEach { target ->
+                runCatching { ModernHookRuntime.requireModule().deoptimize(target) }
+            }
             ModernHookRegistry.installCompat(hookKey, collector, object : ModernMethodHook() {
+                private var applied = false
+                private var warned = false
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     if (!LspConfig.isKeyboardFlagEmojiEnabledXposed()) return
-                    val owner = ownerField.get(param.thisObject) ?: return
-                    if (!category.declaringClass.isInstance(owner)) return
-                    val selected = flowValue.invoke(category.invoke(owner))
-                    if (!KeyboardFlagEmojiRules.shouldAugment(true, selected)) return
-                    models.supplement(param.args[0])?.let { param.args[0] = it }
+                    runCatching {
+                        val owner = ownerField.get(param.thisObject) ?: return
+                        if (!category.declaringClass.isInstance(owner)) return
+                        val selected = flowValue.invoke(category.invoke(owner))
+                        if (!KeyboardFlagEmojiRules.shouldAugment(true, selected)) return
+                        models.supplement(param.args[0])?.let {
+                            param.args[0] = it
+                            if (!applied) {
+                                applied = true
+                                HookLog.i(TAG, "Native flag emoji panel augmented")
+                            }
+                        }
+                    }.onFailure {
+                        if (!warned) {
+                            warned = true
+                            HookLog.w(TAG, "Flag emoji payload changed, stock data retained", it)
+                        }
+                    }
                 }
             })
             HotReloadLifecycle.register(stateKey, capture = { targets })
-            HookLog.i(TAG, "Native flag emoji panel hook installed")
+            HookLog.i(TAG, "DexKit flag emoji panel hook installed: ${collector.declaringClass.name}.${collector.name}")
         }.onFailure {
             ModernHookRegistry.unhook(hookKey)
             HookLog.w(TAG, "Flag emoji panel hook unavailable, stock behavior retained", it)
         }
     }
 
-    @Suppress("DEPRECATION")
-    private fun resolve(loader: ClassLoader, apkPath: String): Array<Any> {
-        val prefixes = listOf("com.oplus.keyboard.input.toolbox.media.",
-            "com.oplus.keyboard.base.data.emojis.", "com.oplus.keyboard.db.model.")
-        val dex = DexFile(apkPath)
-        val names = try {
-            dex.entries().asSequence().filter { name -> prefixes.any(name::startsWith) }.toList()
-        } finally { dex.close() }
-        val classes = names.mapNotNull { name -> runCatching { Class.forName(name, false, loader) }.getOrNull() }
-        val media = classes.filter { it.name.startsWith(prefixes[0]) }
-        val content = media.single { type ->
-            View::class.java.isAssignableFrom(type) && runCatching {
-                type.getDeclaredMethod("getSubmitList").returnType == List::class.java &&
-                    type.getDeclaredMethod("getEmojiList").returnType == List::class.java &&
-                    type.getDeclaredMethod("getCategory").returnType.getMethod("getValue").parameterCount == 0
-            }.getOrDefault(false)
+    private fun resolve(loader: ClassLoader, apkPath: String): Array<Any> =
+        ApkDexSession.withSession(apkPath) { open -> resolve(open(), loader) }
+
+    private fun resolve(dex: DexKitBridge, loader: ClassLoader): Array<Any> {
+        val contents = dex.findMethod { matcher {
+            usingStrings("emojiCategory"); returnType = "void"; paramTypes("java.lang.String")
+        } }.mapNotNull { data ->
+            runCatching { data.getMethodInstance(loader).declaringClass }.getOrNull()
+        }.distinct().filter { type ->
+            View::class.java.isAssignableFrom(type) && type.declaredFields.count {
+                !Modifier.isStatic(it.modifiers) && List::class.java.isAssignableFrom(it.type)
+            } >= 2
         }
-        val category = content.getDeclaredMethod("getCategory")
-        val flowValue = category.returnType.getMethod("getValue")
-        val collector = media.mapNotNull { type ->
-            val owner = type.declaredFields.singleOrNull {
-                !Modifier.isStatic(it.modifiers) && it.type != Any::class.java &&
-                    it.type.isAssignableFrom(content)
-            } ?: return@mapNotNull null
-            val method = type.declaredMethods.singleOrNull {
-                it.name == "emit" && !Modifier.isStatic(it.modifiers) && it.returnType == Any::class.java &&
-                    it.parameterCount == 2 && it.parameterTypes[0] == Any::class.java &&
-                    it.parameterTypes[1].isInterface
-            } ?: return@mapNotNull null
-            method to owner
-        }.single()
-        val emoji = classes.filter { it.name.startsWith(prefixes[2]) }.mapNotNull { type ->
+        val collector = dex.findMethod { matcher {
+            name = "emit"; returnType = "java.lang.Object"; paramCount = 2
+        } }.mapNotNull { data ->
             runCatching {
+                val method = data.getMethodInstance(loader)
+                if (Modifier.isStatic(method.modifiers) || method.parameterTypes[0] != Any::class.java ||
+                    !method.parameterTypes[1].isInterface) return@runCatching null
+                val owner = method.declaringClass.declaredFields.singleOrNull {
+                    !Modifier.isStatic(it.modifiers) && it.type in contents
+                } ?: return@runCatching null
+                Triple(data, method, owner)
+            }.getOrNull()
+        }.single()
+        val content = collector.third.type
+        val category = content.declaredMethods.single { method ->
+            !Modifier.isStatic(method.modifiers) && method.parameterCount == 0 && method.returnType.isInterface &&
+                runCatching { method.returnType.getMethod("getValue").returnType == Any::class.java }.getOrDefault(false)
+        }
+        val flowValue = category.returnType.getMethod("getValue")
+        val emoji = dex.findMethod { matcher {
+            name = "toString"; returnType = "java.lang.String"; paramTypes(); usingStrings("Emoji(value=")
+        } }.mapNotNull { data ->
+            runCatching {
+                val type = data.getMethodInstance(loader).declaringClass
                 val fields = type.declaredFields.filter { !Modifier.isStatic(it.modifiers) }
                 if (fields.size != 3 || fields.count { it.type == String::class.java } != 2 ||
                     fields.count { it.type == Long::class.javaPrimitiveType } != 1) return@runCatching null
@@ -94,8 +116,11 @@ internal object KeyboardFlagEmojiHooker {
                 constructor to value
             }.getOrNull()
         }.single()
-        val group = classes.filter { it.name.startsWith(prefixes[1]) }.mapNotNull { type ->
+        val group = dex.findMethod { matcher {
+            name = "toString"; returnType = "java.lang.String"; paramTypes(); usingStrings("EmojiList(emojis=")
+        } }.mapNotNull { data ->
             runCatching {
+                val type = data.getMethodInstance(loader).declaringClass
                 val entries = type.declaredFields.filter { !Modifier.isStatic(it.modifiers) }
                     .singleOrNull { it.type == List::class.java } ?: return@runCatching null
                 val constructor = type.getDeclaredConstructor(List::class.java).apply { isAccessible = true }
@@ -111,8 +136,12 @@ internal object KeyboardFlagEmojiHooker {
             .onEach { it.isAccessible = true }
         val first = pairFields.single { it.get(pairProbe) == "ONextBox-first" }
         val second = pairFields.single { it.get(pairProbe) == "ONextBox-second" }
-        return arrayOf(collector.first, collector.second, category, flowValue, pair, first, second,
-            emoji.first, emoji.second, group.first, group.second)
+        val callers = collector.first.callers.mapNotNull {
+            runCatching { it.getMethodInstance(loader) }.getOrNull()
+        }
+        val deoptimize = (callers + collector.second.declaringClass.declaredMethods).distinct().toTypedArray()
+        return arrayOf(collector.second, collector.third, category, flowValue, pair, first, second,
+            emoji.first, emoji.second, group.first, group.second, deoptimize)
     }
 }
 

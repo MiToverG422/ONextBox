@@ -144,7 +144,9 @@ internal object SettingsAppInfoCardHooker {
         val info = call(fragment, "getPackageInfo") as? PackageInfo ?: return
         val app = info.applicationInfo ?: return
         val snapshot = Snapshot(info.packageName, info.versionName, info.longVersionCode,
-            app.minSdkVersion, app.targetSdkVersion, info.firstInstallTime, info.lastUpdateTime, app.uid)
+            app.minSdkVersion, app.targetSdkVersion, info.firstInstallTime, info.lastUpdateTime, app.uid,
+            runCatching { app.loadLabel(context.packageManager).toString().takeIf { it.isNotBlank() } }
+                .getOrNull() ?: info.packageName)
         val card = existing ?: insert(context, screen, snapshot, loader) ?: return
         val changedPackage = card.snapshot.packageName != snapshot.packageName || card.snapshot.uid != snapshot.uid
         card.snapshot = snapshot
@@ -286,6 +288,7 @@ internal object SettingsAppInfoCardHooker {
         val locale = context.resources.configuration.locales[0]
         val pattern = DateFormat.getBestDateTimePattern(locale, "yyyyMMddHHmmss")
         val zone = TimeZone.getDefault()
+        setValue(card.rows.getValue(Field.AppName), data.appName)
         setValue(card.rows.getValue(Field.PackageName), data.packageName)
         setValue(card.rows.getValue(Field.Version), SettingsAppInfoRules.version(data.versionName, data.versionCode, unknown))
         setValue(card.rows.getValue(Field.Sdk), text(context, "settings_app_info_sdk_value",
@@ -403,6 +406,7 @@ internal object SettingsAppInfoCardHooker {
         }
 
     private fun label(field: Field): String = when (field) {
+        Field.AppName -> "settings_app_info_name"
         Field.PackageName -> "settings_app_info_package"
         Field.Version -> "settings_app_info_version"
         Field.Sdk -> "settings_app_info_sdk"

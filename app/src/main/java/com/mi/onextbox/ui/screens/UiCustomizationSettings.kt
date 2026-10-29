@@ -145,6 +145,107 @@ internal fun TranslationFeaturesPage() {
 }
 
 @Composable
+internal fun SmartSidebarFeaturesPage() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(SmartSidebarSettings.keys, SmartSidebarSettings::state)
+    FeatureAnimatedGroup(animateChanges = true) {
+        SharedFeatureDefinitions.sidebarRows.forEach { (key, feature) ->
+            row(key) { above, below ->
+                SettingsToggleRow(title = stringResource(feature.title), summary = stringResource(feature.summary),
+                    checked = editor.state[key] == true,
+                    interactionEnabled = editor.savingKey == null, hasDividerAbove = above, hasDividerBelow = below,
+                    onCheckedChange = { enabled -> editor.save(key, editor.state + (key to enabled)) {
+                        SmartSidebarSettings.set(context, key, enabled)
+                    } })
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SystemExtrasGroups(pkg: String) {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(SystemExtrasSettings.keys, SystemExtrasSettings::state)
+    val keyEditor = rememberCustomization(EngineerKeySettings.keys, EngineerKeySettings::state)
+    SystemExtrasSettings.options.filter { it.pkg == pkg }.groupBy { it.group }.forEach { (group, options) ->
+        SettingsSection(title = stringResource(group))
+        FeatureAnimatedGroup {
+            options.forEach { option ->
+                row(option.key) { above, below ->
+                    SettingsToggleRow(title = stringResource(option.title), summary = stringResource(option.summary),
+                        checked = editor.state[option.key] == true, interactionEnabled = editor.savingKey == null,
+                        hasDividerAbove = above, hasDividerBelow = below,
+                        onCheckedChange = { enabled -> editor.save(option.key, editor.state + (option.key to enabled)) {
+                            SystemExtrasSettings.set(context, option.key, enabled)
+                        } })
+                }
+            }
+            if (pkg == SystemExtrasSettings.ENGINEER && group == R.string.engineer_keys_group) {
+                EngineerKeySettings.entries.forEach { key ->
+                    row(EngineerKeySettings.pref(key), visible = editor.state[SystemExtrasSettings.ENGINEER_KEYS] == true) { above, _ ->
+                        if (above) SettingsDivider()
+                        SettingsWindowDropdownPreference(title = key.title,
+                            items = listOf(stringResource(R.string.engineer_key_original), stringResource(R.string.engineer_key_failure),
+                                stringResource(R.string.engineer_key_success), stringResource(R.string.engineer_key_unsupported)),
+                            selectedIndex = keyEditor.state[EngineerKeySettings.pref(key)] ?: 0,
+                            interactionEnabled = keyEditor.savingKey == null,
+                            onSelectedIndexChange = { mode -> keyEditor.save(EngineerKeySettings.pref(key),
+                                keyEditor.state + (EngineerKeySettings.pref(key) to mode)) { EngineerKeySettings.set(context, key, mode) } })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun AppMarketCleanupGroups() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(AppMarketCleanupSettings.keys + AppMarketCleanupSettings.LEGACY_UPDATE_DOWNLOAD, AppMarketCleanupSettings::state)
+    AppMarketCleanupSettings.options.groupBy { it.group }.forEach { (group, options) ->
+        SettingsSection(title = stringResource(group))
+        FeatureAnimatedGroup {
+            options.forEach { option ->
+                row(option.key) { above, below ->
+                    SettingsToggleRow(
+                        title = stringResource(option.title), summary = stringResource(option.summary),
+                        checked = editor.state[option.key] == true,
+                        interactionEnabled = editor.savingKey == null,
+                        hasDividerAbove = above, hasDividerBelow = below,
+                        onCheckedChange = { enabled ->
+                            editor.save(option.key, editor.state + (option.key to enabled)) {
+                                AppMarketCleanupSettings.set(context, option.key, enabled)
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun BrowserFeaturesPage() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(BrowserSettings.keys, BrowserSettings::state)
+    BrowserSettings.options.groupBy { it.group }.forEach { (group, options) ->
+        SettingsSection(title = stringResource(group))
+        FeatureAnimatedGroup {
+            options.forEach { option ->
+                row(option.key) { above, below ->
+                    SettingsToggleRow(title = stringResource(option.title), summary = stringResource(option.summary),
+                        checked = editor.state[option.key] == true, interactionEnabled = editor.savingKey == null,
+                        hasDividerAbove = above, hasDividerBelow = below,
+                        onCheckedChange = { enabled -> editor.save(option.key, editor.state + (option.key to enabled)) {
+                            BrowserSettings.set(context, option.key, enabled)
+                        } })
+                }
+            }
+        }
+    }
+}
+
+@Composable
 internal fun InstallerCleanupPage(page: FeaturePageMode, onOpen: (FeaturePageMode) -> Unit) {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(InstallerCleanupSettings.keys + InstallerCleanupSettings.legacyKeys, InstallerCleanupSettings::state)
@@ -178,6 +279,23 @@ internal fun InstallerManagementGroup(onOpen: (FeaturePageMode) -> Unit) {
                     onClick = { onOpen(page) }, hasDividerAbove = above, hasDividerBelow = below)
             }
         }
+    }
+}
+
+@Composable
+internal fun CouiDividerSettingsGroup() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(setOf(CouiDividerSettings.ENABLED), CouiDividerSettings::enabled)
+    SettingsGroup {
+        SettingsToggleRow(
+            title = stringResource(R.string.coui_hide_dividers_title),
+            summary = "",
+            checked = editor.state,
+            interactionEnabled = editor.savingKey == null,
+            onCheckedChange = { next ->
+                editor.save(CouiDividerSettings.ENABLED, next) { CouiDividerSettings.setEnabled(context, next) }
+            },
+        )
     }
 }
 

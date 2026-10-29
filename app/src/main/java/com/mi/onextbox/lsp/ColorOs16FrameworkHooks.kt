@@ -53,6 +53,9 @@ internal object ColorOs16FrameworkHooks {
         install(loader, "file-picker", "com.android.server.pm.OplusDefaultAppPolicyManager" to "interceptPickerIntent") {
             NativeFilePickerHooker.hook(loader)
         }
+        install(loader, "default-file-manager", "com.android.server.wm.ActivityStarter\$Request" to "resolveActivity") {
+            DefaultFileManagerHooker.hook(loader)
+        }
         install(loader, "gms-region", "com.android.server.SystemConfig" to "getAvailableFeatures") {
             GmsRegionRestrictionHooker.hook(loader)
         }

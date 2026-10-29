@@ -65,12 +65,12 @@ class AospBackPanelHookContractTest {
         val page = source("ui/screens/SystemUiFeaturesPage.kt")
         val nativePage = page.substringAfter("FeaturePageMode.SystemUiNative ->")
             .substringBefore("FeaturePageMode.SystemUiDynamicColor ->")
-        assertTrue(nativePage.contains("AospBackPanelSettingsRow()"))
-        assertTrue(page.contains("R.string.feature_aosp_back_panel_title"))
+        assertFalse(nativePage.contains("AospBackPanelSettingsRow()"))
+        assertTrue(source("ui/screens/BackGestureFeaturesPage.kt").contains("R.string.back_gesture_style"))
         assertFalse(source("ui/screens/NavigationBarFeaturesPage.kt").contains("aospBackPanel"))
         assertFalse(source("ui/screens/NavigationBarFeaturesPage.kt").contains("feature_aosp_back_panel_title"))
         assertTrue(source("ui/screens/FeatureSearchIndex.kt").contains(
-            "Entry(FeaturePageMode.SystemUiNative, R.string.feature_aosp_back_panel_title, R.string.feature_aosp_back_panel_summary)"))
+            "Entry(FeaturePageMode.SystemUiBackGesture, R.string.feature_aosp_back_panel_title, R.string.feature_aosp_back_panel_summary)"))
     }
 
     @Test fun everySupportedLanguageHasBothStrings() {

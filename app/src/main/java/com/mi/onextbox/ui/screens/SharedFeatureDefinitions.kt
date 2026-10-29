@@ -35,6 +35,17 @@ internal object SharedFeatureDefinitions {
     private fun translation(key: String, title: Int, summary: Int) = Toggle(title, summary,
         FeaturePageMode.Translation, { ScreenTranslationSettings.enabled(it, key) },
         { context, enabled -> ScreenTranslationSettings.set(context, key, enabled) })
+    private fun sidebar(key: String, title: Int, summary: Int) = Toggle(title, summary,
+        FeaturePageMode.SmartSidebar, { com.mi.onextbox.lsp.SmartSidebarSettings.enabled(it, key) },
+        { context, enabled -> com.mi.onextbox.lsp.SmartSidebarSettings.set(context, key, enabled) })
+    val sidebarApps = sidebar(com.mi.onextbox.lsp.SmartSidebarSettings.ALLOW_APPS,
+        R.string.sidebar_allow_apps_title, R.string.sidebar_allow_apps_summary)
+    val sidebarDisplay = sidebar(com.mi.onextbox.lsp.SmartSidebarSettings.ALLOW_IN_APPS,
+        R.string.sidebar_allow_in_apps_title, R.string.sidebar_allow_in_apps_summary)
+    val sidebarRows = listOf(
+        com.mi.onextbox.lsp.SmartSidebarSettings.ALLOW_APPS to sidebarApps,
+        com.mi.onextbox.lsp.SmartSidebarSettings.ALLOW_IN_APPS to sidebarDisplay,
+    )
     val translationFloating = translation(ScreenTranslationSettings.ALLOW_FLOATING,
         R.string.translation_allow_floating_title, R.string.translation_allow_floating_summary)
     val translationBlacklist = translation(ScreenTranslationSettings.BYPASS_APP_BLACKLIST,
@@ -149,6 +160,8 @@ internal object SharedFeatureDefinitions {
         translationPages,
         translationLandscape,
         translationBrowser,
+        sidebarApps,
+        sidebarDisplay,
         installerNative,
         installerSkipScan,
         installerRemoveAds,

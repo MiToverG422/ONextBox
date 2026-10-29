@@ -30,7 +30,7 @@ class KeyboardBottomLiftHookContractTest {
         assertTrue(text.contains("?.forEach(native::schedule)"))
         assertTrue(text.contains("HotReloadLifecycle.withHook({ true })"))
         assertTrue(text.contains("removeOnPreDrawListener(task.listener)"))
-        assertTrue(text.contains("cancel(view)\n                    if (!shouldRefresh(view))"))
+        assertTrue(Regex("""cancel\(view\)\s+if \(!shouldRefresh\(view\)\)""").containsMatchIn(text))
         assertTrue(text.contains("container.getDeclaredMethod(\"onDetachedFromWindow\")"))
     }
 

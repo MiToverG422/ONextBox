@@ -14,7 +14,14 @@ internal object FeatureSearchIndex {
         @param:StringRes val description: Int = 0,
     )
 
-    private val allEntries = listOf(
+    private val allEntries = com.mi.onextbox.lsp.KeyboardPictorialSettings.options.map { option ->
+        Entry(if (option.key.startsWith("keyboard_")) FeaturePageMode.Keyboard else FeaturePageMode.Pictorial, option.title, option.summary)
+    } + com.mi.onextbox.lsp.BrowserSettings.options.map { Entry(FeaturePageMode.Browser, it.title, it.summary) } +
+        com.mi.onextbox.lsp.AppMarketCleanupSettings.options.map { Entry(FeaturePageMode.AppMarket, it.title, it.summary) } +
+        com.mi.onextbox.lsp.SystemExtrasSettings.options.map { Entry(systemExtrasPage(it.pkg), it.title, it.summary) } +
+        listOf(Entry(FeaturePageMode.Weather, R.string.weather_page_title), Entry(FeaturePageMode.PhotoPicker, R.string.photopicker_page_title),
+            Entry(FeaturePageMode.EngineerMode, R.string.engineer_page_title)) +
+        listOf(Entry(FeaturePageMode.Browser, R.string.browser_page_title), Entry(FeaturePageMode.Pictorial, R.string.pictorial_page_title)) + listOf(
         FeaturePageMode.DesktopPages to LauncherFeatureItems.pages,
         FeaturePageMode.DesktopRecent to LauncherFeatureItems.recent,
         FeaturePageMode.DesktopIcons to (LauncherFeatureItems.badges + LauncherFeatureItems.folder),
@@ -48,6 +55,8 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_order_title),
         Entry(FeaturePageMode.SystemUiStatusBarSpeed, R.string.network_speed_title),
         Entry(FeaturePageMode.SystemUiStatusBarSpeed, R.string.network_speed_refresh_second),
+        Entry(FeaturePageMode.SystemUiStatusBarSpeed, R.string.network_speed_hide_low_speed),
+        Entry(FeaturePageMode.SystemUiStatusBarSpeed, R.string.network_speed_low_speed_threshold),
         Entry(FeaturePageMode.SystemUiStatusBarSpeed, R.string.network_speed_hide_per_second),
         Entry(FeaturePageMode.SystemUiStatusBarSpeed, R.string.network_speed_hide_units),
         Entry(FeaturePageMode.SystemUiStatusBarSpeed, R.string.network_speed_single_line),
@@ -135,6 +144,9 @@ internal object FeatureSearchIndex {
         SharedFeatureDefinitions.translationLandscape.searchEntry(),
         SharedFeatureDefinitions.translationBrowser.searchEntry(),
         Entry(FeaturePageMode.Translation, R.string.feature_translation_title),
+        Entry(FeaturePageMode.SmartSidebar, R.string.sidebar_page_title),
+        SharedFeatureDefinitions.sidebarApps.searchEntry(),
+        SharedFeatureDefinitions.sidebarDisplay.searchEntry(),
         Entry(FeaturePageMode.AppInstaller, R.string.installer_cleanup_title),
         Entry(FeaturePageMode.PackageInstaller, R.string.package_installer_title),
         SharedFeatureDefinitions.installerNative.searchEntry(),
@@ -145,7 +157,14 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SystemUiNative, R.string.feature_native_notify_icon_title, R.string.feature_native_notify_icon_summary),
         Entry(FeaturePageMode.SystemUiNative, R.string.feature_native_notification_bubbles_title, R.string.feature_native_notification_bubbles_summary),
         Entry(FeaturePageMode.SystemUiNative, R.string.feature_native_power_menu_title, R.string.feature_native_power_menu_summary),
-        Entry(FeaturePageMode.SystemUiNative, R.string.feature_aosp_back_panel_title, R.string.feature_aosp_back_panel_summary),
+        Entry(FeaturePageMode.SystemUiBackGesture, R.string.feature_aosp_back_panel_title, R.string.feature_aosp_back_panel_summary),
+        Entry(FeaturePageMode.SystemUiBackGesture, R.string.back_gesture_title, R.string.back_gesture_summary),
+        Entry(FeaturePageMode.SystemUiBackGesture, R.string.back_gesture_style),
+        Entry(FeaturePageMode.SystemUiBackGesture, R.string.back_gesture_haptics),
+        Entry(FeaturePageMode.SystemUiBackGesture, R.string.back_gesture_release, R.string.back_gesture_release_summary),
+        Entry(FeaturePageMode.SystemUiBackGesture, R.string.back_gesture_predictive_style),
+        Entry(FeaturePageMode.SystemUiBackGestureArea, R.string.back_gesture_area, R.string.back_gesture_area_summary),
+        Entry(FeaturePageMode.SystemUiBackGestureArea, R.string.back_gesture_area_custom, R.string.back_gesture_area_custom_summary),
         Entry(FeaturePageMode.SystemUiNative, R.string.feature_aosp_volume_title, R.string.feature_aosp_volume_summary),
         SharedFeatureDefinitions.stackedSignal.searchEntry(),
         Entry(FeaturePageMode.SystemUiNative, R.string.feature_force_native_clipboard_overlay_title, R.string.feature_force_native_clipboard_overlay_summary),
@@ -176,6 +195,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SystemUiClock, R.string.clock_page_title, R.string.clock_page_summary),
         Entry(FeaturePageMode.SystemUiClock, R.string.clock_period_title),
         Entry(FeaturePageMode.SystemUiClock, R.string.clock_compact_spacing),
+        Entry(FeaturePageMode.SystemUiClock, R.string.clock_tabular_digits),
         Entry(FeaturePageMode.SystemUiClock, R.string.clock_period_format),
         Entry(FeaturePageMode.SystemUiClock, R.string.clock_period_small),
         Entry(FeaturePageMode.SystemUiClock, R.string.clock_period_shade),
@@ -207,6 +227,7 @@ internal object FeatureSearchIndex {
         SharedFeatureDefinitions.sideVolumeKeepWide.searchEntry(),
         Entry(FeaturePageMode.SystemUiVolume, R.string.side_volume_group),
         SharedFeatureDefinitions.powerIndicator.searchEntry(),
+        Entry(FeaturePageMode.SystemUiStatusBarPower, R.string.power_indicator_only_charging),
         Entry(FeaturePageMode.SystemUiStatusBarPower, R.string.power_indicator_hide_discharge_sign),
         Entry(FeaturePageMode.SystemUiStatusBarPower, R.string.power_indicator_follow_font_weight),
         Entry(FeaturePageMode.SystemUiStatusBarPower, R.string.power_indicator_temperature, R.string.power_indicator_temperature_summary),
@@ -290,13 +311,13 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.Battery, R.string.battery_restore_default_whitelist_title, R.string.battery_restore_default_whitelist_summary),
         Entry(FeaturePageMode.Battery, R.string.battery_block_whitelist_restore_title, R.string.battery_block_whitelist_restore_summary),
         Entry(FeaturePageMode.AppMarket, R.string.feature_app_market_region_bypass_title, R.string.feature_app_market_region_bypass_summary),
-        Entry(FeaturePageMode.AppMarket, R.string.feature_app_market_simplify_recommendations_title, R.string.feature_app_market_simplify_recommendations_summary),
         Entry(FeaturePageMode.QuickAppServices, R.string.feature_quick_app_services_title),
         Entry(FeaturePageMode.QuickAppServices, R.string.feature_group_express_service),
         Entry(FeaturePageMode.QuickAppServices, R.string.feature_express_no_mini_program_title, R.string.feature_express_no_mini_program_summary),
         Entry(FeaturePageMode.FileManager, R.string.feature_file_manager_title),
         Entry(FeaturePageMode.FileManager, R.string.feature_file_manager_hide_secure_access_tip_title, R.string.feature_file_manager_hide_secure_access_tip_summary),
         Entry(FeaturePageMode.FileManager, R.string.feature_file_manager_native_picker_title, R.string.feature_file_manager_native_picker_summary),
+        Entry(FeaturePageMode.FileManager, R.string.file_manager_default_title, R.string.file_manager_default_summary),
         Entry(FeaturePageMode.GoogleMessages, R.string.feature_google_messages_title),
         Entry(FeaturePageMode.SystemMessages, R.string.feature_system_messages_title, R.string.push_monitor_privacy),
         Entry(FeaturePageMode.AppErrors, R.string.app_errors_title, R.string.app_errors_enable_summary),
@@ -333,6 +354,10 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SettingsAppearance, R.string.display_enhancement_color_thermal_title, R.string.display_enhancement_color_thermal_summary),
         Entry(FeaturePageMode.SettingsAppearance, R.string.feature_group_screen_refresh_rate),
         Entry(FeaturePageMode.SettingsAppearance, R.string.feature_settings_title_collapsed_title, R.string.feature_settings_title_collapsed_summary),
+        Entry(FeaturePageMode.Coui, R.string.coui_page_title),
+        Entry(FeaturePageMode.Coui, R.string.coui_hide_dividers_title),
+        Entry(FeaturePageMode.Tools, R.string.tab_tools),
+        Entry(FeaturePageMode.More, R.string.tools_more_title),
         Entry(FeaturePageMode.SettingsAppearance, R.string.settings_title_lock_title, R.string.settings_title_lock_summary),
         Entry(FeaturePageMode.SettingsAppearance, R.string.settings_account_size_title, R.string.settings_account_size_summary),
         Entry(FeaturePageMode.SettingsAppearance, R.string.settings_account_size_percent),

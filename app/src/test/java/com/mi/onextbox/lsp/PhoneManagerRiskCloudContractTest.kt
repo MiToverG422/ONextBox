@@ -19,7 +19,7 @@ class PhoneManagerRiskCloudContractTest {
         assertFalse(source.contains("getDeclaredMethod(\"dismissRiskTips\""))
         assertTrue(source.contains("getBoolean(KEY, false)"))
         val entry = File(root, "java/com/mi/onextbox/lsp/OosLspModuleEntry.kt").readText()
-        val scoped = entry.substringAfter("PhoneManagerSettings.PACKAGE_NAME -> {").substringBefore("}")
+        val scoped = entry.substringAfter("PhoneManagerSettings.PACKAGE_NAME -> {").substringBefore("OShareSettings.PACKAGE_NAME")
         assertTrue(scoped.contains("PhoneManagerRiskCloudHooker.hook(classLoader, target.sourceDir)"))
     }
     @Test fun translationsArePresentAndNonEmpty() {

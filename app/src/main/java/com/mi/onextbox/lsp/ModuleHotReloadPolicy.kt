@@ -3,6 +3,8 @@ package com.mi.onextbox.lsp
 /** Scope eligibility is separate from the resource owners' runtime readiness checks. */
 internal object ModuleHotReloadPolicy {
     val supportedPackages: Set<String> = setOf(
+        "com.coloros.weather2", "com.android.photopicker", "com.oplus.engineermode",
+        "com.heytap.pictorial", "com.heytap.browser",
         "system", "com.android.systemui", "com.oplus.screenshot", "com.oplus.screenrecorder",
         "com.android.settings", "com.oplus.securitypermission", "com.oplus.safecenter", "com.android.permissioncontroller",
         "com.coloros.phonemanager", "com.coloros.colordirectservice", "com.oplus.metis", "com.oplus.ota", "com.oplus.sau",
@@ -13,6 +15,7 @@ internal object ModuleHotReloadPolicy {
         "com.coloros.filemanager", "com.heytap.mcs", "com.nearme.instant.platform",
         "com.coloros.assistantscreen", "com.coloros.oshare", "com.heytap.colorfulengine",
         "com.coloros.translate", "com.oplus.camera",
+        "com.coloros.smartsidebar",
         "com.oplus.appdetail", "com.android.packageinstaller",
         "com.heytap.themestore", "com.coloros.securepay", "com.oplus.games", "com.coloros.gallery3d",
     )

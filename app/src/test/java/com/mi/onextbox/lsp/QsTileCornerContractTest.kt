@@ -21,7 +21,7 @@ class QsTileCornerContractTest {
 
     @Test fun hookInstallationIsSystemUiOnlyAndDoesNotInitializeStaticConfiguration() {
         val entry = source("lsp/OosLspModuleEntry")
-        assertEquals(1, Regex("QsTileCornerHooker.hook").findAll(entry).count())
+        assertEquals(1, Regex("""QsTileCornerHooker\.hook\(""").findAll(entry).count())
         assertTrue(entry.substringAfter("PACKAGE_SYSTEM_UI -> {").substringBefore("PACKAGE_SETTINGS").contains("QsTileCornerHooker.hook(classLoader)"))
         val hook = source("lsp/QsTileCornerHooker")
         assertFalse(hook.contains("getStaticIntField"))
