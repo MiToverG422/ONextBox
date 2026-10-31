@@ -194,10 +194,12 @@ internal class SettingsNativeAppInfoPanel(
             "unregisterAdapterDataObserver" -> { observers.remove(args!![0]); null }
             "onViewRecycled" -> {
                 val holder = args!![0]!!
-                val root = ModernReflect.getObjectField(holder, "itemView") as View
-                call(root, "resetBackgroundAnimation")
-                rowPadding.remove(root)
-                holders.remove(holder)
+                recycleBoundAppInfoHolder(holders, holder) { boundHolder ->
+                    val root = ModernReflect.getObjectField(boundHolder, "itemView") as View
+                    rowPadding.remove(root)
+                    if (headerView?.get() === root) headerView = null
+                    call(root, "resetBackgroundAnimation")
+                }
                 null
             }
             "setHasStableIds", "onRestoreView" -> null
@@ -346,4 +348,14 @@ internal class SettingsNativeAppInfoPanel(
                 }
             }
     }
+}
+
+internal inline fun <H : Any, P : Any> recycleBoundAppInfoHolder(
+    bindings: MutableMap<H, P>,
+    holder: H,
+    recycle: (H) -> Unit,
+) {
+    // COUI also forwards animation-only DummyView holders to this callback.
+    if (bindings.remove(holder) == null) return
+    recycle(holder)
 }
