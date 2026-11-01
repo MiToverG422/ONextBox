@@ -780,6 +780,8 @@
     <string name="feature_status_bar_double_tap_to_top_summary">Возвращаться к началу страницы двойным касанием, а не одиночным</string>
     <string name="feature_status_bar_remove_to_top_whitelist_title">Снять ограничение списка возврата наверх</string>
     <string name="feature_status_bar_remove_to_top_whitelist_summary">Разрешить возврат наверх в большем числе приложений; некоторые страницы могут быть несовместимы. Требуется перезагрузка системы</string>
+    <string name="status_bar_keep_title">Оставлять строку состояния</string>
+    <string name="status_bar_keep_summary">Не скрывать строку состояния на экране недавних приложений; не влияет на закрепление Fluid Cloud</string>
     <string name="battery_page_title">Батарея</string>
     <string name="battery_optimization_group">Политики энергосбережения</string>
     <string name="battery_remove_restrict_plugin_title">Блокировать загрузку плагина ограничений батареи</string>

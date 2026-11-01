@@ -12,9 +12,8 @@ internal object FluidCloudRecentsRules {
         fullscreenPrivacyIcon: Boolean,
         notificationIconsAllowed: Boolean,
     ): Int {
-        if (!enabled || visibility == VISIBLE) return visibility
         if (!canShowOngoingActivityChips || miniCapsuleShowing || fullscreenPrivacyIcon) return visibility
         if (notificationIconsAllowed) return visibility
-        return VISIBLE
+        return if (enabled) VISIBLE else HIDDEN
     }
 }

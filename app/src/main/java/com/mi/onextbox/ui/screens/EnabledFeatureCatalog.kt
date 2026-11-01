@@ -252,6 +252,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.battery_block_whitelist_restore_title, FeaturePageMode.Battery) { context -> LspConfig.isBatteryFeatureEnabled(context, LspConfig.BatteryFeature.BlockWhitelistRestore) },
         Entry(R.string.feature_status_bar_double_tap_to_top_title, FeaturePageMode.SystemUiStatusBarInteraction) { context -> LspConfig.isStatusBarInteractionFeatureEnabled(context, LspConfig.StatusBarInteractionFeature.DoubleTapToTop) },
         Entry(R.string.feature_status_bar_remove_to_top_whitelist_title, FeaturePageMode.SystemUiStatusBarInteraction) { context -> LspConfig.isStatusBarInteractionFeatureEnabled(context, LspConfig.StatusBarInteractionFeature.RemoveToTopWhitelist) },
+        Entry(R.string.status_bar_keep_title, FeaturePageMode.SystemUiStatusBarInteraction) { context -> StatusBarKeepSettings.isEnabled(context) },
         Entry(R.string.keyguard_aod_screenshot_title, FeaturePageMode.Screenshot) { LspConfig.isKeyguardFeatureEnabled(it, LspConfig.KeyguardFeature.AodScreenshot) },
         Entry(R.string.keyguard_screen_off_recording_title, FeaturePageMode.ScreenRecording) { LspConfig.isKeyguardFeatureEnabled(it, LspConfig.KeyguardFeature.ScreenOffRecording) },
         Entry(R.string.feature_recent_task_radius_title, FeaturePageMode.DesktopRecent) { LspConfig.isRecentTaskRadiusEnabled(it) },

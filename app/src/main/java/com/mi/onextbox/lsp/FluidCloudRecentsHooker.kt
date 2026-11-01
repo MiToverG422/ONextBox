@@ -31,15 +31,16 @@ internal object FluidCloudRecentsHooker {
 
             ModernHookRegistry.installFast("${key}capsule", combine, XposedInterface.Hooker { chain ->
                 val original = chain.proceed()
-                if (!FluidCloudRecentsSettings.isEnabledXposed()) return@Hooker original
                 val model = original ?: return@Hooker original
                 if (model.javaClass != visibilityClass) return@Hooker original
+                val visibility = visibilityField.getInt(model)
+                val enabled = FluidCloudRecentsSettings.isEnabledXposed()
+                if (!enabled && visibility != FluidCloudRecentsRules.VISIBLE) return@Hooker original
                 val args = chain.args
                 if (args.size < 5) return@Hooker original
                 val flags = args[3] ?: return@Hooker original
-                val visibility = visibilityField.getInt(model)
                 val desired = FluidCloudRecentsRules.keepCapsuleVisible(
-                    enabled = true,
+                    enabled = enabled,
                     visibility = visibility,
                     canShowOngoingActivityChips = args[1] as? Boolean ?: return@Hooker original,
                     miniCapsuleShowing = args[2] as? Boolean ?: return@Hooker original,
@@ -49,7 +50,6 @@ internal object FluidCloudRecentsHooker {
                 if (desired == visibility) return@Hooker original
                 visibilityConstructor.newInstance(desired, animateField.getBoolean(model))
             })
-            HookLog.i(TAG, "Overview capsule persistence installed")
         }.onFailure {
             ModernHookRegistry.unhookPrefix(key)
             HookLog.w(TAG, "Overview capsule persistence unavailable, stock behavior retained", it)

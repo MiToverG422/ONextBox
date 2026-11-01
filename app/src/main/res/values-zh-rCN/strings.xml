@@ -830,6 +830,8 @@
     <string name="feature_status_bar_double_tap_to_top_summary">双击状态栏返回页面顶部，单击不再触发</string>
     <string name="feature_status_bar_remove_to_top_whitelist_title">移除返回顶部白名单</string>
     <string name="feature_status_bar_remove_to_top_whitelist_summary">允许更多应用使用返回顶部，部分页面可能不兼容，需要重启系统</string>
+    <string name="status_bar_keep_title">状态栏常驻</string>
+    <string name="status_bar_keep_summary">在最近任务页面保持状态栏显示，不影响流体云是否常驻</string>
     <string name="battery_page_title">电池</string>
     <string name="battery_optimization_group">电池策略</string>
     <string name="battery_remove_restrict_plugin_title">阻止电池限制插件加载</string>

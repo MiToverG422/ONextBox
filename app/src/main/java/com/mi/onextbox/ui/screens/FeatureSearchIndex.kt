@@ -203,6 +203,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SystemUiStatusBarInteraction, R.string.status_bar_group_interaction),
         Entry(FeaturePageMode.SystemUiStatusBarInteraction, R.string.feature_status_bar_double_tap_to_top_title, R.string.feature_status_bar_double_tap_to_top_summary),
         Entry(FeaturePageMode.SystemUiStatusBarInteraction, R.string.feature_status_bar_remove_to_top_whitelist_title, R.string.feature_status_bar_remove_to_top_whitelist_summary),
+        Entry(FeaturePageMode.SystemUiStatusBarInteraction, R.string.status_bar_keep_title, R.string.status_bar_keep_summary),
         Entry(FeaturePageMode.SystemUiFluidCloud, R.string.feature_fluid_cloud_title, R.string.feature_fluid_cloud_entry_summary),
         Entry(FeaturePageMode.SystemUiFluidCloud, R.string.feature_fluid_cloud_card_group),
         Entry(FeaturePageMode.SystemUiFluidCloud, R.string.feature_fluid_cloud_material_title),

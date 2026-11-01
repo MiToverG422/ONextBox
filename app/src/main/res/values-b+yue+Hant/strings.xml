@@ -780,6 +780,8 @@
     <string name="feature_status_bar_double_tap_to_top_summary">撳兩下狀態列返回頁面頂部，撳一下唔再觸發</string>
     <string name="feature_status_bar_remove_to_top_whitelist_title">移除返回頂部白名單</string>
     <string name="feature_status_bar_remove_to_top_whitelist_summary">容許更多應用使用返回頂部，部分頁面可能唔兼容，需要重新啟動系統</string>
+    <string name="status_bar_keep_title">狀態欄常駐</string>
+    <string name="status_bar_keep_summary">喺最近任務頁面保持狀態欄顯示，唔影響流體雲會唔會常駐</string>
     <string name="battery_page_title">電池</string>
     <string name="battery_optimization_group">電池策略</string>
     <string name="battery_remove_restrict_plugin_title">阻止電池限制插件載入</string>

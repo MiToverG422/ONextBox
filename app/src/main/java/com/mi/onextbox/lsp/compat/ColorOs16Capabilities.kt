@@ -24,6 +24,7 @@ internal object ColorOs16Capabilities {
         "systemui_network_speed_font_size_dp",
         "systemui_network_speed_hide_low_speed",
         "systemui_network_speed_low_speed_threshold_kbps",
+        "systemui_status_bar_keep_in_recents",
         "allow_secure_window_capture",
         "aod_enhance_enabled",
         "aod_init_bright_brightness",

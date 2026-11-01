@@ -832,6 +832,8 @@
     <string name="feature_status_bar_double_tap_to_top_summary">Double-tap the status bar to return to the top; a single tap no longer triggers scrolling</string>
     <string name="feature_status_bar_remove_to_top_whitelist_title">Remove scroll-to-top allowlist</string>
     <string name="feature_status_bar_remove_to_top_whitelist_summary">Allow more apps to scroll to top; some pages may be incompatible. A system restart is required</string>
+    <string name="status_bar_keep_title">Keep status bar on overview</string>
+    <string name="status_bar_keep_summary">Keep the status bar visible on the recents page; does not control Fluid Cloud persistence</string>
     <string name="battery_page_title">Battery</string>
     <string name="battery_optimization_group">Battery policies</string>
     <string name="battery_remove_restrict_plugin_title">Block battery restriction plugin loading</string>
