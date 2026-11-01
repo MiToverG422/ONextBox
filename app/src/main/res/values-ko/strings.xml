@@ -780,6 +780,8 @@
     <string name="feature_status_bar_double_tap_to_top_summary">두 번 누르면 페이지 맨 위로 이동하며 한 번 누르면 동작하지 않습니다</string>
     <string name="feature_status_bar_remove_to_top_whitelist_title">맨 위로 이동 허용 목록 해제</string>
     <string name="feature_status_bar_remove_to_top_whitelist_summary">더 많은 앱에서 사용할 수 있지만 일부 페이지는 호환되지 않을 수 있습니다. 시스템을 다시 시작해야 합니다</string>
+    <string name="status_bar_keep_title">상태 표시줄 유지</string>
+    <string name="status_bar_keep_summary">최근 앱 화면에서 상태 표시줄을 계속 표시합니다. 플루이드 클라우드 유지 여부에는 영향을 주지 않습니다</string>
     <string name="battery_page_title">배터리</string>
     <string name="battery_optimization_group">배터리 정책</string>
     <string name="battery_remove_restrict_plugin_title">배터리 제한 플러그인 로드 차단</string>
@@ -992,6 +994,10 @@
     <string name="fluid_browser_title">기본 브라우저로 웹페이지 열기</string>
     <string name="fluid_browser_summary">플루이드 클라우드가 인식한 웹 링크를 시스템 설정의 기본 브라우저로 엽니다</string>
     <string name="fluid_browser_save_failed">브라우저 설정을 저장할 수 없습니다</string>
+    <string name="fluid_recents_group">표시</string>
+    <string name="fluid_recents_title">최근 앱 화면에 유지</string>
+    <string name="fluid_recents_summary">최근 앱 화면에서 알림 아이콘과 함께 숨기지 않고 플루이드 클라우드를 계속 표시합니다</string>
+    <string name="fluid_recents_save_failed">설정을 저장할 수 없습니다</string>
 
     <string name="launcher_custom_grid_title">홈 화면 레이아웃 사용자 지정</string>
     <string name="launcher_custom_grid_columns">열 수</string>

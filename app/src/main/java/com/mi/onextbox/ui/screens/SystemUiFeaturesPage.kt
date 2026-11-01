@@ -230,6 +230,8 @@ internal fun SystemUiFeaturesPage(
         FeaturePageMode.SystemUiStatusBarInteraction -> {
             SettingsGroup {
                 StatusBarInteractionSettingsRows()
+                SettingsDivider()
+                StatusBarKeepSettingsRow()
             }
         }
         FeaturePageMode.SystemUiNotificationCenter -> {

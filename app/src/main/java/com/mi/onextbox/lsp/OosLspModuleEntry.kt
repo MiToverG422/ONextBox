@@ -264,6 +264,8 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PasswordDialHighlightHooker.hook") { PasswordDialHighlightHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PinSwipeInputHooker.hook") { PinSwipeInputHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FluidCloudMediaBlacklistHooker.hook") { FluidCloudMediaBlacklistHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FluidCloudRecentsHooker.hook") { FluidCloudRecentsHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("StatusBarKeepHooker.hook") { StatusBarKeepHooker.hook(classLoader) }
             }
 
             PACKAGE_SETTINGS -> {

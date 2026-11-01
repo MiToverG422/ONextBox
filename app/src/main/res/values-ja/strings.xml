@@ -780,6 +780,8 @@
     <string name="feature_status_bar_double_tap_to_top_summary">ダブルタップでページの先頭に戻り、シングルタップでは動作しません</string>
     <string name="feature_status_bar_remove_to_top_whitelist_title">先頭に戻る機能の許可リストを解除</string>
     <string name="feature_status_bar_remove_to_top_whitelist_summary">より多くのアプリで利用できますが、一部のページでは動作しない場合があります。システムの再起動が必要です</string>
+    <string name="status_bar_keep_title">ステータスバーを常時表示</string>
+    <string name="status_bar_keep_summary">最近使ったアプリ画面でもステータスバーを表示します。フルイドクラウドの常時表示には影響しません</string>
     <string name="battery_page_title">バッテリー</string>
     <string name="battery_optimization_group">バッテリー制御ポリシー</string>
     <string name="battery_remove_restrict_plugin_title">バッテリー制限プラグインの読み込みを防止</string>
@@ -992,6 +994,10 @@
     <string name="fluid_browser_title">既定のブラウザーでウェブページを開く</string>
     <string name="fluid_browser_summary">流体クラウドが認識したウェブリンクをシステム設定の既定のブラウザーで開く</string>
     <string name="fluid_browser_save_failed">ブラウザーの設定を保存できません</string>
+    <string name="fluid_recents_group">表示</string>
+    <string name="fluid_recents_title">履歴画面で常時表示</string>
+    <string name="fluid_recents_summary">最近使ったアプリ画面でも通知アイコンと一緒に隠さず、フルイドクラウドを表示します</string>
+    <string name="fluid_recents_save_failed">設定を保存できません</string>
 
     <string name="launcher_custom_grid_title">ホーム画面のグリッドをカスタマイズ</string>
     <string name="launcher_custom_grid_columns">列数</string>

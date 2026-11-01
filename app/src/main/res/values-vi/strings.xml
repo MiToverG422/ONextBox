@@ -780,6 +780,8 @@
     <string name="feature_status_bar_double_tap_to_top_summary">Chạm hai lần để về đầu trang; chạm một lần không còn kích hoạt</string>
     <string name="feature_status_bar_remove_to_top_whitelist_title">Bỏ danh sách cho phép về đầu trang</string>
     <string name="feature_status_bar_remove_to_top_whitelist_summary">Cho phép nhiều ứng dụng dùng tính năng hơn; một số trang có thể không tương thích. Cần khởi động lại hệ thống</string>
+    <string name="status_bar_keep_title">Giữ thanh trạng thái</string>
+    <string name="status_bar_keep_summary">Giữ thanh trạng thái trên màn hình ứng dụng gần đây; không ảnh hưởng đến việc giữ Fluid Cloud</string>
     <string name="battery_page_title">Pin</string>
     <string name="battery_optimization_group">Chính sách pin</string>
     <string name="battery_remove_restrict_plugin_title">Chặn tải plugin hạn chế pin</string>
@@ -992,6 +994,10 @@
     <string name="fluid_browser_title">Mở trang web bằng trình duyệt mặc định</string>
     <string name="fluid_browser_summary">Mở liên kết web do Fluid Cloud nhận diện bằng trình duyệt mặc định trong cài đặt hệ thống</string>
     <string name="fluid_browser_save_failed">Không thể lưu cài đặt trình duyệt</string>
+    <string name="fluid_recents_group">Hiển thị</string>
+    <string name="fluid_recents_title">Giữ trên màn hình gần đây</string>
+    <string name="fluid_recents_summary">Giữ Fluid Cloud hiển thị trên màn hình ứng dụng gần đây thay vì ẩn cùng biểu tượng thông báo</string>
+    <string name="fluid_recents_save_failed">Không thể lưu cài đặt</string>
 
     <string name="launcher_custom_grid_title">Tùy chỉnh lưới màn hình chính</string>
     <string name="launcher_custom_grid_columns">Số cột</string>
