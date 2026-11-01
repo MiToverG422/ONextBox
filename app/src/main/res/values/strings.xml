@@ -1046,6 +1046,10 @@
     <string name="fluid_browser_title">Use default browser for web links</string>
     <string name="fluid_browser_summary">Open web links recognized by Fluid Cloud in the default browser set in system settings</string>
     <string name="fluid_browser_save_failed">Unable to save the browser setting</string>
+    <string name="fluid_recents_group">Display</string>
+    <string name="fluid_recents_title">Keep on overview</string>
+    <string name="fluid_recents_summary">Keep Fluid Cloud visible on the recents page instead of hiding it together with the notification icons</string>
+    <string name="fluid_recents_save_failed">Unable to save the overview setting</string>
 
     <string name="launcher_custom_grid_title">Custom home screen grid</string>
     <string name="launcher_custom_grid_columns">Columns</string>

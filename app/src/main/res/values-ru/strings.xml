@@ -992,6 +992,10 @@
     <string name="fluid_browser_title">Открывать ссылки в браузере по умолчанию</string>
     <string name="fluid_browser_summary">Открывать веб-ссылки, распознанные Fluid Cloud, в браузере по умолчанию из настроек системы</string>
     <string name="fluid_browser_save_failed">Не удалось сохранить настройку браузера</string>
+    <string name="fluid_recents_group">Отображение</string>
+    <string name="fluid_recents_title">Оставлять на экране недавних</string>
+    <string name="fluid_recents_summary">Не скрывать Fluid Cloud на экране недавних приложений вместе со значками уведомлений</string>
+    <string name="fluid_recents_save_failed">Не удалось сохранить настройку</string>
 
     <string name="launcher_custom_grid_title">Своя сетка рабочего стола</string>
     <string name="launcher_custom_grid_columns">Столбцы</string>

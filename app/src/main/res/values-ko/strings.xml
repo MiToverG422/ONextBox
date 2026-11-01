@@ -992,6 +992,10 @@
     <string name="fluid_browser_title">기본 브라우저로 웹페이지 열기</string>
     <string name="fluid_browser_summary">플루이드 클라우드가 인식한 웹 링크를 시스템 설정의 기본 브라우저로 엽니다</string>
     <string name="fluid_browser_save_failed">브라우저 설정을 저장할 수 없습니다</string>
+    <string name="fluid_recents_group">표시</string>
+    <string name="fluid_recents_title">최근 앱 화면에 유지</string>
+    <string name="fluid_recents_summary">최근 앱 화면에서 알림 아이콘과 함께 숨기지 않고 플루이드 클라우드를 계속 표시합니다</string>
+    <string name="fluid_recents_save_failed">설정을 저장할 수 없습니다</string>
 
     <string name="launcher_custom_grid_title">홈 화면 레이아웃 사용자 지정</string>
     <string name="launcher_custom_grid_columns">열 수</string>

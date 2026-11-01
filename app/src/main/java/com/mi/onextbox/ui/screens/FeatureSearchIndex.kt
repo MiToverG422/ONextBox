@@ -208,6 +208,8 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SystemUiFluidCloud, R.string.feature_fluid_cloud_material_title),
         Entry(FeaturePageMode.SystemUiFluidCloud, R.string.fluid_browser_title, R.string.fluid_browser_summary),
         Entry(FeaturePageMode.SystemUiFluidCloud, R.string.fluid_media_blacklist_title, R.string.fluid_media_blacklist_summary),
+        Entry(FeaturePageMode.SystemUiFluidCloud, R.string.fluid_recents_group),
+        Entry(FeaturePageMode.SystemUiFluidCloud, R.string.fluid_recents_title, R.string.fluid_recents_summary),
         Entry(FeaturePageMode.SystemUiFluidCloudMediaBlacklist, R.string.fluid_media_apps_title, R.string.fluid_media_search_hint),
         Entry(FeaturePageMode.SystemUiStatusBarNetwork, R.string.feature_international_network_display_title, R.string.feature_international_network_display_summary),
         Entry(FeaturePageMode.SystemUiStatusBarNetwork, R.string.feature_only_data_sim_signal_title, R.string.feature_only_data_sim_signal_summary),

@@ -104,6 +104,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_fluid_cloud_material_title, FeaturePageMode.SystemUiFluidCloud) { context -> LspConfig.isFluidCloudMaterialEnabled(context) },
         Entry(R.string.fluid_media_blacklist_title, FeaturePageMode.SystemUiFluidCloud) { context -> FluidCloudMediaSettings.isEnabled(context) },
         Entry(R.string.fluid_browser_title, FeaturePageMode.SystemUiFluidCloud) { context -> FluidCloudBrowserSettings.isEnabled(context) },
+        Entry(R.string.fluid_recents_title, FeaturePageMode.SystemUiFluidCloud) { context -> FluidCloudRecentsSettings.isEnabled(context) },
         Entry(R.string.feature_google_messages_gemini_title, FeaturePageMode.GoogleMessages) { context -> GoogleMessagesConfig.isEnabled(context, GoogleMessagesConfig.Switch.Gemini) },
         Entry(R.string.feature_google_messages_copy_otp_title, FeaturePageMode.GoogleMessages) { context -> GoogleMessagesConfig.isEnabled(context, GoogleMessagesConfig.Switch.CopyOtp) },
         Entry(R.string.keyboard_material_unlock_title, FeaturePageMode.Keyboard) { context -> LspConfig.isKeyboardMaterialUnlocked(context) },

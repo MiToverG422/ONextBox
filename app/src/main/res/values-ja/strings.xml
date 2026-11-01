@@ -992,6 +992,10 @@
     <string name="fluid_browser_title">既定のブラウザーでウェブページを開く</string>
     <string name="fluid_browser_summary">流体クラウドが認識したウェブリンクをシステム設定の既定のブラウザーで開く</string>
     <string name="fluid_browser_save_failed">ブラウザーの設定を保存できません</string>
+    <string name="fluid_recents_group">表示</string>
+    <string name="fluid_recents_title">履歴画面で常時表示</string>
+    <string name="fluid_recents_summary">最近使ったアプリ画面でも通知アイコンと一緒に隠さず、フルイドクラウドを表示します</string>
+    <string name="fluid_recents_save_failed">設定を保存できません</string>
 
     <string name="launcher_custom_grid_title">ホーム画面のグリッドをカスタマイズ</string>
     <string name="launcher_custom_grid_columns">列数</string>

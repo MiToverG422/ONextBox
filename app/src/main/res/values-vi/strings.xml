@@ -992,6 +992,10 @@
     <string name="fluid_browser_title">Mở trang web bằng trình duyệt mặc định</string>
     <string name="fluid_browser_summary">Mở liên kết web do Fluid Cloud nhận diện bằng trình duyệt mặc định trong cài đặt hệ thống</string>
     <string name="fluid_browser_save_failed">Không thể lưu cài đặt trình duyệt</string>
+    <string name="fluid_recents_group">Hiển thị</string>
+    <string name="fluid_recents_title">Giữ trên màn hình gần đây</string>
+    <string name="fluid_recents_summary">Giữ Fluid Cloud hiển thị trên màn hình ứng dụng gần đây thay vì ẩn cùng biểu tượng thông báo</string>
+    <string name="fluid_recents_save_failed">Không thể lưu cài đặt</string>
 
     <string name="launcher_custom_grid_title">Tùy chỉnh lưới màn hình chính</string>
     <string name="launcher_custom_grid_columns">Số cột</string>

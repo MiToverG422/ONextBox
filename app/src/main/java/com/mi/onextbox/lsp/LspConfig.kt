@@ -2794,6 +2794,7 @@ object LspConfig {
             setExpressNoMiniProgramEnabled(context, false)
             setFluidCloudBatteryEnabled(context, false)
             setFluidCloudMaterialEnabled(context, false)
+            FluidCloudRecentsSettings.setEnabled(context, false)
             setRoundNotificationClearButtonEnabled(context, false)
             setAospBackPanelEnabled(context, false)
             BackGestureSettings.reset(context)

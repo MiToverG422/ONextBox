@@ -19,6 +19,7 @@ import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.lsp.FluidCloudBrowserSettings
 import com.mi.onextbox.lsp.FluidCloudMediaSettings
+import com.mi.onextbox.lsp.FluidCloudRecentsSettings
 import com.mi.onextbox.lsp.LspPreferenceStore
 import com.mi.onextbox.ui.settings.FeatureSettingWriteQueue
 import com.mi.onextbox.ui.settings.SettingsCardRow
@@ -42,6 +43,8 @@ internal fun FluidCloudFeaturesPage(onOpen: (FeaturePageMode) -> Unit) {
     var mediaApplying by remember { mutableStateOf(false) }
     var browserEnabled by remember(context) { mutableStateOf(FluidCloudBrowserSettings.isEnabled(context)) }
     var browserApplying by remember { mutableStateOf(false) }
+    var recentsEnabled by remember(context) { mutableStateOf(FluidCloudRecentsSettings.isEnabled(context)) }
+    var recentsApplying by remember { mutableStateOf(false) }
     DisposableEffect(context, owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -51,6 +54,9 @@ internal fun FluidCloudFeaturesPage(onOpen: (FeaturePageMode) -> Unit) {
             }
             if (event == Lifecycle.Event.ON_RESUME && !browserApplying) {
                 browserEnabled = FluidCloudBrowserSettings.isEnabled(context)
+            }
+            if (event == Lifecycle.Event.ON_RESUME && !recentsApplying) {
+                recentsEnabled = FluidCloudRecentsSettings.isEnabled(context)
             }
         }
         owner.lifecycle.addObserver(observer)
@@ -65,9 +71,13 @@ internal fun FluidCloudFeaturesPage(onOpen: (FeaturePageMode) -> Unit) {
             if (!browserApplying && (key == null || key == FluidCloudBrowserSettings.ENABLED)) {
                 browserEnabled = FluidCloudBrowserSettings.isEnabled(context)
             }
+            if (!recentsApplying && (key == null || key == FluidCloudRecentsSettings.ENABLED)) {
+                recentsEnabled = FluidCloudRecentsSettings.isEnabled(context)
+            }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
         if (!browserApplying) browserEnabled = FluidCloudBrowserSettings.isEnabled(context)
+        if (!recentsApplying) recentsEnabled = FluidCloudRecentsSettings.isEnabled(context)
         onDispose {
             owner.lifecycle.removeObserver(observer)
             prefs.unregisterOnSharedPreferenceChangeListener(listener)
@@ -167,6 +177,37 @@ internal fun FluidCloudFeaturesPage(onOpen: (FeaturePageMode) -> Unit) {
                         } finally {
                             browserEnabled = FluidCloudBrowserSettings.isEnabled(appContext)
                             browserApplying = false
+                        }
+                    }
+                }
+            },
+        )
+    }
+    SettingsSection(title = stringResource(R.string.fluid_recents_group))
+    SettingsGroup {
+        SettingsToggleRow(
+            title = stringResource(R.string.fluid_recents_title),
+            summary = stringResource(R.string.fluid_recents_summary),
+            checked = recentsEnabled,
+            onCheckedChange = { checked ->
+                if (!recentsApplying) {
+                    recentsApplying = true
+                    recentsEnabled = checked
+                    val appContext = context.applicationContext
+                    val pending = FeatureSettingWriteQueue.application.enqueue {
+                        FluidCloudRecentsSettings.setEnabled(appContext, checked)
+                        check(FluidCloudRecentsSettings.isEnabled(appContext) == checked)
+                    }
+                    scope.launch {
+                        try {
+                            pending.await()
+                        } catch (cancel: CancellationException) {
+                            throw cancel
+                        } catch (_: Exception) {
+                            Toast.makeText(appContext, R.string.fluid_recents_save_failed, Toast.LENGTH_LONG).show()
+                        } finally {
+                            recentsEnabled = FluidCloudRecentsSettings.isEnabled(appContext)
+                            recentsApplying = false
                         }
                     }
                 }

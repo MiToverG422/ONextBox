@@ -61,6 +61,7 @@ internal object ColorOs16Capabilities {
         "file_manager_native_picker",
         "file_manager_default_package",
         "fluid_cloud_default_browser_enabled",
+        "fluid_cloud_keep_in_recents",
         "game_assistant_block_realme_startup_animation",
         "game_assistant_block_root",
         "game_assistant_hide_promotions",

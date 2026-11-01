@@ -992,6 +992,10 @@
     <string name="fluid_browser_title">網頁跟隨預設瀏覽器</string>
     <string name="fluid_browser_summary">用系統設定嘅預設瀏覽器開啟流體雲識別到嘅網頁連結</string>
     <string name="fluid_browser_save_failed">儲存唔到瀏覽器設定</string>
+    <string name="fluid_recents_group">顯示</string>
+    <string name="fluid_recents_title">後台頁面常駐</string>
+    <string name="fluid_recents_summary">喺最近任務頁面保持流體雲顯示，唔會跟通知圖示一齊隱藏</string>
+    <string name="fluid_recents_save_failed">儲存唔到常駐設定</string>
 
     <string name="launcher_custom_grid_title">自訂桌面佈局</string>
     <string name="launcher_custom_grid_columns">列數</string>

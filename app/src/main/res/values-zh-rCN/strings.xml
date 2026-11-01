@@ -1042,6 +1042,10 @@
     <string name="fluid_browser_title">网页跟随默认浏览器</string>
     <string name="fluid_browser_summary">使用系统设置的默认浏览器打开流体云识别的网页链接</string>
     <string name="fluid_browser_save_failed">无法保存浏览器设置</string>
+    <string name="fluid_recents_group">显示</string>
+    <string name="fluid_recents_title">后台页面常驻</string>
+    <string name="fluid_recents_summary">在最近任务页面保持流体云显示，不随通知图标一起隐藏</string>
+    <string name="fluid_recents_save_failed">无法保存常驻设置</string>
 
     <string name="launcher_custom_grid_title">自定义桌面布局</string>
     <string name="launcher_custom_grid_columns">列数</string>
