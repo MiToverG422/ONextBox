@@ -1,5 +1,6 @@
 package com.mi.onextbox.lsp
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PixelFormat
 import android.view.Gravity
@@ -26,7 +27,8 @@ internal class FaceAuthCapsuleWindow(
         }
         if (view == null) {
             // Same privileged overlay layer used by System UI's display decorations.
-            val type = 2026 // TYPE_DISPLAY_OVERLAY
+            val type = 2026 // TYPE_DISPLAY_OVERLAY, omitted from the public SDK's WindowType.
+            @SuppressLint("WrongConstant")
             val windowContext = context.createWindowContext(type, null)
             val wm = requireNotNull(windowContext.getSystemService(WindowManager::class.java))
             val owned = FaceAuthCapsuleView(windowContext).apply {

@@ -12,6 +12,7 @@ class InstallerCleanupSettingsTest {
             InstallerCleanupSettings.NATIVE_UI).all(::read))
         assertFalse(read(InstallerCleanupSettings.APP_HIDE_COLLECTION_NOTICE))
         assertFalse(read(InstallerCleanupSettings.APP_BLOCK_NETWORK))
+        assertFalse(read(InstallerCleanupSettings.STDSP_ALLOW_INSTALL))
         values[InstallerCleanupSettings.APP_SKIP_SCAN] = false
         values[InstallerCleanupSettings.APP_HIDE_COLLECTION_NOTICE] = true
         assertFalse(read(InstallerCleanupSettings.APP_SKIP_SCAN))
@@ -32,6 +33,7 @@ class InstallerCleanupSettingsTest {
         assertEquals(setOf(InstallerCleanupSettings.APP_SKIP_SCAN, InstallerCleanupSettings.APP_REMOVE_ADS,
             InstallerCleanupSettings.APP_HIDE_COLLECTION_NOTICE, InstallerCleanupSettings.APP_BLOCK_NETWORK), InstallerCleanupSettings.appKeys)
         assertEquals(setOf(InstallerCleanupSettings.NATIVE_UI), InstallerCleanupSettings.packageKeys)
-        assertEquals(5, InstallerCleanupSettings.keys.size)
+        assertEquals(InstallerCleanupSettings.appKeys + InstallerCleanupSettings.packageKeys +
+            InstallerCleanupSettings.STDSP_ALLOW_INSTALL, InstallerCleanupSettings.keys)
     }
 }

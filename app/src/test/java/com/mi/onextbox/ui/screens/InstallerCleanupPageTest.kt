@@ -3,29 +3,34 @@ package com.mi.onextbox.ui.screens
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.InstallerCleanupSettings
 import com.mi.onextbox.lsp.ModuleHotReloadPolicy
+import com.mi.onextbox.lsp.RegionalAppPackages
 import com.mi.onextbox.lsp.SystemAdaptationVersion
 import org.junit.Assert.*
 import org.junit.Test
 
 class InstallerCleanupPageTest {
     @Test fun installerPagesHaveSeparateScopesControlsAndSearchDestinations() {
-        assertEquals(listOf(InstallerCleanupSettings.APP_DETAIL), featureRestartPackages(FeaturePageMode.AppInstaller))
+        assertEquals(listOf(InstallerCleanupSettings.APP_DETAIL, RegionalAppPackages.APP_INSTALLER_GLOBAL),
+            featureRestartPackages(FeaturePageMode.AppInstaller))
         assertEquals(listOf(InstallerCleanupSettings.PACKAGE_INSTALLER), featureRestartPackages(FeaturePageMode.PackageInstaller))
-        assertTrue(ModuleHotReloadPolicy.supportedPackages.containsAll(InstallerCleanupSettings.packages))
+        assertTrue(ModuleHotReloadPolicy.supportedPackages.containsAll(InstallerCleanupSettings.packages + RegionalAppPackages.APP_INSTALLER_GLOBAL))
         val app = SharedFeatureDefinitions.appInstallerRows
+        val stdsp = SharedFeatureDefinitions.stdspInstallerRows
         val pkg = SharedFeatureDefinitions.packageInstallerRows
         assertEquals(InstallerCleanupSettings.appKeys.toList(), app.map { it.first })
+        assertEquals(listOf(InstallerCleanupSettings.STDSP_ALLOW_INSTALL), stdsp.map { it.first })
         assertEquals(InstallerCleanupSettings.packageKeys.toList(), pkg.map { it.first })
-        assertTrue(app.map { it.first }.intersect(pkg.map { it.first }.toSet()).isEmpty())
-        assertTrue(app.all { it.second.page == FeaturePageMode.AppInstaller })
+        assertTrue((app + stdsp).map { it.first }.intersect(pkg.map { it.first }.toSet()).isEmpty())
+        assertTrue((app + stdsp).all { it.second.page == FeaturePageMode.AppInstaller })
         assertTrue(pkg.all { it.second.page == FeaturePageMode.PackageInstaller })
         assertEquals(listOf(R.string.installer_skip_detection_title, R.string.installer_remove_ads_title,
             R.string.installer_hide_collection_notice_title, R.string.installer_block_network_title), app.map { it.second.title })
         assertEquals(R.string.installer_native_ui_title, pkg.single().second.title)
+        assertEquals(R.string.stdsp_allow_install_title, stdsp.single().second.title)
         assertEquals(setOf(R.string.package_installer_title, R.string.installer_native_ui_title),
             featureSearchEntries(SystemAdaptationVersion.ColorOs17).filter { it.page == FeaturePageMode.PackageInstaller }.map { it.title }.toSet())
         val actions = EnabledFeatureActions()
-        (app + pkg).forEach { (_, definition) ->
+        (app + stdsp + pkg).forEach { (_, definition) ->
             assertEquals(definition.page, featureSearchEntries(SystemAdaptationVersion.ColorOs17).single { it.title == definition.title }.page)
             assertEquals(definition.page, EnabledFeatureCatalog.entries.single { it.title == definition.title }.page)
             assertTrue(actions.supports(definition.title))

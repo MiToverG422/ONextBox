@@ -120,13 +120,28 @@ class GameAssistantHookContractTest {
         assertTrue(page.contains("FeatureSettingWriteQueue.application.enqueue"))
     }
     @Test fun everySupportedLanguageHasEveryNewString() {
-        for (locale in listOf("values", "values-zh-rCN", "values-zh-rTW", "values-b+yue+Hant", "values-ja", "values-ja-rCN", "values-ko", "values-ru", "values-vi")) {
+        fun strings(locale: String): Map<String, String> {
             val file = listOf(File("src/main/res/$locale/strings.xml"), File("app/src/main/res/$locale/strings.xml")).first { it.isFile }
             val nodes = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file).getElementsByTagName("string")
-            val strings = (0 until nodes.length).map { nodes.item(it) }
-                .filter { it.attributes.getNamedItem("name").nodeValue.startsWith("game_assistant_") }
-            assertEquals(locale, 25, strings.size)
-            strings.forEach { assertTrue(locale, it.textContent.isNotBlank()); assertFalse(locale, it.textContent.endsWith(".") || it.textContent.endsWith("。")) }
+            val result = linkedMapOf<String, String>()
+            for (index in 0 until nodes.length) {
+                val node = nodes.item(index)
+                val key = node.attributes.getNamedItem("name").nodeValue
+                if (key.startsWith("game_assistant_")) {
+                    assertNull("Duplicate $locale:$key", result.put(key, node.textContent))
+                }
+            }
+            return result
+        }
+        val original = strings("values")
+        assertTrue(original.keys.containsAll(setOf("game_assistant_temperature_title", "game_assistant_temperature_summary")))
+        for (locale in listOf("values", "values-zh-rCN", "values-zh-rTW", "values-b+yue+Hant", "values-ja", "values-ja-rCN", "values-ko", "values-ru", "values-vi")) {
+            val translated = strings(locale)
+            assertEquals(locale, original.keys, translated.keys)
+            translated.forEach { (key, value) ->
+                assertTrue("$locale:$key", value.isNotBlank())
+                assertFalse("$locale:$key", value.endsWith(".") || value.endsWith("。"))
+            }
         }
     }
 }

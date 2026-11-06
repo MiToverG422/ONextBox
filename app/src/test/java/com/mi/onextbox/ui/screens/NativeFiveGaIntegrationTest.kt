@@ -11,22 +11,25 @@ import javax.xml.parsers.DocumentBuilderFactory
 class NativeFiveGaIntegrationTest {
     @Test fun nativeRecoveryHasOneEditableDestinationAndOnlyTheTwoRequiredScopes() {
         val title = R.string.native_5ga_title
-        assertEquals(FeaturePageMode.MobileNetwork, FeatureSearchIndex.entries.single { it.title == title }.page)
-        assertEquals(FeaturePageMode.MobileNetwork, EnabledFeatureCatalog.entries.single { it.title == title }.page)
+        assertEquals(FeaturePageMode.GlobalNetwork, FeatureSearchIndex.entries.single { it.title == title }.page)
+        assertEquals(FeaturePageMode.GlobalNetwork, EnabledFeatureCatalog.entries.single { it.title == title }.page)
         assertTrue(EnabledFeatureActions().supports(title))
         assertEquals(listOf("com.android.phone", "com.android.systemui"), NativeFiveGaSettings.restartPackages)
         assertFalse(FeatureRestartPlan(NativeFiveGaSettings.restartPackages).includesFramework)
     }
 
-    @Test fun c16CannotExposeTheUnverifiedAdapterThroughSearchOrRelatedLinks() {
+    @Test fun c16KeepsTheUnverifiedAdapterDisabledAndOutOfRelatedLinks() {
         val title = R.string.native_5ga_title
+        val visible = visibleFeatureSearchEntries(SystemAdaptationVersion.ColorOs16).single { it.title == title }
+        assertEquals(FeaturePageMode.GlobalNetwork, visible.page)
+        assertFalse(ColorOs16FeaturePolicy.isFeatureAvailable(SystemAdaptationVersion.ColorOs16, visible.page, visible.title))
         assertFalse(featureSearchEntries(SystemAdaptationVersion.ColorOs16).any { it.title == title })
         assertTrue(FeatureRecommendations.destinations(FeaturePageMode.SystemUiStatusBarNetwork,
             SystemAdaptationVersion.ColorOs16).none { it.title == title })
         val related = FeatureRecommendations.destinations(FeaturePageMode.SystemUiStatusBarNetwork,
             SystemAdaptationVersion.ColorOs17)
         assertEquals(listOf(title), related.map { it.title })
-        assertEquals(FeaturePageMode.MobileNetwork, related.single().page)
+        assertEquals(FeaturePageMode.GlobalNetwork, related.single().page)
     }
 
     @Test fun everyLocaleHasCompleteNativeRecognitionAndRestartTextWithMatchingFormats() {
