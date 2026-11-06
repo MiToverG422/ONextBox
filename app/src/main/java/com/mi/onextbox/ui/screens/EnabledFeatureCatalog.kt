@@ -144,6 +144,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.game_assistant_unlimited_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.UNLIMITED) },
         Entry(R.string.game_assistant_music_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.MUSIC) },
         Entry(R.string.game_assistant_temperature_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.TEMPERATURE) },
+        Entry(R.string.game_assistant_toolbar_temperature_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.TOOLBAR_TEMPERATURE) },
         Entry(R.string.game_assistant_root_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.BLOCK_ROOT) },
         Entry(R.string.game_assistant_developer_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.DEVELOPER) },
         Entry(R.string.game_assistant_skins_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.SKINS) },

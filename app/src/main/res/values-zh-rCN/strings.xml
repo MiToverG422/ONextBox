@@ -1812,8 +1812,10 @@
     <string name="home_support_notice_title">系统支持范围调整公告</string>
     <string name="home_support_notice_summary">即日起，ONextBox 仅支持 ColorOS 17，并终止对 ColorOS 16 的维护。后续不再提供 ColorOS 16 的新增适配及兼容性修复</string>
     <string name="home_support_notice_dismiss">关闭且不再显示</string>
-    <string name="game_assistant_temperature_title">恢复温度显示</string>
-    <string name="game_assistant_temperature_summary">将游戏助手顶部的电量替换为原厂温度读数</string>
+    <string name="game_assistant_temperature_title">性能面板显示温度</string>
+    <string name="game_assistant_temperature_summary">将性能面板顶部的电量替换为原厂温度读数</string>
+    <string name="game_assistant_toolbar_temperature_title">工具栏显示温度</string>
+    <string name="game_assistant_toolbar_temperature_summary">将工具栏顶部的电量替换为原厂温度读数</string>
     <string name="retain_lockscreen_notifications_title">保留锁屏通知</string>
     <string name="retain_lockscreen_notifications_summary">再次锁屏时继续显示尚未清除的通知，遵循锁屏通知隐私设置</string>
     <string name="keyguard_face_capsule_title">锁屏流体云</string>

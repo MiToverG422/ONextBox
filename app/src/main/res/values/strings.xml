@@ -1836,8 +1836,10 @@
     <string name="home_support_notice_title">System Support Policy Update</string>
     <string name="home_support_notice_summary">Effective immediately, ONextBox supports ColorOS 17 exclusively. Support for ColorOS 16 has ended; no further adaptations or compatibility fixes will be provided</string>
     <string name="home_support_notice_dismiss">Dismiss and do not show again</string>
-    <string name="game_assistant_temperature_title">Restore temperature display</string>
-    <string name="game_assistant_temperature_summary">Show the native temperature reading instead of battery level at the top of Game Assistant</string>
+    <string name="game_assistant_temperature_title">Performance panel temperature</string>
+    <string name="game_assistant_temperature_summary">Replace the battery level at the top of the performance panel with the native temperature reading</string>
+    <string name="game_assistant_toolbar_temperature_title">Tools toolbar temperature</string>
+    <string name="game_assistant_toolbar_temperature_summary">Replace the battery level at the top of the tools toolbar with the native temperature reading</string>
     <string name="retain_lockscreen_notifications_title">Keep notifications on lock screen</string>
     <string name="retain_lockscreen_notifications_summary">Keep existing notifications visible when locking again, while respecting lock screen privacy settings</string>
     <string name="keyguard_face_capsule_title">Lock screen Fluid Cloud</string>

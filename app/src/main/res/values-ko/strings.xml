@@ -1722,8 +1722,10 @@
     <string name="home_support_notice_title">지원 시스템 변경 안내</string>
     <string name="home_support_notice_summary">이제부터 ONextBox는 ColorOS 17만 지원합니다. ColorOS 16에 대한 유지보수가 종료되며, 향후 신규 대응 및 호환성 수정은 제공되지 않습니다</string>
     <string name="home_support_notice_dismiss">닫고 다시 표시하지 않기</string>
-    <string name="game_assistant_temperature_title">온도 표시 복원</string>
-    <string name="game_assistant_temperature_summary">게임 어시스턴트 상단의 배터리 잔량을 기본 온도 측정값으로 대체합니다</string>
+    <string name="game_assistant_temperature_title">성능 패널에 온도 표시</string>
+    <string name="game_assistant_temperature_summary">성능 패널 상단의 배터리 잔량을 기본 온도 측정값으로 대체합니다</string>
+    <string name="game_assistant_toolbar_temperature_title">도구 모음에 온도 표시</string>
+    <string name="game_assistant_toolbar_temperature_summary">도구 모음 상단의 배터리 잔량을 기본 온도 측정값으로 대체합니다</string>
     <string name="retain_lockscreen_notifications_title">잠금 화면 알림 유지</string>
     <string name="retain_lockscreen_notifications_summary">다시 잠글 때 삭제하지 않은 알림을 계속 표시하며 잠금 화면 개인정보 설정을 따릅니다</string>
     <string name="keyguard_face_capsule_title">잠금 화면 플루이드 클라우드</string>

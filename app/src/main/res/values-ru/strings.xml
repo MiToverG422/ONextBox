@@ -1724,8 +1724,10 @@
     <string name="home_support_notice_title">Изменение списка поддерживаемых систем</string>
     <string name="home_support_notice_summary">С этого момента ONextBox поддерживает только ColorOS 17. Поддержка ColorOS 16 прекращена; дальнейшая адаптация и исправления совместимости предоставляться не будут</string>
     <string name="home_support_notice_dismiss">Закрыть и больше не показывать</string>
-    <string name="game_assistant_temperature_title">Вернуть отображение температуры</string>
-    <string name="game_assistant_temperature_summary">Показывать штатные показания температуры вместо заряда батареи вверху игрового помощника</string>
+    <string name="game_assistant_temperature_title">Температура на панели производительности</string>
+    <string name="game_assistant_temperature_summary">Показывать штатную температуру вместо заряда батареи вверху панели производительности</string>
+    <string name="game_assistant_toolbar_temperature_title">Температура на панели инструментов</string>
+    <string name="game_assistant_toolbar_temperature_summary">Показывать штатную температуру вместо заряда батареи вверху панели инструментов</string>
     <string name="retain_lockscreen_notifications_title">Сохранять уведомления на экране блокировки</string>
     <string name="retain_lockscreen_notifications_summary">Показывать не удалённые уведомления при повторной блокировке, соблюдая настройки конфиденциальности</string>
     <string name="keyguard_face_capsule_title">Fluid Cloud на экране блокировки</string>

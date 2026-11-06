@@ -132,6 +132,7 @@ internal class EnabledFeatureActions {
         R.string.game_assistant_unlimited_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.UNLIMITED, enabled) },
         R.string.game_assistant_music_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.MUSIC, enabled) },
         R.string.game_assistant_temperature_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.TEMPERATURE, enabled) },
+        R.string.game_assistant_toolbar_temperature_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.TOOLBAR_TEMPERATURE, enabled) },
         R.string.game_assistant_root_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.BLOCK_ROOT, enabled) },
         R.string.game_assistant_developer_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.DEVELOPER, enabled) },
         R.string.game_assistant_skins_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.SKINS, enabled) },

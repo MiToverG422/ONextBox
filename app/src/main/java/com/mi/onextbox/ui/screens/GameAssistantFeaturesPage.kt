@@ -64,6 +64,7 @@ internal fun GameAssistantFeaturesPage() {
         Triple(GameAssistantSettings.UNLIMITED, R.string.game_assistant_unlimited_title, R.string.game_assistant_unlimited_summary),
         Triple(GameAssistantSettings.MUSIC, R.string.game_assistant_music_title, R.string.game_assistant_music_summary),
         Triple(GameAssistantSettings.TEMPERATURE, R.string.game_assistant_temperature_title, R.string.game_assistant_temperature_summary),
+        Triple(GameAssistantSettings.TOOLBAR_TEMPERATURE, R.string.game_assistant_toolbar_temperature_title, R.string.game_assistant_toolbar_temperature_summary),
         Triple(GameAssistantSettings.BLOCK_ROOT, R.string.game_assistant_root_title, R.string.game_assistant_root_summary),
         Triple(GameAssistantSettings.DEVELOPER, R.string.game_assistant_developer_title, R.string.game_assistant_developer_summary),
         Triple(GameAssistantSettings.SKINS, R.string.game_assistant_skins_title, 0),

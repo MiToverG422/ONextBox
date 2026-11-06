@@ -1697,8 +1697,10 @@
     <string name="home_support_notice_title">Thông báo thay đổi phạm vi hỗ trợ</string>
     <string name="home_support_notice_summary">Kể từ nay, ONextBox chỉ hỗ trợ ColorOS 17 và ngừng bảo trì ColorOS 16. Các bản cập nhật tiếp theo sẽ không bổ sung hỗ trợ hoặc sửa lỗi tương thích cho ColorOS 16</string>
     <string name="home_support_notice_dismiss">Đóng và không hiển thị lại</string>
-    <string name="game_assistant_temperature_title">Khôi phục hiển thị nhiệt độ</string>
-    <string name="game_assistant_temperature_summary">Thay mức pin ở đầu Trợ lý trò chơi bằng số đo nhiệt độ gốc</string>
+    <string name="game_assistant_temperature_title">Nhiệt độ trên bảng hiệu năng</string>
+    <string name="game_assistant_temperature_summary">Thay mức pin ở đầu bảng hiệu năng bằng số đo nhiệt độ gốc</string>
+    <string name="game_assistant_toolbar_temperature_title">Nhiệt độ trên thanh công cụ</string>
+    <string name="game_assistant_toolbar_temperature_summary">Thay mức pin ở đầu thanh công cụ bằng số đo nhiệt độ gốc</string>
     <string name="retain_lockscreen_notifications_title">Giữ thông báo trên màn hình khóa</string>
     <string name="retain_lockscreen_notifications_summary">Tiếp tục hiển thị thông báo chưa xóa khi khóa lại, tuân theo cài đặt quyền riêng tư của màn hình khóa</string>
     <string name="keyguard_face_capsule_title">Đám mây lưu động màn hình khóa</string>

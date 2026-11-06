@@ -14,7 +14,8 @@ internal object GameAssistantSettings {
     const val SKIN = "game_assistant_skin"
     const val MUSIC = "game_assistant_unlock_music_whitelist"
     const val TEMPERATURE = "game_assistant_restore_temperature"
-    val toggles = setOf(PROMOTIONS, REALME_STARTUP_ANIMATION, UNLIMITED, BLOCK_ROOT, DEVELOPER, SKINS, MUSIC, TEMPERATURE)
+    const val TOOLBAR_TEMPERATURE = "game_assistant_toolbar_temperature"
+    val toggles = setOf(PROMOTIONS, REALME_STARTUP_ANIMATION, UNLIMITED, BLOCK_ROOT, DEVELOPER, SKINS, MUSIC, TEMPERATURE, TOOLBAR_TEMPERATURE)
     val keys = toggles + SKIN
 
     fun enabled(context: Context, key: String): Boolean {

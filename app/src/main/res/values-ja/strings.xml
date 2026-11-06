@@ -1722,8 +1722,10 @@
     <string name="home_support_notice_title">対応システム変更のお知らせ</string>
     <string name="home_support_notice_summary">本日より、ONextBox のサポート対象を ColorOS 17 のみに変更します。ColorOS 16 の保守は終了し、今後の新規対応および互換性の修正は提供しません</string>
     <string name="home_support_notice_dismiss">閉じて今後表示しない</string>
-    <string name="game_assistant_temperature_title">温度表示を復元</string>
-    <string name="game_assistant_temperature_summary">ゲームアシスタント上部の電池残量を標準の温度測定値に置き換えます</string>
+    <string name="game_assistant_temperature_title">パフォーマンスパネルに温度を表示</string>
+    <string name="game_assistant_temperature_summary">パフォーマンスパネル上部の電池残量を標準の温度測定値に置き換えます</string>
+    <string name="game_assistant_toolbar_temperature_title">ツールバーに温度を表示</string>
+    <string name="game_assistant_toolbar_temperature_summary">ツールバー上部の電池残量を標準の温度測定値に置き換えます</string>
     <string name="retain_lockscreen_notifications_title">ロック画面の通知を保持</string>
     <string name="retain_lockscreen_notifications_summary">再ロック後も未消去の通知を表示します。ロック画面のプライバシー設定は維持されます</string>
     <string name="keyguard_face_capsule_title">ロック画面の流体クラウド</string>

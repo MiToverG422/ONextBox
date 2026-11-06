@@ -48,6 +48,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_unlimited_title, R.string.game_assistant_unlimited_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_music_title, R.string.game_assistant_music_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_temperature_title, R.string.game_assistant_temperature_summary),
+        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_toolbar_temperature_title, R.string.game_assistant_toolbar_temperature_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_root_title, R.string.game_assistant_root_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_developer_title, R.string.game_assistant_developer_summary),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_skins_title),

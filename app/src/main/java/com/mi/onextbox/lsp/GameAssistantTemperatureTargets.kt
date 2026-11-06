@@ -54,7 +54,7 @@ internal class GameAssistantTemperatureTargets(model: Class<*>, private val gett
 
     data class Labels(val index: Int, val battery: List<String>, val temperature: List<String>)
 
-    // Called only after the native panel initialization/update has returned successfully.
+    // Accessed from native UI callbacks after Application initialization.
     fun readLabels(): Labels? {
         val owner = instance.get(null)
         val index = (status.invoke(owner) as List<*>).indexOf("battery")
@@ -66,4 +66,43 @@ internal class GameAssistantTemperatureTargets(model: Class<*>, private val gett
     }
 
     fun readCelsius(): Float = getter.invoke(receiver()) as Float
+
+    fun readDisplayValue(): String = runCatching { formatCelsius(readCelsius()) }.getOrDefault("--")
+
+    fun updateArguments(args: List<Any?>, enabled: Boolean): Array<Any?>? {
+        if (!enabled || args.firstOrNull() != "battery") return null
+        val value = readDisplayValue()
+        return args.toTypedArray().also { it[1] = value; it[2] = false }
+    }
+
+    fun toolbarArguments(args: List<Any?>, valueIndex: Int, enabled: Boolean): Array<Any?>? {
+        if (!enabled) return null
+        val unit = (args.getOrNull(2) as? String)?.trim().orEmpty()
+        if (unit.isEmpty()) return null
+        val labels = readLabels() ?: return null
+        if (unit != labels.battery[1].trim() && unit != labels.temperature[1].trim()) return null
+        val value = readDisplayValue()
+        return args.toTypedArray().also {
+            it[valueIndex] = value
+            it[2] = labels.temperature[1]
+            it[3] = labels.temperature[0]
+            it[4] = false
+        }
+    }
+
+    companion object {
+        fun formatCelsius(value: Float): String =
+            if (value.isFinite() && value in 0f..100f) value.toInt().toString() else "--"
+
+        fun toolbarValueIndex(parameters: Array<Class<*>>): Int? {
+            if (parameters.size != 5 || parameters[2] != String::class.java ||
+                parameters[3] != String::class.java || parameters[4] != Boolean::class.javaPrimitiveType
+            ) return null
+            return when {
+                parameters[0] == String::class.java && parameters[1] == Int::class.javaPrimitiveType -> 0
+                parameters[0] == Int::class.javaPrimitiveType && parameters[1] == String::class.java -> 1
+                else -> null
+            }
+        }
+    }
 }
