@@ -14,13 +14,12 @@ import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.util.IdentityHashMap
-import java.util.zip.ZipFile
 
 internal object KeyboardBottomLiftHooker {
     private const val TAG = "ONextBox-KeyboardLift"
 
     fun hook(loader: ClassLoader, apkPath: String) {
-        val stateKey = "$TAG:state@${System.identityHashCode(loader)}"
+        val stateKey = "$TAG:state-v2@${System.identityHashCode(loader)}"
         val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
         if (!LspConfig.isKeyboardBottomLiftFixEnabledXposed() && saved == null) return
         val hookKey = "$TAG@${System.identityHashCode(loader)}"
@@ -141,12 +140,7 @@ internal object KeyboardBottomLiftHooker {
 
     private fun resolve(loader: ClassLoader, apkPath: String): Array<Any> {
         System.loadLibrary("dexkit")
-        val relevantDex = ZipFile(apkPath).use { apk ->
-            apk.entries().asSequence().filter { it.name.matches(Regex("classes\\d*\\.dex")) }
-                .map { entry -> apk.getInputStream(entry).use { it.readBytes() } }
-                .first { KeyboardBottomLiftRules.containsHeightAnchors(it) }
-        }
-        return DexKitBridge.create(arrayOf(relevantDex)).use { dex ->
+        return DexKitBridge.create(apkPath).use { dex ->
             dex.setThreadNum(1)
             val attached = dex.findMethod {
                 matcher {

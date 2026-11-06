@@ -76,8 +76,8 @@ internal fun LspMissingScopesNotice(
         openFailed = false
         scope.launch {
             try {
-                val result = withContext(Dispatchers.IO) { LsposedScopeRequester.openManager(context) }
-                openFailed = !result.isSuccess
+                val result = withContext(Dispatchers.IO) { LsposedScopeRequester.requestRequiredScopes() }
+                openFailed = !result
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {

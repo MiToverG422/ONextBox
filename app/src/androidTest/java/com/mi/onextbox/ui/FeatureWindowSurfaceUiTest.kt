@@ -22,6 +22,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mi.onextbox.ui.screens.FeatureLaunchOrigin
 import com.mi.onextbox.ui.screens.FeaturePageMode
 import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.basic.rememberTopAppBarState
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -107,6 +108,7 @@ class FeatureWindowSurfaceUiTest {
                     origins = mapOf(FeaturePageMode.Aod to origin),
                     viewportBounds = Rect(0f, 0f, 360f * scale, 640f * scale),
                     gridPosition = null, scrollState = rememberScrollState(),
+                    topAppBarState = rememberTopAppBarState(),
                     onPressStart = { presses.incrementAndGet().toLong() }, onPressEnd = { _, _ -> },
                     onOpen = { _, _, _ -> launches.incrementAndGet() },
                     excludedBounds = Rect(0f, 540f * scale, 360f * scale, 640f * scale),

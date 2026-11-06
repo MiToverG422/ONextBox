@@ -41,11 +41,15 @@ internal fun NotificationBatchPage(modifier: Modifier, backdrop: LayerBackdrop?,
     var notifications by rememberSaveable { mutableStateOf(true) }
     var banners by rememberSaveable { mutableStateOf(true) }
     var lockScreen by rememberSaveable { mutableStateOf(true) }
+    var silent by rememberSaveable { mutableStateOf(false) }
+    var liveActivity by rememberSaveable { mutableStateOf(false) }
     var confirmation by rememberSaveable { mutableIntStateOf(0) }
     val types = buildSet {
         if (notifications) add(NotificationPermissionKind.Notifications)
         if (banners) add(NotificationPermissionKind.Banner)
         if (lockScreen) add(NotificationPermissionKind.LockScreen)
+        if (silent) add(NotificationPermissionKind.Silent)
+        if (liveActivity) add(NotificationPermissionKind.LiveActivity)
     }
     val busy = loading || operation.busy
     val plan = NotificationBatchEngine.plan(states, selected.toSet(), types, confirmation == 1)
@@ -81,6 +85,8 @@ internal fun NotificationBatchPage(modifier: Modifier, backdrop: LayerBackdrop?,
             notifications = NotificationPermissionKind.Notifications in it
             banners = NotificationPermissionKind.Banner in it
             lockScreen = NotificationPermissionKind.LockScreen in it
+            silent = NotificationPermissionKind.Silent in it
+            liveActivity = NotificationPermissionKind.LiveActivity in it
         },
     )
     val actionLabel = stringResource(when (confirmation) {

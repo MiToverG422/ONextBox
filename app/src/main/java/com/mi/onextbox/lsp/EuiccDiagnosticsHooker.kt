@@ -62,7 +62,7 @@ internal object EuiccDiagnosticsHooker {
     @Volatile
     private var latestSnapshot: EsimDiagnosticsSnapshot? = null
 
-    fun hook(classLoader: ClassLoader?): Boolean {
+    fun hook(classLoader: ClassLoader?, google: Boolean = false): Boolean {
         HotReloadLifecycle.register("euicc:diagnostics", capture = {
             arrayOf(application, applicationLoader, latestSnapshot?.lastDownloadResult)
         }, canReload = { !collecting.get() && pendingCallbacks.get() == 0 }, detach = {
@@ -81,10 +81,10 @@ internal object EuiccDiagnosticsHooker {
         })
         HotReloadLifecycle.afterCommit {
             val app = currentApplicationContext() as? Application
-            if (app?.packageName == "com.oplus.euicc") onApplicationReady(app, classLoader)
+            if (app != null && app.packageName in RegionalAppPackages.esim) onApplicationReady(app, classLoader)
         }
-        val applicationClass = findClass(APPLICATION_CLASS, classLoader)
-        val onCreate = applicationClass?.declaredMethods?.singleOrNull { method ->
+        val applicationClass = findClass(if (google) "com.google.android.euicc.gms.EuiccGoogleApplication" else APPLICATION_CLASS, classLoader)
+        val onCreate = applicationClass?.methods?.singleOrNull { method ->
             method.name == "onCreate" && method.parameterCount == 0 && method.returnType == Void.TYPE
         }
         if (onCreate == null) {
@@ -97,7 +97,7 @@ internal object EuiccDiagnosticsHooker {
                 val application = param.thisObject as? Application ?: return@installAfterHook
                 onApplicationReady(application, classLoader)
             }
-            hookLastDownloadResult(classLoader)
+            if (!google) hookLastDownloadResult(classLoader)
             HookLog.i(TAG, "Installed passive C17 eSIM diagnostics collector")
             true
         }.onFailure { throwable ->
@@ -189,6 +189,10 @@ internal object EuiccDiagnosticsHooker {
             publish(context, baseSnapshot)
         }
 
+        if (context.packageName == RegionalAppPackages.ESIM_GLOBAL) {
+            collectGoogleStatus(context)
+            return
+        }
         val assistant = loadProfileAssistant(classLoader)
         readProfileLimit(context, classLoader)?.let { limit ->
             updateSnapshot(context) { it.copy(profileLimit = limit) }
@@ -215,6 +219,34 @@ internal object EuiccDiagnosticsHooker {
         } else {
             updateSnapshot(context) { it.copy(collectionMessage = "esim_power_off") }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun collectGoogleStatus(context: Context) {
+        val manager = context.getSystemService(android.telephony.euicc.EuiccManager::class.java)
+        val eid = runCatching { manager?.eid }.getOrNull()
+        val osVersion = runCatching { manager?.euiccInfo?.osVersion }.getOrNull()
+        val profiles = runCatching {
+            val subscriptions = context.getSystemService(android.telephony.SubscriptionManager::class.java)
+            val available = android.telephony.SubscriptionManager::class.java
+                .getMethod("getAvailableSubscriptionInfoList").invoke(subscriptions) as? List<*>
+            available?.filterIsInstance<android.telephony.SubscriptionInfo>()?.filter { it.isEmbedded }?.map { info ->
+                    EsimProfileDiagnostic(
+                        displayName = info.displayName?.toString().orEmpty(),
+                        serviceProviderName = info.carrierName?.toString().orEmpty(),
+                        iccidMasked = maskIdentifier(info.iccId.orEmpty()),
+                        enabled = info.simSlotIndex >= 0,
+                        portIndex = info.portIndex,
+                    )
+                }
+        }.getOrNull()
+        updateSnapshot(context) { it.copy(
+            eidMasked = eid?.takeIf(String::isNotBlank)?.let(::maskIdentifier) ?: it.eidMasked,
+            firmwareVersion = osVersion.orEmpty(),
+            profiles = profiles.orEmpty(),
+            profileCount = profiles?.size,
+            enabledProfileCount = profiles?.count { profile -> profile.enabled },
+        ) }
     }
 
     private fun loadProfileAssistant(classLoader: ClassLoader?): Any? = runCatching {

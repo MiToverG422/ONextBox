@@ -3,7 +3,7 @@ package com.mi.onextbox.notifications
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class NotificationPermissionKind { Notifications, Banner, LockScreen }
+enum class NotificationPermissionKind { Notifications, Banner, LockScreen, Silent, LiveActivity }
 
 @Serializable
 data class NotificationAppTarget(val packageName: String, val uid: Int)
@@ -56,7 +56,7 @@ class NotificationBatchEngine(private val backend: NotificationBatchBackend, pri
             }
         }
         return NotificationAppState(target, values,
-            if (values.size == NotificationPermissionKind.entries.size) null else NotificationBatchIssue.Unavailable)
+            if (values.isNotEmpty()) null else NotificationBatchIssue.Unavailable)
     }
 
     fun apply(mutations: List<NotificationMutation>): NotificationBatchReport {
@@ -93,6 +93,7 @@ class NotificationBatchEngine(private val backend: NotificationBatchBackend, pri
     companion object {
         fun validValue(kind: NotificationPermissionKind, value: Int): Boolean = when (kind) {
             NotificationPermissionKind.LockScreen -> value in setOf(-1000, -1, 0, 1)
+            NotificationPermissionKind.Silent -> value in -1..1
             else -> value == 0 || value == 1
         }
 
@@ -100,6 +101,7 @@ class NotificationBatchEngine(private val backend: NotificationBatchBackend, pri
             states.filter { it.target.packageName in selected && it.issue == null }.flatMap { state ->
                 kinds.mapNotNull { kind -> state.values[kind]?.let { before ->
                     val after = when {
+                        kind == NotificationPermissionKind.Silent -> if (enabled) -1 else 1
                         enabled && kind == NotificationPermissionKind.LockScreen && before == 0 -> 0
                         enabled -> 1
                         kind == NotificationPermissionKind.LockScreen -> -1

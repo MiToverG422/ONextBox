@@ -229,9 +229,9 @@ internal fun SystemUiFeaturesPage(
         }
         FeaturePageMode.SystemUiStatusBarInteraction -> {
             SettingsGroup {
-                StatusBarInteractionSettingsRows()
+                StatusBarInteractionSettingsRows(hasFollowingRow = true)
                 SettingsDivider()
-                StatusBarKeepSettingsRow()
+                StatusBarKeepSettingsRow(hasDividerAbove = true)
             }
         }
         FeaturePageMode.SystemUiNotificationCenter -> {
@@ -247,6 +247,8 @@ internal fun SystemUiFeaturesPage(
                 NotificationClearButtonSettingsRow()
                 SettingsDivider()
                 HideNotificationClearSettingsRow(hasDividerAbove = true, hasDividerBelow = true)
+                SettingsDivider()
+                RetainLockscreenNotificationsSettingsRow(hasDividerAbove = true, hasDividerBelow = true)
                 SettingsDivider()
                 SettingsCardRow(
                     title = stringResource(R.string.notification_removal_title),

@@ -749,6 +749,7 @@ private fun WelcomePage(onNext: () -> Unit) {
     var guideContentVisible by remember { mutableStateOf(false) }
     var leavingGuide by remember { mutableStateOf(false) }
     var shownTitle by remember { mutableStateOf("") }
+    var secondTitleActive by remember { mutableStateOf(false) }
     val panelOffset = remember { Animatable(0f) }
     val panelCorner = remember { Animatable(0f) }
     val titleAlpha = remember { Animatable(1f) }
@@ -792,20 +793,22 @@ private fun WelcomePage(onNext: () -> Unit) {
         val characterCount = (firstTitle.length + secondTitle.length).coerceAtLeast(1)
         val intervalMillis = ((4_500L - 950L - 50L - 200L) / characterCount)
             .coerceAtLeast(22L)
-        firstTitle.forEachIndexed { index, _ ->
-            shownTitle = firstTitle.take(index + 1)
+        welcomeCharacterEnds(firstTitle).forEach { end ->
+            shownTitle = firstTitle.take(end)
             delay(intervalMillis)
         }
         delay(950)
         shownTitle = ""
+        secondTitleActive = true
         delay(50)
-        secondLead.forEachIndexed { index, _ ->
-            shownTitle = secondLead.take(index + 1)
+        welcomeCharacterEnds(secondLead).forEach { end ->
+            shownTitle = secondLead.take(end)
             delay(intervalMillis)
         }
         if (secondParts.size > 1) delay(200)
-        secondParts.getOrNull(1).orEmpty().forEach { character ->
-            shownTitle += character
+        val tail = secondParts.getOrNull(1).orEmpty()
+        welcomeCharacterEnds(tail).forEach { end ->
+            shownTitle = secondLead + tail.take(end)
             delay(intervalMillis)
         }
         // Hide the doll before the slide-up delay; video completion must not gate navigation.
@@ -920,14 +923,11 @@ private fun WelcomePage(onNext: () -> Unit) {
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
-            Text(
+            WelcomeTypewriter(
                 text = shownTitle,
-                color = ActivationInk,
-                fontSize = 40.sp,
-                lineHeight = 50.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Start,
-                minLines = 1,
+                fullText = if (secondTitleActive) secondTitle else firstTitle,
+                gradientStart = if (secondTitleActive) secondTitle.indexOf('\n').let { if (it < 0) 0 else it + 1 } else -1,
+                active = slideDownCompleted && !guideContentVisible,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 72.dp, start = 32.dp, end = 32.dp)

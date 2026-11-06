@@ -46,6 +46,17 @@ import java.util.Date
 @Composable
 internal fun EsimFeaturesPage(onOpenSubPage: (FeaturePageMode) -> Unit) {
     val context = LocalContext.current
+    if (com.mi.onextbox.lsp.RegionalAppPackages.googleEsim(context)) {
+        SettingsGroup {
+            SettingsCardRow(
+                title = stringResource(R.string.feature_group_esim_diagnostics),
+                summary = stringResource(R.string.feature_esim_diagnostics_entry_summary),
+                onClick = { onOpenSubPage(FeaturePageMode.EsimDiagnostics) },
+                showArrow = true,
+            )
+        }
+        return
+    }
     val scope = rememberCoroutineScope()
     var regionRestrictionOverrideEnabled by rememberSaveable {
         mutableStateOf(LspConfig.isEsimRegionRestrictionOverrideEnabled(context))
@@ -229,6 +240,7 @@ internal fun EsimDiagnosticsContent(
     confirmationCodePromptEnabled: Boolean,
     onRefresh: () -> Unit,
 ) {
+    val googleEsim = com.mi.onextbox.lsp.RegionalAppPackages.googleEsim(LocalContext.current)
     val unknown = stringResource(R.string.feature_esim_diag_unknown)
     val on = stringResource(R.string.feature_esim_diag_on)
     val off = stringResource(R.string.feature_esim_diag_off)
@@ -275,7 +287,9 @@ internal fun EsimDiagnosticsContent(
             FeatureSegmentPosition(index = 0, count = segmentCount) {
             SettingsCardRow(
                 title = stringResource(R.string.feature_esim_diagnostics_euicc_title),
-                summary = stringResource(
+                summary = if (googleEsim) stringResource(R.string.esim_google_euicc_summary,
+                    textOrUnknown(snapshot.eidMasked), textOrUnknown(snapshot.firmwareVersion), support(snapshot.mepSupported))
+                else stringResource(
                     R.string.feature_esim_diagnostics_euicc_summary,
                     power,
                     textOrUnknown(snapshot.eidMasked),
@@ -291,7 +305,9 @@ internal fun EsimDiagnosticsContent(
             FeatureSegmentPosition(index = 1, count = segmentCount) {
             SettingsCardRow(
                 title = stringResource(R.string.feature_esim_diagnostics_profiles_title),
-                summary = stringResource(
+                summary = if (googleEsim) stringResource(R.string.esim_google_profiles_summary,
+                    snapshot.profileCount?.toString() ?: unknown, snapshot.enabledProfileCount?.toString() ?: unknown)
+                else stringResource(
                     R.string.feature_esim_diagnostics_profiles_summary,
                     snapshot.profileCount?.toString() ?: unknown,
                     snapshot.operationalProfileCount?.toString() ?: unknown,
@@ -323,7 +339,9 @@ internal fun EsimDiagnosticsContent(
             FeatureSegmentPosition(index = snapshot.profiles.size + 2, count = segmentCount) {
             SettingsCardRow(
                 title = stringResource(R.string.feature_esim_diagnostics_environment_title),
-                summary = stringResource(
+                summary = if (googleEsim) stringResource(R.string.esim_google_environment_summary,
+                    state(snapshot.networkAvailable), textOrUnknown(snapshot.networkCountries), state(snapshot.locationEnabled))
+                else stringResource(
                     R.string.feature_esim_diagnostics_environment_summary,
                     state(snapshot.networkAvailable),
                     textOrUnknown(snapshot.networkCountries),

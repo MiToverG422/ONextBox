@@ -31,6 +31,7 @@ internal object LauncherNotificationDotColorHooker {
     private const val BIG_FOLDER_PREVIEW = "com.android.launcher3.folder.big.BigFolderPreviewItemManager"
     private const val BIG_FOLDER_NUM_BADGE = "com.android.launcher3.folder.big.BigFolderNumBadgeRender"
     private const val FOLDER_ICON = "com.android.launcher3.folder.FlexibleFolderIcon"
+    private const val SHORTCUT_CONTAINER = "com.android.launcher3.viewcontainer.ShortcutContainer"
 
     // The red dot drawable is a process-wide singleton reached through an obfuscated lazy holder
     // (f4.k -> Lht/c -> launcher_unread_notification_dot). It inflates from an XML <shape> to a
@@ -75,6 +76,42 @@ internal object LauncherNotificationDotColorHooker {
         }.onFailure {
             HookLog.w(TAG, "Folder icon badge color unavailable, stock color retained", it)
         }
+        runCatching { installShortcutContainer(loader) }.onSuccess {
+            HookLog.i(TAG, "Shortcut container badge color gate installed")
+        }.onFailure {
+            HookLog.w(TAG, "Shortcut container badge color unavailable", it)
+        }
+        // Animated icon nodes also record badges through this caller. Invalidate
+        // compiled copies of the draw methods so they cannot bypass the tint hooks.
+        runCatching {
+            ModernReflect.findClass("com.android.launcher3.iconrender.impl.IconNotificationDotRenderer", loader)
+                .declaredMethods.filter {
+                    it.name.startsWith("drawDotIfNecessary") &&
+                        it.parameterTypes.contentEquals(arrayOf(android.graphics.Canvas::class.java))
+                }.forEach { ModernHookRuntime.requireModule().deoptimize(it) }
+        }.onFailure { HookLog.w(TAG, "Animated badge caller unavailable", it) }
+    }
+
+    private fun installShortcutContainer(loader: ClassLoader) {
+        val type = ModernReflect.findClass(SHORTCUT_CONTAINER, loader)
+        val render = type.declaredMethods.single {
+            it.name == "dispatchDraw" &&
+                it.parameterTypes.contentEquals(arrayOf(android.graphics.Canvas::class.java))
+        }
+        // The return animation draws its badge from a container rather than the
+        // workspace BubbleTextView. Its DrawParams do not carry an icon color.
+        ModernHookRegistry.installCompat("$TAG:shortcut-container", render, object : ScopedTintHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                if (!enabled()) return
+                val host = param.thisObject ?: return
+                val color = iconColor(host) ?: return
+                val renderer = ModernReflect.getObjectField(host, "mDotRenderer")
+                    ?: return
+                tint(param, resolveDotDrawable(loader), color)
+                tint(param, numberPill(renderer), color)
+                textColor(param, renderer, color)
+            }
+        })
     }
 
     // Recompute the icon's dominant color at drawable creation when newIcon() is about to read a
@@ -103,8 +140,8 @@ internal object LauncherNotificationDotColorHooker {
                 if (!enabled()) return
                 // The renderer pipeline calls setDrawDotView(hostView) right before draw(), so the
                 // host BubbleTextView is available here even though draw() has no host parameter.
-                val host = ModernReflect.getObjectField(param.thisObject ?: return, "drawDotView") ?: return
-                val color = iconColor(host) ?: return
+                val host = ModernReflect.getObjectField(param.thisObject ?: return, "drawDotView")
+                val color = iconColor(host) ?: drawParamsColor(param.args[1]) ?: return
                 val drawable = resolveDotDrawable(loader) ?: return
                 tint(param, drawable, color)
             }
@@ -124,7 +161,7 @@ internal object LauncherNotificationDotColorHooker {
                 if (!enabled()) return
                 // drawNumber(Canvas, int count, DrawParams, Boolean, View host) — the last arg is
                 // the host BubbleTextView.
-                val color = iconColor(param.args[4]) ?: return
+                val color = iconColor(param.args[4]) ?: drawParamsColor(param.args[2]) ?: return
                 val pill = numberPill(param.thisObject) ?: return
                 tint(param, pill, color)
                 textColor(param, param.thisObject, color)
@@ -336,6 +373,13 @@ internal object LauncherNotificationDotColorHooker {
     // getIconColor() returns null, so fall back to the host's tag bitmap color.
     private fun iconColor(host: Any?): Int? {
         if (host == null) return null
+        if (host.javaClass.name == SHORTCUT_CONTAINER) {
+            val child = runCatching { ModernReflect.callMethod(host, "getApplicationChild") }.getOrNull()
+            iconColor(child)?.let { return it }
+            val info = runCatching { ModernReflect.getObjectField(host, "mInfo") }.getOrNull()
+            val app = runCatching { ModernReflect.callMethod(info, "getApplicationItem") }.getOrNull()
+            return itemBitmapColor(app)
+        }
         val tag = runCatching { ModernReflect.callMethod(host, "getTag") }.getOrNull()
         if (tag is List<*>) {
             // Stacked category icon: pick the first app that actually has a notification.
@@ -359,7 +403,10 @@ internal object LauncherNotificationDotColorHooker {
             }
             return null
         }
-        val icon = runCatching { ModernReflect.callMethod(host, "getIcon") }.getOrNull() ?: return null
+        // Item data survives the temporary drawable swaps used by long-press,
+        // drag and return animations; use it before the transient icon surface.
+        itemBitmapColor(tag)?.let { return it }
+        val icon = runCatching { ModernReflect.callMethod(host, "getIcon") }.getOrNull()
         val value = runCatching { ModernReflect.callMethod(icon, "getIconColor") as? Number }.getOrNull()?.toInt()
         if (value != null && value != 0 && Color.alpha(value) == 0xFF) return value
         // Fallback: the icon is a transient LayerDrawable (category-folder open animation) or its
@@ -367,11 +414,18 @@ internal object LauncherNotificationDotColorHooker {
         return itemBitmapColor(tag)
     }
 
+    private fun drawParamsColor(params: Any?): Int? {
+        params ?: return null
+        val color = runCatching { ModernReflect.getIntField(params, "appColor") }.getOrNull()
+            ?: return null
+        return color.takeIf { it != Color.BLACK && Color.alpha(it) == 255 }
+    }
+
     // Read the (scrimmed) dominant color from a WorkspaceItemInfo's bitmap, extracting it if the
     // stored color is still unset.
     private fun itemBitmapColor(item: Any?): Int? {
         if (item == null) return null
-        val info = ModernReflect.getObjectField(item, "bitmap") ?: return null
+        val info = runCatching { ModernReflect.getObjectField(item, "bitmap") }.getOrNull() ?: return null
         val color = ModernReflect.getIntField(info, "color")
         if (color != 0 && color != -0x1000000 && Color.alpha(color) == 0xFF) return scrim(color)
         val bitmap = ModernReflect.getObjectField(info, "icon") as? Bitmap ?: return null
@@ -382,11 +436,17 @@ internal object LauncherNotificationDotColorHooker {
     private fun numberPill(host: Any?): GradientDrawable? =
         ModernReflect.getObjectField(host ?: return null, "mGradientNumBg") as? GradientDrawable
 
-    // Pick black or white text for the number pill based on the (scrimmed) background luminance,
-    // using Android's WCAG relative luminance so the count stays readable over any icon color.
+    // Keep the badge hue in its text, with enough contrast against the pastel fill.
     private fun setTextColorForBg(renderer: Any?, bg: Int) {
         if (renderer == null) return
-        val textColor = if (ColorUtils.calculateLuminance(bg) > 0.5) Color.BLACK else Color.WHITE
+        val hsl = FloatArray(3)
+        ColorUtils.colorToHSL(bg, hsl)
+        hsl[2] = 0.22f
+        var textColor = ColorUtils.HSLToColor(hsl)
+        while (ColorUtils.calculateContrast(textColor, bg) < 4.5 && hsl[2] > 0.04f) {
+            hsl[2] -= 0.02f
+            textColor = ColorUtils.HSLToColor(hsl)
+        }
         runCatching { ModernReflect.setIntField(renderer, "mBadgeNumTextColor", textColor) }
     }
 

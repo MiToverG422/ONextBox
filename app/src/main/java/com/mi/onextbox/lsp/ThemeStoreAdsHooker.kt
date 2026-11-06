@@ -126,7 +126,8 @@ internal object ThemeStoreAdsHooker {
     }
 
     private fun hookPromotionPopup(loader: ClassLoader): Int {
-        val type = ModernReflect.findClassIfExists("lo.a\$c", loader) ?: return 0
+        val type = sequenceOf("lo.a\$c", "xq.a\$c")
+            .mapNotNull { ModernReflect.findClassIfExists(it, loader) }.firstOrNull() ?: return 0
         val dto = ModernReflect.findClass("com.oppo.cdo.theme.domain.dto.response.PromotionPopupDto", loader)
         install(type.getDeclaredMethod("b", dto)) { param ->
             // Run the native invalid-data branch to clear request state and deliver

@@ -21,6 +21,7 @@ com.oplus.euicc
 com.oplus.wallpapers
 com.heytap.colorfulengine
 com.heytap.themestore
+com.oplus.themestore
 com.coloros.gallery3d
 com.android.phone
 com.google.android.googlequicksearchbox
@@ -43,3 +44,6 @@ com.heytap.browser
 com.coloros.weather2
 com.android.photopicker
 com.oplus.engineermode
+com.google.android.euicc
+
+com.oplus.stdsp

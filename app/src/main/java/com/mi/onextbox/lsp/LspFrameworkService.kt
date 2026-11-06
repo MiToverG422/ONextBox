@@ -57,6 +57,25 @@ object LspFrameworkService {
 
     fun isCurrent(bound: XposedService): Boolean = service === bound
 
+    fun requestScopes(packages: Set<String>): Boolean {
+        val bound = service ?: return false
+        return runCatching {
+            val missing = (packages - bound.scope.toSet()).sorted()
+            if (missing.isNotEmpty()) {
+                bound.requestScope(missing, object : XposedService.OnScopeEventListener {
+                    override fun onScopeRequestApproved(approved: List<String>) {
+                        if (isCurrent(bound)) LsposedScopeRequester.onFrameworkServiceChanged()
+                    }
+                    override fun onScopeRequestFailed(message: String) {
+                        Log.w(TAG, "Scope request failed: $message")
+                        if (isCurrent(bound)) LsposedScopeRequester.onFrameworkServiceChanged()
+                    }
+                })
+            }
+            true
+        }.onFailure { Log.w(TAG, "Dynamic scope request unavailable", it) }.getOrDefault(false)
+    }
+
     internal fun publishIfCurrent(bound: XposedService, publish: () -> Unit): Boolean =
         synchronized(serviceLock) {
             if (service !== bound) false else {

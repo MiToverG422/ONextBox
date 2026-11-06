@@ -153,10 +153,8 @@ object LsposedScopeRequester {
             AppLogStore.w("LSPosed", "Cannot open manager before initialization")
             return false
         }
-        AppLogStore.i(
-            "LSPosed",
-            "Static scope mode; opening LSPosed manager instead of a dynamic scope request"
-        )
+        val required = readRequiredScopes()
+        if (required != null && LspFrameworkService.requestScopes(required)) return true
         return openManager(context).isSuccess
     }
 

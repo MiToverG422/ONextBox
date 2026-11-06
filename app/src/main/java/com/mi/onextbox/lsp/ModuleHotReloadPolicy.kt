@@ -3,6 +3,7 @@ package com.mi.onextbox.lsp
 /** Scope eligibility is separate from the resource owners' runtime readiness checks. */
 internal object ModuleHotReloadPolicy {
     val supportedPackages: Set<String> = setOf(
+        RegionalAppPackages.ESIM_GLOBAL, RegionalAppPackages.APP_INSTALLER_GLOBAL,
         "com.coloros.weather2", "com.android.photopicker", "com.oplus.engineermode",
         "com.heytap.pictorial", "com.heytap.browser",
         "system", "com.android.systemui", "com.oplus.screenshot", "com.oplus.screenrecorder",
@@ -17,7 +18,7 @@ internal object ModuleHotReloadPolicy {
         "com.coloros.translate", "com.oplus.camera",
         "com.coloros.smartsidebar",
         "com.oplus.appdetail", "com.android.packageinstaller",
-        "com.heytap.themestore", "com.coloros.securepay", "com.oplus.games", "com.coloros.gallery3d",
+        "com.heytap.themestore", RegionalAppPackages.THEME_GLOBAL, "com.coloros.securepay", "com.oplus.games", "com.coloros.gallery3d",
     )
 
     fun supportsProcess(processName: String, isSystemServer: Boolean): Boolean =

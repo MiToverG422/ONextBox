@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -212,13 +214,15 @@ fun SettingsCardRow(
     hasDividerAbove: Boolean = false,
     hasDividerBelow: Boolean = false,
     leadingContent: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true,
 ) {
 
 
 
     val spotlight = com.mi.onextbox.ui.screens.featureSpotlightModifier(title)
+        .then(if (enabled) Modifier else Modifier.semantics(mergeDescendants = true) { disabled() })
     val rowSummary = summary.takeIf { it.isNotBlank() }
-    if (LocalColorOsDialogContent.current && onClick != null && trailing == null &&
+    if (enabled && LocalColorOsDialogContent.current && onClick != null && trailing == null &&
         !showArrow && !showExpandArrow && leadingContent == null) {
         ColorOsDialogChoice(title, summary, onClick)
         return
@@ -230,6 +234,7 @@ fun SettingsCardRow(
     when {
         trailing != null -> BasicComponent(
             modifier = spotlight,
+            enabled = enabled,
             title = title,
             summary = rowSummary,
             startAction = startAction,
@@ -245,15 +250,17 @@ fun SettingsCardRow(
         )
         showArrow -> BasicComponent(
             modifier = spotlight,
+            enabled = enabled,
             title = title,
             summary = rowSummary,
             startAction = startAction,
             insideMargin = SettingsTokens.RowInsideMargin,
-            endActions = { SettingsJumpArrow() },
+            endActions = { SettingsJumpArrow(enabled = enabled) },
             onClick = onClick,
         )
         showExpandArrow -> BasicComponent(
             modifier = spotlight,
+            enabled = enabled,
             title = title,
             summary = rowSummary,
             startAction = startAction,
@@ -265,6 +272,7 @@ fun SettingsCardRow(
         )
         else -> BasicComponent(
             modifier = spotlight,
+            enabled = enabled,
             title = title,
             summary = rowSummary,
             startAction = startAction,
@@ -275,9 +283,11 @@ fun SettingsCardRow(
 }
 
 @Composable
-private fun SettingsJumpArrow() {
+private fun SettingsJumpArrow(enabled: Boolean = true) {
     val direction = LocalLayoutDirection.current
-    val tint = COUITheme.colorScheme.onSurfaceVariantActions
+    val tint = COUITheme.colorScheme.onSurfaceVariantActions.let {
+        if (enabled) it else it.copy(alpha = it.alpha * 0.38f)
+    }
     Canvas(
         modifier = Modifier
             .size(width = 12.dp, height = 24.dp)

@@ -11,7 +11,10 @@ internal object FluidCloudRecentsRules {
         miniCapsuleShowing: Boolean,
         fullscreenPrivacyIcon: Boolean,
         notificationIconsAllowed: Boolean,
+        statusBarKept: Boolean = false,
+        nativeLiveUpdate: Boolean = false,
     ): Int {
+        if (nativeLiveUpdate || (!enabled && !statusBarKept)) return visibility
         if (!canShowOngoingActivityChips || miniCapsuleShowing || fullscreenPrivacyIcon) return visibility
         if (notificationIconsAllowed) return visibility
         return if (enabled) VISIBLE else HIDDEN

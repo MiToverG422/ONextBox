@@ -76,7 +76,7 @@ class FeatureRestartPlanTest {
             .substringBefore("private fun Modifier.extendPastBottom")
         assertTrue(invocation.contains("title = stringResource(R.string.feature_restart_scope_confirm_title)"))
         assertFalse(invocation.contains("featurePageTitle(modeToRestart)"))
-        val dialog = source.substringAfter("private fun FeatureRestartConfirmDialog(")
+        val dialog = source.substringAfter("fun FeatureRestartConfirmDialog(")
             .substringBefore("private fun FeatureMainPage(")
         assertTrue(dialog.contains("FeatureRestartPlan(displayedTargets)"))
         assertTrue(dialog.contains("plan.appPackages.map"))

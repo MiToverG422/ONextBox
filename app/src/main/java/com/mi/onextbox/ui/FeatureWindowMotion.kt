@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +47,8 @@ import com.mi.onextbox.ui.screens.FeatureLaunchIcon
 import com.mi.onextbox.ui.screens.FeatureLaunchOrigin
 import com.mi.onextbox.ui.screens.FeaturePageMode
 import io.github.suqi8.coui.kmp.theme.COUITheme
+import io.github.suqi8.coui.kmp.basic.COUIScrollBehavior
+import io.github.suqi8.coui.kmp.basic.TopAppBarState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -649,6 +652,7 @@ internal fun FeatureLaunchQueueHitLayer(
     viewportBounds: Rect,
     gridPosition: Offset?,
     scrollState: ScrollState,
+    topAppBarState: TopAppBarState,
     onPressStart: (FeaturePageMode) -> Long,
     onPressEnd: (FeaturePageMode, Long) -> Unit,
     onOpen: (FeaturePageMode, FeatureLaunchOrigin?, Long) -> Unit,
@@ -660,7 +664,10 @@ internal fun FeatureLaunchQueueHitLayer(
     val latestOnPressStart by rememberUpdatedState(onPressStart)
     val latestOnPressEnd by rememberUpdatedState(onPressEnd)
     val latestOnOpen by rememberUpdatedState(onOpen)
-    Box(modifier = modifier.fillMaxSize()) {
+    val scrollBehavior = COUIScrollBehavior(state = topAppBarState)
+    // This overlay is a sibling of the page, so its scroll events must explicitly
+    // drive the same app bar while the closing window still owns hit testing.
+    Box(modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)) {
         origins.forEach { (mode, cachedOrigin) ->
             val origin = cachedOrigin.atGridPosition(gridPosition)
             val latestOrigin by rememberUpdatedState(origin)

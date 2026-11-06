@@ -15,6 +15,29 @@ class HotReloadResourceCoordinatorTest {
     private fun hookResult(owner: HotReloadResourceCoordinator) =
         owner.withHook(fallback = { "original" }, action = { "module" })
 
+    @Test fun busyPreflightKeepsLiveCallbacksActive() {
+        val owner = coordinator()
+        owner.register("native-network", canPrepare = {
+            assertFalse(owner.isRetiring)
+            assertEquals("module", hookResult(owner))
+            false
+        })
+        repeat(3) { assertThrows(IllegalStateException::class.java) { owner.prepare() } }
+        assertEquals("module", hookResult(owner))
+    }
+
+    @Test fun resourceBecomingBusyAfterPreflightStillVetoesDetach() {
+        val owner = coordinator()
+        var checks = 0
+        var detached = false
+        owner.register("native-network", canPrepare = { ++checks; true },
+            canReload = { ++checks; false }, detach = { detached = true })
+        assertThrows(IllegalStateException::class.java) { owner.prepare() }
+        assertEquals(2, checks)
+        assertFalse(detached)
+        assertEquals("module", hookResult(owner))
+    }
+
     @Test fun retiredGenerationCannotRecaptureAlreadyReleasedResourcesOrResumeOldHooks() {
         val owner = coordinator()
         var captured = 0

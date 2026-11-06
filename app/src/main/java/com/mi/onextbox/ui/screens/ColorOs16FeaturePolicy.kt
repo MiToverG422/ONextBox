@@ -19,6 +19,7 @@ internal object ColorOs16FeaturePolicy {
             FeaturePageMode.SystemUiSmallWindow,
             FeaturePageMode.SystemUiLockScreen,
             FeaturePageMode.SystemUiNavigationBar,
+            FeaturePageMode.SystemUiBackGesture,
             FeaturePageMode.SystemUiDynamicColor,
         ),
         FeaturePageMode.SystemUiStatusBar to listOf(
@@ -65,6 +66,17 @@ internal object ColorOs16FeaturePolicy {
     fun isPageAvailable(page: FeaturePageMode): Boolean =
         page in categories || page in featureTitles || page in setOf(FeaturePageMode.EnabledFeatures, FeaturePageMode.Updates)
 
+    val visibleCategories: Map<FeaturePageMode, List<FeaturePageMode>> by lazy {
+        linkedMapOf(FeaturePageMode.Main to
+            (colorOs17FeatureMainPageModes() + categories[FeaturePageMode.Main].orEmpty()).distinct()) +
+            candidateCategories
+    }
+
+    fun unsupportedFeatures(page: FeaturePageMode): List<EnabledFeatureCatalog.Entry> =
+        EnabledFeatureCatalog.entries.filter {
+            it.page == page && !isFeatureAvailable(SystemAdaptationVersion.ColorOs16, page, it.title)
+        }.distinctBy { it.title }
+
     fun isFeatureAvailable(version: SystemAdaptationVersion, page: FeaturePageMode, title: Int): Boolean =
         version != SystemAdaptationVersion.ColorOs16 || title in featureTitles[page].orEmpty() ||
             (page == FeaturePageMode.PackageInstaller && title == R.string.package_installer_title && isPageAvailable(page))
@@ -73,10 +85,13 @@ internal object ColorOs16FeaturePolicy {
 }
 
 internal fun featureSearchEntries(version: SystemAdaptationVersion): List<FeatureSearchIndex.Entry> =
+    visibleFeatureSearchEntries(version)
+        .filter { ColorOs16FeaturePolicy.isFeatureAvailable(version, it.page, it.title) }
+
+internal fun visibleFeatureSearchEntries(version: SystemAdaptationVersion): List<FeatureSearchIndex.Entry> =
     (FeatureSearchIndex.entries + if (version == SystemAdaptationVersion.ColorOs16) listOf(
         FeatureSearchIndex.Entry(FeaturePageMode.MobileNetwork, R.string.feature_mobile_network_hide_smart_cloud_acceleration_title,
             R.string.feature_mobile_network_hide_smart_cloud_acceleration_summary)) else emptyList())
-        .filter { ColorOs16FeaturePolicy.isFeatureAvailable(version, it.page, it.title) }
 
 internal fun enabledFeatureEntries(version: SystemAdaptationVersion): List<EnabledFeatureCatalog.Entry> =
     (EnabledFeatureCatalog.entries + if (version == SystemAdaptationVersion.ColorOs16) colorOs16AdditionalCatalogEntries else emptyList())

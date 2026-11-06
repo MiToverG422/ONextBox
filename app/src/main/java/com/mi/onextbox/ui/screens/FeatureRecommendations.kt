@@ -15,6 +15,7 @@ import io.github.suqi8.coui.kmp.preference.RecommendedItem
 
 internal object FeatureRecommendations {
     private val titlesByPage = mapOf(
+        FeaturePageMode.SystemUiStatusBarNetwork to listOf(R.string.native_5ga_title),
         FeaturePageMode.Screenshot to listOf(R.string.feature_screen_capture_title),
         FeaturePageMode.ScreenRecording to listOf(R.string.feature_screen_capture_title),
         FeaturePageMode.SystemUiSmallWindow to listOf(

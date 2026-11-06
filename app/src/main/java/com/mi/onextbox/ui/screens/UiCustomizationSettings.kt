@@ -249,9 +249,15 @@ internal fun BrowserFeaturesPage() {
 internal fun InstallerCleanupPage(page: FeaturePageMode, onOpen: (FeaturePageMode) -> Unit) {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(InstallerCleanupSettings.keys + InstallerCleanupSettings.legacyKeys, InstallerCleanupSettings::state)
-    val rows = if (page == FeaturePageMode.AppInstaller) SharedFeatureDefinitions.appInstallerRows
-        else SharedFeatureDefinitions.packageInstallerRows
-    SettingsSection(title = stringResource(R.string.installer_cleanup_group))
+    val installedInstallers = remember(context) {
+        com.mi.onextbox.lsp.RegionalAppPackages.installed(context, com.mi.onextbox.lsp.RegionalAppPackages.appInstallers)
+    }
+    val rows = if (page == FeaturePageMode.AppInstaller) buildList {
+        if (InstallerCleanupSettings.APP_DETAIL in installedInstallers) addAll(SharedFeatureDefinitions.appInstallerRows)
+        if (com.mi.onextbox.lsp.RegionalAppPackages.APP_INSTALLER_GLOBAL in installedInstallers) addAll(SharedFeatureDefinitions.stdspInstallerRows)
+    } else if (com.mi.onextbox.lsp.RegionalAppPackages.googleInstaller(context)) emptyList()
+    else SharedFeatureDefinitions.packageInstallerRows
+    if (rows.isNotEmpty()) SettingsSection(title = stringResource(R.string.installer_cleanup_group))
     FeatureAnimatedGroup(animateChanges = true) {
         rows.forEach { (key, feature) ->
             row(key) { above, below ->

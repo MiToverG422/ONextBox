@@ -12,6 +12,8 @@ import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.lsp.SideKeyFeaturePolicy
+import com.mi.onextbox.lsp.SystemAdaptationVersion
+import com.mi.onextbox.ui.common.rememberSystemAdaptationVersion
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup

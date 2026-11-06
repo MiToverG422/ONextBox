@@ -16,7 +16,8 @@ internal object InstallerCleanupSettings {
     val packages = listOf(APP_DETAIL, PACKAGE_INSTALLER)
     val appKeys = linkedSetOf(APP_SKIP_SCAN, APP_REMOVE_ADS, APP_HIDE_COLLECTION_NOTICE, APP_BLOCK_NETWORK)
     val packageKeys = setOf(NATIVE_UI)
-    val keys = (appKeys + packageKeys).toSet()
+    const val STDSP_ALLOW_INSTALL = "stdsp_allow_install"
+    val keys = (appKeys + packageKeys + STDSP_ALLOW_INSTALL).toSet()
     val legacyKeys = setOf(SKIP_SCAN, REMOVE_ADS)
     private val legacy = mapOf(APP_SKIP_SCAN to SKIP_SCAN, APP_REMOVE_ADS to REMOVE_ADS)
 

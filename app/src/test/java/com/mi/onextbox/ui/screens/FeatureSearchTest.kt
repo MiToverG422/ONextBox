@@ -314,7 +314,7 @@ class FeatureSearchTest {
     @Test fun fluidCloudMaterialIsSearchableOnItsOwnPage() {
         assertTrue(FeaturePageMode.SystemUiFluidCloud.isNestedPage)
         val destinations = FeatureSearchIndex.entries.filter { it.page == FeaturePageMode.SystemUiFluidCloud }
-        assertEquals(5, destinations.size)
+        assertEquals(7, destinations.size)
         val category = destinations.single { it.title == com.mi.onextbox.R.string.feature_fluid_cloud_title }
         assertEquals(com.mi.onextbox.R.string.feature_fluid_cloud_entry_summary, category.description)
         assertTrue(destinations.any { it.title == com.mi.onextbox.R.string.feature_fluid_cloud_card_group })
@@ -323,6 +323,9 @@ class FeatureSearchTest {
         assertTrue(destinations.any { it.title == com.mi.onextbox.R.string.fluid_media_blacklist_title })
         val browser = destinations.single { it.title == com.mi.onextbox.R.string.fluid_browser_title }
         assertEquals(com.mi.onextbox.R.string.fluid_browser_summary, browser.description)
+        assertTrue(destinations.any { it.title == com.mi.onextbox.R.string.fluid_recents_group })
+        val recents = destinations.single { it.title == com.mi.onextbox.R.string.fluid_recents_title }
+        assertEquals(com.mi.onextbox.R.string.fluid_recents_summary, recents.description)
         assertTrue(FeaturePageMode.SystemUiFluidCloudMediaBlacklist.isNestedPage)
         assertTrue(FeatureSearchIndex.entries.any { it.page == FeaturePageMode.SystemUiFluidCloudMediaBlacklist })
     }

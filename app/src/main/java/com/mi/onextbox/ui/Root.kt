@@ -264,6 +264,15 @@ private sealed interface RootRoute : NavKey {
     data object FeatureTools : RootRoute
 
     @Serializable
+    data object FeatureGlobalLocalization : RootRoute
+
+    @Serializable
+    data object FeatureGlobalSpoofing : RootRoute
+
+    @Serializable
+    data object FeatureGlobalNetwork : RootRoute
+
+    @Serializable
     data object FeatureMore : RootRoute
 
     @Serializable
@@ -543,6 +552,9 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Updates -> RootRoute.FeatureUpdates
     FeaturePageMode.Coui -> RootRoute.FeatureCoui
     FeaturePageMode.Tools -> RootRoute.FeatureTools
+    FeaturePageMode.GlobalLocalization -> RootRoute.FeatureGlobalLocalization
+    FeaturePageMode.GlobalSpoofing -> RootRoute.FeatureGlobalSpoofing
+    FeaturePageMode.GlobalNetwork -> RootRoute.FeatureGlobalNetwork
     FeaturePageMode.More -> RootRoute.FeatureMore
     FeaturePageMode.Main -> null
     FeaturePageMode.Desktop -> RootRoute.FeatureDesktop
@@ -1188,6 +1200,9 @@ fun Root(
                     subclass(RootRoute.FeatureUpdates::class)
                     subclass(RootRoute.FeatureCoui::class)
                     subclass(RootRoute.FeatureTools::class)
+                    subclass(RootRoute.FeatureGlobalLocalization::class)
+                    subclass(RootRoute.FeatureGlobalSpoofing::class)
+                    subclass(RootRoute.FeatureGlobalNetwork::class)
                     subclass(RootRoute.FeatureMore::class)
                     subclass(RootRoute.FeatureDesktopLayout::class)
                     subclass(RootRoute.FeatureDesktopIcons::class)
@@ -2410,6 +2425,15 @@ fun Root(
             entry<RootRoute.FeatureTools> {
                 featureEntryContent(FeaturePageMode.Tools)
             }
+            entry<RootRoute.FeatureGlobalNetwork> {
+                featureEntryContent(FeaturePageMode.GlobalNetwork)
+            }
+            entry<RootRoute.FeatureGlobalSpoofing> {
+                featureEntryContent(FeaturePageMode.GlobalSpoofing)
+            }
+            entry<RootRoute.FeatureGlobalLocalization> {
+                featureEntryContent(FeaturePageMode.GlobalLocalization)
+            }
             entry<RootRoute.FeatureMore> {
                 featureEntryContent(FeaturePageMode.More)
             }
@@ -2894,6 +2918,7 @@ fun Root(
                         viewportBounds = rootViewportBounds,
                         gridPosition = featureLauncherGridPosition,
                         scrollState = featureLauncherScrollState,
+                        topAppBarState = featurePageScroll.appBar,
                         excludedBounds = bottomChromeBounds[
                             rootUiState.liquidGlassBottomBarEnabled && rootUiState.liquidBackdrop != null
                         ]?.takeIf {

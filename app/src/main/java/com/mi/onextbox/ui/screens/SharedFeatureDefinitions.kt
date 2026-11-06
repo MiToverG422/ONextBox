@@ -76,6 +76,9 @@ internal object SharedFeatureDefinitions {
         R.string.installer_hide_collection_notice_title, R.string.installer_hide_collection_notice_summary, FeaturePageMode.AppInstaller)
     val installerBlockNetwork = installer(com.mi.onextbox.lsp.InstallerCleanupSettings.APP_BLOCK_NETWORK,
         R.string.installer_block_network_title, R.string.installer_block_network_summary, FeaturePageMode.AppInstaller)
+    val stdspAllowInstall = installer(com.mi.onextbox.lsp.InstallerCleanupSettings.STDSP_ALLOW_INSTALL,
+        R.string.stdsp_allow_install_title, R.string.stdsp_allow_install_summary, FeaturePageMode.AppInstaller)
+    val stdspInstallerRows = listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.STDSP_ALLOW_INSTALL to stdspAllowInstall)
     val appInstallerRows = listOf(
         com.mi.onextbox.lsp.InstallerCleanupSettings.APP_SKIP_SCAN to installerSkipScan,
         com.mi.onextbox.lsp.InstallerCleanupSettings.APP_REMOVE_ADS to installerRemoveAds,
@@ -129,6 +132,9 @@ internal object SharedFeatureDefinitions {
     val hideNotificationClear = Toggle(R.string.hide_notification_clear_title, R.string.hide_notification_clear_summary,
         FeaturePageMode.SystemUiNotificationCenter, { com.mi.onextbox.lsp.HideNotificationClearSettings.enabled(it) },
         { context, enabled -> com.mi.onextbox.lsp.HideNotificationClearSettings.set(context, enabled) })
+    val retainLockscreenNotifications = Toggle(R.string.retain_lockscreen_notifications_title, R.string.retain_lockscreen_notifications_summary,
+        FeaturePageMode.SystemUiNotificationCenter, { com.mi.onextbox.lsp.RetainLockscreenNotificationsSettings.enabled(it) },
+        { context, enabled -> com.mi.onextbox.lsp.RetainLockscreenNotificationsSettings.set(context, enabled) })
     val hideScreenshotFloating = Toggle(R.string.hide_screenshot_floating_title, R.string.hide_screenshot_floating_summary,
         FeaturePageMode.Screenshot, { com.mi.onextbox.lsp.HideScreenshotFloatingSettings.enabled(it) },
         { context, enabled -> com.mi.onextbox.lsp.HideScreenshotFloatingSettings.set(context, enabled) })
@@ -152,6 +158,7 @@ internal object SharedFeatureDefinitions {
         launcherLabelSpacing,
         hideRecentApps,
         hideNotificationClear,
+        retainLockscreenNotifications,
         hideScreenshotFloating,
         galleryAiRetouch,
         nativeLiveUpdate,
@@ -167,5 +174,6 @@ internal object SharedFeatureDefinitions {
         installerRemoveAds,
         installerHideCollectionNotice,
         installerBlockNetwork,
+        stdspAllowInstall,
     )
 }

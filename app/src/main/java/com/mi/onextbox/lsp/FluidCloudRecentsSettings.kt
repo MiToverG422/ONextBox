@@ -10,8 +10,7 @@ internal object FluidCloudRecentsSettings {
         LspPreferenceStore.prefs(context).getBoolean(ENABLED, false)
 
     fun setEnabled(context: Context, enabled: Boolean) {
-        check(LspPreferenceStore.prefs(context).edit().putBoolean(ENABLED, enabled).commit())
-        LspConfig.syncReadableState(context)
+        ModernXposedPreferenceSync.setBooleanAndSync(context, ENABLED, enabled)
     }
 
     fun isEnabledXposed(): Boolean = HookConfigSnapshot.boolean(ENABLED, false) == true

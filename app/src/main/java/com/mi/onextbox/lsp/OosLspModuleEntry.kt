@@ -220,6 +220,7 @@ class OosLspModuleEntry : XposedModule() {
 
         when (packageName) {
             PACKAGE_SYSTEM_UI -> {
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NativeFiveGaUiHooker.hook") { NativeFiveGaUiHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PictorialCustomizationHooker.hookSystemUi") { PictorialCustomizationHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LargeNetworkTypeHooker.hook") { LargeNetworkTypeHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("DataSimSignalHooker.hook") { DataSimSignalHooker.hook(classLoader) }
@@ -257,9 +258,11 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NotificationRemovalHooker.hookSystemUi") { NotificationRemovalHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NotificationClearButtonHooker.hook") { NotificationClearButtonHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("HideNotificationClearHooker.hook") { HideNotificationClearHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("RetainLockscreenNotificationsHooker.hook") { RetainLockscreenNotificationsHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SmallWindowHooker.hookSystemUi") { SmallWindowHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NetworkSpeedHooker.hook") { NetworkSpeedHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FaceTapUnlockHooker.hook") { FaceTapUnlockHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FaceAuthCapsuleHooker.hook") { FaceAuthCapsuleHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyguardCaptureHooker.hookSystemUi") { KeyguardCaptureHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PasswordDialHighlightHooker.hook") { PasswordDialHighlightHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PinSwipeInputHooker.hook") { PinSwipeInputHooker.hook(classLoader) }
@@ -304,6 +307,8 @@ class OosLspModuleEntry : XposedModule() {
 
             PACKAGE_ATHENA -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AthenaPolicyHooker.hook") { AthenaPolicyHooker.hook(classLoader) }
 
+            RegionalAppPackages.ESIM_GLOBAL -> EuiccDiagnosticsHooker.hook(classLoader, google = true)
+
             PACKAGE_OPLUS_EUICC -> {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccRegionRestrictionHooker.hook") { EuiccRegionRestrictionHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccDiagnosticsHooker.hook") { EuiccDiagnosticsHooker.hook(classLoader) }
@@ -319,6 +324,7 @@ class OosLspModuleEntry : XposedModule() {
             }
 
             PACKAGE_PHONE -> {
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NativeFiveGaPhoneHooker.hook") { NativeFiveGaPhoneHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MobileNetworkHooker.hook") { MobileNetworkHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NetworkIdentityHooker.hook") { NetworkIdentityHooker.hook(classLoader, processName) }
             }
@@ -353,6 +359,8 @@ class OosLspModuleEntry : XposedModule() {
             CameraGallerySettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraGalleryHooker.hook") { CameraGalleryHooker.hook(classLoader, target.sourceDir) }
             ScreenTranslationSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ScreenTranslationHooker.hook") { ScreenTranslationHooker.hook(classLoader, target.sourceDir) }
             SmartSidebarSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SmartSidebarHooker.hook") { SmartSidebarHooker.hook(classLoader, target.sourceDir) }
+            RegionalAppPackages.APP_INSTALLER_GLOBAL ->
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("StdspInstallHooker.hook") { StdspInstallHooker.hook(classLoader) }
             InstallerCleanupSettings.APP_DETAIL, InstallerCleanupSettings.PACKAGE_INSTALLER ->
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("InstallerCleanupHooker.hook") { InstallerCleanupHooker.hook(classLoader, target.sourceDir, packageName) }
 
@@ -367,7 +375,7 @@ class OosLspModuleEntry : XposedModule() {
             }
 
             OShareSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("OShareVisibilityHooker.hook") { OShareVisibilityHooker.hook(classLoader) }
-            ThemeStoreSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ThemeStoreHooker.hook") { ThemeStoreHooker.hook(classLoader) }
+            ThemeStoreSettings.PACKAGE_NAME, RegionalAppPackages.THEME_GLOBAL -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ThemeStoreHooker.hook") { ThemeStoreHooker.hook(classLoader) }
             GalleryAiRetouchSettings.PACKAGE_NAME -> {
                 if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
                     com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GalleryAiRetouchHooker.hook") { GalleryAiRetouchHooker.hook(classLoader, target.sourceDir) }
@@ -397,7 +405,9 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AodScreenshotHooker.hook") { AodScreenshotHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("HideScreenshotFloatingHooker.hook") { HideScreenshotFloatingHooker.hook(classLoader) }
             }
-            "com.oplus.screenrecorder" -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyguardCaptureHooker.hookRecorder") { KeyguardCaptureHooker.hookRecorder(classLoader) }
+            "com.oplus.screenrecorder" -> {
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyguardCaptureHooker.hookRecorder") { KeyguardCaptureHooker.hookRecorder(classLoader) }
+            }
             ExpressCardRules.PLATFORM, ExpressCardRules.ASSISTANT -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ExpressCardHooker.hook") { ExpressCardHooker.hook(packageName, classLoader) }
         }
 

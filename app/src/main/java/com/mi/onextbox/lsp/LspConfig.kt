@@ -699,6 +699,7 @@ object LspConfig {
     }
 
     enum class KeyguardFeature(val key: String) {
+        FaceAuthCapsule("keyguard_face_auth_capsule"),
         FaceTapUnlock("keyguard_face_tap_unlock"),
         FaceTapAnimation("keyguard_face_tap_animation"),
         BlockPasswordHighlight("keyguard_block_password_highlight"),
@@ -2784,6 +2785,7 @@ object LspConfig {
             CouiDividerSettings.setEnabled(context, false)
             SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.TITLE_LOCK, false)
             CameraGallerySettings.set(context, false)
+            NativeFiveGaSettings.setEnabled(context, false)
             ScreenTranslationSettings.keys.forEach { ScreenTranslationSettings.set(context, it, false) }
             SmartSidebarSettings.keys.forEach { SmartSidebarSettings.set(context, it, false) }
             InstallerCleanupSettings.reset(context)

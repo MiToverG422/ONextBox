@@ -120,6 +120,9 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Coui(true),
     Tools(true),
     More(true),
+    GlobalLocalization(true),
+    GlobalNetwork(true),
+    GlobalSpoofing(true),
     Desktop,
     DesktopLayout(true),
     DesktopIcons(true),
@@ -461,7 +464,7 @@ fun FeatureSubRoute(
                     onClick = { pushMonitorRefresh++ },
                 )
             }
-            if (pageMode != FeaturePageMode.Coui && pageMode != FeaturePageMode.Tools && pageMode != FeaturePageMode.More && pageMode != FeaturePageMode.EsimDiagnostics && pageMode != FeaturePageMode.TouchSampling && pageMode != FeaturePageMode.SystemMessages) {
+            if (pageMode != FeaturePageMode.GlobalLocalization && pageMode != FeaturePageMode.Coui && pageMode != FeaturePageMode.Tools && pageMode != FeaturePageMode.More && pageMode != FeaturePageMode.EsimDiagnostics && pageMode != FeaturePageMode.TouchSampling && pageMode != FeaturePageMode.SystemMessages) {
                 FeatureRestartActionButton(
                     contentDescription = stringResource(R.string.feature_restart_scope_confirm_action),
                     onClick = {
@@ -583,6 +586,9 @@ private fun Modifier.extendPastBottom(extra: Dp): Modifier = layout { measurable
 internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Coui -> stringResource(R.string.coui_page_title)
     FeaturePageMode.Tools -> stringResource(R.string.tab_tools)
+    FeaturePageMode.GlobalLocalization -> stringResource(R.string.global_localization_title)
+    FeaturePageMode.GlobalNetwork -> stringResource(R.string.global_network_title)
+    FeaturePageMode.GlobalSpoofing -> stringResource(R.string.global_spoofing_title)
     FeaturePageMode.More -> stringResource(R.string.tools_more_title)
     FeaturePageMode.EnabledFeatures -> stringResource(R.string.enabled_features_title)
     FeaturePageMode.Updates -> stringResource(R.string.feature_updates_title)
@@ -665,7 +671,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Camera -> stringResource(R.string.camera_page_title)
     FeaturePageMode.Translation -> stringResource(R.string.feature_translation_title)
     FeaturePageMode.SmartSidebar -> stringResource(R.string.sidebar_page_title)
-    FeaturePageMode.AppInstaller -> stringResource(R.string.installer_cleanup_title)
+    FeaturePageMode.AppInstaller -> if (com.mi.onextbox.lsp.RegionalAppPackages.stdspInstaller(LocalContext.current)) "StdSP Core" else stringResource(R.string.installer_cleanup_title)
     FeaturePageMode.PackageInstaller -> stringResource(R.string.package_installer_title)
     FeaturePageMode.Assistant -> stringResource(R.string.feature_assistant_title)
 }
@@ -709,7 +715,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.Camera -> listOf(com.mi.onextbox.lsp.CameraGallerySettings.PACKAGE_NAME)
     FeaturePageMode.Translation -> listOf(com.mi.onextbox.lsp.ScreenTranslationSettings.PACKAGE_NAME)
     FeaturePageMode.SmartSidebar -> listOf(com.mi.onextbox.lsp.SmartSidebarSettings.PACKAGE_NAME)
-    FeaturePageMode.AppInstaller -> listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.APP_DETAIL)
+    FeaturePageMode.AppInstaller -> com.mi.onextbox.lsp.RegionalAppPackages.appInstallers
     FeaturePageMode.PackageInstaller -> listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.PACKAGE_INSTALLER)
     FeaturePageMode.NotificationRemoval -> listOf("android", "system", "com.android.systemui")
     FeaturePageMode.MobileNetwork -> listOf("com.android.phone")
@@ -717,12 +723,12 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.CorePatch -> emptyList() // Full device reboot, never kill system_server from this page.
     FeaturePageMode.SideKey -> listOf("android", "system", "com.android.systemui")
     FeaturePageMode.Installer -> listOf("android", "system")
-    FeaturePageMode.Esim -> listOf("com.oplus.euicc")
+    FeaturePageMode.Esim -> com.mi.onextbox.lsp.RegionalAppPackages.esim
     FeaturePageMode.AppMarket -> listOf("com.heytap.market")
     FeaturePageMode.Battery -> listOf("android", "system", "com.oplus.battery")
     FeaturePageMode.TrafficManagement -> listOf("com.oplus.trafficmonitor")
     FeaturePageMode.PhoneManager -> listOf(PhoneManagerSettings.PACKAGE_NAME)
-    FeaturePageMode.ThemeStore -> listOf(ThemeStoreSettings.PACKAGE_NAME)
+    FeaturePageMode.ThemeStore -> com.mi.onextbox.lsp.RegionalAppPackages.themes
     FeaturePageMode.Gallery -> listOf(com.mi.onextbox.lsp.GalleryAiRetouchSettings.PACKAGE_NAME)
     FeaturePageMode.SecurePay -> listOf(SecurePaySettings.PACKAGE_NAME)
     FeaturePageMode.GameAssistant -> listOf(GameAssistantSettings.PACKAGE_NAME)
@@ -738,6 +744,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
         "com.nearme.instant.platform", "com.android.launcher", "com.coloros.assistantscreen",
     )
     FeaturePageMode.FileManager -> listOf("android", "system", "com.coloros.filemanager")
+    FeaturePageMode.GlobalNetwork -> listOf("com.android.phone", "com.android.systemui")
     FeaturePageMode.GoogleMessages -> listOf("com.google.android.apps.messaging")
     FeaturePageMode.Athena -> listOf("android", "system", "com.oplus.athena")
     FeaturePageMode.Settings,
@@ -763,6 +770,8 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.EnabledFeatures,
     FeaturePageMode.Tools,
     FeaturePageMode.More,
+    FeaturePageMode.GlobalLocalization,
+    FeaturePageMode.GlobalSpoofing,
     FeaturePageMode.Updates,
     FeaturePageMode.Main,
     // C17 flexible handles also live in system_server. Offer no misleading SystemUI-only restart.
@@ -797,7 +806,7 @@ private fun FeatureRestartActionButton(
 }
 
 @Composable
-private fun FeatureRestartConfirmDialog(
+internal fun FeatureRestartConfirmDialog(
     show: Boolean,
     title: String,
     targets: List<String>,
@@ -1007,6 +1016,10 @@ internal fun MoreMainPage(onOpen: (FeaturePageMode) -> Unit) {
         titleRes = R.string.feature_google_messages_title,
         iconPackages = listOf("com.google.android.apps.messaging"),
         pageMode = FeaturePageMode.GoogleMessages,
+    ), FeatureMainEntry(
+        titleRes = R.string.global_localization_title,
+        iconPackages = listOf("com.android.settings"),
+        pageMode = FeaturePageMode.GlobalLocalization,
     )) }
     ClassicMainEntryList(entries = entries, onOpen = onOpen)
 }
@@ -1018,7 +1031,7 @@ private fun ClassicMainEntryList(
 ) {
     SettingsListGroup(entries, key = { it.pageMode }) { index, entry ->
         FeatureEntryRow(
-            title = stringResource(entry.titleRes),
+            title = if (entry.pageMode == FeaturePageMode.AppInstaller) featurePageTitle(entry.pageMode) else stringResource(entry.titleRes),
             iconPackages = entry.iconPackages,
             iconGlyph = entry.iconGlyph,
             onClick = { onOpen(entry.pageMode) },
@@ -1028,6 +1041,9 @@ private fun ClassicMainEntryList(
     }
 }
 
+
+internal fun colorOs17FeatureMainPageModes(): List<FeaturePageMode> =
+    colorOs17FeatureMainEntries().map { it.pageMode }
 
 private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         add(
@@ -1082,7 +1098,7 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         add(
             FeatureMainEntry(
                 titleRes = R.string.theme_store_title,
-                iconPackages = listOf(ThemeStoreSettings.PACKAGE_NAME),
+                iconPackages = com.mi.onextbox.lsp.RegionalAppPackages.themes,
                 pageMode = FeaturePageMode.ThemeStore,
             )
         )
@@ -1152,7 +1168,7 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         add(FeatureMainEntry(titleRes = R.string.weather_page_title,
             iconPackages = listOf(com.mi.onextbox.lsp.SystemExtrasSettings.WEATHER), pageMode = FeaturePageMode.Weather))
         add(FeatureMainEntry(titleRes = R.string.photopicker_page_title,
-            iconPackages = listOf(com.mi.onextbox.lsp.SystemExtrasSettings.PICKER), pageMode = FeaturePageMode.PhotoPicker))
+            iconPackages = com.mi.onextbox.lsp.RegionalAppPackages.pickers, pageMode = FeaturePageMode.PhotoPicker))
         add(FeatureMainEntry(titleRes = R.string.engineer_page_title,
             iconPackages = listOf(com.mi.onextbox.lsp.SystemExtrasSettings.ENGINEER), pageMode = FeaturePageMode.EngineerMode))
         add(
@@ -1226,14 +1242,14 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         add(
             FeatureMainEntry(
                 titleRes = R.string.installer_cleanup_title,
-                iconPackages = listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.APP_DETAIL),
+                iconPackages = com.mi.onextbox.lsp.RegionalAppPackages.appInstallers,
                 pageMode = FeaturePageMode.AppInstaller,
             )
         )
         add(
             FeatureMainEntry(
                 titleRes = R.string.package_installer_title,
-                iconPackages = listOf(com.mi.onextbox.lsp.InstallerCleanupSettings.PACKAGE_INSTALLER),
+                iconPackages = com.mi.onextbox.lsp.RegionalAppPackages.installers,
                 pageMode = FeaturePageMode.PackageInstaller,
             )
         )
@@ -1248,7 +1264,7 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         add(
             FeatureMainEntry(
                 titleRes = R.string.feature_esim_title,
-                iconPackages = listOf("com.oplus.euicc"),
+                iconPackages = com.mi.onextbox.lsp.RegionalAppPackages.esim,
                 pageMode = FeaturePageMode.Esim,
             )
         )
@@ -1470,7 +1486,7 @@ private fun FeatureLauncherItem(
             )
         }
         Text(
-            text = stringResource(entry.titleRes),
+            text = if (entry.pageMode == FeaturePageMode.AppInstaller) featurePageTitle(entry.pageMode) else stringResource(entry.titleRes),
             color = COUITheme.colorScheme.onSurface,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
@@ -1599,6 +1615,13 @@ private fun FeatureSubPage(
         FeaturePageMode.Coui -> CouiDividerSettingsGroup()
         FeaturePageMode.Tools -> ToolsMainPage(onOpenSubPage)
         FeaturePageMode.More -> MoreMainPage(onOpenSubPage)
+        FeaturePageMode.GlobalLocalization -> GlobalLocalizationPage(onOpenSubPage)
+        FeaturePageMode.GlobalSpoofing -> Unit
+        FeaturePageMode.GlobalNetwork -> {
+            if (rememberSystemAdaptationVersion() != SystemAdaptationVersion.ColorOs16) {
+                SettingsGroup { NativeFiveGaSettingsRows(hasDividerAbove = false) }
+            }
+        }
         FeaturePageMode.Desktop -> DesktopCategoriesPage(onOpenSubPage)
         FeaturePageMode.DesktopLayout,
         FeaturePageMode.DesktopIcons,

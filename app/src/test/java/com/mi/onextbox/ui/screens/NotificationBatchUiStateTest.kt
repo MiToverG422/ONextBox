@@ -44,4 +44,10 @@ class NotificationBatchUiStateTest {
             assertFalse(ready.copy(states = listOf(NotificationAppState(target, issue = issue))).canApply)
         }
     }
+    @Test fun unsupportedSelectedTypeDoesNotEnableBatchActions() {
+        val state = ready.copy(states = listOf(NotificationAppState(target, mapOf(NotificationPermissionKind.Banner to 1))))
+        assertFalse(state.copy(types = setOf(NotificationPermissionKind.LiveActivity)).canApply)
+        assertTrue(state.copy(types = setOf(NotificationPermissionKind.Banner, NotificationPermissionKind.LiveActivity)).canApply)
+    }
+
 }

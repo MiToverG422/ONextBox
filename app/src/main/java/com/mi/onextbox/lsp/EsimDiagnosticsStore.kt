@@ -141,9 +141,9 @@ internal object EsimDiagnosticsStore {
     }.getOrDefault(false)
 
     fun requestRefresh(context: Context): Boolean = runCatching {
-        context.sendBroadcast(
-            Intent(ACTION_REFRESH).setPackage(TARGET_PACKAGE),
-        )
+        RegionalAppPackages.installed(context, RegionalAppPackages.esim).forEach { target ->
+            context.sendBroadcast(Intent(ACTION_REFRESH).setPackage(target))
+        }
         true
     }.getOrDefault(false)
 }

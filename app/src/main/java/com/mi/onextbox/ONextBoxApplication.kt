@@ -7,7 +7,7 @@ import com.mi.onextbox.ui.settings.AppUpdatePreferences
 class ONextBoxApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        if (getProcessName().endsWith(":diagnostics")) return
+        if (getProcessName().endsWith(":diagnostics") || getProcessName().endsWith(":native_5ga_bridge")) return
         com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("startup_begin", "Application")
         com.mi.onextbox.diagnostics.DeveloperDiagnostics.install(this)
         com.mi.onextbox.ui.common.AppLogStore.initialize(this)

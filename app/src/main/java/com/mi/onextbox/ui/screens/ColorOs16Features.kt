@@ -13,6 +13,7 @@ import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspPreferenceStore
 import com.mi.onextbox.ui.settings.FeatureSettingWriteQueue
 import com.mi.onextbox.ui.settings.SettingsCardRow
+import com.mi.onextbox.ui.settings.SettingsSection
 import com.mi.onextbox.ui.settings.SettingsToggleRow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -22,9 +23,12 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun ColorOs16FeatureCategories(mode: FeaturePageMode, onOpen: (FeaturePageMode) -> Unit) {
     FeatureAnimatedGroup {
-        ColorOs16FeaturePolicy.categories[mode].orEmpty().forEach { page ->
+        ColorOs16FeaturePolicy.visibleCategories[mode].orEmpty().forEach { page ->
             row(page) { above, below ->
-                SettingsCardRow(title = featurePageTitle(page), summary = "", showArrow = true,
+                val available = ColorOs16FeaturePolicy.isPageAvailable(page)
+                SettingsCardRow(title = featurePageTitle(page),
+                    summary = if (available) "" else stringResource(R.string.feature_unsupported_coloros16),
+                    enabled = available, showArrow = true,
                     onClick = { onOpen(page) }, hasDividerAbove = above, hasDividerBelow = below)
             }
         }
@@ -33,10 +37,16 @@ internal fun ColorOs16FeatureCategories(mode: FeaturePageMode, onOpen: (FeatureP
 
 @Composable
 internal fun ColorOs16Features(mode: FeaturePageMode, onOpen: (FeaturePageMode) -> Unit) {
-    if (mode in ColorOs16FeaturePolicy.categories) {
+    if (mode in ColorOs16FeaturePolicy.visibleCategories) {
         ColorOs16FeatureCategories(mode, onOpen)
         return
     }
+    ColorOs16SupportedFeatures(mode, onOpen)
+    ColorOs16UnsupportedFeatures(mode)
+}
+
+@Composable
+private fun ColorOs16SupportedFeatures(mode: FeaturePageMode, onOpen: (FeaturePageMode) -> Unit) {
     when (mode) {
         FeaturePageMode.SystemUiIconOrder -> { StatusBarIconOrderPage(); return }
         FeaturePageMode.SystemUiCornerSettings -> { QsTileCornerSettingsPage(); return }
@@ -60,6 +70,29 @@ internal fun ColorOs16Features(mode: FeaturePageMode, onOpen: (FeaturePageMode) 
     }
     val advancedTitles = ColorOs16AdvancedFeatureGroups(mode, onOpen)
     ColorOs16CatalogRows(mode, advancedTitles)
+}
+
+@Composable
+internal fun ColorOs16UnsupportedFeatures(mode: FeaturePageMode) {
+    val entries = remember(mode) { ColorOs16FeaturePolicy.unsupportedFeatures(mode) }
+    if (entries.isEmpty()) return
+    val actions = remember { EnabledFeatureActions() }
+    val summary = stringResource(R.string.feature_unsupported_coloros16)
+    SettingsSection(summary)
+    FeatureAnimatedGroup {
+        entries.forEach { entry ->
+            row(entry.title) { above, below ->
+                if (actions.supports(entry.title)) {
+                    SettingsToggleRow(title = stringResource(entry.title), summary = summary,
+                        checked = false, enabled = false, onCheckedChange = {},
+                        hasDividerAbove = above, hasDividerBelow = below)
+                } else {
+                    SettingsCardRow(title = stringResource(entry.title), summary = summary, enabled = false,
+                        hasDividerAbove = above, hasDividerBelow = below)
+                }
+            }
+        }
+    }
 }
 
 /** The same catalog and dependency rules drive C16 switches and the enabled-feature inventory. */

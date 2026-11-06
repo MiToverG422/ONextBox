@@ -28,6 +28,7 @@ internal open class HotReloadResourceCoordinator(
         val detach: () -> Unit,
         val restore: (Any?) -> Unit,
         val canReload: () -> Boolean,
+        val canPrepare: () -> Boolean,
         val resumeAfterRejection: () -> Unit,
     )
     private data class Replay(val capture: () -> Any?, val replay: (Any?) -> Unit)
@@ -63,11 +64,12 @@ internal open class HotReloadResourceCoordinator(
         detach: () -> Unit = {},
         restore: (Any?) -> Unit = {},
         canReload: () -> Boolean = { true },
+        canPrepare: () -> Boolean = { true },
         resumeAfterRejection: () -> Unit = {},
     ) {
         synchronized(lock) {
             check(!isRetiring) { "Cannot acquire resources after retirement" }
-            participants[key] = Participant(capture, detach, restore, canReload, resumeAfterRejection)
+            participants[key] = Participant(capture, detach, restore, canReload, canPrepare, resumeAfterRejection)
         }
     }
 
@@ -100,6 +102,13 @@ internal open class HotReloadResourceCoordinator(
         check(!isRetiring) { "This generation has already retired; restart the scope" }
         var rollbackFailed = false
         try {
+            // Reject long-lived host resources before interrupting their active callbacks.
+            // Recheck after draining to cover resources acquired during this preflight.
+            onMain {
+                synchronized(lock) { participants.toList() }.forEach { (key, participant) ->
+                    check(participant.canPrepare()) { "Resource is busy: $key" }
+                }
+            }
             check(gate.pause()) { "Hook callbacks are busy; restart the scope" }
             isRetiring = true
             return onMain {

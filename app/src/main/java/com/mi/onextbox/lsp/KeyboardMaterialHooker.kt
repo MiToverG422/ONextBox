@@ -1,5 +1,6 @@
 package com.mi.onextbox.lsp
 
+import android.view.inputmethod.EditorInfo
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
@@ -13,12 +14,25 @@ internal object KeyboardMaterialHooker {
     private const val TAG = "ONextBox-Keyboard"
 
     fun hook(loader: ClassLoader, apkPath: String) {
-        val stateKey = "$TAG:targets@${System.identityHashCode(loader)}"
+        val stateKey = "$TAG:targets-v2@${System.identityHashCode(loader)}"
         val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
         if (!LspConfig.isKeyboardMaterialUnlockedXposed() && saved == null) return
         val hookKey = "$TAG@${System.identityHashCode(loader)}:material-allowlist"
         runCatching {
             val targets = saved ?: resolve(loader, apkPath)
+            val gate = targets[0] as? Method
+            if (gate != null) {
+                targets.drop(1).forEach { ModernHookRuntime.requireModule().deoptimize(it as Method) }
+                ModernHookRegistry.installFast(hookKey, gate, XposedInterface.Hooker { chain ->
+                    val editor = chain.getArg(0) as? EditorInfo
+                    if (KeyboardMaterialRules.shouldAllow(
+                            LspConfig.isKeyboardMaterialUnlockedXposed(), true, editor?.packageName,
+                        )) true else chain.proceed()
+                })
+                HotReloadLifecycle.register(stateKey, capture = { targets })
+                HookLog.i(TAG, "Native material eligibility hook installed")
+                return@runCatching
+            }
             val field = targets[0] as Field
             val allowlist = field.apply { isAccessible = true }.get(null) as ArrayList<*>
             check(KeyboardMaterialRules.isMaterialAllowlist(allowlist)) { "Material allowlist changed" }
@@ -49,6 +63,18 @@ internal object KeyboardMaterialHooker {
                     paramTypes("android.view.inputmethod.EditorInfo", "boolean")
                 }
             }.single()
+            val gates = apply.invokes.filter { method ->
+                method.returnTypeName == "boolean" &&
+                    method.paramTypeNames == listOf("android.view.inputmethod.EditorInfo") &&
+                    method.usingStrings.containsAll(KeyboardMaterialRules.stockPackages)
+            }.distinctBy { it.descriptor }
+            if (gates.isNotEmpty()) {
+                val gate = gates.single()
+                val callers = (gate.callers + gate.callers.flatMap { it.callers })
+                    .filter { it.isMethod }.distinctBy { it.descriptor }
+                return@use arrayOf(gate.getMethodInstance(loader),
+                    *callers.map { it.getMethodInstance(loader) }.toTypedArray())
+            }
             val field = apply.usingFields.map { it.field }.distinctBy { it.descriptor }.single { data ->
                 data.typeName == "java.util.ArrayList" && Modifier.isStatic(data.modifiers) &&
                     Modifier.isFinal(data.modifiers) && data.writers.any {

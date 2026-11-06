@@ -5,6 +5,12 @@
     <uses-sdk tools:overrideLibrary="io.github.suqi8.coui.kmp.blur" />
 
     <queries>
+        <package android:name="com.oplus.themestore" />
+        <package android:name="com.google.android.euicc" />
+        <package android:name="com.oplus.stdsp" />
+        <package android:name="com.google.android.packageinstaller" />
+        <package android:name="com.google.android.photopicker" />
+        <package android:name="com.google.android.providers.media.module" />
         <package android:name="com.oplus.safecenter" />
         <package android:name="com.realme.wellbeing" />
         <package android:name="com.oplus.heartrate.detect" />
@@ -175,6 +181,13 @@
         <provider
             android:name=".push.PushMonitorProvider"
             android:authorities="${applicationId}.pushmonitor"
+            android:directBootAware="true"
+            android:exported="true" />
+
+        <provider
+            android:name=".lsp.NativeFiveGaProvider"
+            android:authorities="${applicationId}.native5ga"
+            android:process=":native_5ga_bridge"
             android:directBootAware="true"
             android:exported="true" />
 

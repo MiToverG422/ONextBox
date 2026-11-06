@@ -15,7 +15,7 @@ internal object KeyboardFlagEmojiHooker {
     private const val TAG = "ONextBox-KeyboardEmoji"
 
     fun hook(loader: ClassLoader, apkPath: String) {
-        val stateKey = "$TAG:dexkit-v2:targets@${System.identityHashCode(loader)}"
+        val stateKey = "$TAG:dexkit-v3:targets@${System.identityHashCode(loader)}"
         val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
         val hookKey = "$TAG@${System.identityHashCode(loader)}:flags"
         runCatching {
@@ -78,20 +78,27 @@ internal object KeyboardFlagEmojiHooker {
                 !Modifier.isStatic(it.modifiers) && List::class.java.isAssignableFrom(it.type)
             } >= 2
         }
-        val collector = dex.findMethod { matcher {
+        val resolvedCollector = dex.findMethod { matcher {
             name = "emit"; returnType = "java.lang.Object"; paramCount = 2
         } }.mapNotNull { data ->
             runCatching {
                 val method = data.getMethodInstance(loader)
                 if (Modifier.isStatic(method.modifiers) || method.parameterTypes[0] != Any::class.java ||
                     !method.parameterTypes[1].isInterface) return@runCatching null
-                val owner = method.declaringClass.declaredFields.singleOrNull {
-                    !Modifier.isStatic(it.modifiers) && it.type in contents
+                val referencedContents = contents.filter { content ->
+                    data.invokes.any { it.className == content.name }
+                }
+                val owner = method.declaringClass.declaredFields.singleOrNull { field ->
+                    !Modifier.isStatic(field.modifiers) && referencedContents.any {
+                        View::class.java.isAssignableFrom(field.type) && field.type.isAssignableFrom(it)
+                    }
                 } ?: return@runCatching null
-                Triple(data, method, owner)
+                if (referencedContents.size != 1) return@runCatching null
+                Triple(data, method, owner) to referencedContents.single()
             }.getOrNull()
         }.single()
-        val content = collector.third.type
+        val content = resolvedCollector.second
+        val collector = resolvedCollector.first
         val category = content.declaredMethods.single { method ->
             !Modifier.isStatic(method.modifiers) && method.parameterCount == 0 && method.returnType.isInterface &&
                 runCatching { method.returnType.getMethod("getValue").returnType == Any::class.java }.getOrDefault(false)

@@ -22,7 +22,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 @Composable
-internal fun StatusBarInteractionSettingsRows() {
+internal fun StatusBarInteractionSettingsRows(hasFollowingRow: Boolean = false) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -67,7 +67,7 @@ internal fun StatusBarInteractionSettingsRows() {
                 }
             },
             hasDividerAbove = index > 0,
-            hasDividerBelow = index < StatusBarInteractionFeature.entries.lastIndex,
+            hasDividerBelow = index < StatusBarInteractionFeature.entries.lastIndex || hasFollowingRow,
         )
         if (index < StatusBarInteractionFeature.entries.lastIndex) SettingsDivider()
     }

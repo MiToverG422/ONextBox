@@ -130,7 +130,7 @@ internal data class NotificationBatchUiState(
 ) {
     val busy: Boolean get() = loading || operation.busy
     val canApply: Boolean get() = !busy && !readFailed && types.isNotEmpty() &&
-        states.any { it.issue == null && it.target.packageName in selected }
+        states.any { it.issue == null && it.target.packageName in selected && types.any(it.values::containsKey) }
 }
 
 @Composable
@@ -152,7 +152,7 @@ internal fun NotificationBatchLayout(
     var typesExpanded by rememberSaveable { mutableStateOf(false) }
     var reportExpanded by rememberSaveable { mutableStateOf(false) }
     val states = remember(ui.states) { ui.states.associateBy { it.target.packageName } }
-    val eligible = remember(ui.states) { ui.states.filter { it.issue == null }.map { it.target.packageName }.toSet() }
+    val eligible = remember(ui.states, ui.types) { ui.states.filter { it.issue == null && ui.types.any(it.values::containsKey) }.map { it.target.packageName }.toSet() }
     val visible = remember(ui.apps, query) {
         ui.apps.filter { query.isBlank() || it.label.contains(query, true) || it.target.packageName.contains(query, true) }
     }
@@ -180,7 +180,7 @@ internal fun NotificationBatchLayout(
                 item("types") {
                     NotificationBatchExpandableCard(
                         title = stringResource(R.string.notification_batch_types), summary = typeSummary,
-                        expanded = typesExpanded, childCount = 3, tag = "batchPermissions",
+                        expanded = typesExpanded, childCount = NotificationPermissionKind.entries.size, tag = "batchPermissions",
                         onExpandChange = { typesExpanded = it },
                     ) {
                         NotificationPermissionKind.entries.forEachIndexed { index, kind ->
@@ -383,13 +383,15 @@ private fun BatchCheckbox(state: ToggleableState, enabled: Boolean) {
 
 @Composable
 private fun NotificationPermissionBadge(kind: NotificationPermissionKind, value: Int?) {
-    val active = value == 1 || (kind == NotificationPermissionKind.LockScreen && value == 0)
+    val active = if (kind == NotificationPermissionKind.Silent) value == -1
+        else value == 1 || (kind == NotificationPermissionKind.LockScreen && value == 0)
     val color by animateColorAsState(if (active) batchPrimary() else batchForeground(secondary = true), tween(160), label = "batchPermissionBadge")
     val status = when {
         value == null -> R.string.notification_batch_unknown
         kind == NotificationPermissionKind.LockScreen && value == 0 -> R.string.notification_batch_private
         value == -1000 -> R.string.notification_batch_default
-        value == 1 -> R.string.notification_batch_on
+        kind == NotificationPermissionKind.Silent && value == 0 -> R.string.notification_batch_default
+        active -> R.string.notification_batch_on
         else -> R.string.notification_batch_off
     }
     Box(Modifier.clip(RoundedCornerShape(6.dp)).background(color.copy(alpha = .10f))
@@ -455,6 +457,8 @@ internal fun notificationPermissionLabel(kind: NotificationPermissionKind): Int 
     NotificationPermissionKind.Notifications -> R.string.notification_batch_notifications
     NotificationPermissionKind.Banner -> R.string.notification_batch_banner
     NotificationPermissionKind.LockScreen -> R.string.notification_batch_lock_screen
+    NotificationPermissionKind.Silent -> R.string.notification_batch_silent
+    NotificationPermissionKind.LiveActivity -> R.string.notification_batch_live_activity
 }
 
 @Composable

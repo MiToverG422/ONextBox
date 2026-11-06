@@ -27,6 +27,7 @@ internal object GameAssistantCurrentHooker {
         adapter("Current semantic adapters") {
             System.loadLibrary("dexkit")
             DexKitBridge.create(apkPath).use { dex ->
+                adapter("Temperature display") { GameAssistantTemperatureHooker.hook(loader, dex) }
                 adapter("Skins") {
                     val skin = dex.findMethod { matcher {
                         usingStrings("OnePlus Ace Pro Genshin Impact Limited Edition", "genshin-hutao")

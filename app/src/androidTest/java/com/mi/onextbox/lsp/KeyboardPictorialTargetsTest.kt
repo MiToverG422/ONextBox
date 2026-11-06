@@ -23,12 +23,18 @@ class KeyboardPictorialTargetsTest {
     }
     @Test fun actualKeyboardHasTwoKeyDrawingEntriesAndItsBackingThemeEngine() {
         val loader = loader("com.oplus.keyboard")
-        val renderer = loader.loadClass("com.oplus.keyboard.input.view.body.r")
-        val key = loader.loadClass("com.oplus.keyboard.base.entity.e")
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val apk = context.packageManager.getApplicationInfo("com.oplus.keyboard", 0).sourceDir
+        val background = KeyboardRenderTargets.background(loader, apk)
+        val renderer = background.declaringClass
+        val key = background.parameterTypes[0]
         val draws = KeyboardAppearanceRules.drawEntries(renderer, Canvas::class.java, key)
-        assertEquals(setOf("f", "g"), draws.map { it.name }.toSet())
-        assertTrue(Drawable::class.java.isAssignableFrom(renderer.getDeclaredMethod("h", key, Boolean::class.javaPrimitiveType).returnType))
-        assertEquals(Boolean::class.javaPrimitiveType, renderer.getDeclaredField("p").type)
+        assertTrue(draws.isNotEmpty())
+        assertTrue(Drawable::class.java.isAssignableFrom(background.returnType))
+        assertNotNull(renderer.getDeclaredMethod("setDrawRefresh", Boolean::class.javaPrimitiveType))
+        val effects = KeyboardRenderTargets.effects(loader, apk, renderer)
+        assertEquals(1, effects.count(KeyboardRenderTargets::isEdge))
+        assertEquals(1, effects.count { !KeyboardRenderTargets.isEdge(it) })
         assertEquals(String::class.java, key.getDeclaredField("t").type)
         val theme = loader.loadClass("com.oplus.keyboard.base.theme.a")
         assertTrue(theme.declaredMethods.count { it.returnType == Integer::class.java && String::class.java in it.parameterTypes } >= 3)
@@ -38,6 +44,27 @@ class KeyboardPictorialTargetsTest {
         assertNotNull(manager.getMethod("setBlurRadius", Int::class.javaPrimitiveType))
         assertNotNull(manager.getMethod("setCornerRadius", *Array(4) { Float::class.javaPrimitiveType }))
         assertEquals(StateListDrawable::class.java, loader.loadClass("com.oplus.keyboard.input.view.head.ToolItemView").getDeclaredField("c").type)
+    }
+
+    @Test fun actualKeyboardEmojiResolverAcceptsMergedCollectors() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val apk = context.packageManager.getApplicationInfo("com.oplus.keyboard", 0).sourceDir
+        val loader = loader("com.oplus.keyboard")
+        val resolve = KeyboardFlagEmojiHooker::class.java.getDeclaredMethod("resolve", ClassLoader::class.java, String::class.java)
+            .apply { isAccessible = true }
+        val targets = resolve.invoke(KeyboardFlagEmojiHooker, loader, apk) as Array<*>
+        val collector = targets[0] as java.lang.reflect.Method
+        val owner = targets[1] as java.lang.reflect.Field
+        val category = targets[2] as java.lang.reflect.Method
+        assertEquals("emit", collector.name)
+        assertTrue(owner.type.isAssignableFrom(category.declaringClass))
+        val models = KeyboardFlagEmojiModels(
+            targets[4] as java.lang.reflect.Constructor<*>, targets[5] as java.lang.reflect.Field,
+            targets[6] as java.lang.reflect.Field, targets[7] as java.lang.reflect.Constructor<*>,
+            targets[8] as java.lang.reflect.Field, targets[9] as java.lang.reflect.Constructor<*>, targets[10] as java.lang.reflect.Field,
+        )
+        val pair = (targets[4] as java.lang.reflect.Constructor<*>).newInstance(emptyList<Any>(), emptyList<Any>())
+        assertNotNull(models.supplement(pair))
     }
     @Test fun actualSystemUiProvidesRotationEventsCurrentBitmapAndExistingClockAccess() {
         val loader = loader("com.android.systemui")

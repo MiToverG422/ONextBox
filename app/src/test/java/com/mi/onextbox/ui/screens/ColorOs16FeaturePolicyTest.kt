@@ -7,6 +7,32 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ColorOs16FeaturePolicyTest {
+    @Test fun unsupportedFeaturesStayVisibleWithoutBecomingAvailable() {
+        val c16 = SystemAdaptationVersion.ColorOs16
+        val visible = visibleFeatureSearchEntries(c16)
+        val supported = featureSearchEntries(c16)
+        val inventory = enabledFeatureEntries(c16)
+        val title = R.string.keyguard_swipe_pin_title
+        assertTrue(visible.any { it.title == title })
+        assertFalse(supported.any { it.title == title })
+        assertFalse(inventory.any { it.title == title })
+        val disabled = ColorOs16FeaturePolicy.unsupportedFeatures(FeaturePageMode.SystemUiLockScreen)
+        assertTrue(disabled.any { it.title == title })
+        assertEquals(disabled.size, disabled.distinctBy { it.title }.size)
+        disabled.forEach { assertFalse(ColorOs16FeaturePolicy.isFeatureAvailable(c16, it.page, it.title)) }
+        assertTrue(disabled.none { it.title in ColorOs16FeatureRegistry.titlesForPage(it.page) })
+    }
+
+    @Test fun visibleCategoriesIncludeUnsupportedAppsAndSubpagesWithoutGrantingScopes() {
+        val visible = ColorOs16FeaturePolicy.visibleCategories
+        assertTrue(visible.getValue(FeaturePageMode.Main).containsAll(colorOs17FeatureMainPageModes()))
+        assertTrue(visible.getValue(FeaturePageMode.SystemUi).contains(FeaturePageMode.SystemUiBackGesture))
+        assertFalse(ColorOs16FeaturePolicy.isPageAvailable(FeaturePageMode.SystemUiBackGesture))
+        assertTrue(featureRestartPackages(FeaturePageMode.SystemUiBackGesture, SystemAdaptationVersion.ColorOs16).isEmpty())
+        visible.values.forEach { assertEquals(it.size, it.distinct().size) }
+        assertEquals(FeatureSearchIndex.entries, visibleFeatureSearchEntries(SystemAdaptationVersion.ColorOs17))
+    }
+
     @Test fun availabilityComesFromTheAuditedRegistryAndAllCategoriesHaveChildren() {
         assertTrue(ColorOs16FeatureRegistry.entries.isNotEmpty())
         ColorOs16FeaturePolicy.categories.forEach { (page, children) ->

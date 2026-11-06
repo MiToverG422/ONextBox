@@ -25,7 +25,7 @@ internal object KeyboardAppearanceHooker {
     private val renderedViews = WeakHashMap<View, Int>()
     private val blurOwners = WeakHashMap<Any, Boolean>()
     private val hits = ConcurrentHashMap.newKeySet<String>()
-    private data class Frame(val mark: String, val left: Float, val right: Float, val type: String)
+    private data class Frame(val marks: Set<String>, val left: Float, val right: Float, val type: String)
     private val application by lazy { Class.forName("android.app.ActivityThread").getDeclaredMethod("currentApplication") }
     private fun context() = application.invoke(null) as? Context
     private fun hit(name: String) { if (hits.add(name)) HookLog.i(TAG, "Applied $name") }
@@ -177,32 +177,37 @@ internal object KeyboardAppearanceHooker {
             }
         }
         install("keys") {
-            val renderer = loader.loadClass("com.oplus.keyboard.input.view.body.r")
-            val keyType = loader.loadClass("com.oplus.keyboard.base.entity.e")
+            val background = KeyboardRenderTargets.background(loader, apkPath)
+            val renderer = background.declaringClass
+            val keyType = background.parameterTypes[0]
             val draws = KeyboardAppearanceRules.drawEntries(renderer, Canvas::class.java, keyType)
             fun field(name: String): Field = keyType.getDeclaredField(name).apply { isAccessible = true }
-            val mark = field("t"); val left = field("b"); val right = field("c")
-            val code = field("a")
-            val top = field("d"); val bottom = field("e"); val eligible = field("E")
+            val labelMaps by lazy { KeyboardRenderTargets.labelMaps(loader, apkPath, renderer) }
+            val mark by lazy { field("t") }; val left by lazy { field("b") }; val right by lazy { field("c") }
+            val code by lazy { field("a") }
+            val top by lazy { field("d") }; val bottom by lazy { field("e") }; val eligible by lazy { field("E") }
             val codes = loader.loadClass("com.oplus.keyboard.base.enums.KeyCode").let { type ->
                 val value = type.getDeclaredMethod("getValue")
                 type.enumConstants.orEmpty().associate { value.invoke(it) as Int to (it as Enum<*>).name }
             }
-            val keyboardType = renderer.declaredFields.single { it.type.name == "com.oplus.keyboard.base.enums.KeyboardType" }.apply { isAccessible = true }
+            val keyboardType by lazy { renderer.declaredFields.single { it.type.name == "com.oplus.keyboard.base.enums.KeyboardType" }.apply { isAccessible = true } }
             install("material-key-geometry") {
-                val edge = loader.loadClass("com.oplus.keyboard.base.util.t")
-                val shadow = loader.loadClass("com.oplus.keyboard.base.util.s")
-                val effectField = edge.getDeclaredField("a").apply { isAccessible = true }
+                check(listOf(left, right, top, bottom, code).all { it.type == Int::class.javaPrimitiveType })
+                check(eligible.type == Boolean::class.javaPrimitiveType)
+                val effects = KeyboardRenderTargets.effects(loader, apkPath, renderer)
+                val edges = effects.single(KeyboardRenderTargets::isEdge)
+                val effectField = edges.declaringClass.declaredFields.single {
+                    java.lang.reflect.Modifier.isStatic(it.modifiers) && Drawable::class.java.isAssignableFrom(it.type) &&
+                        it.type.methods.any { method -> method.name == "setEdgeEnable" }
+                }.apply { isAccessible = true }
                 val effectClass = effectField.type
                 val setCorner = effectClass.getMethod("setCornerRadius", Float::class.javaPrimitiveType)
                 val setEdge = effectClass.getMethod("setEdgeEnable", Boolean::class.javaPrimitiveType)
                 val setShadow = effectClass.getMethod("setShadowEnable", Boolean::class.javaPrimitiveType)
-                val dp = loader.loadClass("com.oplus.keyboard.utils.f").getDeclaredMethod("a", Float::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
-                val signature = arrayOf(Canvas::class.java, List::class.java, Boolean::class.javaPrimitiveType)
-                val edges = edge.getDeclaredMethod("b", *signature)
+                fun nativeRadius() = 8f * (context()?.resources?.displayMetrics?.density ?: 1f)
                 ModernHookRegistry.installFast("$TAG:material-edges", edges) { chain ->
                     if (listOf("monet", "key_corner", "key_no_outline", "key_no_shadow").none(::enabled)) return@installFast chain.proceed()
-                    val nativeRadius = (dp.invoke(null, 8f, false) as Number).toFloat()
+                    val nativeRadius = nativeRadius()
                     val radii = (chain.args[1] as List<*>).filterNotNull().mapNotNull { key ->
                         val width = right.getInt(key) - left.getInt(key)
                         val height = bottom.getInt(key) - top.getInt(key)
@@ -221,7 +226,7 @@ internal object KeyboardAppearanceHooker {
                     if (iterator == null || !iterator.hasNext()) return@installFast chain.proceed()
                     val effect = effectField.get(null) as Drawable
                     if (chain.thisObject !== effect) return@installFast chain.proceed()
-                    val nativeRadius = (dp.invoke(null, 8f, false) as Number).toFloat()
+                    val nativeRadius = nativeRadius()
                     val radius = iterator.next()
                     synchronized(effect) {
                         try {
@@ -238,62 +243,74 @@ internal object KeyboardAppearanceHooker {
                         }
                     }
                 }
-                val ambient = shadow.getDeclaredMethod("d", *signature)
+                val ambient = effects.single { !KeyboardRenderTargets.isEdge(it) }
                 ModernHookRegistry.installFast("$TAG:key-ambient-shadow", ambient) { chain ->
                     if (enabled("key_no_shadow") || enabled("monet")) null else chain.proceed()
                 }
                 renderer.declaredMethods.forEach { runCatching { com.mi.onextbox.lsp.compat.ModernHookRuntime.requireModule().deoptimize(it) } }
             }
-            draws.forEach { draw -> ModernHookRegistry.installFast("$TAG:key-draw:$draw", draw) { chain ->
-                if (listOf("key_font_scale", "hide_t9_marks", "hide_qwerty_marks", "center_marks").none(::enabled)) return@installFast chain.proceed()
-                val old = frames.get()
-                val key = chain.args[1]
-                frames.set(Frame(mark.get(key)?.toString().orEmpty(), left.getInt(key).toFloat(), right.getInt(key).toFloat(), keyboardType.get(chain.thisObject)?.toString().orEmpty()))
-                try { chain.proceed() } finally { frames.set(old) }
-            } }
-            val background = renderer.declaredMethods.single { Drawable::class.java.isAssignableFrom(it.returnType) &&
-                it.parameterTypes.contentEquals(arrayOf(keyType, Boolean::class.javaPrimitiveType)) }
-            ModernHookRegistry.installFast("$TAG:key-background", background) { chain ->
-                val original = chain.proceed() as? Drawable ?: return@installFast null
-                if (listOf("monet", "key_corner", "key_alpha", "key_no_outline", "key_no_shadow").none(::enabled)) original
-                else {
-                    val name = codes[code.getInt(chain.args[0])].orEmpty()
-                    val kind = when {
-                        name.contains("ENTER") -> "keyEnter"
-                        name in setOf("BACK", "SHIFT", "SPACE", "SYMBOL", "LEFTSYMBOL", "CLEAR") -> "keyFunction"
-                        else -> "key"
+            install("key-text") {
+                check(mark.type == String::class.java && left.type == Int::class.javaPrimitiveType && right.type == Int::class.javaPrimitiveType)
+                keyboardType
+                labelMaps
+                draws.forEach { draw -> ModernHookRegistry.installFast("$TAG:key-draw:$draw", draw) { chain ->
+                    if (listOf("key_font_scale", "hide_t9_marks", "hide_qwerty_marks", "center_marks").none(::enabled)) return@installFast chain.proceed()
+                    val old = frames.get()
+                    val key = chain.args[1]
+                    val rawMark = mark.get(key)?.toString().orEmpty()
+                    val marks = (listOf(rawMark) + labelMaps.mapNotNull { it[rawMark] as? String }).filter { it.isNotEmpty() }.toSet()
+                    frames.set(Frame(marks, left.getInt(key).toFloat(), right.getInt(key).toFloat(), keyboardType.get(chain.thisObject)?.toString().orEmpty()))
+                    try { chain.proceed() } finally { frames.set(old) }
+                } }
+            }
+            install("key-background") {
+                check(code.type == Int::class.javaPrimitiveType)
+                ModernHookRegistry.installFast("$TAG:key-background", background) { chain ->
+                    val original = chain.proceed() as? Drawable ?: return@installFast null
+                    if (listOf("monet", "key_corner", "key_alpha", "key_no_outline", "key_no_shadow").none(::enabled)) original
+                    else {
+                        val name = codes[code.getInt(chain.args[0])].orEmpty()
+                        val kind = when {
+                            name.contains("ENTER") -> "keyEnter"
+                            name in setOf("BACK", "SHIFT", "SPACE", "SYMBOL", "LEFTSYMBOL", "CLEAR") -> "keyFunction"
+                            else -> "key"
+                        }
+                        hit("key-background")
+                        styled(original, kind + if (chain.args[1] == true) "Pressed" else "", false)
                     }
-                    hit("key-background")
-                    styled(original, kind + if (chain.args[1] == true) "Pressed" else "", false)
                 }
             }
-            val text = Canvas::class.java.getDeclaredMethod("drawText", String::class.java, Float::class.javaPrimitiveType, Float::class.javaPrimitiveType, Paint::class.java)
-            ModernHookRegistry.installFast("$TAG:key-text", text) { chain ->
-                val frame = frames.get() ?: return@installFast chain.proceed()
-                val word = chain.args[0] as String
-                val secondary = frame.mark.isNotEmpty() && word == frame.mark
-                if (secondary && KeyboardAppearanceRules.hideMark(frame.type, enabled("hide_t9_marks"), enabled("hide_qwerty_marks"))) {
-                    hit("hide-secondary:${frame.type}"); return@installFast null
+            install("key-text-paint") {
+                val text = Canvas::class.java.getDeclaredMethod("drawText", String::class.java, Float::class.javaPrimitiveType, Float::class.javaPrimitiveType, Paint::class.java)
+                ModernHookRegistry.installFast("$TAG:key-text", text) { chain ->
+                    val frame = frames.get() ?: return@installFast chain.proceed()
+                    val word = chain.args[0] as String
+                    val secondary = word in frame.marks
+                    if (secondary && KeyboardAppearanceRules.hideMark(frame.type, enabled("hide_t9_marks"), enabled("hide_qwerty_marks"))) {
+                        hit("hide-secondary:${frame.type}"); return@installFast null
+                    }
+                    val paint = chain.args[3] as Paint
+                    val size = paint.textSize
+                    val args = chain.args.toTypedArray()
+                    try {
+                        if (enabled("key_font_scale")) { paint.textSize = size * number("key_font_scale") / 100f; hit("key-font-scale:${number("key_font_scale")}") }
+                        if (secondary && enabled("center_marks")) { args[1] = (frame.left + frame.right - paint.measureText(word)) / 2f; hit("center-secondary") }
+                        chain.proceed(args)
+                    } finally { paint.textSize = size }
                 }
-                val paint = chain.args[3] as Paint
-                val size = paint.textSize
-                val args = chain.args.toTypedArray()
-                try {
-                    if (enabled("key_font_scale")) { paint.textSize = size * number("key_font_scale") / 100f; hit("key-font-scale:${number("key_font_scale")}") }
-                    if (secondary && enabled("center_marks")) { args[1] = (frame.left + frame.right - paint.measureText(word)) / 2f; hit("center-secondary") }
-                    chain.proceed(args)
-                } finally { paint.textSize = size }
             }
-            val dirty = renderer.getDeclaredField("p").apply { isAccessible = true }
-            ModernHookRegistry.installFast("$TAG:cached-keys", renderer.getDeclaredMethod("onDraw", Canvas::class.java)) { chain ->
-                val owner = chain.thisObject as View
-                val token = KeyboardPictorialSettings.keyboard.fold(1) { hash, option ->
-                    hash * 31 + if (!KeyboardPictorialSettings.active(option.key)) 0 else if (option.max > option.min) KeyboardPictorialSettings.number(option.key) + 1 else 1
+            install("key-refresh") {
+                val refresh = renderer.getDeclaredMethod("setDrawRefresh", Boolean::class.javaPrimitiveType).apply { isAccessible = true }
+                ModernHookRegistry.installFast("$TAG:cached-keys", renderer.getDeclaredMethod("onDraw", Canvas::class.java)) { chain ->
+                    val owner = chain.thisObject as View
+                    val token = KeyboardPictorialSettings.keyboard.fold(1) { hash, option ->
+                        hash * 31 + if (!KeyboardPictorialSettings.active(option.key)) 0 else if (option.max > option.min) KeyboardPictorialSettings.number(option.key) + 1 else 1
+                    }
+                    synchronized(renderedViews) {
+                        if (renderedViews.put(owner, token) != token) refresh.invoke(owner, true)
+                    }
+                    chain.proceed()
                 }
-                synchronized(renderedViews) {
-                    if (renderedViews.put(owner, token) != token) dirty.setBoolean(owner, true)
-                }
-                chain.proceed()
             }
             renderer.declaredMethods.forEach { runCatching { com.mi.onextbox.lsp.compat.ModernHookRuntime.requireModule().deoptimize(it) } }
             HookLog.i(TAG, "Key appearance installed: ${draws.size} native draw entries")
@@ -401,7 +418,7 @@ internal object KeyboardAppearanceHooker {
                 if (toolbar && enabled("toolbar_outline")) {
                     paint.color = systemColor("outline_variant") ?: Color.GRAY
                     paint.style = Paint.Style.STROKE; paint.strokeWidth = context()?.resources?.displayMetrics?.density ?: 1f
-                    val r = min(bounds.width(), bounds.height()) * .15f
+                    val r = min(bounds.width(), bounds.height()) * .5f
                     canvas.drawRoundRect(RectF(bounds).apply { inset(paint.strokeWidth, paint.strokeWidth) }, r, r, paint)
                     paint.style = Paint.Style.FILL
                 }

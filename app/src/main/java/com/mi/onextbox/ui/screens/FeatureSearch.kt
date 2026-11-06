@@ -224,7 +224,7 @@ internal fun FeatureSearchResults(query: String, onOpen: (FeaturePageMode) -> Un
     val keyboard = LocalSoftwareKeyboardController.current
     val version = rememberSystemAdaptationVersion()
     val results = remember(query, configuration, resources, version) {
-        featureSearchEntries(version).map { entry ->
+        visibleFeatureSearchEntries(version).map { entry ->
             entry to featureSearchScore(
                 query, resources.getString(entry.title),
                 if (entry.description == 0) "" else resources.getString(entry.description),
@@ -241,9 +241,12 @@ internal fun FeatureSearchResults(query: String, onOpen: (FeaturePageMode) -> Un
         }
     } else {
         SettingsListGroup(results, key = { it.title }) { index, entry ->
+            val available = ColorOs16FeaturePolicy.isFeatureAvailable(version, entry.page, entry.title)
             run {SettingsCardRow(
                     title = stringResource(entry.title),
-                    summary = featurePageTitle(entry.page),
+                    summary = if (available) featurePageTitle(entry.page) else
+                        "${featurePageTitle(entry.page)} · ${stringResource(R.string.feature_unsupported_coloros16)}",
+                    enabled = available,
                     showArrow = true,
                     onClick = {
                         focus.clearFocus()

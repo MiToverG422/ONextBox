@@ -7,7 +7,7 @@ import org.junit.Test
 
 class NotificationBatchEngineTest {
     private val target = NotificationAppTarget("com.test.alpha", 10123)
-    private val kinds = NotificationPermissionKind.entries.toSet()
+    private val kinds = setOf(NotificationPermissionKind.Notifications, NotificationPermissionKind.Banner, NotificationPermissionKind.LockScreen)
     private class Backend : NotificationBatchBackend {
         val values = NotificationPermissionKind.entries.associateWith { 0 }.toMutableMap()
         val writes = mutableListOf<Pair<NotificationPermissionKind, Int>>()
@@ -30,7 +30,7 @@ class NotificationBatchEngineTest {
         val backend = Backend()
         val state = NotificationBatchEngine(backend, 0).inspect(target)
         assertNull(state.issue)
-        assertEquals(3, state.values.size)
+        assertEquals(NotificationPermissionKind.entries.size, state.values.size)
         assertTrue(backend.writes.isEmpty())
     }
 
@@ -101,7 +101,7 @@ class NotificationBatchEngineTest {
         val backend = Backend().apply { unreadable = NotificationPermissionKind.Banner }
         val engine = NotificationBatchEngine(backend, 0)
         val state = engine.inspect(target)
-        assertEquals(NotificationBatchIssue.Unavailable, state.issue)
+        assertNull(state.issue)
         assertFalse(state.values.containsKey(NotificationPermissionKind.Banner))
         assertEquals(NotificationBatchIssue.Unavailable, engine.apply(listOf(NotificationMutation(target, NotificationPermissionKind.Banner, 0, 1))).results.single().issue)
         assertTrue(backend.writes.isEmpty())
@@ -144,4 +144,41 @@ class NotificationBatchEngineTest {
         val result = NotificationBatchReport(listOf(NotificationMutationResult(NotificationMutation(target, NotificationPermissionKind.LockScreen, -1000, -1), true)))
         assertEquals(result, Json.decodeFromString<NotificationBatchReport>(Json.encodeToString(result)))
     }
+    @Test fun silentUsesNativeValuesAndUndoRestoresDefault() {
+        val backend = Backend()
+        val engine = NotificationBatchEngine(backend, 0)
+        val kind = setOf(NotificationPermissionKind.Silent)
+        val enabled = engine.apply(NotificationBatchEngine.plan(listOf(engine.inspect(target)), setOf(target.packageName), kind, true))
+        assertEquals(-1, backend.values[NotificationPermissionKind.Silent])
+        assertEquals(1, enabled.changes.size)
+        val disabled = NotificationBatchEngine.plan(listOf(engine.inspect(target)), setOf(target.packageName), kind, false)
+        assertEquals(1, disabled.single().after)
+        engine.apply(NotificationBatchEngine.undo(enabled.changes))
+        assertEquals(0, backend.values[NotificationPermissionKind.Silent])
+        assertTrue(backend.writes.all { it.first == NotificationPermissionKind.Silent })
+    }
+
+    @Test fun missingLiveActivitySupportPreservesOtherOperations() {
+        val backend = Backend().apply { unreadable = NotificationPermissionKind.LiveActivity }
+        val engine = NotificationBatchEngine(backend, 0)
+        val state = engine.inspect(target)
+        assertNull(state.issue)
+        val plan = NotificationBatchEngine.plan(listOf(state), setOf(target.packageName),
+            setOf(NotificationPermissionKind.Banner, NotificationPermissionKind.LiveActivity), true)
+        assertEquals(NotificationPermissionKind.Banner, plan.single().kind)
+        assertEquals(1, engine.apply(plan).changes.size)
+    }
+
+    @Test fun liveActivityCanBeDisabledAndUndoneWithoutChangingNotifications() {
+        val backend = Backend().apply { values[NotificationPermissionKind.LiveActivity] = 1 }
+        val engine = NotificationBatchEngine(backend, 0)
+        val plan = NotificationBatchEngine.plan(listOf(engine.inspect(target)), setOf(target.packageName),
+            setOf(NotificationPermissionKind.LiveActivity), false)
+        val report = engine.apply(plan)
+        assertEquals(0, backend.values[NotificationPermissionKind.LiveActivity])
+        engine.apply(NotificationBatchEngine.undo(report.changes))
+        assertEquals(1, backend.values[NotificationPermissionKind.LiveActivity])
+        assertTrue(backend.writes.all { it.first == NotificationPermissionKind.LiveActivity })
+    }
+
 }

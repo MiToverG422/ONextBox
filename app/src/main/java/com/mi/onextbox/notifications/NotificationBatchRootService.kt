@@ -67,6 +67,12 @@ class NotificationBatchRootService : RootService() {
                 .invoke(service, target.packageName, target.uid) as Boolean) 1 else 0
             NotificationPermissionKind.Banner -> if (callVendor("getAppBanner", target) as Boolean) 1 else 0
             NotificationPermissionKind.LockScreen -> callVendor("getAppVisibility", target) as Int
+            NotificationPermissionKind.Silent -> callVendor("getStowOption", target) as Int
+            NotificationPermissionKind.LiveActivity -> {
+                requireLiveActivitySupport(target)
+                if (service.javaClass.getMethod("appCanBePromoted", String::class.java, intClass)
+                    .apply { isAccessible = true }.invoke(service, target.packageName, target.uid) as Boolean) 1 else 0
+            }
         }.also { require(NotificationBatchEngine.validValue(kind, it)) }
 
         override fun write(target: NotificationAppTarget, kind: NotificationPermissionKind, value: Int) {
@@ -79,9 +85,23 @@ class NotificationBatchRootService : RootService() {
                     })
                 NotificationPermissionKind.Banner -> vendor.javaClass.getMethod("setAppBanner", String::class.java, intClass, boolClass)
                     .invoke(vendor, target.packageName, target.uid, value == 1)
+                NotificationPermissionKind.Silent -> vendor.javaClass.getMethod("setStowOption", String::class.java, intClass, intClass)
+                    .invoke(vendor, target.packageName, target.uid, value)
+                NotificationPermissionKind.LiveActivity -> {
+                    requireLiveActivitySupport(target)
+                    service.javaClass.getMethod("setCanBePromoted", String::class.java, intClass, boolClass, boolClass)
+                        .apply { isAccessible = true }.invoke(service, target.packageName, target.uid, value == 1, true)
+                }
                 NotificationPermissionKind.LockScreen -> vendor.javaClass.getMethod("setAppVisibility", String::class.java, intClass, intClass)
                     .invoke(vendor, target.packageName, target.uid, value)
             }
+        }
+
+        private fun requireLiveActivitySupport(target: NotificationAppTarget) {
+            val info = packageManager.javaClass.getMethod("getPackageInfoAsUser", String::class.java, intClass, intClass)
+                .invoke(packageManager, target.packageName, PackageManager.GET_PERMISSIONS, target.uid / 100000)
+                as android.content.pm.PackageInfo
+            check(info.requestedPermissions?.contains("android.permission.POST_PROMOTED_NOTIFICATIONS") == true)
         }
 
         private fun callVendor(name: String, target: NotificationAppTarget): Any = vendor.javaClass

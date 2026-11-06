@@ -51,6 +51,7 @@ fun HomePage(
     }
 
 
+    HomeSupportNotice()
     HomeHeroCard(
         rootGranted = rootGranted,
         lsposedReady = versionInfo.lsposedReady,

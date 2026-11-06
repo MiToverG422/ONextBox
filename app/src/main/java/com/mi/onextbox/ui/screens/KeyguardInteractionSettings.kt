@@ -32,6 +32,10 @@ internal fun KeyguardInteractionSettings() {
     val owner = LocalLifecycleOwner.current
     val writeLock = remember { Mutex() }
     val feature = KeyguardFeature.FaceTapUnlock
+    var faceCapsuleEnabled by remember {
+        mutableStateOf(LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.FaceAuthCapsule))
+    }
+    var savingFaceCapsule by remember { mutableStateOf(false) }
     var enabled by remember { mutableStateOf(LspConfig.isKeyguardFeatureEnabled(context, feature)) }
     var animationEnabled by remember {
         mutableStateOf(LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.FaceTapAnimation))
@@ -46,6 +50,7 @@ internal fun KeyguardInteractionSettings() {
     DisposableEffect(context, owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                faceCapsuleEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.FaceAuthCapsule)
                 enabled = LspConfig.isKeyguardFeatureEnabled(context, feature)
                 animationEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.FaceTapAnimation)
                 highlightBlocked = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.BlockPasswordHighlight)
@@ -55,7 +60,40 @@ internal fun KeyguardInteractionSettings() {
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    SettingsSection(stringResource(R.string.keyguard_interaction_group))
+    SettingsSection(stringResource(R.string.keyguard_display_group))
+    FeatureAnimatedGroup {
+        row("face-auth-capsule") { above, below ->
+            SettingsToggleRow(
+                title = stringResource(R.string.keyguard_face_capsule_title),
+                summary = stringResource(R.string.keyguard_face_capsule_summary),
+                checked = faceCapsuleEnabled,
+                interactionEnabled = !savingFaceCapsule,
+                onCheckedChange = { checked ->
+                    if (!savingFaceCapsule) {
+                        savingFaceCapsule = true
+                        faceCapsuleEnabled = checked
+                        val pending = com.mi.onextbox.ui.settings.FeatureSettingWriteQueue.application.enqueue {
+                            LspConfig.setKeyguardFeatureEnabled(context, KeyguardFeature.FaceAuthCapsule, checked)
+                        }
+                        scope.launch {
+                            try { pending.await() }
+                            catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                            catch (_: Exception) {
+                                android.widget.Toast.makeText(context, R.string.ota_save_failed, android.widget.Toast.LENGTH_LONG).show()
+                            } finally {
+                                faceCapsuleEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.FaceAuthCapsule)
+                                savingFaceCapsule = false
+                            }
+                        }
+                    }
+                },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
+        }
+    }
+
+    SettingsSection(stringResource(R.string.keyguard_fingerprint_group))
     FeatureAnimatedGroup {
         row(0) { above, below ->
             SettingsToggleRow(
@@ -96,6 +134,10 @@ internal fun KeyguardInteractionSettings() {
                 hasDividerBelow = below,
             )
         }
+    }
+
+    SettingsSection(stringResource(R.string.keyguard_password_group))
+    FeatureAnimatedGroup {
         row("swipe-pin") { above, below ->
             SettingsToggleRow(
                 title = stringResource(R.string.keyguard_swipe_pin_title),
