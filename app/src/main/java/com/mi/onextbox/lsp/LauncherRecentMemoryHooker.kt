@@ -102,7 +102,8 @@ internal object LauncherRecentMemoryHooker {
                     val owner = chain.args.first { native.allowed.declaringClass.isInstance(it) }!!
                     synchronize(owner)
                     if (!enabled() && !native.detail.getBoolean(owner)) {
-                        val panel = chain.args.first { native.panelType.isInstance(it) }
+                        val panel = chain.thisObject?.takeIf(native.panelType::isInstance)
+                            ?: chain.args.first { native.panelType.isInstance(it) }
                         native.updatePanel.invoke(panel, false)
                         null
                     } else chain.proceed()

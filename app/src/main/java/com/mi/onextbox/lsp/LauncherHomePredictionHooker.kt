@@ -15,7 +15,7 @@ import java.util.WeakHashMap
 internal object LauncherHomePredictionHooker {
     private const val TAG = "ONextBox-BackGesture"
     private const val KEY = "$TAG:launcherHome"
-    private data class Frame(val owner: Any, val event: Any)
+    private data class Frame(val owner: Any, val progress: Float, val edge: Int, val touchY: Float)
 
     fun hook(loader: ClassLoader) {
         if (BackGestureSettings.xposed().predictive != 1 && HotReloadLifecycle.restoredState(KEY) != true) return
@@ -24,28 +24,34 @@ internal object LauncherHomePredictionHooker {
     }
 
     private fun install(loader: ClassLoader) {
-        val type = loader.loadClass("com.android.quickstep.LauncherBackAnimationController")
-        val callback = loader.loadClass("com.android.quickstep.o3")
-        val animator = loader.loadClass("com.android.quickstep.i4")
+        val legacy = runCatching { loader.loadClass("com.android.quickstep.LauncherBackAnimationController") }.getOrNull()
+        val inlined = legacy == null
+        val type = legacy ?: loader.loadClass("com.android.quickstep.d")
+        val callback = loader.loadClass(if (inlined) "rj5" else "com.android.quickstep.o3")
+        val animator = loader.loadClass(if (inlined) "jk5" else "com.android.quickstep.i4")
         val motion = loader.loadClass("android.window.BackMotionEvent")
-        val event = loader.loadClass("android.window.BackEvent")
+        val event = if (inlined) motion else loader.loadClass("android.window.BackEvent")
         fun field(owner: Class<*>, name: String) = owner.getDeclaredField(name).apply { isAccessible = true }
+        fun controllerField(old: String, current: String) = field(type, if (inlined) current else old)
         val callbackOwner = field(callback, "a")
-        val bounds = field(type, "c")
-        val initialTouch = field(type, "z")
-        val current = field(type, "s")
-        val crop = field(type, "o")
-        val session = field(type, "q")
+        val listenerField = if (inlined) field(animator, "d") else null
+        val motionField = if (inlined) field(animator, "f") else null
+        val bounds = controllerField("c", "r")
+        val initialTouch = controllerField("z", "F")
+        val current = controllerField("s", "y")
+        val crop = controllerField("o", "u")
+        val session = controllerField("q", "w")
         val sessionProgress = field(session.type, "d")
-        val initialRadius = field(type, "y")
-        val currentRadius = field(type, "d0")
-        val launcherReference = field(type, "w")
-        val endRadius = type.getDeclaredMethod("v").apply { isAccessible = true }
+        val initialRadius = controllerField("y", "E")
+        val currentRadius = controllerField("d0", "j0")
+        val launcherReference = controllerField("w", "C")
+        val endRadius = type.getDeclaredMethod(if (inlined) "k" else "v").apply { isAccessible = true }
         val begin = animator.getDeclaredMethod("b", motion, callback)
-        val update = callback.getDeclaredMethod("a", event)
-        val transform = type.getDeclaredMethod("l", RectF::class.java, Float::class.javaPrimitiveType,
+        val update = if (inlined) animator.getDeclaredMethod("d", Float::class.javaPrimitiveType)
+            else callback.getDeclaredMethod("a", event)
+        val transform = type.getDeclaredMethod(if (inlined) "a" else "l", RectF::class.java, Float::class.javaPrimitiveType,
             Rect::class.java, Float::class.javaPrimitiveType, Float::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
-        val finish = type.getDeclaredMethod("s")
+        val finish = if (inlined) animator.getDeclaredMethod("c") else type.getDeclaredMethod("s")
         val edge = event.getDeclaredMethod("getSwipeEdge")
         val startEdge = motion.getDeclaredMethod("getSwipeEdge")
         val progress = event.getDeclaredMethod("getProgress")
@@ -63,7 +69,8 @@ internal object LauncherHomePredictionHooker {
             runCatching { ModernHookRuntime.requireModule().deoptimize(method) }
         }
         hook(finish) { chain ->
-            try { chain.proceed() } finally { synchronized(gestures) { gestures.remove(chain.thisObject) } }
+            val owner = if (inlined) listenerField?.get(chain.thisObject)?.let(callbackOwner::get) else chain.thisObject
+            try { chain.proceed() } finally { synchronized(gestures) { gestures.remove(owner) } }
         }
         hook(transform) { chain ->
             val active = frame.get()
@@ -77,8 +84,8 @@ internal object LauncherHomePredictionHooker {
             val id = resources.getIdentifier("swipe_back_window_scale_x_margin", "dimen", context.packageName)
             val margin = if (id != 0) resources.getDimension(id) else 8f * resources.displayMetrics.density
             val projected = BackGestureRules.homePreview(screen.width().toFloat(), screen.height().toFloat(),
-                progress.invoke(active.event) as Float, edge.invoke(active.event) as Int,
-                (touchY.invoke(active.event) as Float) - initial.y, margin) ?: return@hook chain.proceed()
+                active.progress, active.edge,
+                active.touchY - initial.y, margin) ?: return@hook chain.proceed()
             val rect = RectF(screen.left + projected.left, screen.top + projected.top,
                 screen.left + projected.left + projected.width, screen.top + projected.top + projected.height)
             val radius = initialRadius.getFloat(owner).let { start ->
@@ -95,17 +102,20 @@ internal object LauncherHomePredictionHooker {
             args[3] = 1f
             args[4] = projected.progress
             chain.proceed(args).also {
-                if (!logged) {
+                if (!logged && active.progress > 0f) {
                     logged = true
                     HookLog.i(TAG, "AOSP launcher predictive frame applied")
                 }
             }
         }
         hook(update) { chain ->
-            val owner = callbackOwner.get(chain.thisObject) ?: return@hook chain.proceed()
+            val listener = if (inlined) listenerField?.get(chain.thisObject) else chain.thisObject
+            val owner = listener?.let(callbackOwner::get) ?: return@hook chain.proceed()
             if (synchronized(gestures) { gestures[owner] } != true) return@hook chain.proceed()
             val previous = frame.get()
-            frame.set(Frame(owner, chain.args[0] ?: return@hook chain.proceed()))
+            val sample = (if (inlined) motionField?.get(chain.thisObject) else chain.args[0]) ?: return@hook chain.proceed()
+            val fraction = if (inlined) (chain.args[0] as Float) / 100f else progress.invoke(sample) as Float
+            frame.set(Frame(owner, fraction, edge.invoke(sample) as Int, touchY.invoke(sample) as Float))
             try { chain.proceed() }
             finally { if (previous == null) frame.remove() else frame.set(previous) }
         }

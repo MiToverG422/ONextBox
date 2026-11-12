@@ -55,12 +55,14 @@ internal object LauncherRecentInteractionHooker {
 
     private fun hookAutoFocus(loader: ClassLoader) {
         // Resolve without initializing AppFeatureUtils before LauncherApplication.attachBaseContext.
-        val featureUtils = ModernReflect.findClass("com.android.common.util.AppFeatureUtils", loader)
-        val gates = featureUtils.declaredMethods.filter {
+        val featureUtils = ModernReflect.findClassIfExists("com.android.common.util.AppFeatureUtils", loader)
+        val gates = featureUtils?.declaredMethods?.filter {
             it.name == "isSupportAutoFocusToNextPageInOverviewState" &&
                 it.returnType == Boolean::class.javaPrimitiveType &&
                 (it.parameterCount == 0 || it.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType)))
-        }
+        } ?: listOf(ModernReflect.findClass("wy", loader).getDeclaredMethod("d1", Boolean::class.javaPrimitiveType).also {
+            require(java.lang.reflect.Modifier.isStatic(it.modifiers) && it.returnType == Boolean::class.javaPrimitiveType)
+        })
         require(gates.isNotEmpty())
         gates.forEach { method ->
             hook("auto-focus", method) { chain ->
@@ -73,6 +75,7 @@ internal object LauncherRecentInteractionHooker {
             "da.e" to setOf("j"),
             "lq.d" to setOf("a", "c"),
             "com.android.quickstep.views.OplusRecentsViewImpl" to setOf("getToRecentsFocusPage"),
+            "zo7" to setOf("getToRecentsFocusPage"),
         )) {
             ModernReflect.findClassIfExists(className, loader)?.declaredMethods
                 ?.filter { it.name in names }
@@ -95,17 +98,23 @@ internal object LauncherRecentInteractionHooker {
     }
 
     private fun hookAppDetails(loader: ClassLoader) {
-        val taskView = ModernReflect.findClass("com.android.quickstep.views.TaskView", loader)
+        val legacy = ModernReflect.findClassIfExists("com.android.quickstep.views.TaskView", loader)
+        val taskView = legacy ?: ModernReflect.findClass("com.android.quickstep.views.c", loader)
         val taskType = ModernReflect.findClass("com.android.systemui.shared.recents.model.Task", loader)
-        val iconType = ModernReflect.findClass("com.android.quickstep.views.IconView", loader)
+        val iconType = if (legacy != null) ModernReflect.findClass("com.android.quickstep.views.IconView", loader)
+            else taskView.getDeclaredMethod("getIconView").returnType
         val containers = taskView.getDeclaredMethod("getTaskIdAttributeContainers")
         val containerType = requireNotNull(containers.returnType.componentType)
         val containerIcon = containerType.declaredFields.single { it.type == iconType }.apply { isAccessible = true }
         val containerTask = containerType.declaredFields.single { it.type == taskType }.apply { isAccessible = true }
-        val itemInfo = taskView.getDeclaredMethod("getItemInfo", taskType)
         val itemType = ModernReflect.findClass("com.android.launcher3.model.data.ItemInfo", loader)
+        val itemInfo = (if (legacy != null) taskView.getDeclaredMethod("getItemInfo", taskType) else taskView.declaredMethods.single {
+            it.parameterTypes.contentEquals(arrayOf(taskType)) && itemType.isAssignableFrom(it.returnType)
+        }).apply { isAccessible = true }
         val component = itemType.getDeclaredMethod("getTargetComponent")
-        val activity = taskView.getDeclaredField("mActivity").apply { isAccessible = true }
+        val activity = (if (legacy != null) taskView.getDeclaredField("mActivity") else taskView.declaredFields.single {
+            android.app.Activity::class.java.isAssignableFrom(it.type)
+        }).apply { isAccessible = true }
         require(Context::class.java.isAssignableFrom(activity.type))
         val utilities = ModernReflect.findClass("com.android.launcher3.Utilities", loader)
         val bounds = utilities.getDeclaredMethod("getViewBounds", View::class.java)
@@ -113,6 +122,8 @@ internal object LauncherRecentInteractionHooker {
             .getDeclaredMethod("startDetailsActivityForInfo", Context::class.java, itemType, Rect::class.java, Bundle::class.java)
         val dispatch = taskView.getDeclaredMethod("dispatchTouchEvent", MotionEvent::class.java)
         val pending = WeakHashMap<View, PendingPress>()
+        val overview = if (legacy == null) ModernReflect.findClass("com.android.launcher3.LauncherState", loader)
+            .getField("OVERVIEW").get(null) else null
 
         fun taskAt(owner: View, index: Int): Any? =
             (containers.invoke(owner) as? Array<*>)?.getOrNull(index)?.let { containerTask.get(it) }
@@ -120,6 +131,11 @@ internal object LauncherRecentInteractionHooker {
         fun ready(owner: View): Boolean {
             if (!owner.isAttachedToWindow || !owner.isShown || owner.alpha <= 0f) return false
             val recents = ModernReflect.callMethod(owner, "getRecentsView") ?: return false
+            if (overview != null) {
+                val manager = ModernReflect.callMethod(activity.get(owner) ?: return false, "getStateManager") ?: return false
+                return ModernReflect.callMethod(manager, "getState") === overview &&
+                    ModernReflect.callMethod(recents, "getOverviewStateEnabled") == true
+            }
             return ModernReflect.callMethod(recents, "canLaunchFullscreenTask") == true &&
                 ModernReflect.callMethod(recents, "isSplitSelectionActive") == false &&
                 ModernReflect.callMethod(recents, "getOverviewStateEnabled") == true

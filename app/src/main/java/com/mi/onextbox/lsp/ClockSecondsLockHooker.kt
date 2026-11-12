@@ -22,6 +22,7 @@ internal object ClockSecondsLockHooker {
         runCatching {
             val clock = Reflect.findClass(ClockPeriodHooker.CLOCK, loader)
             val apply = clock.getDeclaredMethod("applyShowSecondsFromController", Boolean::class.javaPrimitiveType)
+                .apply { isAccessible = true }
             val showing = clock.getDeclaredField("mShowSeconds").apply { isAccessible = true }
             fun refresh(view: TextView, native: Boolean) {
                 runCatching { apply.invoke(view, native) }
@@ -46,7 +47,12 @@ internal object ClockSecondsLockHooker {
                 },
                 restore = { state ->
                     (state as? Map<*, *>)?.forEach { (view, native) ->
-                        if (view is TextView && native is Boolean) refresh(view, native)
+                        if (view is TextView && native is Boolean) nativeChoices[view] = native
+                    }
+                },
+                resumeAfterRejection = {
+                    nativeChoices.toMap().forEach { (view, native) ->
+                        if (view.isAttachedToWindow) refresh(view, native)
                     }
                 },
             )
@@ -63,7 +69,10 @@ internal object ClockSecondsLockHooker {
                     }
                     roots.filterIsInstance<View>().forEach(::visit)
                 }.onFailure { HookLog.w("ONextBox-ClockSeconds", "Locked seconds will refresh on the next native update", it) }
-            }.also(main::post)
+            }
+            // complete() opens the hook gate after commit actions return. Apply the
+            // saved controller choices on the next main-loop turn with the gate open.
+            HotReloadLifecycle.afterCommit { bootstrap?.let(main::post) }
         }.onFailure {
             ModernHookRegistry.unhookPrefix(PREFIX)
             HookLog.w("ONextBox-ClockSeconds", "Seconds lock unavailable; native choice retained", it)

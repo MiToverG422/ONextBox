@@ -29,7 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private class CustomizationEditor<T>(private val context: Context, private val scope: CoroutineScope,
+internal class CustomizationEditor<T>(private val context: Context, private val scope: CoroutineScope,
     private val read: (Context) -> T) {
     var state by mutableStateOf(read(context))
     var savingKey by mutableStateOf<String?>(null)
@@ -52,7 +52,7 @@ private class CustomizationEditor<T>(private val context: Context, private val s
 }
 
 @Composable
-private fun <T> rememberCustomization(keys: Set<String>, read: (Context) -> T): CustomizationEditor<T> {
+internal fun <T> rememberCustomization(keys: Set<String>, read: (Context) -> T): CustomizationEditor<T> {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
     val owner = LocalLifecycleOwner.current
@@ -289,19 +289,104 @@ internal fun InstallerManagementGroup(onOpen: (FeaturePageMode) -> Unit) {
 }
 
 @Composable
-internal fun CouiDividerSettingsGroup() {
+internal fun CouiSystemMaterialSettingsGroup(onOpen: (FeaturePageMode) -> Unit) {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(setOf(CouiDividerSettings.ENABLED), CouiDividerSettings::enabled)
-    SettingsGroup {
-        SettingsToggleRow(
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(CouiDividerSettings.ENABLED) { above, below -> SettingsToggleRow(
             title = stringResource(R.string.coui_hide_dividers_title),
             summary = "",
             checked = editor.state,
             interactionEnabled = editor.savingKey == null,
+            hasDividerAbove = above, hasDividerBelow = below,
             onCheckedChange = { next ->
                 editor.save(CouiDividerSettings.ENABLED, next) { CouiDividerSettings.setEnabled(context, next) }
             },
-        )
+        ) }
+        row(FeaturePageMode.SoftLightGlass.name) { above, below ->
+            SettingsCardRow(title = stringResource(R.string.soft_light_glass_title), summary = "", showArrow = true,
+                onClick = { onOpen(FeaturePageMode.SoftLightGlass) }, hasDividerAbove = above, hasDividerBelow = below)
+        }
+    }
+}
+
+@Composable
+internal fun SoftLightGlassPage() {
+    val context = LocalContext.current.applicationContext
+    val glass = rememberCustomization(setOf(SoftLightGlassSettings.ENABLED), SoftLightGlassSettings::enabled)
+    LaunchedEffect(context) {
+        if (SoftLightGlassSettings.enabled(context)) SoftLightGlassSettings.requestInstalledScopes(context)
+    }
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(SoftLightGlassSettings.ENABLED) { above, below -> SettingsToggleRow(
+            title = stringResource(R.string.soft_light_glass_title),
+            summary = stringResource(R.string.soft_light_glass_summary),
+            checked = glass.state, interactionEnabled = glass.savingKey == null,
+            hasDividerAbove = above, hasDividerBelow = below,
+            onCheckedChange = { next ->
+                glass.save(SoftLightGlassSettings.ENABLED, next) { SoftLightGlassSettings.setEnabled(context, next) }
+            },
+        ) }
+    }
+    if (glass.state) SoftLightGlassControls()
+}
+
+@Composable
+private fun SoftLightGlassControls() {
+    val context = LocalContext.current.applicationContext
+    val settings = SoftLightGlassSettings
+    val editor = rememberCustomization(settings.keys, settings::read)
+    val state = editor.state
+    val custom = state[settings.CUSTOM] == 1
+    val selected = state.getValue(settings.SELECTION)
+    fun save(key: String, value: Int) = editor.save(key, editor.state + (key to value)) {
+        settings.save(context, key, value)
+    }
+    SettingsSection(title = stringResource(R.string.glass_scope))
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(settings.CUSTOM) { _, _ ->
+            SettingsWindowDropdownPreference(title = stringResource(R.string.glass_scope),
+                items = listOf(stringResource(R.string.glass_scope_all), stringResource(R.string.glass_scope_selected)),
+                selectedIndex = if (custom) 1 else 0, interactionEnabled = editor.savingKey == null,
+                onSelectedIndexChange = { save(settings.CUSTOM, it) })
+        }
+        SoftLightGlassSettings.Scene.entries.forEach { scene ->
+            row(scene.name, visible = custom) { above, below ->
+                SettingsToggleRow(title = stringResource(scene.title), summary = "",
+                    checked = selected and scene.bit != 0, interactionEnabled = editor.savingKey == null,
+                    hasDividerAbove = above, hasDividerBelow = below,
+                    onCheckedChange = { on -> save(settings.SELECTION,
+                        if (on) selected or scene.bit else selected and scene.bit.inv()) })
+            }
+        }
+    }
+    SettingsSection(title = stringResource(R.string.glass_optics))
+    FeatureAnimatedGroup(animateChanges = true) {
+        row(settings.KEEP_WHITE) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.glass_keep_white), summary = "",
+                checked = state[settings.KEEP_WHITE] == 1, interactionEnabled = editor.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { save(settings.KEEP_WHITE, if (it) 1 else 0) })
+        }
+        SoftLightGlassSettings.Parameter.entries.forEach { p ->
+            val response = p == SoftLightGlassSettings.Parameter.RESPONSE
+            if (response) row(settings.GYRO) { above, below ->
+                SettingsToggleRow(title = stringResource(R.string.glass_gyro), summary = "",
+                    checked = state[settings.GYRO] == 1, interactionEnabled = editor.savingKey == null,
+                    hasDividerAbove = above, hasDividerBelow = below,
+                    onCheckedChange = { save(settings.GYRO, if (it) 1 else 0) })
+            }
+            row(p.key, visible = !response || state[settings.GYRO] == 1) { above, below ->
+                val value = state.getValue(p.key)
+                val unit = if (p == SoftLightGlassSettings.Parameter.ANGLE) "°" else "%"
+                FeatureSliderRow(heading = stringResource(p.title), currentValue = "$value$unit", value = value.toFloat(),
+                    valueRange = p.min.toFloat()..p.max.toFloat(), steps = (p.max-p.min)/5-1,
+                    enabled = true, interactionEnabled = editor.savingKey == null,
+                    onValueChange = { editor.state = editor.state + (p.key to it.roundToInt()) },
+                    onValueChangeFinished = { save(p.key, editor.state.getValue(p.key)) },
+                    onReset = { save(p.key, p.default) }, hasDividerAbove = above, hasDividerBelow = below)
+            }
+        }
     }
 }
 

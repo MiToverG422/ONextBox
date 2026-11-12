@@ -108,7 +108,11 @@ internal object NotificationClearButtonHooker {
         check(View::class.java.isAssignableFrom(button.type))
         val width = controller.getDeclaredField("iconWidth")
         check(width.type == Int::class.javaPrimitiveType)
-        val layout = controller.getDeclaredMethod("updateLayoutParams", String::class.java)
+        val layout = try {
+            controller.getDeclaredMethod("updateLayoutParams", String::class.java, Boolean::class.javaPrimitiveType)
+        } catch (_: NoSuchMethodException) {
+            controller.getDeclaredMethod("updateLayoutParams", String::class.java)
+        }
         val margin = controller.getDeclaredMethod("updateLayoutParams", Int::class.javaPrimitiveType)
         check(listOf(layout, margin).all { it.returnType == Void.TYPE })
         val callers = controller.declaredMethods.filter {

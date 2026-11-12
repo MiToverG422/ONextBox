@@ -72,6 +72,10 @@ internal object LauncherFeaturesHooker {
         val c16 = SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16
         val panel = ModernReflect.findClass("com.oplus.quickstep.views.OplusClearAllPanelView", loader)
         val buttonClass = ModernReflect.findClass("com.android.launcher.views.PressFeedbackButton", loader)
+        val instanceClick = panel.declaredMethods.singleOrNull {
+            it.name == "n" && it.returnType == Void.TYPE &&
+                it.parameterTypes.contentEquals(arrayOf(View.OnClickListener::class.java, View::class.java))
+        }
         val getButton = panel.getDeclaredMethod("getClearPressButton")
         val setSource = buttonClass.getDeclaredMethod("setSrcDrawable", Drawable::class.java)
         val icons = WeakHashMap<TextView, Drawable>()
@@ -90,21 +94,24 @@ internal object LauncherFeaturesHooker {
                 LauncherFeatureRules.ClearButton.Old -> {
                     val resources = button.resources
                     val iconId = resources.getIdentifier("oplus_recent_clear_all", "drawable", "com.android.launcher")
-                    val sizeId = resources.getIdentifier("oplus_recent_clear_all_btn_width", "dimen", "com.android.launcher")
-                    if (iconId == 0 || sizeId == 0) return
+                    val sizeId = sequenceOf("oplus_recent_clear_all_btn_width", "clean_memory_button_height")
+                        .map { resources.getIdentifier(it, "dimen", "com.android.launcher") }.firstOrNull { it != 0 } ?: return
                     val size = resources.getDimensionPixelSize(sizeId)
                     val cached = icons[button]
-                    val icon = cached ?: button.context.getDrawable(iconId)?.mutate()?.also { icons[button] = it }
-                        ?: return
+                    val icon = cached ?: (if (iconId != 0) button.context.getDrawable(iconId)?.mutate()
+                        else LauncherClearIconDrawing.createIcon(button)).also { if (it != null) icons[button] = it } ?: return
                     val bounds = LauncherFeatureRules.clearIconBounds(
-                        button.width, button.height, icon.intrinsicWidth, icon.intrinsicHeight, size,
+                        size, size, icon.intrinsicWidth, icon.intrinsicHeight, size,
                     )
                     icon.setBounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
                     if (cached == null || button.text.isNotEmpty()) {
                         // Set icon bounds during binding instead of waiting for layout.
                         setSource.invoke(button, icon)
                         // Preserve native click handling, task clearing, and accessibility labels.
-                        button.text = ""
+                        if (button.text.isNotEmpty()) {
+                            if (button.contentDescription.isNullOrEmpty()) button.contentDescription = button.text
+                            button.text = ""
+                        }
                     }
                     if (button.layoutParams.width != size || button.layoutParams.height != size) {
                         button.layoutParams = button.layoutParams.apply { width = size; height = size }
@@ -119,7 +126,7 @@ internal object LauncherFeaturesHooker {
             panel.getDeclaredMethod("onFinishInflate"),
             panel.getDeclaredMethod("setAlpha", Float::class.javaPrimitiveType),
             panel.getDeclaredMethod("onConfigurationChanged", android.content.res.Configuration::class.java),
-            panel.getDeclaredMethod(if (c16) "updateClearAllSize" else "y"),
+            panel.getDeclaredMethod(if (c16) "updateClearAllSize" else if (instanceClick != null) "v" else "y"),
         ).forEach { method ->
             after(method) { chain ->
                 if (method.name == "onConfigurationChanged") {
@@ -141,10 +148,12 @@ internal object LauncherFeaturesHooker {
         hook(clickable) { chain ->
             if (enabled(LauncherFeature.HideClearButton)) chain.proceed(arrayOf(0f)) else chain.proceed()
         }
-        val panelClick = panel.getDeclaredMethod(if (c16) "clearAllBtnPerformClick" else "m")
-        require(panelClick.returnType == Void.TYPE)
-        hook(panelClick) { chain ->
-            if (enabled(LauncherFeature.HideClearButton)) null else chain.proceed()
+        if (instanceClick == null) {
+            val panelClick = panel.getDeclaredMethod(if (c16) "clearAllBtnPerformClick" else "m")
+            require(panelClick.returnType == Void.TYPE)
+            hook(panelClick) { chain ->
+                if (enabled(LauncherFeature.HideClearButton)) null else chain.proceed()
+            }
         }
         val listenerSetter = panel.getDeclaredMethod("setOnClearClickListener", View.OnClickListener::class.java)
         after(listenerSetter) { chain ->
@@ -162,7 +171,7 @@ internal object LauncherFeaturesHooker {
         }
         // The verified host click bridge may show a permission dialog before reaching
         // the external listener. Suppress that bridge too, scoped to this panel only.
-        val clickBridge = if (c16) {
+        val clickBridge = instanceClick ?: if (c16) {
             panel.getDeclaredMethod("lambda\$setOnClearClickListener\$6", View.OnClickListener::class.java, View::class.java)
         } else panel.getDeclaredMethod("b", panel, View.OnClickListener::class.java, View::class.java)
         hook(clickBridge) { chain ->
@@ -198,8 +207,13 @@ internal object LauncherFeaturesHooker {
         val itemBitmap = item.getDeclaredField("bitmap")
         val getIcon = bubble.getDeclaredMethod("getIcon")
         val badges = LauncherBadgeState()
-        val fancy = ModernReflect.findClass(if (c16) "com.oplus.fancyicon.fancydrawable.IconFancyDrawable" else "xl.c", loader)
-        val setWorkFlag = fancy.getDeclaredMethod("setWorkFlag", Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+        val setWorkFlag = (if (c16) listOf("com.oplus.fancyicon.fancydrawable.IconFancyDrawable") else listOf("xl.c", "bo4"))
+            .firstNotNullOf { name -> runCatching {
+                loader.loadClass(name).getDeclaredMethod("setWorkFlag", Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+            }.getOrNull() }
+        val fancy = setWorkFlag.declaringClass
+        val resetBadgeState = oplusBubble.declaredMethods.single { it.name == "resetBadgeState" &&
+            (it.parameterCount == 0 || it.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType))) }
         fun badgeFor(info: Any) = LauncherFeatureRules.badge(shortcut.get(info) != null, flags.getInt(info))
         fun hidden(badge: LauncherFeatureRules.Badge) = LauncherFeatureRules.hideBadge(
             badge, enabled(LauncherFeature.HideShortcutBadge), enabled(LauncherFeature.HideWorkBadge),
@@ -258,7 +272,7 @@ internal object LauncherFeaturesHooker {
         hook(setWorkFlag) { chain ->
             if (enabled(LauncherFeature.HideWorkBadge)) chain.proceed(arrayOf<Any>(false, 0)) else chain.proceed()
         }
-        hook(oplusBubble.getDeclaredMethod("resetBadgeState", Boolean::class.javaPrimitiveType)) { chain ->
+        hook(resetBadgeState) { chain ->
             hideForView(chain.thisObject, getIcon.invoke(chain.thisObject))
             chain.proceed()
         }

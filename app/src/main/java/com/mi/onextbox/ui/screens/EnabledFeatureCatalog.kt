@@ -26,6 +26,7 @@ internal object EnabledFeatureCatalog {
         Entry(option.title, systemExtrasPage(option.pkg)) { context -> SystemExtrasSettings.enabled(context, option.key) }
     } + listOf(
         Entry(R.string.coui_hide_dividers_title, FeaturePageMode.Coui) { CouiDividerSettings.enabled(it) },
+        Entry(R.string.soft_light_glass_title, FeaturePageMode.SoftLightGlass) { SoftLightGlassSettings.enabled(it) },
         Entry(R.string.app_lock_delay_title, FeaturePageMode.SecurityPermission) { AppLockDelaySettings.enabled(it) },
         SharedFeatureDefinitions.networkIdentity.catalogEntry(),
         SharedFeatureDefinitions.qsCorner.catalogEntry(),

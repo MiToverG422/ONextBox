@@ -12,6 +12,15 @@ import com.mi.onextbox.lsp.compat.ModernReflect as Reflect
 import io.github.libxposed.api.XposedInterface
 import java.util.concurrent.ConcurrentHashMap
 
+internal fun fluidCloudAnimationPolicy(loader: ClassLoader): java.lang.reflect.Method {
+    val scrim = Reflect.findClass("com.oplusos.systemui.common.util.ScrimUtil", loader)
+    return try {
+        scrim.getDeclaredMethod("isBPAnimLevel", Boolean::class.javaPrimitiveType)
+    } catch (_: NoSuchMethodException) {
+        scrim.getDeclaredMethod("isBPAnimLevel")
+    }.apply { isAccessible = true }
+}
+
 /** Unifies card backgrounds while preserving native layout, controls and content transitions. */
 internal object FluidCloudMaterialHooker {
     private const val TAG = "ONextBox-FluidMaterial"
@@ -171,13 +180,18 @@ internal object FluidCloudMaterialHooker {
 
         runCatching {
             val handler = Reflect.findClass("com.oplus.systemui.notification.row.NotificationBackgroundCustomRowHandler", loader)
-            val method = handler.declaredMethods.single { it.name == "getContentBgColor" }
-            ModernHookRegistry.installFast("$TAG:panel:contentColor", method, XposedInterface.Hooker { chain ->
-                // Let the native handler clear its custom MetaBall color instead of applying
-                // a branded solid/gradient layer on top of the normal notification shader.
-                if (enabled()) null else chain.proceed()
-            })
-            handler.declaredMethods.filter { it.name in listOf("updateDrawableMetaColor", "needDrawBgColorByMetaBall") }
+            for (method in handler.declaredMethods.filter { it.name in setOf("getContentBgColor", "getGradientBgColors") }) {
+                ModernHookRegistry.installFast("$TAG:panel:${method.name}", method, XposedInterface.Hooker { chain ->
+                    if (enabled() && material.ready()) null else chain.proceed()
+                })
+            }
+            // Already bound rows may retain a parsed gradient across a module reload.
+            handler.declaredMethods.singleOrNull { it.name == "applyGradientColorsWithFade" }?.let { fade ->
+                ModernHookRegistry.installFast("$TAG:panel:gradientFade", fade, XposedInterface.Hooker { chain ->
+                    if (enabled() && material.ready()) null else chain.proceed()
+                })
+            }
+            handler.declaredMethods.filter { it.name in listOf("parseData", "updateDrawableMetaColor", "needDrawBgColorByMetaBall") }
                 .forEach { runCatching { ModernHookRuntime.requireModule().deoptimize(it) } }
         }.onFailure { diagnose("Panel template tint hook unavailable", it) }
 
@@ -206,6 +220,12 @@ internal object FluidCloudMaterialHooker {
                     if (!material.isPanelMaterialActive(proxy)) return@runCatching
                     // Only remove the redundant solid immersive mask when a real notification
                     // renderer is active. Native fallback and parent/gesture alpha stay untouched.
+                    val config = Reflect.callMethod(proxy, "getBlurConfig")
+                    val ordinary = material.panelMix()
+                    if (config != null && ordinary != null && Reflect.callMethod(config, "getPlatformMixConfig") != ordinary) {
+                        Reflect.callMethod(config, "setPlatformMixConfig", ordinary)
+                        Reflect.callMethod(proxy, "applyBlurConfig")
+                    }
                     Reflect.callMethod(extension, "setTempDrawable", null)
                     (Reflect.callMethod(view, "getCustomBackground") as? Drawable)?.alpha = 255
                     logged("immersive", "Panel immersive updates preserve notification shader; extra dark mask removed")
@@ -241,8 +261,7 @@ internal object FluidCloudMaterialHooker {
             val extension = Reflect.findClass("com.oplus.systemui.statusbar.notification.row.NotificationBackgroundViewExtImp", loader)
             val row = Reflect.findClass("com.oplus.systemui.statusbar.notification.customcard.OplusCustomRow", loader)
             val draw = extension.getDeclaredMethod("draw", Canvas::class.java, Drawable::class.java)
-            val policy = Reflect.findClass("com.oplusos.systemui.common.util.ScrimUtil", loader)
-                .getDeclaredMethod("isBPAnimLevel")
+            val policy = fluidCloudAnimationPolicy(loader)
             val aodMask = extension.getDeclaredMethod("getPanoramicAodDrawable")
             ModernHookRegistry.installFast("$TAG:panel:aodMask", aodMask, XposedInterface.Hooker { chain ->
                 if (aodScope.hidesMask(chain.thisObject)) null else chain.proceed()
@@ -318,7 +337,8 @@ internal object FluidCloudMaterialHooker {
 
     private fun installTemplates(loader: ClassLoader, prefix: String) {
         runCatching {
-            val target = Reflect.findClass(FluidCloudMaterialRules.SINGLE_BACKGROUND, loader)
+            val target = Reflect.findClassIfExists(FluidCloudMaterialRules.SINGLE_BACKGROUND, loader)
+                ?: Reflect.findClass("${FluidCloudMaterialRules.PAGE_PACKAGE}.SingleCardPage\$bind\$1\$5\$4", loader)
             val method = target.getDeclaredMethod("invokeSuspend", Any::class.java)
             ModernHookRegistry.installFast("$prefix:single", method, XposedInterface.Hooker { chain ->
                 val result = chain.proceed()

@@ -230,6 +230,8 @@
     <string name="feature_group_settings_hidden_features">Зависит от региона</string>
     <string name="feature_launcher_taskbar_search_box_title">Поле поиска на панели задач</string>
     <string name="feature_launcher_taskbar_search_box_summary">Восстановить скрытую запись в поле поиска и переключиться на выбранную версию программы запуска</string>
+    <string name="launcher_search_width_china">Ширина китайской строки поиска</string>
+    <string name="launcher_search_width_google">Ширина строки поиска Google</string>
     <string name="feature_launcher_search_bar_mode_china">Китай</string>
     <string name="feature_launcher_search_bar_mode_international">Глобальный</string>
     <string name="feature_launcher_search_bar_mode_off">Выкл</string>
@@ -1100,7 +1102,7 @@
     <string name="ota_block_files_summary">Запретить проверку обновлений системных файлов</string>
 
     <string name="update_beta_plan_title">Участвовать в Beta-программе</string>
-    <string name="update_beta_plan_summary">Программа бета-тестирования сейчас закрыта</string>
+    <string name="update_beta_plan_summary">Получать тестовые Beta-обновления</string>
     <string name="update_beta_join_title">Присоединиться к Beta-программе?</string>
     <string name="update_beta_join_summary">После вступления Beta-обновления будут загружаться из ONextBox_BetaTesting с учётом текущего типа сборки, тестовые версии могут быть нестабильными или содержать ошибки, продолжить</string>
     <string name="update_beta_join_cancel">Не сейчас</string>
@@ -1733,4 +1735,38 @@
     <string name="keyguard_face_capsule_title">Fluid Cloud на экране блокировки</string>
     <string name="keyguard_face_capsule_summary">Показывать Fluid Cloud с индикатором состояния разблокировки системы на экране блокировки</string>
     <string name="feature_unsupported_coloros16">Не поддерживается в ColorOS 16</string>
+    <string name="soft_light_glass_title">Мягкое стекло</string>
+    <string name="soft_light_glass_summary">Применять эффект мягкого стекла к поддерживаемым системным фонам</string>
+    <string name="glass_scene_desktop">Меню и другие элементы рабочего стола</string>
+    <string name="glass_scene_folder">Папки рабочего стола</string>
+    <string name="glass_scene_widget">Карточки и виджеты</string>
+    <string name="glass_scene_bar">Поиск и док рабочего стола</string>
+    <string name="glass_scene_shade">Центр уведомлений и другие системные панели</string>
+    <string name="glass_scene_control">Центр управления</string>
+    <string name="glass_scene_volume">Боковая панель громкости</string>
+    <string name="glass_scene_lock">Экран блокировки</string>
+    <string name="glass_scene_aod">Постоянно включённый дисплей</string>
+    <string name="glass_scene_global_search">Глобальный поиск</string>
+    <string name="glass_scene_assistant">Полка</string>
+    <string name="glass_scene_sidebar">Умная боковая панель</string>
+    <string name="glass_scene_settings">Настройки</string>
+    <string name="glass_scene_other">Другие поддерживаемые системные приложения</string>
+    <string name="glass_strength">Сила эффекта</string>
+    <string name="glass_blur">Радиус размытия</string>
+    <string name="glass_rim_width">Ширина контура</string>
+    <string name="glass_shine">Блик на контуре</string>
+    <string name="glass_refraction">Сила преломления</string>
+    <string name="glass_saturation">Насыщенность</string>
+    <string name="glass_exposure">Коррекция яркости</string>
+    <string name="glass_dimming">Затемнение стекла</string>
+    <string name="glass_scope">Область применения</string>
+    <string name="glass_scope_all">Все поддерживаемые экраны</string>
+    <string name="glass_scope_selected">Выбранные экраны</string>
+    <string name="glass_optics">Оформление стекла</string>
+    <string name="glass_keep_white">Не применять эффект стекла к белым выбранным элементам и маскам</string>
+    <string name="glass_warmth">Цветовая температура стекла</string>
+    <string name="glass_contrast">Контраст стекла</string>
+    <string name="glass_light_angle">Направление блика</string>
+    <string name="glass_gyro">Смещение блика при наклоне</string>
+    <string name="glass_tilt_response">Чувствительность к наклону</string>
 </resources>

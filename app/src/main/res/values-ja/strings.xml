@@ -230,6 +230,8 @@
     <string name="feature_group_settings_hidden_features">地域関連</string>
     <string name="feature_launcher_taskbar_search_box_title">タスクバーの検索ボックス</string>
     <string name="feature_launcher_taskbar_search_box_summary">非表示の検索ボックスのエントリを復元し、選択したランチャー エディションに切り替える</string>
+    <string name="launcher_search_width_china">中国版検索バーの幅</string>
+    <string name="launcher_search_width_google">Google 検索バーの幅</string>
     <string name="feature_launcher_search_bar_mode_china">中国</string>
     <string name="feature_launcher_search_bar_mode_international">グローバル</string>
     <string name="feature_launcher_search_bar_mode_off">オフ</string>
@@ -1100,7 +1102,7 @@
     <string name="ota_block_files_summary">システムファイル更新の確認を停止</string>
 
     <string name="update_beta_plan_title">Beta プログラムに参加</string>
-    <string name="update_beta_plan_summary">現在ベータプログラムは終了しています</string>
+    <string name="update_beta_plan_summary">ベータテスト版のアップデートを受け取る</string>
     <string name="update_beta_join_title">Beta プログラムに参加しますか？</string>
     <string name="update_beta_join_summary">参加すると ONextBox_BetaTesting から現在のビルド種類に合った Beta 更新を取得します、テスト版は不安定になったり機能に不具合が発生したりする可能性があります、続行しますか</string>
     <string name="update_beta_join_cancel">今は参加しない</string>
@@ -1731,4 +1733,38 @@
     <string name="keyguard_face_capsule_title">ロック画面の流体クラウド</string>
     <string name="keyguard_face_capsule_summary">ロック画面で、システムのロック解除状態を示す流体クラウドを表示</string>
     <string name="feature_unsupported_coloros16">ColorOS 16 では非対応</string>
+    <string name="soft_light_glass_title">ソフトライトガラス</string>
+    <string name="soft_light_glass_summary">対応するシステムの背景素材にソフトライトガラスを適用</string>
+    <string name="glass_scene_desktop">ホームのメニューとその他の背景</string>
+    <string name="glass_scene_folder">ホームのフォルダ</string>
+    <string name="glass_scene_widget">ホームのカードとウィジェット</string>
+    <string name="glass_scene_bar">ホームの検索とドック</string>
+    <string name="glass_scene_shade">通知センターとその他のシステムパネル</string>
+    <string name="glass_scene_control">コントロールセンター</string>
+    <string name="glass_scene_volume">サイド音量パネル</string>
+    <string name="glass_scene_lock">ロック画面</string>
+    <string name="glass_scene_aod">常時表示</string>
+    <string name="glass_scene_global_search">グローバル検索</string>
+    <string name="glass_scene_assistant">シェルフ</string>
+    <string name="glass_scene_sidebar">スマートサイドバー</string>
+    <string name="glass_scene_settings">設定</string>
+    <string name="glass_scene_other">その他の対応システムアプリ</string>
+    <string name="glass_strength">効果の強さ</string>
+    <string name="glass_blur">ぼかしの範囲</string>
+    <string name="glass_rim_width">縁の幅</string>
+    <string name="glass_shine">縁のハイライト</string>
+    <string name="glass_refraction">屈折の強さ</string>
+    <string name="glass_saturation">彩度</string>
+    <string name="glass_exposure">明るさ補正</string>
+    <string name="glass_dimming">ガラスの暗さ調整</string>
+    <string name="glass_scope">適用範囲</string>
+    <string name="glass_scope_all">対応するすべての画面</string>
+    <string name="glass_scope_selected">画面を選択</string>
+    <string name="glass_optics">ガラスの外観</string>
+    <string name="glass_keep_white">白い選択項目とマスクにガラス効果を適用しない</string>
+    <string name="glass_warmth">ガラスの色温度</string>
+    <string name="glass_contrast">ガラスのコントラスト</string>
+    <string name="glass_light_angle">縁の光の角度</string>
+    <string name="glass_gyro">傾きに合わせて縁の光を動かす</string>
+    <string name="glass_tilt_response">傾きの感度</string>
 </resources>

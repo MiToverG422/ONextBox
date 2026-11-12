@@ -2783,6 +2783,7 @@ object LspConfig {
             setNavigationHandleAutoHideEnabled(context, false)
             setSettingsTitleCollapsedEnabled(context, false)
             CouiDividerSettings.setEnabled(context, false)
+            SoftLightGlassSettings.setEnabled(context, false)
             SettingsAppearanceSettings.setEnabled(context, SettingsAppearanceSettings.TITLE_LOCK, false)
             CameraGallerySettings.set(context, false)
             NativeFiveGaSettings.setEnabled(context, false)

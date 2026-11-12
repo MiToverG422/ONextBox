@@ -1345,7 +1345,7 @@ fun SoftwareUpdateAutoSettingsPage(
                 title = stringResource(R.string.update_beta_plan_title),
                 summary = stringResource(R.string.update_beta_plan_summary),
                 checked = state.betaPlanEnabled,
-                enabled = false,
+                enabled = settingsEditable && AppUpdatePreferences.BETA_PLAN_AVAILABLE,
                 hasDividerAbove = true,
                 onCheckedChange = { enabled ->
                     if (enabled) showBetaConfirmation = true else state.onBetaPlanEnabledChange(false)

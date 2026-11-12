@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
+import com.mi.onextbox.lsp.LauncherSearchWidth
 import com.mi.onextbox.lsp.FeatureSliderRules
 import com.mi.onextbox.ui.common.AssistantScreenOption
 import com.mi.onextbox.ui.settings.SettingsDivider
@@ -123,7 +124,13 @@ internal fun DesktopFeaturesPage(
                 hasDividerBelow = below,
             )
         }
-        row(1, visible = launcherSearchBarMode != LspConfig.LAUNCHER_SEARCH_BAR_MODE_OFF) { above, below ->
+        row(1, visible = launcherSearchBarMode == LspConfig.LAUNCHER_SEARCH_BAR_MODE_CHINA) { above, below ->
+            LauncherSearchWidthRow(LauncherSearchWidth.CHINA, R.string.launcher_search_width_china, above, below)
+        }
+        row(2, visible = launcherSearchBarMode == LspConfig.LAUNCHER_SEARCH_BAR_MODE_INTERNATIONAL) { above, below ->
+            LauncherSearchWidthRow(LauncherSearchWidth.GOOGLE, R.string.launcher_search_width_google, above, below)
+        }
+        row(3, visible = launcherSearchBarMode != LspConfig.LAUNCHER_SEARCH_BAR_MODE_OFF) { above, below ->
             SettingsToggleRow(
                 title = stringResource(R.string.feature_launcher_search_compatibility_title),
                 summary = stringResource(R.string.feature_launcher_search_compatibility_summary),
@@ -184,6 +191,26 @@ internal fun DesktopFeaturesPage(
         SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.folder) }
 
     }
+}
+
+@Composable
+private fun LauncherSearchWidthRow(key: String, title: Int, above: Boolean, below: Boolean) {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(setOf(key)) { LauncherSearchWidth.read(it, key) }
+    fun save(value: Int) = editor.save(key, value) { LauncherSearchWidth.save(context, key, value) }
+    FeatureSliderRow(
+        heading = stringResource(title),
+        currentValue = "${editor.state}%",
+        value = editor.state.toFloat(),
+        valueRange = LauncherSearchWidth.MIN.toFloat()..LauncherSearchWidth.MAX.toFloat(),
+        steps = LauncherSearchWidth.MAX - LauncherSearchWidth.MIN - 1,
+        interactionEnabled = editor.savingKey == null,
+        onValueChange = { editor.state = it.roundToInt() },
+        onValueChangeFinished = { save(editor.state) },
+        onReset = { save(LauncherSearchWidth.DEFAULT) },
+        hasDividerAbove = above,
+        hasDividerBelow = below,
+    )
 }
 
 @Composable

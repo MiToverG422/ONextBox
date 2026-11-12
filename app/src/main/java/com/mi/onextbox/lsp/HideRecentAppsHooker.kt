@@ -16,7 +16,11 @@ internal object HideRecentAppsHooker {
 
     fun hook(loader: ClassLoader) {
         runCatching {
-            val base = ModernReflect.findClass("com.android.quickstep.RecentTasksList", loader)
+            val base = ModernReflect.findClassIfExists("com.android.quickstep.RecentTasksList", loader)
+                ?: ModernReflect.findClass("com.android.quickstep.g", loader).also { type ->
+                    require(type.declaredMethods.any { it.returnType == ArrayList::class.java &&
+                        it.parameterTypes.contentEquals(arrayOf(ArrayList::class.java)) })
+                }
             val task = ModernReflect.findClass(TASK, loader)
             val packageGetter = task.getDeclaredMethod("getPackageName")
             check(packageGetter.returnType == String::class.java)
@@ -25,6 +29,9 @@ internal object HideRecentAppsHooker {
             HotReloadLifecycle.registerReplay("$TAG:types@${System.identityHashCode(loader)}",
                 capture = replay::capture, replay = { replay.restore(it) })
             replay.restore(null, ModernHotReloadSession.current?.previousTargets.orEmpty())
+            if (base.name == "com.android.quickstep.g") {
+                ModernReflect.findClassIfExists("pn7", loader)?.takeIf { it.superclass == base }?.let(replay::discover)
+            }
             // The concrete ColorOS subclass is obfuscated; discover it from construction.
             base.declaredConstructors.forEach { constructor ->
                 ModernHookRegistry.installCompat("$TAG:ctor:${constructor.parameterCount}", constructor,
@@ -44,11 +51,19 @@ internal object HideRecentAppsHooker {
         // Native ColorOS already rejects blacklisted apps here. Use the same gate so a filtered
         // app is not reinserted as a temporary running-task card when entering overview.
         val taskArray = java.lang.reflect.Array.newInstance(task, 0).javaClass
-        listOf("com.android.quickstep.views.RecentsView",
-            "com.android.quickstep.views.OplusRecentsViewImpl").forEach { name ->
+        val legacyOwners = listOf("com.android.quickstep.views.RecentsView",
+            "com.android.quickstep.views.OplusRecentsViewImpl").mapNotNull { ModernReflect.findClassIfExists(it, loader) }
+        val owners = legacyOwners.ifEmpty {
+            val launcher = ModernReflect.findClassIfExists("com.android.quickstep.views.LauncherRecentsView", loader)
+            generateSequence(launcher) { it.superclass }.filter { type ->
+                type.declaredMethods.any { it.name == "W2" && it.parameterTypes.contentEquals(arrayOf(taskArray)) &&
+                    it.returnType == Boolean::class.javaPrimitiveType && !Modifier.isAbstract(it.modifiers) }
+            }.toList()
+        }
+        owners.forEach { owner ->
+            val name = owner.name
             runCatching {
-                val owner = ModernReflect.findClass(name, loader)
-                val gate = owner.getDeclaredMethod("shouldAddStubTaskView", taskArray)
+                val gate = owner.getDeclaredMethod(if (legacyOwners.isEmpty()) "W2" else "shouldAddStubTaskView", taskArray)
                 check(gate.returnType == Boolean::class.javaPrimitiveType)
                 ModernHookRegistry.installCompat("$TAG:running:$name", gate, object : ModernMethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
@@ -61,7 +76,8 @@ internal object HideRecentAppsHooker {
                         if (HideRecentAppsRules.hideGroup(packages, hidden)) param.result = false
                     }
                 })
-                (owner.declaredMethods.filter { it.name == "showCurrentTask" } + gate).forEach {
+                (owner.declaredMethods.filter { it.name == "showCurrentTask" ||
+                    (legacyOwners.isEmpty() && it.name == "C2" && it.parameterTypes.firstOrNull() == taskArray) } + gate).forEach {
                     ModernHookRuntime.requireModule().deoptimize(it)
                 }
             }.onFailure { HookLog.w(TAG, "Running-task gate unavailable for $name", it) }

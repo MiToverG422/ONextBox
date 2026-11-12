@@ -230,6 +230,8 @@
     <string name="feature_group_settings_hidden_features">地區相關</string>
     <string name="feature_launcher_taskbar_search_box_title">工作列搜尋框</string>
     <string name="feature_launcher_taskbar_search_box_summary">加返對應版本桌面入面隱藏咗嘅搜尋框入口同開關</string>
+    <string name="launcher_search_width_china">國行搜尋欄闊度</string>
+    <string name="launcher_search_width_google">Google 搜尋欄闊度</string>
     <string name="feature_launcher_search_bar_mode_china">中國版</string>
     <string name="feature_launcher_search_bar_mode_international">國際版</string>
     <string name="feature_launcher_search_bar_mode_off">關閉</string>
@@ -1100,7 +1102,7 @@
     <string name="ota_block_files_summary">封鎖系統檔案更新查詢</string>
 
     <string name="update_beta_plan_title">加入 Beta 計劃</string>
-    <string name="update_beta_plan_summary">目前 Beta 計劃已關閉</string>
+    <string name="update_beta_plan_summary">接收 Beta 測試版本更新</string>
     <string name="update_beta_join_title">要加入 Beta 計劃嗎？</string>
     <string name="update_beta_join_summary">加入後會從 ONextBox_BetaTesting 接收 Beta 更新，仍然配對目前嘅建構類型，測試版可能唔穩定或者有功能異常，係咪繼續</string>
     <string name="update_beta_join_cancel">暫時唔加入</string>
@@ -1706,4 +1708,38 @@
     <string name="keyguard_face_capsule_title">鎖屏流體雲</string>
     <string name="keyguard_face_capsule_summary">鎖屏時顯示系統解鎖狀態指示嘅流體雲</string>
     <string name="feature_unsupported_coloros16">唔支援 ColorOS 16</string>
+    <string name="soft_light_glass_title">柔光玻璃</string>
+    <string name="soft_light_glass_summary">喺支援嘅系統材質背景套用柔光玻璃效果</string>
+    <string name="glass_scene_desktop">桌面選單同其他背景</string>
+    <string name="glass_scene_folder">桌面資料夾</string>
+    <string name="glass_scene_widget">桌面卡片同小工具</string>
+    <string name="glass_scene_bar">桌面搜尋同底欄</string>
+    <string name="glass_scene_shade">通知中心同其他系統面板</string>
+    <string name="glass_scene_control">控制中心</string>
+    <string name="glass_scene_volume">側邊音量面板</string>
+    <string name="glass_scene_lock">鎖定畫面</string>
+    <string name="glass_scene_aod">息屏顯示</string>
+    <string name="glass_scene_global_search">全域搜尋</string>
+    <string name="glass_scene_assistant">負一屏</string>
+    <string name="glass_scene_sidebar">智能側邊欄</string>
+    <string name="glass_scene_settings">設定</string>
+    <string name="glass_scene_other">其他支援嘅系統應用程式</string>
+    <string name="glass_strength">效果強度</string>
+    <string name="glass_blur">模糊範圍</string>
+    <string name="glass_rim_width">描邊闊度</string>
+    <string name="glass_shine">邊緣高光</string>
+    <string name="glass_refraction">折射強度</string>
+    <string name="glass_saturation">飽和度</string>
+    <string name="glass_exposure">亮度偏移</string>
+    <string name="glass_dimming">玻璃暗化調整</string>
+    <string name="glass_scope">套用範圍</string>
+    <string name="glass_scope_all">所有支援嘅介面</string>
+    <string name="glass_scope_selected">自選介面</string>
+    <string name="glass_optics">玻璃外觀</string>
+    <string name="glass_keep_white">白色已選項目同遮罩唔套用玻璃效果</string>
+    <string name="glass_warmth">玻璃色溫</string>
+    <string name="glass_contrast">玻璃對比度</string>
+    <string name="glass_light_angle">邊緣光照角度</string>
+    <string name="glass_gyro">邊緣光效跟隨陀螺儀</string>
+    <string name="glass_tilt_response">傾斜靈敏度</string>
 </resources>

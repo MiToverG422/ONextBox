@@ -118,6 +118,7 @@ import kotlin.math.roundToInt
 enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Main,
     Coui(true),
+    SoftLightGlass(true),
     Tools(true),
     More(true),
     GlobalLocalization(true),
@@ -464,7 +465,7 @@ fun FeatureSubRoute(
                     onClick = { pushMonitorRefresh++ },
                 )
             }
-            if (pageMode != FeaturePageMode.GlobalLocalization && pageMode != FeaturePageMode.Coui && pageMode != FeaturePageMode.Tools && pageMode != FeaturePageMode.More && pageMode != FeaturePageMode.EsimDiagnostics && pageMode != FeaturePageMode.TouchSampling && pageMode != FeaturePageMode.SystemMessages) {
+            if (pageMode != FeaturePageMode.GlobalLocalization && pageMode != FeaturePageMode.Tools && pageMode != FeaturePageMode.More && pageMode != FeaturePageMode.EsimDiagnostics && pageMode != FeaturePageMode.TouchSampling && pageMode != FeaturePageMode.SystemMessages) {
                 FeatureRestartActionButton(
                     contentDescription = stringResource(R.string.feature_restart_scope_confirm_action),
                     onClick = {
@@ -585,6 +586,7 @@ private fun Modifier.extendPastBottom(extra: Dp): Modifier = layout { measurable
 @Composable
 internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Coui -> stringResource(R.string.coui_page_title)
+    FeaturePageMode.SoftLightGlass -> stringResource(R.string.soft_light_glass_title)
     FeaturePageMode.Tools -> stringResource(R.string.tab_tools)
     FeaturePageMode.GlobalLocalization -> stringResource(R.string.global_localization_title)
     FeaturePageMode.GlobalNetwork -> stringResource(R.string.global_network_title)
@@ -678,6 +680,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
 
 internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (mode) {
     FeaturePageMode.Coui -> com.mi.onextbox.lsp.CouiDividerSettings.recommendedPackages.toList()
+    FeaturePageMode.SoftLightGlass -> com.mi.onextbox.lsp.SoftLightGlassSettings.mainPackages.toList()
     FeaturePageMode.Desktop,
     FeaturePageMode.DesktopLayout,
     FeaturePageMode.DesktopRecent,
@@ -1607,12 +1610,13 @@ private fun FeatureSubPage(
     pushMonitorRefresh: Int,
 ) {
     if (rememberSystemAdaptationVersion() == SystemAdaptationVersion.ColorOs16 &&
-        mode != FeaturePageMode.Coui && mode != FeaturePageMode.Aod && mode != FeaturePageMode.SystemMessages) {
+        mode != FeaturePageMode.Coui && mode != FeaturePageMode.SoftLightGlass && mode != FeaturePageMode.Aod && mode != FeaturePageMode.SystemMessages) {
         ColorOs16Features(mode, onOpenSubPage)
         return
     }
     when (mode) {
-        FeaturePageMode.Coui -> CouiDividerSettingsGroup()
+        FeaturePageMode.Coui -> CouiSystemMaterialSettingsGroup(onOpenSubPage)
+        FeaturePageMode.SoftLightGlass -> SoftLightGlassPage()
         FeaturePageMode.Tools -> ToolsMainPage(onOpenSubPage)
         FeaturePageMode.More -> MoreMainPage(onOpenSubPage)
         FeaturePageMode.GlobalLocalization -> GlobalLocalizationPage(onOpenSubPage)

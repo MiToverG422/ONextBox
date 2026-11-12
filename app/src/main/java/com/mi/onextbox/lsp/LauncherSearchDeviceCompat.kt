@@ -23,7 +23,6 @@ internal object LauncherSearchDeviceCompat {
     private const val APPLICATION = "com.android.common.LauncherApplication"
     private const val LAUNCHER = "com.android.launcher.Launcher"
     private const val BASE_LAUNCHER = "com.android.launcher3.Launcher"
-    private const val MODE_MANAGER = "com.android.launcher.mode.LauncherModeManager"
     private const val SCREEN_UTILS = "com.android.common.util.ScreenUtils"
     private const val FEATURE_UTILS = "com.android.common.util.AppFeatureUtils"
     private const val SEARCH_IMPL = "com.android.launcher.bottomsearch.e"
@@ -138,7 +137,7 @@ internal object LauncherSearchDeviceCompat {
             }
             if (tablet || (international && foldScreen)) {
                 val baseLauncher = ModernReflect.findClass(BASE_LAUNCHER, loader)
-                val modes = ModernReflect.findClass(MODE_MANAGER, loader)
+                val modes = LauncherModeApi(loader)
                 val layoutSupport = ModernReflect.findDeclaredMethodExact(impl, "n", baseLauncher)
                 check(layoutSupport.returnType == Boolean::class.javaPrimitiveType)
                 handles += ModernHookBridge.hookMethod(layoutSupport, object : ModernMethodHook() {
@@ -148,10 +147,9 @@ internal object LauncherSearchDeviceCompat {
                         val activity = param.args.firstOrNull() as? Activity ?: return
                         val profile = ModernReflect.callMethod(activity, "getDeviceProfile") ?: return
                         val config = ModernReflect.callMethod(profile, "config") ?: return
-                        val mode = ModernReflect.callStaticMethod(modes, "getInstance") ?: return
+                        val mode = modes.instance.invoke(null) ?: return
                         val landscape = ModernReflect.getObjectField(config, "e") == true
-                        val drawerOrStandard = ModernReflect.callMethod(mode, "isInDrawerMode") == true ||
-                            ModernReflect.callMethod(mode, "isStandardMode") == true
+                        val drawerOrStandard = modes.drawer.invoke(mode) == true || modes.standard.invoke(mode) == true
                         val supported = if (international) {
                             LauncherSearchRecoveryRules.supportsInternationalLayout(
                                 foldScreen, tablet, landscape, drawerOrStandard,

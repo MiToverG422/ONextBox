@@ -138,6 +138,7 @@ internal class EnabledFeatureActions {
         R.string.game_assistant_skins_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.SKINS, enabled) },
         R.string.feature_settings_title_collapsed_title to { context, enabled -> LspConfig.setSettingsTitleCollapsedEnabled(context, enabled) },
         R.string.coui_hide_dividers_title to { context, enabled -> CouiDividerSettings.setEnabled(context, enabled) },
+        R.string.soft_light_glass_title to { context, enabled -> SoftLightGlassSettings.setEnabled(context, enabled) },
         R.string.settings_title_lock_title to { context, enabled -> com.mi.onextbox.lsp.SettingsAppearanceSettings.setEnabled(
             context, com.mi.onextbox.lsp.SettingsAppearanceSettings.TITLE_LOCK, enabled) },
         R.string.settings_account_size_title to { context, enabled -> com.mi.onextbox.lsp.SettingsAppearanceSettings.setEnabled(

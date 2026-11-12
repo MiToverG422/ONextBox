@@ -197,6 +197,10 @@ class OosLspModuleEntry : XposedModule() {
         val profile = AdaptationHookGate.bind()
         if (!AdaptationHookGate.isActive(profile)) return
         com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CouiDividerHooker.hook") { CouiDividerHooker.hook(packageName, classLoader, target.sourceDir) }
+        if (profile == SystemAdaptationVersion.ColorOs17) {
+            runCatching { SoftLightGlassHooker.hook(packageName, processName, classLoader, target.sourceDir) }
+                .onFailure { HookLog.w("ONextBox-SoftLight", "Material hooks unavailable in $packageName", it) }
+        }
         if (!AdaptationRuntimePolicy.allowsPackage(profile, packageName)) return
         if (profile == SystemAdaptationVersion.ColorOs16) {
             com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16FrameworkHooks.hookApp") { ColorOs16FrameworkHooks.hookApp() }

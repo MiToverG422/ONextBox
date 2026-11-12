@@ -250,7 +250,7 @@ internal class FluidCloudNotificationMaterial(
         private val mode = Reflect.findClass("com.oplus.systemui.notification.row.material.NotificationBlurMode", loader)
         private val dependency = Reflect.findClass("com.android.systemui.DependencyEx", loader)
         private val colorManager = Reflect.findClass("com.oplus.systemui.notification.color.MaterialColorManager", loader)
-        private val policy = Reflect.findClass("com.oplusos.systemui.common.util.ScrimUtil", loader)
+        private val policy = fluidCloudAnimationPolicy(loader)
         private val feature = Reflect.findClass("com.oplusos.systemui.common.feature.FeatureOption", loader)
         private val shape = Reflect.findClass("com.oplus.systemui.notification.base.radius.SmoothRoundExKt", loader)
         private val metaDrawables = WeakHashMap<Any, WeakReference<Any>>()
@@ -376,7 +376,7 @@ internal class FluidCloudNotificationMaterial(
             }
         }
 
-        fun isBP(): Boolean = Reflect.callStaticMethod(policy, "isBPAnimLevel") == true
+        fun isBP(): Boolean = if (policy.parameterCount == 0) policy.invoke(null) == true else policy.invoke(null, false) == true
 
         fun applyAod(config: Any, modeName: String, fraction: Float) {
             Reflect.callMethod(params, "applyAodProgressToNotificationBlurParams",

@@ -365,6 +365,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SettingsAppearance, R.string.feature_settings_title_collapsed_title, R.string.feature_settings_title_collapsed_summary),
         Entry(FeaturePageMode.Coui, R.string.coui_page_title),
         Entry(FeaturePageMode.Coui, R.string.coui_hide_dividers_title),
+        Entry(FeaturePageMode.SoftLightGlass, R.string.soft_light_glass_title, R.string.soft_light_glass_summary),
         Entry(FeaturePageMode.Tools, R.string.tab_tools),
         Entry(FeaturePageMode.More, R.string.tools_more_title),
         Entry(FeaturePageMode.GlobalLocalization, R.string.global_localization_title),

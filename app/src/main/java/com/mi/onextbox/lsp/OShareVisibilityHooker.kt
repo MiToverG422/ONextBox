@@ -28,7 +28,7 @@ internal object OShareVisibilityHooker {
                 resolveCountdown(loader, "com.oplus.oshare.ui.ShareSettingsFragment",
                     if (colorOs16) "e" else "d", if (colorOs16) "Z" else "Y"),
                 resolveCountdown(loader, "com.oplus.oshare.OShareSysUiInlineViewService", "f",
-                    if (colorOs16) "P" else "Q"),
+                    *if (colorOs16) arrayOf("P") else arrayOf("Q", "R")),
             )
             keys += key
             ModernHookRegistry.installFast(key, method, XposedInterface.Hooker { chain ->
@@ -66,14 +66,16 @@ internal object OShareVisibilityHooker {
         val clear: java.lang.reflect.Method,
     )
 
-    private fun resolveCountdown(loader: ClassLoader, ownerName: String, suffix: String, clearName: String): Countdown {
+    private fun resolveCountdown(loader: ClassLoader, ownerName: String, suffix: String, vararg clearNames: String): Countdown {
         val owner = Class.forName(ownerName, false, loader)
         val timer = Class.forName("$ownerName\$$suffix", false, loader)
         require(Runnable::class.java.isAssignableFrom(timer))
         val ownerField = timer.declaredFields.single { it.type == owner && !Modifier.isStatic(it.modifiers) }
             .apply { isAccessible = true }
         val run = timer.getDeclaredMethod("run")
-        val clear = owner.getDeclaredMethod(clearName).apply { isAccessible = true }
+        val clear = clearNames.firstNotNullOf { name ->
+            owner.declaredMethods.singleOrNull { it.name == name && it.parameterCount == 0 && it.returnType == Void.TYPE }
+        }.apply { isAccessible = true }
         require(run.returnType == Void.TYPE && clear.returnType == Void.TYPE &&
             !Modifier.isStatic(run.modifiers) && !Modifier.isStatic(clear.modifiers))
         return Countdown(run, ownerField, clear)

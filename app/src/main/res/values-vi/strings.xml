@@ -230,6 +230,8 @@
     <string name="feature_group_settings_hidden_features">Liên quan đến vùng</string>
     <string name="feature_launcher_taskbar_search_box_title">Hộp tìm kiếm trên thanh tác vụ</string>
     <string name="feature_launcher_taskbar_search_box_summary">Khôi phục mục nhập hộp tìm kiếm ẩn và chuyển đổi cho phiên bản trình khởi chạy đã chọn</string>
+    <string name="launcher_search_width_china">Chiều rộng thanh tìm kiếm bản Trung Quốc</string>
+    <string name="launcher_search_width_google">Chiều rộng thanh tìm kiếm Google</string>
     <string name="feature_launcher_search_bar_mode_china">Trung Quốc</string>
     <string name="feature_launcher_search_bar_mode_international">Toàn cầu</string>
     <string name="feature_launcher_search_bar_mode_off">Tắt</string>
@@ -1100,7 +1102,7 @@
     <string name="ota_block_files_summary">Chặn kiểm tra cập nhật tệp hệ thống</string>
 
     <string name="update_beta_plan_title">Tham gia chương trình Beta</string>
-    <string name="update_beta_plan_summary">Chương trình beta hiện đã đóng</string>
+    <string name="update_beta_plan_summary">Nhận bản cập nhật thử nghiệm Beta</string>
     <string name="update_beta_join_title">Tham gia chương trình Beta?</string>
     <string name="update_beta_join_summary">Sau khi tham gia, bản cập nhật Beta được lấy từ ONextBox_BetaTesting và khớp với loại bản dựng hiện tại, bản thử nghiệm có thể không ổn định hoặc có lỗi chức năng, bạn có muốn tiếp tục không</string>
     <string name="update_beta_join_cancel">Chưa tham gia</string>
@@ -1706,4 +1708,38 @@
     <string name="keyguard_face_capsule_title">Đám mây lưu động màn hình khóa</string>
     <string name="keyguard_face_capsule_summary">Hiển thị Đám mây lưu động cho biết trạng thái mở khóa hệ thống trên màn hình khóa</string>
     <string name="feature_unsupported_coloros16">Không hỗ trợ trên ColorOS 16</string>
+    <string name="soft_light_glass_title">Kính ánh sáng dịu</string>
+    <string name="soft_light_glass_summary">Áp dụng hiệu ứng kính ánh sáng dịu cho các nền hệ thống được hỗ trợ</string>
+    <string name="glass_scene_desktop">Menu và nền khác trên màn hình chính</string>
+    <string name="glass_scene_folder">Thư mục trên màn hình chính</string>
+    <string name="glass_scene_widget">Thẻ và tiện ích trên màn hình chính</string>
+    <string name="glass_scene_bar">Tìm kiếm và thanh dock</string>
+    <string name="glass_scene_shade">Trung tâm thông báo và các bảng hệ thống khác</string>
+    <string name="glass_scene_control">Trung tâm điều khiển</string>
+    <string name="glass_scene_volume">Bảng âm lượng bên</string>
+    <string name="glass_scene_lock">Màn hình khóa</string>
+    <string name="glass_scene_aod">Màn hình luôn bật</string>
+    <string name="glass_scene_global_search">Tìm kiếm toàn cục</string>
+    <string name="glass_scene_assistant">Shelf</string>
+    <string name="glass_scene_sidebar">Thanh bên thông minh</string>
+    <string name="glass_scene_settings">Cài đặt</string>
+    <string name="glass_scene_other">Ứng dụng hệ thống khác được hỗ trợ</string>
+    <string name="glass_strength">Cường độ hiệu ứng</string>
+    <string name="glass_blur">Phạm vi làm mờ</string>
+    <string name="glass_rim_width">Độ rộng đường viền</string>
+    <string name="glass_shine">Ánh sáng viền</string>
+    <string name="glass_refraction">Cường độ khúc xạ</string>
+    <string name="glass_saturation">Độ bão hòa</string>
+    <string name="glass_exposure">Bù sáng</string>
+    <string name="glass_dimming">Độ tối của kính</string>
+    <string name="glass_scope">Phạm vi áp dụng</string>
+    <string name="glass_scope_all">Tất cả giao diện được hỗ trợ</string>
+    <string name="glass_scope_selected">Giao diện đã chọn</string>
+    <string name="glass_optics">Giao diện kính</string>
+    <string name="glass_keep_white">Bỏ qua hiệu ứng kính cho mục đã chọn và lớp phủ màu trắng</string>
+    <string name="glass_warmth">Nhiệt độ màu của kính</string>
+    <string name="glass_contrast">Độ tương phản của kính</string>
+    <string name="glass_light_angle">Góc chiếu sáng viền</string>
+    <string name="glass_gyro">Ánh sáng viền thay đổi theo độ nghiêng</string>
+    <string name="glass_tilt_response">Độ nhạy khi nghiêng</string>
 </resources>

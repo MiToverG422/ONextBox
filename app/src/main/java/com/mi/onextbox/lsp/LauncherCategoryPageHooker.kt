@@ -215,11 +215,23 @@ internal object LauncherCategoryPageHooker {
             }
             // Select the return target before the gesture to avoid briefly showing the home page.
             runCatching {
-                val activityInterface = ModernReflect.findClass("com.android.quickstep.r3", loader)
-                val homeTarget = activityInterface.declaredMethods.single { it.name == "J" && !it.isBridge }
+                val (homeTarget, getActivity) = listOf(
+                    Triple("com.android.quickstep.r3", "J", "S"), Triple("uh5", "I", "N"),
+                ).firstNotNullOf { (owner, target, getter) ->
+                    val type = runCatching { loader.loadClass(owner) }.getOrNull() ?: return@firstNotNullOf null
+                    val targetMethod = type.declaredMethods.singleOrNull {
+                        it.name == target && !it.isBridge && it.parameterTypes.singleOrNull()?.name ==
+                            "com.android.quickstep.GestureState\$GestureEndTarget"
+                    } ?: return@firstNotNullOf null
+                    val getterMethod = type.declaredMethods.singleOrNull {
+                        it.name == getter && it.parameterCount == 0 && java.lang.reflect.Modifier.isStatic(it.modifiers) &&
+                            Activity::class.java.isAssignableFrom(it.returnType)
+                    } ?: return@firstNotNullOf null
+                    targetMethod to getterMethod.apply { isAccessible = true }
+                }
                 install(homeTarget) { chain ->
                     if ((chain.getArg(0) as? Enum<*>)?.name != "HOME") return@install chain.proceed()
-                    val activity = ModernReflect.callStaticMethod(activityInterface, "S")
+                    val activity = getActivity.invoke(null)
                     if (sessions[activity]?.retainsAppReturn == true) api.state("ALL_APPS") else chain.proceed()
                 }
             }.onFailure { HookLog.w(TAG, "Category gesture return target unavailable", it) }
@@ -240,7 +252,7 @@ internal object LauncherCategoryPageHooker {
                 "com.android.launcher3.uioverrides.touchcontrollers.PortraitStatesTouchController",
                 "com.android.launcher3.touch.AllAppsSwipeController",
             )) {
-                val touchController = ModernReflect.findClass(name, loader)
+                val touchController = ModernReflect.findClassIfExists(name, loader) ?: continue
                 install(touchController.getDeclaredMethod("canInterceptTouch\$2", MotionEvent::class.java)) { chain ->
                     val activity = ModernReflect.getObjectField(chain.thisObject!!, "mLauncher")
                     // Disable only the standalone drawer toggle; retain native RecyclerView scrolling.
@@ -365,13 +377,16 @@ internal object LauncherCategoryPageHooker {
                 api.searchRowWidth.get()?.takeIf { it > 0 } ?: chain.proceed()
             }
             val search = ModernReflect.findClass("com.android.launcher3.allapps.search.LauncherAppsSearchContainerLayout", loader)
-            install(api.mode.getDeclaredMethod("isInDrawerMode")) { chain ->
+            install(api.mode.drawer) { chain ->
                 if (api.panelModeScope.active) true else chain.proceed()
             }
-            install(api.mode.getDeclaredMethod("isStandardMode")) { chain ->
+            install(api.mode.standard) { chain ->
                 if (api.panelModeScope.active) false else chain.proceed()
             }
-            for (name in listOf("setupColorFilter", "resetColorFilter", "inflateSearchViewAnimate\$1", "onLayout", "resetSearchBoxToOriginalWidthInNonColorMode")) {
+            val inflateSearch = listOf("inflateSearchViewAnimate\$1", "inflateSearchViewAnimate").first { candidate ->
+                search.declaredMethods.any { it.name == candidate && it.parameterCount == 0 }
+            }
+            for (name in listOf("setupColorFilter", "resetColorFilter", inflateSearch, "onLayout", "resetSearchBoxToOriginalWidthInNonColorMode")) {
                 val method = search.declaredMethods.first { it.name == name }
                 // Native width queries may be inlined; retain the standalone row width.
                 if (name == "resetColorFilter" || name == "resetSearchBoxToOriginalWidthInNonColorMode") {
@@ -383,7 +398,9 @@ internal object LauncherCategoryPageHooker {
                     api.withSearchRow(chain.thisObject as View) { api.panelModeScope.withDrawer { chain.proceed() } }
                 }
             }
-            install(appsClass.declaredMethods.single { it.name == "onStartingActivity" }) { chain ->
+            val onStartingActivity = generateSequence<Class<*>>(appsClass) { it.superclass }
+                .firstNotNullOf { type -> type.declaredMethods.singleOrNull { it.name == "onStartingActivity" && it.parameterCount == 1 } }
+            install(onStartingActivity) { chain ->
                 // Native closing animations use these fields to find the original category icon.
                 if (!isActivePanelView(chain.thisObject)) return@install chain.proceed()
                 val session = sessions.values.firstOrNull { it.hasActivePanel && it.isPanelView(chain.thisObject as View) }
@@ -535,8 +552,9 @@ internal object LauncherCategoryPageHooker {
                 canvas.clipRect(view.scrollX, view.scrollY, view.scrollX + view.width, view.scrollY + view.height)
                 try { chain.proceed() } finally { canvas.restoreToCount(checkpoint) }
             }
-            val allAppsState = ModernReflect.findClass("com.android.launcher3.uioverrides.states.AllAppsState", loader)
-            install(allAppsState.declaredMethods.first { it.name == "getWorkspaceScrimColor" }) { chain ->
+            val allAppsState = loader.loadClass("com.android.launcher3.uioverrides.states.OplusAllAppsState")
+            val scrimColor = allAppsState.getMethod("getWorkspaceScrimColor", baseLauncher)
+            install(scrimColor) { chain ->
                 if (sessions[chain.getArg(0)]?.hasActivePanel == true) Color.TRANSPARENT else chain.proceed()
             }
             val baseApps = ModernReflect.findClass("com.android.launcher3.allapps.BaseAllAppsContainerView", loader)
@@ -551,7 +569,10 @@ internal object LauncherCategoryPageHooker {
                 }
             }
             HookLog.i(TAG, "Rightmost category page hooks installed")
-        }.onFailure { HookLog.w(TAG, "Rightmost category page hooks unavailable", it) }
+        }.onFailure {
+            ModernHookRegistry.unhookPrefix("$TAG:")
+            HookLog.w(TAG, "Rightmost category page hooks unavailable", it)
+        }
     }
 
     private class NativeApi(loader: ClassLoader) {
@@ -572,7 +593,7 @@ internal object LauncherCategoryPageHooker {
         val baseState = ModernReflect.findClass("com.android.launcher3.statemanager.BaseState", loader)
         val state = ModernReflect.findClass("com.android.launcher3.LauncherState", loader)
         val config = ModernReflect.findClass("com.android.launcher3.states.StateAnimationConfig", loader)
-        val mode = ModernReflect.findClass("com.android.launcher.mode.LauncherModeManager", loader)
+        val mode = LauncherModeApi(loader)
         private val floating = ModernReflect.findClass("com.android.launcher3.AbstractFloatingView", loader)
         private val activityContext = ModernReflect.findClass("com.android.launcher3.views.ActivityContext", loader)
         private val playback = ModernReflect.findClass("com.android.launcher3.anim.AnimatorPlaybackController", loader)
@@ -617,11 +638,16 @@ internal object LauncherCategoryPageHooker {
             // Use native category data and icon color parsing on the launcher loading thread.
             val categoryMove = ModernReflect.findClass("com.android.launcher3.allapps.categoryfolder.CategoryMoveHelper", loader)
             ModernReflect.callStaticMethod(categoryMove, "loadCategoryMapFromDatabase", context, false)
-            val assets = ModernReflect.findClass("s2.l", loader)
-            ModernReflect.callMethod(ModernReflect.callStaticMethod(assets, "q", context), "z", installed)
+            val legacyAssets = ModernReflect.findClassIfExists("s2.l", loader)
+            if (legacyAssets != null) {
+                ModernReflect.callMethod(ModernReflect.callStaticMethod(legacyAssets, "q", context), "z", installed)
+            } else {
+                val assets = ModernReflect.findClass("qj5", loader)
+                ModernReflect.callMethod(ModernReflect.callStaticMethod(assets, "o", context), "y", installed)
+            }
             HookLog.d(TAG, "Standard loader prepared: apps=${installed.size}")
             val palette = ModernReflect.findClass("com.android.launcher3.allapps.colorfilter.DrawerIconPalette", loader)
-            val executors = ModernReflect.findClass("ej.a", loader)
+            val executors = ModernReflect.findClassIfExists("ej.a", loader) ?: ModernReflect.findClass("ui3", loader)
             val executor = executors.getDeclaredField("a").apply { isAccessible = true }.get(null) as Executor
             pendingPaletteJobs.incrementAndGet()
             try {
@@ -668,10 +694,10 @@ internal object LauncherCategoryPageHooker {
         }
         fun state(name: String): Any = state.getDeclaredField(name).get(null)!!
         fun supportsMode(): Boolean {
-            val instance = mode.getDeclaredMethod("getInstance").invoke(null)
+            val instance = mode.instance.invoke(null)
             return LauncherCategoryPageRules.supportsMode(
-                ModernReflect.callMethod(instance, "isStandardMode") == true,
-                ModernReflect.callMethod(instance, "isInDrawerMode") == true,
+                mode.standard.invoke(instance) == true,
+                mode.drawer.invoke(instance) == true,
             )
         }
 

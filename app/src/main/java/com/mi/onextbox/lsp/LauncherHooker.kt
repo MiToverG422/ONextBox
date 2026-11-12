@@ -154,6 +154,15 @@ object LauncherHooker {
     }
 
     private fun hookSearchBarMode(classLoader: ClassLoader?, mode: Int) {
+        if (classLoader != null && SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs17) {
+            runCatching { LauncherSearchWidth.install(classLoader, mode) }
+                .onFailure { HookLog.w(TAG, "Dock search width unavailable", it) }
+        }
+        if (classLoader != null && LauncherDockSearch17.matches(classLoader)) {
+            runCatching { LauncherDockSearch17.install(classLoader, mode) }
+                .onFailure { HookLog.w(TAG, "Dock search adapter unavailable", it) }
+            return
+        }
         val targets = LauncherSearchTargets.forVersion(SystemAdaptationDetector.current())
         val managerClass = XposedHelpers.findClassIfExists(
             targets.manager,

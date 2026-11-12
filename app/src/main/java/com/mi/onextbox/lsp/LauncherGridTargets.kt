@@ -123,9 +123,9 @@ internal class LauncherGridTargets(val values: Array<*>) {
                 val largeStyle = adapter.declaredFields.single { it.type == Boolean::class.javaPrimitiveType && Modifier.isStatic(it.modifiers) }
                 val recycler = adapter.getMethod("getMRecyclerView")
                 require(View::class.java.isAssignableFrom(recycler.returnType))
-                val modeType = ModernReflect.findClass("com.android.launcher.mode.LauncherModeManager", loader)
-                val mode = modeType.getDeclaredMethod("getInstance")
-                val simple = modeType.getDeclaredMethod("isInSimpleMode")
+                val modes = LauncherModeApi(loader)
+                val mode = modes.instance
+                val simple = modes.simple
                 val previewType = ModernReflect.findClass("com.android.launcher.togglebar.views.ToggleBarLayoutItemPreview", loader)
                 val drawData = dex.findMethod {
                     matcher {

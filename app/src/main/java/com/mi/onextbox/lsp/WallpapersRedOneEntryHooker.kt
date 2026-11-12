@@ -24,7 +24,10 @@ object WallpapersRedOneEntryHooker {
         runCatching {
             // In ColorOS 17 this private predicate is used only to filter the
             // `oplus_red_one` item from the bundled moreParam.json card list.
-            XposedHelpers.findAndHookMethod(viewModel, "n", object : XC_MethodHook() {
+            val predicate = viewModel.declaredMethods.single {
+                it.name in setOf("n", "r") && it.parameterCount == 0 && it.returnType == Boolean::class.javaPrimitiveType
+            }
+            XposedHelpers.findAndHookMethod(viewModel, predicate.name, object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     if (LspConfig.isWallpapersRedOneEntryEnabledXposed()) {
                         param.result = true

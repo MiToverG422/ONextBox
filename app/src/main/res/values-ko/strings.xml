@@ -230,6 +230,8 @@
     <string name="feature_group_settings_hidden_features">지역 관련</string>
     <string name="feature_launcher_taskbar_search_box_title">작업 표시줄 검색 상자</string>
     <string name="feature_launcher_taskbar_search_box_summary">숨겨진 검색 상자 항목을 복원하고 선택한 런처 에디션으로 전환합니다</string>
+    <string name="launcher_search_width_china">중국판 검색창 너비</string>
+    <string name="launcher_search_width_google">Google 검색창 너비</string>
     <string name="feature_launcher_search_bar_mode_china">중국</string>
     <string name="feature_launcher_search_bar_mode_international">글로벌</string>
     <string name="feature_launcher_search_bar_mode_off">끄기</string>
@@ -1100,7 +1102,7 @@
     <string name="ota_block_files_summary">시스템 파일 업데이트 확인을 차단</string>
 
     <string name="update_beta_plan_title">Beta 프로그램 참여</string>
-    <string name="update_beta_plan_summary">현재 베타 프로그램이 종료되었습니다</string>
+    <string name="update_beta_plan_summary">베타 테스트 업데이트 받기</string>
     <string name="update_beta_join_title">Beta 프로그램에 참여할까요?</string>
     <string name="update_beta_join_summary">참여하면 ONextBox_BetaTesting에서 현재 빌드 유형에 맞는 Beta 업데이트를 받습니다, 테스트 버전은 불안정하거나 기능 오류가 발생할 수 있습니다, 계속할까요</string>
     <string name="update_beta_join_cancel">나중에</string>
@@ -1731,4 +1733,38 @@
     <string name="keyguard_face_capsule_title">잠금 화면 플루이드 클라우드</string>
     <string name="keyguard_face_capsule_summary">잠금 화면에서 시스템 잠금 해제 상태를 나타내는 플루이드 클라우드를 표시합니다</string>
     <string name="feature_unsupported_coloros16">ColorOS 16에서 지원되지 않음</string>
+    <string name="soft_light_glass_title">소프트 라이트 글라스</string>
+    <string name="soft_light_glass_summary">지원되는 시스템 배경에 소프트 라이트 글라스 효과 적용</string>
+    <string name="glass_scene_desktop">홈 메뉴 및 기타 배경</string>
+    <string name="glass_scene_folder">홈 화면 폴더</string>
+    <string name="glass_scene_widget">홈 카드 및 위젯</string>
+    <string name="glass_scene_bar">홈 검색 및 독</string>
+    <string name="glass_scene_shade">알림 센터 및 기타 시스템 패널</string>
+    <string name="glass_scene_control">제어 센터</string>
+    <string name="glass_scene_volume">측면 음량 패널</string>
+    <string name="glass_scene_lock">잠금 화면</string>
+    <string name="glass_scene_aod">상시 표시</string>
+    <string name="glass_scene_global_search">통합 검색</string>
+    <string name="glass_scene_assistant">셸프</string>
+    <string name="glass_scene_sidebar">스마트 사이드바</string>
+    <string name="glass_scene_settings">설정</string>
+    <string name="glass_scene_other">기타 지원 시스템 앱</string>
+    <string name="glass_strength">효과 강도</string>
+    <string name="glass_blur">흐림 범위</string>
+    <string name="glass_rim_width">테두리 너비</string>
+    <string name="glass_shine">테두리 하이라이트</string>
+    <string name="glass_refraction">굴절 강도</string>
+    <string name="glass_saturation">채도</string>
+    <string name="glass_exposure">밝기 보정</string>
+    <string name="glass_dimming">유리 어둡기 조절</string>
+    <string name="glass_scope">적용 범위</string>
+    <string name="glass_scope_all">지원되는 모든 화면</string>
+    <string name="glass_scope_selected">선택한 화면</string>
+    <string name="glass_optics">유리 효과 설정</string>
+    <string name="glass_keep_white">흰색 선택 항목과 마스크에 유리 효과 적용 안 함</string>
+    <string name="glass_warmth">유리 색온도</string>
+    <string name="glass_contrast">유리 대비</string>
+    <string name="glass_light_angle">테두리 조명 각도</string>
+    <string name="glass_gyro">기울기에 따라 테두리 조명 이동</string>
+    <string name="glass_tilt_response">기울기 감도</string>
 </resources>

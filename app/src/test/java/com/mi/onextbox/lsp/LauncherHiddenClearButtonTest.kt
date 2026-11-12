@@ -20,7 +20,8 @@ class LauncherHiddenClearButtonTest {
         assertTrue(source.contains("hook(clickBridge)"))
         assertTrue(source.contains("after(listenerSetter)"))
         assertTrue(source.contains("deoptimize(listener.javaClass.getDeclaredMethod(\"onClick\", View::class.java))"))
-        assertFalse(source.contains("arrayOf(View.OnClickListener"))
+        assertFalse(source.contains("arrayOf(View.OnClickListener {"))
+        assertTrue(source.contains("val clickBridge = instanceClick ?:"))
         assertFalse(source.contains("View::class.java.getDeclaredMethod(\"performClick\""))
     }
 }

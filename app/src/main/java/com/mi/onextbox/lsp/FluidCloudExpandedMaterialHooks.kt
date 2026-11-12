@@ -55,24 +55,43 @@ internal class FluidCloudExpandedMaterialHooks(
         })
         ModernHookRuntime.requireModule().deoptimize(params)
 
-        val gradient = Reflect.findClass("${FluidCloudMaterialRules.PLUGIN_PACKAGE}.seedling.util.d", loader)
-            .declaredConstructors.single { it.parameterCount == 4 &&
-                it.parameterTypes.take(3).all { type -> type == Int::class.javaPrimitiveType } }
-        ModernHookRegistry.installFast("$prefix:expanded:gradient", gradient, XposedInterface.Hooker { chain ->
+        val plugin = FluidCloudMaterialRules.PLUGIN_PACKAGE
+        val target = Reflect.findClass("com.heytap.log.nx.obus.a", loader)
+        val root = Reflect.findClass("com.oplus.view.ViewRootManager", loader)
+        val overlay = Reflect.findClassIfExists("$plugin.seedling.card.ui.view.CardGradientOverlayView", loader)
+        val builder = overlay?.let {
+            runCatching { target.getDeclaredMethod("b", View::class.java, root, it) }.getOrNull()
+        } ?: target.getDeclaredMethod("b", View::class.java, root)
+        val separateOverlay = builder.parameterCount == 3
+        val gradientType = if (separateOverlay) "$plugin.seedling.card.ui.view.f" else "$plugin.seedling.util.d"
+        val gradient = Reflect.findClass(gradientType, loader).declaredConstructors.single {
+            it.parameterCount == (if (separateOverlay) 5 else 4) &&
+                it.parameterTypes.take(3).all { type -> type == Int::class.javaPrimitiveType } &&
+                (!separateOverlay || it.parameterTypes[3] == Float::class.javaPrimitiveType)
+        }
+        val blurModeOwner = if (separateOverlay) "$plugin.seedling.util.d" else "$plugin.seedling.util.e"
+        if (separateOverlay) {
+            val draw = gradient.declaringClass.getDeclaredMethod("draw", android.graphics.Canvas::class.java)
+            ModernHookRegistry.installFast("$prefix:expanded:overlayDraw", draw, XposedInterface.Hooker { chain ->
+                var owner = (chain.thisObject as Drawable).callback
+                while (owner is Drawable) owner = owner.callback
+                if (owner is View && (overlay?.isInstance(owner) == true || isBackgroundHost(owner)) && enabled()) {
+                    logged("expanded:overlay", "Expanded card gradient omitted over notification material")
+                    null
+                } else chain.proceed()
+            })
+        } else ModernHookRegistry.installFast("$prefix:expanded:gradient", gradient, XposedInterface.Hooker { chain ->
             if (scope.current == null) return@Hooker chain.proceed()
             val args = chain.args.toTypedArray()
             repeat(3) { args[it] = FluidCloudExpandedMaterialRules.GRADIENT_COLOR }
             chain.proceed(args)
         })
 
-        val target = Reflect.findClass("com.heytap.log.nx.obus.a", loader)
-        val root = Reflect.findClass("com.oplus.view.ViewRootManager", loader)
-        val builder = target.getDeclaredMethod("b", View::class.java, root)
         ModernHookRegistry.installFast("$prefix:background", builder, XposedInterface.Hooker { chain ->
             val view = chain.getArg(0) as? View
             val use = enabled() && view != null && isBackgroundHost(view)
             val style = if (use) runCatching {
-                val blurMode = Reflect.findClass("${FluidCloudMaterialRules.PLUGIN_PACKAGE}.seedling.util.e", loader)
+                val blurMode = Reflect.findClass(blurModeOwner, loader)
                     .getDeclaredField("a").apply { isAccessible = true }.get(null)!!
                 FluidCloudExpandedBuildScope.Style(Reflect.callMethod(blurMode, "getValue") == true)
             }.onFailure { report("Cannot select native expanded blur branch", it) }.getOrNull() else null

@@ -22,11 +22,20 @@ internal object LauncherDockHooker {
             val setBackground = hotseat.getDeclaredMethod("setDockerBackground").apply { isAccessible = true }
             val background = if (c16) null else hotseat.getDeclaredField("mDockerBackgroundDrawable").apply { isAccessible = true }
             val shortcuts = if (c16) hotseat.getMethod("getShortcutsAndWidgets") else null
-            val screen = ModernReflect.findClass("com.android.common.util.ScreenUtils", loader)
+            val largeDisplay = ModernReflect.findClassIfExists("com.android.common.util.ScreenUtils", loader)
+                ?.getDeclaredMethod("hasLargeDisplayFeatures")
+                ?: ModernReflect.findClass("wn9", loader).getDeclaredMethod("d")
+            require(largeDisplay.returnType == Boolean::class.javaPrimitiveType &&
+                java.lang.reflect.Modifier.isStatic(largeDisplay.modifiers))
             val blurProperties = ModernReflect.findClass("com.android.launcher3.uioverrides.states.blurdrawable.OplusBlurProperties", loader)
             val blurOption = if (c16) blurProperties.getDeclaredMethod("isSupportNewBlur", Context::class.java,
                 Boolean::class.javaPrimitiveType)
-            else blurProperties.getDeclaredMethod("isSupportNewBlur", Context::class.java)
+            else try {
+                blurProperties.getDeclaredMethod("isSupportNewBlur", Context::class.java)
+            } catch (_: NoSuchMethodException) {
+                ModernReflect.findClass("${blurProperties.name}\$Companion", loader)
+                    .getDeclaredMethod("isSupportNewBlur", Context::class.java)
+            }
             // Size checks in the background method may be inlined.
             if (!ModernHookRuntime.requireModule().deoptimize(setBackground)) {
                 HookLog.w(TAG, "Dock background caller deoptimization unavailable")
@@ -43,7 +52,7 @@ internal object LauncherDockHooker {
                 },
             )
             ModernHookRegistry.installFast(
-                "${prefix}blur-size-gate", screen.getDeclaredMethod("hasLargeDisplayFeatures"),
+                "${prefix}blur-size-gate", largeDisplay,
                 XposedInterface.Hooker { chain ->
                     if (creatingBackground.get() == true && blurEnabled()) true else chain.proceed()
                 },

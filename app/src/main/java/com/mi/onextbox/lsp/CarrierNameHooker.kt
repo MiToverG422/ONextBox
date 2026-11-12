@@ -9,6 +9,7 @@ import android.telephony.ServiceState
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
+import android.util.SparseArray
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
@@ -73,14 +74,31 @@ internal object CarrierNameHooker {
         // not subscription order or the current data SIM. Never mutate its shared array.
         runCatching {
             val controller = Reflect.findClass("com.oplus.systemui.qs.OplusQSCarrierTextController", loader)
-            val method = controller.getDeclaredMethod("joinNotEmpty", CharSequence::class.java,
-                Array<CharSequence>::class.java, Int::class.javaPrimitiveType)
+            val method = try {
+                controller.getDeclaredMethod("joinNotEmpty", CharSequence::class.java,
+                    SparseArray::class.java, Int::class.javaPrimitiveType)
+            } catch (_: NoSuchMethodException) {
+                controller.getDeclaredMethod("joinNotEmpty", CharSequence::class.java,
+                    Array<CharSequence>::class.java, Int::class.javaPrimitiveType)
+            }
             ModernHookRegistry.installFast("$TAG:finalMerge", method, XposedInterface.Hooker { chain ->
                 if (!enabled()) return@Hooker chain.proceed()
                 val names = runCatching {
                     val owner = requireNotNull(chain.thisObject)
-                    val original = chain.getArg(1) as? Array<*> ?: return@runCatching null
-                    if (original.any { it != null && it !is CharSequence }) return@runCatching null
+                    val original = chain.getArg(1)
+                    val next = SparseArray<CharSequence?>()
+                    when (original) {
+                        is SparseArray<*> -> for (i in 0 until original.size()) {
+                            val value = original.valueAt(i)
+                            if (value != null && value !is CharSequence) return@runCatching null
+                            next.append(original.keyAt(i), value as? CharSequence)
+                        }
+                        is Array<*> -> original.forEachIndexed { slot, value ->
+                            if (value != null && value !is CharSequence) return@runCatching null
+                            next.append(slot, value as? CharSequence)
+                        }
+                        else -> return@runCatching null
+                    }
                     val context = Reflect.getObjectField(owner, "mContext") as? Context ?: return@runCatching null
                     val monitor = Reflect.getObjectField(owner, "mKeyguardUpdateMonitor") ?: return@runCatching null
                     val subscriptions = Reflect.callMethod(owner, "getSubscriptionInfo", false) as? List<*>
@@ -90,11 +108,10 @@ internal object CarrierNameHooker {
                         ?: return@runCatching null
                     val helperType = Reflect.findClass("com.oplus.systemui.keyguard.telephony.SimStateHelper", loader)
                     val helper = Reflect.callStaticMethod(helperType, "getInstance", context) ?: return@runCatching null
-                    val next = Array<CharSequence?>(original.size) { original[it] as? CharSequence }
                     var changed = false
                     for (info in subscriptions.filterIsInstance<SubscriptionInfo>()) {
                         val slot = info.simSlotIndex
-                        if (slot !in 0..1 || slot !in next.indices || next[slot].isNullOrEmpty()) continue
+                        if (slot !in 0..1 || next[slot].isNullOrEmpty()) continue
                         // Preserve the vendor's per-slot emergency warning even if its
                         // service-state broadcast and the live telephony query disagree.
                         val emergency = Reflect.callMethod(helper, "isEmergencyOnlyBySlot", count, slot, emergencyUpdate)
@@ -102,10 +119,14 @@ internal object CarrierNameHooker {
                         if (emergency) continue
                         val alias = scope.resolve(slot, info.subscriptionId) { replacement(context, monitor, slot, info.subscriptionId) }
                         val text = CarrierNameRules.finalName(next[slot], alias, scope.applied(slot), emergency)
-                        if (text != next[slot]) { next[slot] = text; changed = true }
+                        if (text != next[slot]) { next.put(slot, text); changed = true }
                         if (alias != null) logApplied(slot)
                     }
-                    if (changed) next else null
+                    when {
+                        !changed -> null
+                        original is Array<*> -> Array<CharSequence?>(original.size) { next[it] }
+                        else -> next
+                    }
                 }.onFailure { diagnose("Final per-slot carrier merge", it) }.getOrNull()
                 if (names == null) chain.proceed() else {
                     val args = chain.args.toTypedArray()
@@ -120,8 +141,14 @@ internal object CarrierNameHooker {
         // C17's home status bar uses a separate per-slot Flow. Transform only its String
         // emissions; null resume arguments and the native coroutine continuation stay intact.
         runCatching {
-            val collector = Reflect.findClass("com.oplus.systemui.statusbar.pipeline.shared.ui.viewmodel." +
-                "OplusHomeStatusBarViewModelImpl\$operatorNameForDisplaySlot\$lambda\$6\$lambda\$5\$\$inlined\$map\$1\$2", loader)
+            val prefix = "com.oplus.systemui.statusbar.pipeline.shared.ui.viewmodel." +
+                "OplusHomeStatusBarViewModelImpl\$operatorNameForDisplaySlot\$lambda\$"
+            val collector = listOf("7\$lambda\$6", "6\$lambda\$5").firstNotNullOf { suffix ->
+                Reflect.findClassIfExists("$prefix$suffix\$\$inlined\$map\$1\$2", loader)?.takeIf { type ->
+                    type.declaredFields.any { it.name == "\$subId\$inlined" && it.type == Int::class.javaObjectType } &&
+                        type.declaredFields.any { it.name == "\$slot\$inlined" && it.type == Int::class.javaPrimitiveType }
+                }
+            }
             val method = collector.declaredMethods.single { it.name == "emit" && it.parameterCount == 2 }
             val dependency = Reflect.findClass("com.android.systemui.Dependency", loader)
             val monitorType = Reflect.findClass("com.android.keyguard.KeyguardUpdateMonitor", loader)

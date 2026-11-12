@@ -15,6 +15,7 @@ internal object ModuleHotReloadPolicy {
         "com.heytap.market", "com.oplus.battery", "com.oplus.trafficmonitor", "com.oplus.keyboard",
         "com.coloros.filemanager", "com.heytap.mcs", "com.nearme.instant.platform",
         "com.coloros.assistantscreen", "com.coloros.oshare", "com.heytap.colorfulengine",
+        "com.heytap.quicksearchbox",
         "com.coloros.translate", "com.oplus.camera",
         "com.coloros.smartsidebar",
         "com.oplus.appdetail", "com.android.packageinstaller",

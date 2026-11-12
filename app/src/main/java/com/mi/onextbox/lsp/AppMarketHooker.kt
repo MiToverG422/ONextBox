@@ -25,10 +25,10 @@ internal object AppMarketHooker {
     private const val SWITCH_UI_MANAGER_CLASS =
         "com.heytap.mspsdk.regionv3.switcher.ui.manager.a"
     private const val EXTRA_TARGET_REGION = "targetRegion"
-    private const val SPLASH_TRANSACTION_CLASS = "a.a.a.w4f"
+    private val SPLASH_TRANSACTION_CLASSES = listOf("a.a.a.w4f", "a.a.a.zwe")
     private const val SPLASH_DTO_V4_CLASS =
         "com.heytap.cdo.splash.domain.dto.v4.SplashDtoV4"
-    private val CARD_DATA_PROCESSOR_CLASSES = listOf("a.a.a.wo2", "a.a.a.sl2")
+    private val CARD_DATA_PROCESSOR_CLASSES = listOf("a.a.a.wo2", "a.a.a.sl2", "a.a.a.tk2")
     private const val CARD_ADAPTER_PRESENTER_CLASS =
         "com.heytap.cdo.client.cards.page.base.adapter.CardAdapterPresenter"
     private const val CARD_API_ADAPTER_CLASS =
@@ -47,7 +47,6 @@ internal object AppMarketHooker {
         "com.heytap.cdo.client.detail.cn.app.tabcontent.detail.TabDetailContentView"
     private const val DETAIL_RECOMMEND_CONTENT_VIEW_CLASS =
         "com.heytap.cdo.client.detail.cn.app.tabcontent.recommend.TabRecommendContentView"
-    private const val DETAIL_RECOMMEND_PAYLOAD_CLASS = "a.a.a.sn2"
     private const val DETAIL_REPO_CLASS =
         "com.heytap.cdo.client.detail.cn.app.tabcontent.detail.TabDetailRepo"
     private const val NETWORK_RESPONSE_CLASS = "com.nearme.platform.loader.network.d"
@@ -196,22 +195,16 @@ internal object AppMarketHooker {
     }
 
     private fun installSplashRecommendationHook(classLoader: ClassLoader) {
-        val transactionClass = XposedHelpers.findClassIfExists(
-            SPLASH_TRANSACTION_CLASS,
-            classLoader,
-        ) ?: run {
-            HookLog.w(TAG, "App Market splash transaction was not found")
-            return
-        }
         val splashDtoClass = XposedHelpers.findClassIfExists(SPLASH_DTO_V4_CLASS, classLoader)
             ?: run {
                 HookLog.w(TAG, "App Market V4 splash DTO was not found")
                 return
             }
-        val target = transactionClass.declaredMethods.singleOrNull { method ->
-            method.parameterTypes.size == 1 &&
-                method.parameterTypes[0] == Boolean::class.javaPrimitiveType &&
-                method.returnType == splashDtoClass
+        val target = SPLASH_TRANSACTION_CLASSES.firstNotNullOfOrNull { name ->
+            XposedHelpers.findClassIfExists(name, classLoader)?.declaredMethods?.singleOrNull { method ->
+                method.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType)) &&
+                    method.returnType == splashDtoClass
+            }
         } ?: run {
             HookLog.w(TAG, "App Market splash data method was not found uniquely")
             return
@@ -522,31 +515,26 @@ internal object AppMarketHooker {
             DETAIL_RECOMMEND_CONTENT_VIEW_CLASS,
             classLoader,
         )
-        val payloadClass = XposedHelpers.findClassIfExists(
-            DETAIL_RECOMMEND_PAYLOAD_CLASS,
-            classLoader,
-        )
         val dtoClass = XposedHelpers.findClassIfExists(VIEW_LAYER_WRAP_DTO_CLASS, classLoader)
-        if (contentClass == null || payloadClass == null || dtoClass == null) {
+        if (contentClass == null || dtoClass == null) {
             HookLog.w(TAG, "App Market detail Recommend page data classes were not found")
             return
         }
-        val dtoGetter = payloadClass.declaredMethods.singleOrNull { method ->
-            method.parameterTypes.isEmpty() && method.returnType == dtoClass
-        } ?: run {
-            HookLog.w(TAG, "App Market detail Recommend payload getter was not found uniquely")
-            return
-        }
-        dtoGetter.isAccessible = true
-        val targets = contentClass.declaredMethods.filter { method ->
-            method.returnType == Void.TYPE &&
-                method.parameterTypes.contentEquals(arrayOf(payloadClass))
+        val targets = contentClass.declaredMethods.mapNotNull { method ->
+            if (method.returnType != Void.TYPE) return@mapNotNull null
+            val payload = method.parameterTypes.singleOrNull() ?: return@mapNotNull null
+            if (payload.name !in setOf("a.a.a.sn2", "a.a.a.tm2")) return@mapNotNull null
+            val getter = payload.declaredMethods.singleOrNull {
+                it.parameterCount == 0 && it.returnType == dtoClass
+            } ?: return@mapNotNull null
+            getter.isAccessible = true
+            method to getter
         }
         if (targets.isEmpty()) {
             HookLog.w(TAG, "App Market detail Recommend content receiver was not found")
             return
         }
-        targets.forEach { target ->
+        targets.forEach { (target, dtoGetter) ->
             runCatching {
                 XposedBridge.hookMethod(
                     target,

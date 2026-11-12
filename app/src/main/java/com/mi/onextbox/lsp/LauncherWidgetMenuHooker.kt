@@ -25,7 +25,11 @@ internal object LauncherWidgetMenuHooker {
         val factoryMethod = widgets.javaClass.getDeclaredMethod("getShortcut", Context::class.java, item, View::class.java)
         val itemType = item.getDeclaredField("itemType").apply { isAccessible = true }
         val disabled = item.getMethod("isDisabled")
-        val promise = workspaceItem.getMethod("isPromise")
+        val promise = try {
+            workspaceItem.getMethod("isPromise")
+        } catch (_: NoSuchMethodException) {
+            workspaceItem.getMethod("hasPromiseIconUi")
+        }
         // The archive/install additions are absent on some older launcher builds.
         val archived = runCatching { item.getMethod("getIsArchived") }.getOrNull()
         val nonInstalled = runCatching { item.getMethod("isNonInstalledApp") }.getOrNull()

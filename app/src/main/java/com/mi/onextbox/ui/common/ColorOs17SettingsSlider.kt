@@ -1,8 +1,5 @@
 package com.mi.onextbox.ui.common
 
-import android.annotation.SuppressLint
-import android.graphics.RuntimeShader
-import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
@@ -25,10 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -46,7 +41,6 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-@SuppressLint("NewApi")
 @Composable
 fun ColorOs17SettingsSlider(
     value: Float,
@@ -74,18 +68,6 @@ fun ColorOs17SettingsSlider(
     var isThumbPressed by remember { mutableStateOf(false) }
     var isPointerDown by remember { mutableStateOf(false) }
     val spotLightX = remember { Animatable(0f) }
-    val spotLightY = remember { Animatable(0f) }
-    val spotLightShader = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            runCatching { RuntimeShader(ColorOs17SpotlightShader) }.getOrNull()
-        } else {
-            null
-        }
-    }
-    val spotLightBrush = remember(spotLightShader) {
-        spotLightShader?.let(::ShaderBrush)
-    }
-
     val animatedValue by animateFloatAsState(
         targetValue = currentValue,
         animationSpec = spring(
@@ -230,7 +212,6 @@ fun ColorOs17SettingsSlider(
                             }
                             val thumbX = capInsetPx + visualFraction * availableWidth
                             scope.launch { spotLightX.snapTo(down.position.x) }
-                            scope.launch { spotLightY.snapTo(down.position.y) }
                             isPointerDown = true
                             isThumbPressed = abs(down.position.x - thumbX) <= capInsetPx
 
@@ -252,15 +233,6 @@ fun ColorOs17SettingsSlider(
                                 scope.launch {
                                     spotLightX.animateTo(
                                         targetValue = lastPosition.x,
-                                        animationSpec = spring(
-                                            dampingRatio = SpotLightFollowDampingRatio,
-                                            stiffness = SpotLightFollowStiffness,
-                                        ),
-                                    )
-                                }
-                                scope.launch {
-                                    spotLightY.animateTo(
-                                        targetValue = lastPosition.y,
                                         animationSpec = spring(
                                             dampingRatio = SpotLightFollowDampingRatio,
                                             stiffness = SpotLightFollowStiffness,
@@ -362,10 +334,6 @@ fun ColorOs17SettingsSlider(
             center = Offset(thumbCenterX, centerY),
         )
 
-        // DrawPhase.OVERLAY from C17's SpotLightEffectRenderer: the complete
-        // seek bar is rendered first, then one TYPE_OPAQUE_MEDIUM_1 spotlight
-        // is blended over it and clipped to the background track. This remains
-        // the final Canvas operation, matching View.draw() after super.draw().
         if (enabled && spotLightProgress > 0f) {
             val radius3d = SpotLightStartRadiusPx +
                 (SpotLightEndRadiusPx - SpotLightStartRadiusPx) * spotLightProgress +
@@ -380,39 +348,7 @@ fun ColorOs17SettingsSlider(
                 SpotLightLightEndIntensity
             }
             val intensity = endIntensity * spotLightProgress
-            if (spotLightBrush != null && spotLightShader != null) {
-                spotLightShader.setFloatUniform("resolution", size.width, size.height)
-                spotLightShader.setFloatUniform(
-                    "u_lightPosAndHeight",
-                    spotLightX.value,
-                    spotLightY.value,
-                    radius3d,
-                    intensity,
-                )
-                spotLightShader.setFloatUniform(
-                    "u_lightColorAndAmbient",
-                    1f,
-                    1f,
-                    1f,
-                    SpotLightAmbientStrength,
-                )
-                spotLightShader.setFloatUniform(
-                    "u_lightingParams",
-                    SpotLightDiffuseStrength,
-                    SpotLightHeightPx,
-                    SpotLightNoise,
-                    SpotLightDither,
-                )
-                drawRoundRect(
-                    brush = spotLightBrush,
-                    topLeft = Offset(backgroundLeft, centerY - backgroundHeight / 2f),
-                    size = Size(backgroundRight - backgroundLeft, backgroundHeight),
-                    cornerRadius = CornerRadius(backgroundHeight / 2f),
-                    blendMode = BlendMode.Overlay,
-                )
-            } else if (radius3d > SpotLightHeightPx) {
-                // Android 12 and older cannot run AGSL. Keep the same lighting
-                // equation as a compatibility fallback, sampled radially.
+            if (radius3d > SpotLightHeightPx) {
                 val planarRadius = sqrt(
                     radius3d * radius3d - SpotLightHeightPx * SpotLightHeightPx,
                 )
@@ -436,13 +372,12 @@ fun ColorOs17SettingsSlider(
                 drawRoundRect(
                     brush = Brush.radialGradient(
                         colorStops = stops,
-                        center = Offset(spotLightX.value, spotLightY.value),
+                        center = Offset(spotLightX.value, centerY),
                         radius = planarRadius,
                     ),
                     topLeft = Offset(backgroundLeft, centerY - backgroundHeight / 2f),
                     size = Size(backgroundRight - backgroundLeft, backgroundHeight),
                     cornerRadius = CornerRadius(backgroundHeight / 2f),
-                    blendMode = BlendMode.Overlay,
                 )
             }
         }
@@ -471,8 +406,6 @@ private const val SpotLightDarkEndIntensity = 0.8f
 private const val SpotLightAmbientStrength = 0.4f
 private const val SpotLightDiffuseStrength = 0.4f
 private const val SpotLightBaseIntensity = 1.5f
-private const val SpotLightNoise = 0.08f
-private const val SpotLightDither = 0f
 private const val SpotLightSampleCount = 13
 private const val SpotLightGlowStiffness = 1755f
 private const val SpotLightExtinguishStiffness = 247f

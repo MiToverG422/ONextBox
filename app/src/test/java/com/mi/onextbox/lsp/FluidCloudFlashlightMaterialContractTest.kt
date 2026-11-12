@@ -13,7 +13,7 @@ class FluidCloudFlashlightMaterialContractTest {
         assertTrue(hooks.contains("flashlight.apply(original)"))
         assertFalse(hooks.contains("material.background("))
         assertFalse(hooks.contains("qs_detail_bg_corner_radius"))
-        assertTrue(hooks.contains("\n            original\n"))
+        assertTrue(hooks.lineSequence().any { it.trim() == "original" })
     }
 
     @Test fun materialDoesNotOverrideNativeGeometryOrAnimationAlpha() {

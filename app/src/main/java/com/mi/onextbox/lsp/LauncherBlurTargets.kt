@@ -44,28 +44,37 @@ internal object LauncherBlurTargets {
             matcher { usingStrings("Fail to getGaussianLevel, "); paramTypes(Context::class.java.name); returnType = "int" }
         }.single()
         val platform = gaussian.className
-        val dynamicFlag = dex.booleanMethod(FEATURES, "isSupportDynamicBlur")
-        val dynamic = dynamicFlag.callers.single {
+        val dynamicFlag = dex.findMethod {
+            matcher { declaredClass = FEATURES; name = "isSupportDynamicBlur"; paramTypes(); returnType = "boolean" }
+        }.singleOrNull()
+        val dynamic = dynamicFlag?.callers?.single {
             it.className == platform && it.returnTypeName == "boolean" && it.paramTypeNames == listOf(Context::class.java.name)
-        }
+        } ?: dex.findMethod {
+            matcher { declaredClass = platform; paramTypes(Context::class.java.name); returnType = "boolean" }
+        }.single { method -> method.invokes.any { it.name == "access\$getMSysAnimBlurSwitchEnable\$cp" } }
         val unavailable = dex.findMethod {
             matcher { declaredClass = "com.android.launcher3.popup.PopupBlurView"; name = "<init>" }
         }.flatMap { it.invokes }.distinctBy { it.descriptor }.single {
             it.className == platform && it.returnTypeName == "boolean" && it.paramTypeNames == listOf(Context::class.java.name)
         }
-        val levelEnabled = dex.booleanMethod(FEATURES, "isAnimationLevelDisable").callers.single {
-            it.className == platform && it.returnTypeName == "boolean" && it.paramCount == 0
-        }
+        val levelEnabled = dex.findMethod {
+            matcher { declaredClass = FEATURES; name = "isAnimationLevelDisable"; paramTypes(); returnType = "boolean" }
+        }.singleOrNull()?.callers?.single { it.className == platform && it.returnTypeName == "boolean" && it.paramCount == 0 }
         val support = dynamic.invokes.distinctBy { it.descriptor }.single {
             it.className == platform && it.returnTypeName == "boolean" && it.paramCount == 0 &&
-                it.descriptor != levelEnabled.descriptor
+                it.descriptor != levelEnabled?.descriptor && (levelEnabled != null || it.invokes.any { nested ->
+                    nested.className == platform && nested.paramTypeNames == listOf("int") && nested.returnTypeName == "boolean"
+                })
         }
         val tier = dex.findMethod {
             matcher { declaredClass = platform; paramTypes("int"); returnType = "boolean" }
         }.single()
         val queries = listOf("isMaterialBlurJumpSupported", "isSupportDrawerBlur", "isSupportDrawerBtnBlur")
-            .map { dex.booleanMethod(BLUR, it) }
-        val flags = linkedMapOf(dynamicFlag to true)
+            .mapNotNull { name -> dex.findMethod {
+                matcher { declaredClass = BLUR; this.name = name; paramTypes(); returnType = "boolean" }
+            }.singleOrNull() }
+        val flags = linkedMapOf<MethodData, Boolean>()
+        if (dynamicFlag != null) flags[dynamicFlag] = true
         listOf("getAllowLauncherBlur" to true,
             "isAllAppsDisableBlur" to false, "isRecentsDisableBlur" to false,
             "isSpringLoadedDisableBlur" to false, "isStartAppDisableBlur" to false,
@@ -94,11 +103,12 @@ internal object LauncherBlurTargets {
         val tier = builder.invokes.distinctBy { it.descriptor }.single {
             it.returnTypeName == "boolean" && it.paramTypeNames == listOf(LEVEL)
         }
+        val materialOwners = builder.invokes.map { it.className }.filter { it.startsWith("com.coui.appcompat.") }.toSet() + MATERIAL
         val readLevel = dex.findMethod {
-            matcher { declaredClass = MATERIAL; usingStrings("getAnimLevelVersion e: "); paramTypes(); returnType = "int" }
-        }.single()
+            matcher { usingStrings("getAnimLevelVersion e: "); paramTypes(); returnType = "int" }
+        }.single { it.className in materialOwners }
         val materialTier = readLevel.callers.single {
-            it.className == MATERIAL && it.returnTypeName == "boolean" && it.paramCount == 0
+            it.className == readLevel.className && it.returnTypeName == "boolean" && it.paramCount == 0
         }
         require(Modifier.isStatic(tier.modifiers) && Modifier.isStatic(materialTier.modifiers))
         return Menu(builder.getMethodInstance(loader).apply { isAccessible = true },
@@ -106,10 +116,6 @@ internal object LauncherBlurTargets {
             materialTier.getMethodInstance(loader).apply { isAccessible = true },
             callers(listOf(builder, tier, materialTier), loader))
     }
-
-    private fun DexKitBridge.booleanMethod(type: String, method: String): MethodData = findMethod {
-        matcher { declaredClass = type; name = method; paramTypes(); returnType = "boolean" }
-    }.single()
 
     private fun callers(targets: List<MethodData>, loader: ClassLoader): List<Executable> {
         // ART may have inlined both a tier check and its small wrapper. Deoptimize

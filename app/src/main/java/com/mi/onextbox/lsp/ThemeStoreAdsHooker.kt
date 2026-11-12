@@ -67,20 +67,24 @@ internal object ThemeStoreAdsHooker {
         val splash = ModernReflect.findClass("com.oppo.cdo.card.theme.dto.SplashDto", loader)
         val handlerField = manager.declaredFields.single { it.type == Handler::class.java }.apply { isAccessible = true }
         val callbackField = manager.declaredFields.single { it.type == callback }.apply { isAccessible = true }
-        val showEmpty = manager.getDeclaredMethod("J", splash).apply { isAccessible = true }
+        val legacyEmpty = manager.declaredMethods.singleOrNull {
+            it.name == "J" && it.parameterTypes.contentEquals(arrayOf(splash))
+        }
+        val showEmpty = (legacyEmpty ?: manager.getDeclaredMethod("I", splash)).apply { isAccessible = true }
         // Reuse the application's lifecycle Runnable and message dispatcher. No module
         // callback is retained by its Handler, and completion stays on the host thread.
-        val lifecycleTask = ModernReflect.findClass("com.nearme.themespace.ad.l\$c", loader)
-            .getDeclaredConstructor(manager, activity).apply { isAccessible = true }
+        val lifecycleTask = manager.declaredClasses.filter { Runnable::class.java.isAssignableFrom(it) }
+            .flatMap { it.declaredConstructors.toList() }
+            .single { it.parameterTypes.contentEquals(arrayOf(manager, activity)) }.apply { isAccessible = true }
         val request = manager.getDeclaredMethod("a", activity, Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
-        val show = manager.getDeclaredMethod("I", splash)
+        val show = manager.getDeclaredMethod(if (legacyEmpty == null) "H" else "I", splash)
         install(show) { param ->
             val host = param.thisObject ?: return@install
             val handler = handlerField.get(host) as? Handler ?: return@install
             if (callbackField.get(host) == null) return@install
             if (Looper.myLooper() == handler.looper) {
                 handler.removeMessages(4)
-                // J(null) is the native no-ad branch: finish tracking and notify the
+                // A null DTO takes the native no-ad branch: finish tracking and notify the
                 // splash owner, rather than merely suppressing the view or its timer.
                 showEmpty.invoke(host, null)
             } else if (!handler.sendEmptyMessage(4)) {

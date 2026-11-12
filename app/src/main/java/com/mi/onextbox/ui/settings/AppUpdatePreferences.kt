@@ -9,7 +9,7 @@ enum class UpdateBuildType {
 }
 
 object AppUpdatePreferences {
-    const val BETA_PLAN_AVAILABLE = false
+    const val BETA_PLAN_AVAILABLE = true
     private const val PREFS_NAME = "onextbox_prefs"
     private const val KEY_BETA_PLAN = "update_beta_plan"
     private const val KEY_FEATURE_UPDATES_SEEN = "feature_updates_seen"

@@ -59,11 +59,11 @@ internal class LauncherMemoryTargets(val values: Array<*>) {
                     .filter { it.typeName == "boolean" && !Modifier.isStatic(it.modifiers) }
                 val allowed = booleanFields.single { Modifier.isFinal(it.modifiers) }
                 val detail = booleanFields.single { !Modifier.isFinal(it.modifiers) }
-                fun getter(field: FieldData): MethodData = field.readers.single {
+                fun getter(field: FieldData): MethodData? = field.readers.singleOrNull {
                     it.className == init.className && it.returnTypeName == "boolean" &&
                         it.paramTypeNames.isEmpty() && !Modifier.isStatic(it.modifiers)
                 }
-                val gates = listOf(getter(allowed), getter(detail))
+                val gates = listOfNotNull(getter(allowed), getter(detail))
                 val type = ModernReflect.findClass(init.className, loader)
                 val singleton = type.declaredMethods.single {
                     Modifier.isStatic(it.modifiers) && it.returnType == type &&
@@ -80,21 +80,28 @@ internal class LauncherMemoryTargets(val values: Array<*>) {
                 }
                 val panel = ModernReflect.findClass("com.oplus.quickstep.views.OplusClearAllPanelView", loader)
                 check(View::class.java.isAssignableFrom(panel))
-                val update = gates[1].callers.single {
+                val update = (detail.readers + gates.flatMap { it.callers }).distinctBy { it.descriptor }.singleOrNull {
                     it.className == panel.name && it.returnTypeName == "void" && it.paramTypeNames == listOf("boolean")
+                }?.getMethodInstance(loader) ?: run {
+                    check(type.name == "bh6" && detail.name == "d")
+                    panel.getDeclaredMethod("y", Boolean::class.javaPrimitiveType)
                 }
                 val bind = panel.declaredMethods.single {
-                    Modifier.isStatic(it.modifiers) && it.returnType == Void.TYPE && it.parameterCount == 4 &&
-                        it.parameterTypes.toSet() == setOf(panel, type, format.returnType, Boolean::class.javaPrimitiveType)
+                    val parameters = it.parameterTypes.toSet()
+                    it.returnType == Void.TYPE && if (Modifier.isStatic(it.modifiers)) {
+                        parameters == setOf(panel, type, format.returnType, Boolean::class.javaPrimitiveType) && it.parameterCount == 4
+                    } else {
+                        parameters == setOf(type, format.returnType, Boolean::class.javaPrimitiveType) && it.parameterCount == 3
+                    }
                 }
                 val direct = gates.flatMap { it.callers }
-                val callers = (direct + direct.flatMap { it.callers } + listOf(refresh, update))
+                val callers = (direct + direct.flatMap { it.callers } + refresh)
                     .filter { it.isMethod }.distinctBy { it.descriptor }.map { it.getMethodInstance(loader) }
                 LauncherMemoryTargets(arrayOf(
                     init.getConstructorInstance(loader), refresh.getMethodInstance(loader),
                     allowed.getFieldInstance(loader), detail.getFieldInstance(loader),
                     gates.map { it.getMethodInstance(loader) }.toTypedArray(), singleton, singletonField, format,
-                    update.getMethodInstance(loader), panel.getDeclaredMethod("onFinishInflate"), callers.toTypedArray(), bind,
+                    update, panel.getDeclaredMethod("onFinishInflate"), (callers + update).distinct().toTypedArray(), bind,
                 ))
             }
         }

@@ -261,6 +261,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureCoui : RootRoute
 
     @Serializable
+    data object FeatureSoftLightGlass : RootRoute
+
+    @Serializable
     data object FeatureTools : RootRoute
 
     @Serializable
@@ -551,6 +554,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.EnabledFeatures -> RootRoute.FeatureEnabledFeatures
     FeaturePageMode.Updates -> RootRoute.FeatureUpdates
     FeaturePageMode.Coui -> RootRoute.FeatureCoui
+    FeaturePageMode.SoftLightGlass -> RootRoute.FeatureSoftLightGlass
     FeaturePageMode.Tools -> RootRoute.FeatureTools
     FeaturePageMode.GlobalLocalization -> RootRoute.FeatureGlobalLocalization
     FeaturePageMode.GlobalSpoofing -> RootRoute.FeatureGlobalSpoofing
@@ -1199,6 +1203,7 @@ fun Root(
                     subclass(RootRoute.FeatureEnabledFeatures::class)
                     subclass(RootRoute.FeatureUpdates::class)
                     subclass(RootRoute.FeatureCoui::class)
+                    subclass(RootRoute.FeatureSoftLightGlass::class)
                     subclass(RootRoute.FeatureTools::class)
                     subclass(RootRoute.FeatureGlobalLocalization::class)
                     subclass(RootRoute.FeatureGlobalSpoofing::class)
@@ -2421,6 +2426,9 @@ fun Root(
             }
             entry<RootRoute.FeatureCoui> {
                 featureEntryContent(FeaturePageMode.Coui)
+            }
+            entry<RootRoute.FeatureSoftLightGlass> {
+                featureEntryContent(FeaturePageMode.SoftLightGlass)
             }
             entry<RootRoute.FeatureTools> {
                 featureEntryContent(FeaturePageMode.Tools)
