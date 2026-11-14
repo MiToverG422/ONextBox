@@ -16,9 +16,8 @@ internal object LauncherDockSearch17 {
     private const val TAG = "ONextBox-Launcher"
 
     fun matches(loader: ClassLoader): Boolean = runCatching {
-        val base = loader.loadClass("yt0")
-        loader.loadClass("cu0").getField("c").type == base &&
-            loader.loadClass(PACKAGE + "e").superclass == base && loader.loadClass(PACKAGE + "c").superclass == base
+        LauncherDockSearchTargets(loader)
+        true
     }.getOrDefault(false)
 
     private fun hook(method: Method, before: Boolean = false, body: (ModernMethodHook.MethodHookParam) -> Unit) {
@@ -35,31 +34,33 @@ internal object LauncherDockSearch17 {
 
     fun install(loader: ClassLoader, mode: Int) {
         val international = mode == LspConfig.LAUNCHER_SEARCH_BAR_MODE_INTERNATIONAL
-        val manager = loader.loadClass("cu0")
-        val proxy = manager.getField("c")
-        val selected = loader.loadClass(PACKAGE + if (international) "e" else "c")
-        val support = selected.getDeclaredMethod("c", Context::class.java)
-        val utils = loader.loadClass(PACKAGE + "a")
+        val targets = LauncherDockSearchTargets(loader)
+        val manager = targets.manager
+        val proxy = targets.proxy
+        val selected = if (international) targets.export else targets.domestic
+        val support = targets.support(selected)
+        val utils = targets.utils
         val init = loader.loadClass("com.android.common.util.LauncherSharedPrefs")
             .getDeclaredMethod("initOtaVersionUpdate", Context::class.java)
-        val region = loader.loadClass("rp3").getField("N")
+        val region = targets.region
         fun selectProxy(context: Context) {
             if (selected.isInstance(proxy.get(null))) return
             val instance = allocate(selected)
-            val mutex = loader.loadClass("kotlinx.coroutines.sync.a").getDeclaredConstructor().newInstance()
+            val mutexField = targets.mutex(selected)
+            val mutex = mutexField.type.getDeclaredConstructor().newInstance()
+            mutexField.set(instance, mutex)
             if (international) {
-                selected.getField("q").set(instance, mutex)
-                selected.getField("r").setInt(instance, -1)
+                targets.cached(true).setInt(instance, -1)
                 selected.getField("s").set(instance, selected.getField("w").get(null))
                 selected.getField("u").set(instance, "ExportBottomSearch")
                 val key = "selected_search_engine_aga"
                 Reflect.callMethod(selected.getField("v").get(null), "i", Settings.Secure.getString(context.contentResolver, key))
                 context.contentResolver.registerContentObserver(Settings.Secure.getUriFor(key), true,
-                    selected.getField("D").get(null) as ContentObserver)
+                    targets.exportObserver().get(null) as ContentObserver)
             } else {
-                selected.getField("r").set(instance, mutex)
-                selected.getField("s").set(instance, loader.loadClass("wf1").getDeclaredConstructor().newInstance())
-                selected.getField("t").setInt(instance, -1)
+                val interpolator = targets.domesticInterpolator()
+                interpolator.set(instance, interpolator.type.getDeclaredConstructor().newInstance())
+                targets.cached(false).setInt(instance, -1)
             }
             proxy.set(null, instance)
         }
@@ -72,8 +73,8 @@ internal object LauncherDockSearch17 {
             HookLog.i(TAG, "Dock search mode=$mode, active=" + proxy.get(null)?.javaClass?.name)
         }
         if (international) {
-            val probe = selected.getDeclaredMethod("t", Context::class.java)
-            val cached = selected.getField("r")
+            val probe = targets.exportProbe
+            val cached = targets.cached(true)
             hook(support, before = true) { param ->
                 val context = param.args[0] as? Context ?: return@hook
                 if (cached.getInt(param.thisObject) == -1) probe.invoke(param.thisObject, context)
@@ -84,7 +85,7 @@ internal object LauncherDockSearch17 {
                 param.result = support.invoke(impl, param.args[0]) == true &&
                     Reflect.callStaticMethod(utils, "n", param.args[0]) == true
             }
-            hook(utils.getDeclaredMethod("q", Context::class.java, Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)) { param ->
+            hook(targets.saveSwitch) { param ->
                 if (param.args[2] == true && !region.getBoolean(null)) {
                     val launcher = Reflect.callStaticMethod(loader.loadClass("com.android.launcher3.taskbar.TaskbarUtils"), "getOplusLauncher")
                     val impl = proxy.get(null)
@@ -92,8 +93,8 @@ internal object LauncherDockSearch17 {
                 }
             }
         } else {
-            val providerSupported = selected.getDeclaredMethod("p", Context::class.java)
-            val cached = selected.getField("t")
+            val providerSupported = targets.domesticProbe
+            val cached = targets.cached(false)
             hook(support, before = true) { param ->
                 val context = param.args[0] as? Context ?: loader.loadClass("com.android.common.LauncherApplication")
                     .getField("q").get(null) as? Context ?: return@hook
@@ -104,16 +105,15 @@ internal object LauncherDockSearch17 {
             // Dispatch the launcher's own job; it owns the switch, widget host and removal.
             val baseLauncher = loader.loadClass("com.android.launcher3.Launcher")
             val job = loader.loadClass(PACKAGE + "DomesticBottomSearch\$addOrDeleteBottomSearchWidget\$2")
-                .getDeclaredConstructor(selected, baseLauncher, Boolean::class.javaPrimitiveType, loader.loadClass("dg2"))
+                .declaredConstructors.single { it.parameterCount == 4 &&
+                    it.parameterTypes.take(3) == listOf(selected, baseLauncher, java.lang.Boolean.TYPE) }
                 .apply { isAccessible = true }
-            val scope = loader.loadClass("androidx.lifecycle.b").getDeclaredMethod("a", loader.loadClass("tx5"))
-            val dispatch = loader.loadClass("n92").getDeclaredMethod("E", loader.loadClass("ih2"),
-                loader.loadClass("vg2"), loader.loadClass("kotlinx.coroutines.CoroutineStart"),
-                loader.loadClass("kotlin.jvm.functions.Function2"), Int::class.javaPrimitiveType)
+            val scope = targets.coroutineScope
+            val dispatch = targets.dispatch
             hook(selected.getDeclaredMethod("d", launcher), before = true) { param ->
                 param.result = support.invoke(param.thisObject, param.args[0])
             }
-            hook(selected.getDeclaredMethod("h", baseLauncher, Boolean::class.javaPrimitiveType), before = true) { param ->
+            hook(targets.domesticSchedule, before = true) { param ->
                 val activity = param.args[0] as Context
                 if (param.args[1] == true || support.invoke(param.thisObject, activity) == true) {
                     val lifecycle = Reflect.callMethod(activity, "getLifecycle")
@@ -123,36 +123,44 @@ internal object LauncherDockSearch17 {
                 param.result = null
             }
         }
-        installSettings(loader, international)
+        runCatching { installSettings(loader, international, targets) }
+            .onFailure { HookLog.w(TAG, "Native search settings adapter unavailable", it) }
     }
 
-    private fun installSettings(loader: ClassLoader, international: Boolean) {
+    private fun installSettings(loader: ClassLoader, international: Boolean, targets: LauncherDockSearchTargets) {
         val fragment = loader.loadClass("com.android.launcher.settings.c")
         val category = fragment.getField("K")
         val domestic = fragment.getField("C")
         val global = fragment.getField("D")
-        val nativeListener = if (international) loader.loadClass("vq5") else null
+        val nativeListener = if (international) targets.nativeListener else null
+        val retained = java.util.WeakHashMap<Any, Boolean>()
         fun update(owner: Any) {
             val group = category.get(owner) ?: return
             val entry = (if (international) global else domestic).get(owner) ?: return
+            retained[entry] = true
             val other = (if (international) domestic else global).get(owner)
             if (other != null && Reflect.callMethod(other, "getParent") === group) Reflect.callMethod(group, "j", other)
             if (Reflect.callMethod(entry, "getParent") !== group) Reflect.callMethod(group, "g", entry)
             if (nativeListener != null && Reflect.callMethod(entry, "getOnPreferenceClickListener") == null) {
                 val listener = allocate(nativeListener)
-                nativeListener.getField("c").set(listener, owner)
+                nativeListener.declaredFields.single {
+                    !java.lang.reflect.Modifier.isStatic(it.modifiers) && (it.type == fragment || it.type == Any::class.java)
+                }.apply { isAccessible = true }.set(listener, owner)
                 Reflect.callMethod(entry, "setOnPreferenceClickListener", listener)
             }
         }
         for (method in listOf("onCreatePreferences", "onResume")) {
             hook(fragment.getDeclaredMethod(method)) { param -> param.thisObject?.let(::update) }
         }
-        // The native layout compatibility callback can change the entries after onResume.
-        val task = loader.loadClass("b02")
-        val taskOwner = task.getField("r")
-        hook(task.getDeclaredMethod("run")) { param ->
-            val owner = taskOwner.get(param.thisObject)
-            if (owner != null && fragment.isInstance(owner)) update(owner)
+        // Layout compatibility callbacks can remove the entry after onResume.
+        val group = category.type
+        val preference = loader.loadClass("androidx.preference.Preference")
+        val remove = group.methods.single {
+            it.name in setOf("removePreference", "j") && it.returnType == java.lang.Boolean.TYPE &&
+                it.parameterTypes.contentEquals(arrayOf(preference))
+        }
+        hook(remove, before = true) { param ->
+            if (retained[param.args[0]] == true) param.result = false
         }
     }
 }

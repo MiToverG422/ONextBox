@@ -30,7 +30,13 @@ internal object HideRecentAppsHooker {
                 capture = replay::capture, replay = { replay.restore(it) })
             replay.restore(null, ModernHotReloadSession.current?.previousTargets.orEmpty())
             if (base.name == "com.android.quickstep.g") {
-                ModernReflect.findClassIfExists("pn7", loader)?.takeIf { it.superclass == base }?.let(replay::discover)
+                runCatching {
+                    LauncherDexResolver.type(loader, "recent-task-list") { dex ->
+                        dex.findMethod { matcher { paramTypes("java.util.ArrayList"); returnType = "java.util.ArrayList" } }
+                            .filter { Class.forName(it.className, false, loader).superclass == base }
+                            .map { it.className }.distinct().single()
+                    }.let(replay::discover)
+                }.onFailure { HookLog.w(TAG, "Recent-task subclass discovery deferred to construction", it) }
             }
             // The concrete ColorOS subclass is obfuscated; discover it from construction.
             base.declaredConstructors.forEach { constructor ->

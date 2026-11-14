@@ -161,6 +161,7 @@ internal object SharedFeatureDefinitions {
         retainLockscreenNotifications,
         hideScreenshotFloating,
         galleryAiRetouch,
+        *com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.entries.map(::systemCustomizationDefinition).toTypedArray(),
         nativeLiveUpdate,
         translationFloating,
         translationBlacklist,

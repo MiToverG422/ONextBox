@@ -4,6 +4,7 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Camera
 import android.graphics.Color
@@ -12,6 +13,7 @@ import android.graphics.Matrix
 import android.graphics.Path
 import android.graphics.RectF
 import android.view.View
+import android.view.WindowInsets
 import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import kotlin.math.roundToLong
@@ -42,14 +44,14 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
     private var pulse = 0f
     private var motion: ValueAnimator? = null
     private var scan: ValueAnimator? = null
-    private val density = resources.displayMetrics.density
-    private val pluginResources = runCatching {
+    private val density get() = resources.displayMetrics.density
+    private var pluginResources = loadPluginResources()
+    private fun loadPluginResources() = runCatching {
         context.createPackageContext("com.oplus.systemui.plugins", 0).resources
     }.getOrNull()
-    private val nativeIconInset by lazy {
-        dimension("capsule_padding_start_end", 5f) + dimension("capsule_icon_size", 20f) / 2f
-    }
+    private val nativeIconInset get() = dimension("capsule_padding_start_end", 5f) + dimension("capsule_icon_size", 20f) / 2f
     private var compactLayout: FaceAuthCapsuleNativeLayout? = null
+    private var hasNativeLayout = false
     private var placement: FaceAuthCapsuleLayout? = null
     private var reservedBounds: FaceAuthCapsuleBounds? = null
     var nativeLayout: (() -> FaceAuthCapsuleNativeLayout?)? = null
@@ -69,9 +71,13 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
     }
 
     fun show(next: FaceAuthCapsuleState.Phase) {
-        if (requested == next) return
+        if (requested == next) {
+            // The native plugin may finish laying out after the idle lock's first frame.
+            if (next != FaceAuthCapsuleState.Phase.Hidden) invalidate()
+            return
+        }
         if (requested == FaceAuthCapsuleState.Phase.Hidden && next != FaceAuthCapsuleState.Phase.Hidden) {
-            compactLayout = null; placement = null; reservedBounds = null
+            resetPosition()
         }
         requested = next
         removeCallbacks(staticSuccessFinished)
@@ -82,6 +88,7 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
             FaceAuthCapsuleState.Phase.Success -> {
                 // Lock-screen content can settle while the idle lock is visible.
                 placement = null
+                hasNativeLayout = false
                 val initialOpacity = opacity
                 motion = ValueAnimator.ofFloat(0f, 1f).apply {
                     duration = FaceAuthCapsuleMotion.SUCCESS_DURATION
@@ -166,6 +173,28 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
         finally { canvas.restoreToCount(save) }
     }
 
+    private fun resetPosition() {
+        compactLayout = null; hasNativeLayout = false; placement = null; reservedBounds = null
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        resetPosition()
+    }
+
+    override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
+        resetPosition()
+        invalidate()
+        return super.onApplyWindowInsets(insets)
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        pluginResources = loadPluginResources()
+        resetPosition()
+        invalidate()
+    }
+
     private fun dimension(name: String, fallback: Float): Float {
         val res = pluginResources ?: return fallback * density
         val id = res.getIdentifier(name, "dimen", "com.oplus.systemui.plugins")
@@ -180,35 +209,56 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
                 if (canvas.isHardwareAccelerated) "hardware" else "software")
         }
         val d = density
-        val cutout = rootWindowInsets?.displayCutout?.boundingRects?.firstOrNull { it.top < 8 * d }
+        val insets = rootWindowInsets
+        val cutout = insets?.displayCutout
+        // boundingRectTop may include the empty area above a punch hole. The path gives
+        // the physical camera's vertical center, which is what the OEM aligns against.
+        val cameraPath = RectF()
+        cutout?.cutoutPath?.computeBounds(cameraPath, true)
+        val camera = if (!cameraPath.isEmpty && cameraPath.top >= 0f &&
+            cameraPath.bottom <= maxOf(cutout?.safeInsetTop ?: 0, (80 * d).toInt())) {
+            FaceAuthCapsuleBounds(cameraPath.left, cameraPath.top, cameraPath.right, cameraPath.bottom)
+        } else cutout?.boundingRectTop?.takeUnless { it.isEmpty }?.let {
+            FaceAuthCapsuleBounds(it.left.toFloat(), it.top.toFloat(), it.right.toFloat(), it.bottom.toFloat())
+        }
         val barId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        val statusHeight = if (barId != 0) resources.getDimension(barId) else 36f * d
-        val native = compactLayout ?: nativeLayout?.invoke()
-        val compactHeight = native?.height ?: maxOf(
+        val statusHeight = maxOf(if (barId != 0) resources.getDimension(barId) else 36f * d,
+            (insets?.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars())?.top ?: 0).toFloat())
+        val position = IntArray(2).also(::getLocationOnScreen)
+        val transitioning = requested == FaceAuthCapsuleState.Phase.Success || requested == FaceAuthCapsuleState.Phase.Hidden
+        val native = if (hasNativeLayout && transitioning) null else nativeLayout?.invoke()
+            ?.offset(-position[0].toFloat(), -position[1].toFloat())
+            ?.takeIf { it.top >= 0f && it.top + it.height <= height }
+        val resolved = native ?: compactLayout ?: FaceAuthCapsulePosition.fallback(
+            width.toFloat(), statusHeight,
             dimension(if (statusHeight > dimension("status_bar_height_slop", 32f))
                 "capsule_layout_max_height" else "capsule_layout_max_height_small", 30f),
-            (cutout?.let { minOf(it.width(), it.height()).toFloat() } ?: dimension("default_hole_width", 20f)) +
-                dimension("capsule_hole_safe_height_gap", 4f),
-        ).coerceAtMost(maxOf(statusHeight - 3f, 24f * d))
-        val top = native?.top ?: maxOf(3f, (statusHeight - compactHeight) / 2f)
-        val cx = native?.centerX ?: cutout?.exactCenterX() ?: width / 2f
-        val compactWidth = native?.minWidth ?: dimension("capsule_view_min_width", 100f)
-        val compactRadius = minOf(native?.radius ?: dimension("capsule_corner_radius", 20f), compactHeight / 2f)
-        val hole = native?.hole ?: run {
+            dimension("capsule_view_min_width", 100f), dimension("capsule_corner_radius", 20f), camera,
+            dimension("default_hole_width", 20f), dimension("capsule_hole_safe_height_gap", 4f),
+        )
+        if (native != null) hasNativeLayout = true
+        if (compactLayout != resolved) {
+            compactLayout = resolved; placement = null; reservedBounds = null
+        }
+        val compactHeight = resolved.height
+        val top = resolved.top
+        val cx = resolved.centerX ?: width / 2f
+        val compactWidth = resolved.minWidth
+        val compactRadius = minOf(resolved.radius, compactHeight / 2f)
+        val hole = resolved.hole ?: run {
             val size = dimension("capsule_appear_init_width_height", 20f)
-            val centerY = cutout?.exactCenterY()?.takeIf { it in size / 2f..statusHeight } ?: top + compactHeight / 2f
+            val centerY = top + compactHeight / 2f
             FaceAuthCapsuleBounds(cx - size / 2, centerY - size / 2, cx + size / 2, centerY + size / 2)
         }
-        if (compactLayout == null) {
-            compactLayout = FaceAuthCapsuleNativeLayout(top, compactHeight, compactWidth, compactRadius, cx, hole)
-        }
         val layout = placement ?: FaceAuthCapsuleLayout.resolve(
-            top, compactHeight, d, protectedContentTop?.invoke(), height.toFloat(),
+            top, compactHeight, d, protectedContentTop?.invoke()?.minus(position[1]), height.toFloat(),
         ).also { placement = it }
         if (reservedBounds == null) {
             val half = (compactWidth + 32f * d) * 1.025f / 2f
             val reserved = FaceAuthCapsuleBounds(cx - half, 0f, cx + half, maxOf(statusHeight, top + layout.expandedHeight))
-            check(reserveIcons?.invoke(reserved) != false) { "Native capsule icon avoidance is not ready" }
+            check(reserveIcons?.invoke(reserved.offset(position[0].toFloat(), position[1].toFloat())) != false) {
+                "Native capsule icon avoidance is not ready"
+            }
             reservedBounds = reserved
         }
         val w = (compactWidth + 32f * d * expansion) * shapeStretch
@@ -273,15 +323,10 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
         scan?.cancel(); scan = null
         requested = FaceAuthCapsuleState.Phase.Hidden
         opacity = 0f; expansion = 0f; retraction = 0f; unlock = 0f
-        compactLayout = null; placement = null; reservedBounds = null
+        resetPosition()
         nativeLayout = null; protectedContentTop = null; reserveIcons = null; onRenderFailure = null
         visibility = INVISIBLE
     }
 
     override fun onDetachedFromWindow() { dispose(); super.onDetachedFromWindow() }
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        compactLayout = null; placement = null; reservedBounds = null
-    }
 }

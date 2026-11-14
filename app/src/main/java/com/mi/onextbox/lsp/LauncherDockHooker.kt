@@ -22,9 +22,7 @@ internal object LauncherDockHooker {
             val setBackground = hotseat.getDeclaredMethod("setDockerBackground").apply { isAccessible = true }
             val background = if (c16) null else hotseat.getDeclaredField("mDockerBackgroundDrawable").apply { isAccessible = true }
             val shortcuts = if (c16) hotseat.getMethod("getShortcutsAndWidgets") else null
-            val largeDisplay = ModernReflect.findClassIfExists("com.android.common.util.ScreenUtils", loader)
-                ?.getDeclaredMethod("hasLargeDisplayFeatures")
-                ?: ModernReflect.findClass("wn9", loader).getDeclaredMethod("d")
+            val largeDisplay = LauncherDynamicTargets.largeDisplay(loader)
             require(largeDisplay.returnType == Boolean::class.javaPrimitiveType &&
                 java.lang.reflect.Modifier.isStatic(largeDisplay.modifiers))
             val blurProperties = ModernReflect.findClass("com.android.launcher3.uioverrides.states.blurdrawable.OplusBlurProperties", loader)

@@ -16,6 +16,11 @@ internal object ColorOs16AppHooks {
             "com.android.phone" -> {
                 MobileNetworkHooker.hook(loader, colorOs16 = true)
                 NetworkIdentityHooker.hook(loader, processName)
+                EuiccProfileLimitHooker.hookPhone(loader, apkPath)
+            }
+            "com.oplus.euicc" -> {
+                EuiccRegionRestrictionHooker.hook(loader, apkPath)
+                EuiccDiagnosticsHooker.hook(loader, apkPath = apkPath)
             }
             "com.heytap.market" -> AppMarketHooker.hook(loader)
             TrafficManagementRules.PACKAGE_NAME -> TrafficManagementHooker.hook(loader, apkPath, colorOs16 = true)

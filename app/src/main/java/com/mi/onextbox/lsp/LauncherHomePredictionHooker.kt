@@ -23,19 +23,45 @@ internal object LauncherHomePredictionHooker {
             .onFailure { HookLog.w(TAG, "Launcher predictive preview unavailable; native animation retained", it) }
     }
 
-    private fun install(loader: ClassLoader) {
+    internal data class Playback(val type: Class<*>, val inlined: Boolean, val resolvedUpdate: Method?,
+        val animator: Class<*>, val motion: Class<*>, val begin: Method?, val callback: Class<*>)
+
+    internal fun playback(loader: ClassLoader): Playback {
         val legacy = runCatching { loader.loadClass("com.android.quickstep.LauncherBackAnimationController") }.getOrNull()
         val inlined = legacy == null
-        val type = legacy ?: loader.loadClass("com.android.quickstep.d")
-        val callback = loader.loadClass(if (inlined) "rj5" else "com.android.quickstep.o3")
-        val animator = loader.loadClass(if (inlined) "jk5" else "com.android.quickstep.i4")
+        val type = legacy ?: LauncherDexResolver.type(loader, "home-controller") { dex ->
+            dex.findMethod {
+                matcher { usingStrings("onBackProgressed touchX to progress: ")
+                    paramTypes("android.window.BackMotionEvent"); returnType = "void" }
+            }.single().className
+        }
+        val resolvedUpdate = if (inlined) LauncherDexResolver.method(loader, "home-progress") { dex ->
+            dex.findMethod {
+                matcher { usingStrings("updateBackProgress, illegal appWindowToHomeMap")
+                    paramTypes("float"); returnType = "void" }
+            }.single()
+        } else null
+        val animator = resolvedUpdate?.declaringClass ?: loader.loadClass("com.android.quickstep.i4")
         val motion = loader.loadClass("android.window.BackMotionEvent")
+        val begin = if (inlined) animator.declaredMethods.single {
+            it.returnType == Void.TYPE && it.parameterCount == 2 && it.parameterTypes[0] == motion
+        } else null
+        val callback = begin?.parameterTypes?.get(1) ?: loader.loadClass("com.android.quickstep.o3")
+        return Playback(type, inlined, resolvedUpdate, animator, motion, begin, callback)
+    }
+
+    private fun install(loader: ClassLoader) {
+        val (type, inlined, resolvedUpdate, animator, motion, begin, callback) = playback(loader)
         val event = if (inlined) motion else loader.loadClass("android.window.BackEvent")
         fun field(owner: Class<*>, name: String) = owner.getDeclaredField(name).apply { isAccessible = true }
         fun controllerField(old: String, current: String) = field(type, if (inlined) current else old)
-        val callbackOwner = field(callback, "a")
-        val listenerField = if (inlined) field(animator, "d") else null
-        val motionField = if (inlined) field(animator, "f") else null
+        val callbackOwner = callback.declaredFields.single {
+            !java.lang.reflect.Modifier.isStatic(it.modifiers) && (it.type == type || it.type == Any::class.java)
+        }.apply { isAccessible = true }
+        val listenerField = if (inlined) animator.declaredFields.single { it.type == callback }
+            .apply { isAccessible = true } else null
+        val motionField = if (inlined) animator.declaredFields.single { it.type == motion }
+            .apply { isAccessible = true } else null
         val bounds = controllerField("c", "r")
         val initialTouch = controllerField("z", "F")
         val current = controllerField("s", "y")
@@ -46,30 +72,33 @@ internal object LauncherHomePredictionHooker {
         val currentRadius = controllerField("d0", "j0")
         val launcherReference = controllerField("w", "C")
         val endRadius = type.getDeclaredMethod(if (inlined) "k" else "v").apply { isAccessible = true }
-        val begin = animator.getDeclaredMethod("b", motion, callback)
-        val update = if (inlined) animator.getDeclaredMethod("d", Float::class.javaPrimitiveType)
+        val start = begin ?: animator.getDeclaredMethod("b", motion, callback)
+        val update = if (inlined) requireNotNull(resolvedUpdate)
             else callback.getDeclaredMethod("a", event)
-        val transform = type.getDeclaredMethod(if (inlined) "a" else "l", RectF::class.java, Float::class.javaPrimitiveType,
-            Rect::class.java, Float::class.javaPrimitiveType, Float::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
+        val transform = type.declaredMethods.single { it.returnType == Void.TYPE &&
+            it.parameterTypes.contentEquals(arrayOf(RectF::class.java, java.lang.Float.TYPE, Rect::class.java,
+                java.lang.Float.TYPE, java.lang.Float.TYPE, java.lang.Boolean.TYPE)) }
         val finish = if (inlined) animator.getDeclaredMethod("c") else type.getDeclaredMethod("s")
         val edge = event.getDeclaredMethod("getSwipeEdge")
         val startEdge = motion.getDeclaredMethod("getSwipeEdge")
         val progress = event.getDeclaredMethod("getProgress")
         val touchY = event.getDeclaredMethod("getTouchY")
-        require(callbackOwner.type == type && bounds.type == Rect::class.java &&
+        require((callbackOwner.type == type || callbackOwner.type == Any::class.java) && bounds.type == Rect::class.java &&
             initialTouch.type == PointF::class.java && current.type == RectF::class.java && crop.type == Rect::class.java)
         require(listOf(sessionProgress, initialRadius, currentRadius).all { it.type == Float::class.javaPrimitiveType })
         require(WeakReference::class.java.isAssignableFrom(launcherReference.type))
         val gestures = WeakHashMap<Any, Boolean>()
         val frame = ThreadLocal<Frame>()
         var logged = false
+        fun owner(listener: Any?): Any? = listener?.takeIf(callback::isInstance)
+            ?.let(callbackOwner::get)?.takeIf(type::isInstance)
 
         fun hook(method: Method, action: (XposedInterface.Chain) -> Any?) {
             ModernHookRegistry.installFast("$KEY:${method.toGenericString()}", method, XposedInterface.Hooker(action))
             runCatching { ModernHookRuntime.requireModule().deoptimize(method) }
         }
         hook(finish) { chain ->
-            val owner = if (inlined) listenerField?.get(chain.thisObject)?.let(callbackOwner::get) else chain.thisObject
+            val owner = if (inlined) owner(listenerField?.get(chain.thisObject)) else chain.thisObject
             try { chain.proceed() } finally { synchronized(gestures) { gestures.remove(owner) } }
         }
         hook(transform) { chain ->
@@ -110,7 +139,7 @@ internal object LauncherHomePredictionHooker {
         }
         hook(update) { chain ->
             val listener = if (inlined) listenerField?.get(chain.thisObject) else chain.thisObject
-            val owner = listener?.let(callbackOwner::get) ?: return@hook chain.proceed()
+            val owner = owner(listener) ?: return@hook chain.proceed()
             if (synchronized(gestures) { gestures[owner] } != true) return@hook chain.proceed()
             val previous = frame.get()
             val sample = (if (inlined) motionField?.get(chain.thisObject) else chain.args[0]) ?: return@hook chain.proceed()
@@ -119,9 +148,9 @@ internal object LauncherHomePredictionHooker {
             try { chain.proceed() }
             finally { if (previous == null) frame.remove() else frame.set(previous) }
         }
-        hook(begin) { chain ->
+        hook(start) { chain ->
             val listener = chain.args.getOrNull(1) ?: return@hook chain.proceed()
-            val owner = callbackOwner.get(listener) ?: return@hook chain.proceed()
+            val owner = owner(listener) ?: return@hook chain.proceed()
             synchronized(gestures) {
                 gestures[owner] = BackGestureSettings.xposed().predictive == 1 && startEdge.invoke(chain.args[0]) in listOf(0, 1)
             }

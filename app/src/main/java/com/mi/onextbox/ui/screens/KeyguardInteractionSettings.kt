@@ -47,6 +47,14 @@ internal fun KeyguardInteractionSettings() {
         mutableStateOf(LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.SwipePinInput))
     }
     var savingSwipePin by remember { mutableStateOf(false) }
+    var shufflePinEnabled by remember {
+        mutableStateOf(LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.ShufflePinKeys))
+    }
+    var savingShufflePin by remember { mutableStateOf(false) }
+    var emergencyHidden by remember {
+        mutableStateOf(LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.HidePasswordEmergency))
+    }
+    var savingEmergency by remember { mutableStateOf(false) }
     DisposableEffect(context, owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -55,6 +63,8 @@ internal fun KeyguardInteractionSettings() {
                 animationEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.FaceTapAnimation)
                 highlightBlocked = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.BlockPasswordHighlight)
                 swipePinEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.SwipePinInput)
+                shufflePinEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.ShufflePinKeys)
+                emergencyHidden = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.HidePasswordEmergency)
             }
         }
         owner.lifecycle.addObserver(observer)
@@ -138,6 +148,35 @@ internal fun KeyguardInteractionSettings() {
 
     SettingsSection(stringResource(R.string.keyguard_password_group))
     FeatureAnimatedGroup {
+        row("shuffle-pin") { above, below ->
+            SettingsToggleRow(
+                title = stringResource(R.string.keyguard_shuffle_pin_title),
+                summary = stringResource(R.string.keyguard_shuffle_pin_summary),
+                checked = shufflePinEnabled,
+                interactionEnabled = !savingShufflePin,
+                onCheckedChange = { checked ->
+                    if (!savingShufflePin) {
+                        savingShufflePin = true
+                        shufflePinEnabled = checked
+                        val pending = com.mi.onextbox.ui.settings.FeatureSettingWriteQueue.application.enqueue {
+                            LspConfig.setKeyguardFeatureEnabled(context, KeyguardFeature.ShufflePinKeys, checked)
+                        }
+                        scope.launch {
+                            try { pending.await() }
+                            catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                            catch (_: Exception) {
+                                android.widget.Toast.makeText(context, R.string.ota_save_failed, android.widget.Toast.LENGTH_LONG).show()
+                            } finally {
+                                shufflePinEnabled = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.ShufflePinKeys)
+                                savingShufflePin = false
+                            }
+                        }
+                    }
+                },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
+        }
         row("swipe-pin") { above, below ->
             SettingsToggleRow(
                 title = stringResource(R.string.keyguard_swipe_pin_title),
@@ -180,6 +219,35 @@ internal fun KeyguardInteractionSettings() {
                                 LspConfig.setKeyguardFeatureEnabled(
                                     context, KeyguardFeature.BlockPasswordHighlight, checked,
                                 )
+                            }
+                        }
+                    }
+                },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
+        }
+        row("hide-password-emergency") { above, below ->
+            SettingsToggleRow(
+                title = stringResource(R.string.keyguard_hide_emergency_title),
+                summary = stringResource(R.string.keyguard_hide_emergency_summary),
+                checked = emergencyHidden,
+                interactionEnabled = !savingEmergency,
+                onCheckedChange = { checked ->
+                    if (!savingEmergency) {
+                        savingEmergency = true
+                        emergencyHidden = checked
+                        val pending = com.mi.onextbox.ui.settings.FeatureSettingWriteQueue.application.enqueue {
+                            LspConfig.setKeyguardFeatureEnabled(context, KeyguardFeature.HidePasswordEmergency, checked)
+                        }
+                        scope.launch {
+                            try { pending.await() }
+                            catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                            catch (_: Exception) {
+                                android.widget.Toast.makeText(context, R.string.ota_save_failed, android.widget.Toast.LENGTH_LONG).show()
+                            } finally {
+                                emergencyHidden = LspConfig.isKeyguardFeatureEnabled(context, KeyguardFeature.HidePasswordEmergency)
+                                savingEmergency = false
                             }
                         }
                     }

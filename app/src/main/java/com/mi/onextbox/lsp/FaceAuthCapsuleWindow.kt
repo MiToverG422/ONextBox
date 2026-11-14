@@ -64,6 +64,14 @@ internal class FaceAuthCapsuleWindow(
             wm.addView(owned, params)
             manager = wm; view = owned
         }
+        view?.let { owned ->
+            val params = owned.layoutParams as? WindowManager.LayoutParams ?: return@let
+            val desiredHeight = (150 * owned.resources.displayMetrics.density).toInt()
+            if (params.height != desiredHeight) {
+                params.height = desiredHeight
+                manager?.updateViewLayout(owned, params)
+            }
+        }
         view?.show(phase)
     }
 

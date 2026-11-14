@@ -55,6 +55,8 @@ private fun ColorOs16SupportedFeatures(mode: FeaturePageMode, onOpen: (FeaturePa
         FeaturePageMode.SystemUiNavigationBar -> { NavigationBarFeaturesPage(); return }
         FeaturePageMode.CorePatch -> { CorePatchPage(); return }
         FeaturePageMode.Installer -> { InstallerPage(); return }
+        FeaturePageMode.Esim -> { EsimFeaturesPage(onOpenSubPage = onOpen); return }
+        FeaturePageMode.EsimDiagnostics -> { EsimDiagnosticsPage(); return }
         // Every current option on these two pages is present in the C16 registry.
         // Keep the native selector/confirmation/tool actions as well as their switches.
         FeaturePageMode.MobileNetwork -> if (colorOs16PageHasAll(mode, colorOs16MobileNetworkTitles)) {

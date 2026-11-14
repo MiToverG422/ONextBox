@@ -5,19 +5,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NotificationClearButtonHookContractTest {
-    @Test fun disabledFreshScopeDoesNotResolveOrInstallHooks() {
+    @Test fun liveSizingRefreshesWhenTheShadeIsOpenedAgain() {
         val text = source("lsp/NotificationClearButtonHooker.kt")
-        val guard = text.indexOf("if (!LspConfig.isRoundNotificationClearButtonEnabledXposed() && saved == null) return")
-        assertTrue(guard >= 0 && guard < text.indexOf("resolve(loader)"))
-        assertTrue(guard < text.indexOf("ModernHookRegistry.installCompat("))
+        assertTrue(text.contains("SystemCustomizationSettings.Feature.NotificationClearSize"))
+        assertTrue(text.contains("\"onHeightUpdated\""))
+        assertTrue(text.contains("\"updateVisibility\""))
     }
 
-    @Test fun onlyClearButtonWidthChangesAndAllNativeBehaviorIsPreserved() {
+    @Test fun onlyClearButtonDimensionsChangeAndAllNativeBehaviorIsPreserved() {
         val text = source("lsp/NotificationClearButtonHooker.kt")
         assertTrue(text.contains("com.oplus.systemui.notification.clearall.ClearAllController"))
         assertTrue(text.contains("com.oplus.systemui.notification.clearall.OplusClearAllButton"))
         assertTrue(text.contains("params.width = desired"))
-        for (mutation in listOf("params.height =", "bottomMargin =", "setPadding(", "setBackground",
+        assertTrue(text.contains("params.height = desiredHeight"))
+        for (mutation in listOf("bottomMargin =", "setBackground",
             "setOnClickListener", "setOnTouchListener", "setOutlineProvider", "setVisibility", "putInt(", "setInt(")) {
             assertTrue("Unexpected mutation: $mutation", !text.contains(mutation))
         }
@@ -36,7 +37,9 @@ class NotificationClearButtonHookContractTest {
         val text = source("lsp/NotificationClearButtonHooker.kt")
         assertTrue(text.contains("WeakHashMap<View, IntArray>()"))
         assertTrue(text.contains("capture = { arrayOf(targets, native.snapshot()) }"))
-        assertTrue(text.contains("detach = { native.restoreAll() }"))
+        assertTrue(text.contains("detach = { native.stop() }"))
+        assertTrue(text.contains("handler.removeCallbacks(refreshTask)"))
+        assertTrue(text.contains("unregisterOnSharedPreferenceChangeListener(listener)"))
         assertTrue(text.contains("native.restoreSnapshot((state as? Array<*>)?.get(1))"))
         assertTrue(text.contains("NotificationClearButtonRules.restoreWidth"))
     }

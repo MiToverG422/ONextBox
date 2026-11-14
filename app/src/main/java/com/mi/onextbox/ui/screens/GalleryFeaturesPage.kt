@@ -39,8 +39,11 @@ internal fun GalleryFeaturesPage() {
         }
     }
     SettingsGroup {
+        SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.GalleryDeleteCountdown,
+            hasDividerBelow = true)
         SettingsToggleRow(title = stringResource(R.string.gallery_ai_retouch_title),
             summary = stringResource(R.string.gallery_ai_retouch_summary), checked = enabled, interactionEnabled = !saving,
+            hasDividerAbove = true,
             onCheckedChange = { next ->
                 if (!saving) {
                     saving = true

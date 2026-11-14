@@ -22,6 +22,7 @@ internal object LauncherFeaturesHooker {
     private const val TAG = "LauncherFeatures"
 
     fun hook(classLoader: ClassLoader, apkPath: String) {
+        LauncherCustomizationHooker.hook(classLoader)
         LauncherGridHooker.hook(classLoader, apkPath)
         LauncherRecentInteractionHooker.hook(classLoader)
         LauncherBlurHooker.hook(classLoader, apkPath)
@@ -207,10 +208,9 @@ internal object LauncherFeaturesHooker {
         val itemBitmap = item.getDeclaredField("bitmap")
         val getIcon = bubble.getDeclaredMethod("getIcon")
         val badges = LauncherBadgeState()
-        val setWorkFlag = (if (c16) listOf("com.oplus.fancyicon.fancydrawable.IconFancyDrawable") else listOf("xl.c", "bo4"))
-            .firstNotNullOf { name -> runCatching {
-                loader.loadClass(name).getDeclaredMethod("setWorkFlag", Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType)
-            }.getOrNull() }
+        val setWorkFlag = if (c16) loader.loadClass("com.oplus.fancyicon.fancydrawable.IconFancyDrawable")
+            .getDeclaredMethod("setWorkFlag", Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+        else LauncherDynamicTargets.workFlag(loader)
         val fancy = setWorkFlag.declaringClass
         val resetBadgeState = oplusBubble.declaredMethods.single { it.name == "resetBadgeState" &&
             (it.parameterCount == 0 || it.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType))) }

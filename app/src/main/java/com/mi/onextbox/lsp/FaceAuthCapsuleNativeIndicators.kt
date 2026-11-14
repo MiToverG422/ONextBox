@@ -81,34 +81,15 @@ internal class FaceAuthCapsuleNativeIndicators(
         var source = capsule.get()?.takeIf { it.isAttachedToWindow }
         val now = SystemClock.uptimeMillis()
         if (source == null && now >= nextCapsuleSearch) {
-            nextCapsuleSearch = now + 1000L
-            source = root.get()?.rootView?.let(::findCapsule)
+            nextCapsuleSearch = now + 250L
+            source = root.get()?.rootView?.let { host ->
+                val id = host.resources.getIdentifier("keyguard_seeding_card_container", "id", "com.android.systemui")
+                val keyguard = if (id != 0) host.findViewById<View>(id) else null
+                keyguard?.let(::findCapsule) ?: findCapsule(host)
+            }
             capsule = WeakReference(source)
         }
-        val view = source ?: return null
-        val height = (Reflect.callMethod(view, "getMaxHeight") as? Int)?.toFloat() ?: return null
-        if (height <= 0f || view.height < height || !view.isLaidOut) return null
-        val location = IntArray(2)
-        view.getLocationOnScreen(location)
-        val top = location[1] + (view.height - height) / 2f
-        val res = view.resources
-        val pkg = "com.oplus.systemui.plugins"
-        val statusHeight = res.getIdentifier("status_bar_height", "dimen", "android")
-            .takeIf { it != 0 }?.let(res::getDimension) ?: return null
-        if (top < 0 || top + height > statusHeight + 1f) return null
-        val minWidth = res.getDimension(res.getIdentifier("capsule_view_min_width", "dimen", pkg))
-        val radius = res.getDimension(res.getIdentifier("capsule_corner_radius", "dimen", pkg))
-        val centerX = location[0] + view.width / 2f
-        val hole = runCatching {
-            val blankWidth = (Reflect.callMethod(view, "getBlankWidth") as? Int)?.toFloat() ?: return@runCatching null
-            val pair = Reflect.callMethod(view, "g", height.toInt()) ?: return@runCatching null
-            val holeTop = (Reflect.callMethod(pair, "getFirst") as? Int)?.toFloat() ?: return@runCatching null
-            val holeBottom = (Reflect.callMethod(pair, "getSecond") as? Int)?.toFloat() ?: return@runCatching null
-            if (blankWidth <= 0 || holeBottom <= holeTop || blankWidth > minWidth) return@runCatching null
-            FaceAuthCapsuleBounds(centerX - blankWidth / 2, location[1] + holeTop,
-                centerX + blankWidth / 2, location[1] + holeBottom)
-        }.getOrNull()
-        FaceAuthCapsuleNativeLayout(top, height, minWidth, radius, centerX, hole)
+        source?.takeIf { it.isAttachedToWindow }?.let(FaceAuthCapsuleNativePosition::read)
     }.getOrNull()
 
     private fun findCapsule(view: View): View? {

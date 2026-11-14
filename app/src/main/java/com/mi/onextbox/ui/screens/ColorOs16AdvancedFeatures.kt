@@ -24,6 +24,13 @@ internal fun ColorOs16AdvancedFeatureGroups(mode: FeaturePageMode, onOpen: (Feat
     val supported = ColorOs16FeatureRegistry.titlesForPage(mode)
     val handled = mutableSetOf<Int>()
     when (mode) {
+        FeaturePageMode.SystemUiNative -> {
+            if (R.string.feature_aosp_volume_title in supported) {
+                SettingsGroup { AospVolumeSettingsRow() }
+                handled += setOf(R.string.feature_aosp_volume_title, R.string.feature_aosp_volume_scale,
+                    R.string.feature_aosp_volume_hide_in_qs)
+            }
+        }
         FeaturePageMode.DesktopLayout -> {
             if (R.string.launcher_custom_grid_title in supported) {
                 SettingsGroup { LauncherGridSettingsGroup() }

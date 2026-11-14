@@ -109,6 +109,7 @@ internal class SoftLightPanelPass(
 
     fun installSources(loader: ClassLoader) {
         if (packageName != "com.android.systemui") return
+        val qsProgressShape = QsSliderProgressShape()
         val volume = ModernReflect.findClassIfExists("com.oplus.systemui.volume.utils.material.VolumeSurfaceFactory", loader)
         val create = volume?.declaredMethods?.singleOrNull { it.name == "createContent" && it.parameterCount == 1 && Drawable::class.java.isAssignableFrom(it.returnType) }
         if (create != null) {
@@ -169,13 +170,17 @@ internal class SoftLightPanelPass(
                     val config = proxy?.let { ModernReflect.callMethod(it, "getBlurConfig") }
                     val radius = config?.let { ModernReflect.callMethod(it, "getCornerRadius") as? Float }
                     if (radius != null) {
-                        val bounds = drawable.bounds
-                        progressPaint.color = android.graphics.Color.WHITE
-                        progressPaint.alpha = drawable.alpha
-                        (chain.getArg(0) as Canvas).drawRoundRect(bounds.left.toFloat(), bounds.top.toFloat(),
-                            bounds.right.toFloat(), bounds.bottom.toFloat(), radius, radius, progressPaint)
-                        report("solid white control progress")
-                        return@Hooker null
+                        val path = runCatching {
+                            val weight = ModernReflect.callMethod(config, "getRadiusWeight") as? Float
+                            qsProgressShape.path(drawable, radius, weight)
+                        }.onFailure { report("native control progress shape unavailable: ${it.javaClass.simpleName}") }.getOrNull()
+                        if (path != null) {
+                            progressPaint.color = android.graphics.Color.WHITE
+                            progressPaint.alpha = drawable.alpha
+                            (chain.getArg(0) as Canvas).drawPath(path, progressPaint)
+                            report("solid white control progress")
+                            return@Hooker null
+                        }
                     }
                 }
                 if (selected == VOLUME_PROGRESS && skipWhiteVolume() && placeholder != null) {

@@ -1,6 +1,7 @@
 package com.mi.onextbox.lsp
 
 import android.animation.ValueAnimator
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -12,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.PathInterpolator
 import android.widget.TextView
+import android.widget.FrameLayout
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
@@ -263,6 +265,69 @@ class FaceAuthCapsuleRenderingTest {
                 assertEquals(camera.height, rect.height(), 0.1f * d)
                 assertEquals(1, reservations)
             } finally { view.dispose() }
+        }
+    }
+
+    @Test fun lateNativeLayoutReplacesTheInitialFallbackWithoutWaitingForAnotherUnlock() {
+        instrumentation.runOnMainSync {
+            var native: FaceAuthCapsuleNativeLayout? = null
+            val view = view { 44f * d }.apply { nativeLayout = { native } }
+            var reserved: FaceAuthCapsuleBounds? = null
+            view.reserveIcons = { reserved = it; true }
+            try {
+                view.show(FaceAuthCapsuleState.Phase.Locked)
+                motion(view).pause()
+                capture(view, 160).recycle()
+                native = FaceAuthCapsuleNativeLayout(12f * d, 30f * d, 100f * d, 15f * d, 215f * d)
+                view.show(FaceAuthCapsuleState.Phase.Locked)
+                capture(view, 160).recycle()
+                val box = FaceAuthCapsuleView::class.java.getDeclaredField("box")
+                    .apply { isAccessible = true }.get(view) as RectF
+                assertEquals(12f * d, box.top, 0.01f)
+                assertEquals(215f * d, box.centerX(), 0.01f)
+                assertEquals(215f * d, reserved!!.centerX, 0.01f)
+                native = native!!.copy(top = 8f * d, centerX = 200f * d)
+                view.layout(0, 0, (420 * d).toInt(), view.height)
+                capture(view, 160).recycle()
+                assertEquals(8f * d, box.top, 0.01f)
+                assertEquals(200f * d, box.centerX(), 0.01f)
+            } finally { view.dispose() }
+        }
+    }
+
+    class NativeGeometryView(context: Context) : FrameLayout(context) {
+        fun getMaxHeight() = 90
+        fun getBlankWidth() = 61
+        fun cameraOffsets(height: Int) = ((measuredHeight - height) / 2 + 14) to ((measuredHeight - height) / 2 + 76)
+    }
+
+    @Test fun goneNativeChildUsesCurrentParentPaddingAndNotItsZeroOrStaleBounds() {
+        instrumentation.runOnMainSync {
+            val pluginContext = context.createPackageContext("com.oplus.systemui.plugins", 0)
+            val parent = FrameLayout(pluginContext).apply { setPadding(0, 2, 0, 0) }
+            val child = NativeGeometryView(pluginContext).apply {
+                visibility = View.GONE
+                layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER)
+            }
+            parent.addView(child)
+            fun layoutParent(width: Int, height: Int) {
+                parent.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+                parent.layout(0, 0, width, height)
+            }
+            layoutParent(1080, 120)
+            assertEquals(0, child.height)
+            val empty = FaceAuthCapsuleNativePosition.read(child)!!
+            assertEquals(16f, empty.top, 0f)
+            assertEquals(30f, empty.hole!!.top, 0f)
+            assertEquals(92f, empty.hole.bottom, 0f)
+            // Reproduce a GONE child retaining an old measured size after a resolution change.
+            child.measure(View.MeasureSpec.makeMeasureSpec(433, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(158, View.MeasureSpec.EXACTLY))
+            child.layout(503, 2, 936, 160)
+            layoutParent(1080, 120)
+            assertEquals(empty, FaceAuthCapsuleNativePosition.read(child))
         }
     }
 

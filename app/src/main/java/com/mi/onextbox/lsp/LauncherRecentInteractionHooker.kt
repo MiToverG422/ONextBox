@@ -60,15 +60,17 @@ internal object LauncherRecentInteractionHooker {
             it.name == "isSupportAutoFocusToNextPageInOverviewState" &&
                 it.returnType == Boolean::class.javaPrimitiveType &&
                 (it.parameterCount == 0 || it.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType)))
-        } ?: listOf(ModernReflect.findClass("wy", loader).getDeclaredMethod("d1", Boolean::class.javaPrimitiveType).also {
+        }.orEmpty().ifEmpty { listOf(LauncherDynamicTargets.autoFocus(loader).also {
             require(java.lang.reflect.Modifier.isStatic(it.modifiers) && it.returnType == Boolean::class.javaPrimitiveType)
-        })
+        }) }
         require(gates.isNotEmpty())
         gates.forEach { method ->
             hook("auto-focus", method) { chain ->
                 if (enabled(LauncherFeature.DisablePreviousTaskAutoFocus)) false else chain.proceed()
             }
         }
+        runCatching { ModernHookRuntime.requireModule().deoptimize(LauncherDynamicTargets.focusPage(loader)) }
+            .onFailure { HookLog.w(TAG, "Unable to deoptimize overview focus consumer", it) }
         // Keep the feature gate observable in compiled overview-entry and interruption paths.
         for ((className, names) in listOf(
             "com.android.quickstep.o1" to setOf("e"),

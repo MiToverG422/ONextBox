@@ -53,9 +53,6 @@ internal fun SystemUiFeaturesPage(
     var monetColorSpecMode by remember {
         mutableStateOf(LspConfig.getSystemUiMonetColorSpecMode(context))
     }
-    var nativePowerMenuEnabled by rememberSaveable {
-        mutableStateOf(LspConfig.isSystemUiNativePowerMenuEnabled(context))
-    }
     var hideNetworkActivityIndicatorEnabled by rememberSaveable {
         mutableStateOf(LspConfig.isSystemUiHideNetworkActivityIndicatorEnabled(context))
     }
@@ -80,21 +77,7 @@ internal fun SystemUiFeaturesPage(
                     hasDividerBelow = true,
                 )
                 SettingsDivider()
-                SettingsToggleRow(
-                    title = stringResource(R.string.feature_native_power_menu_title),
-                    summary = stringResource(R.string.feature_native_power_menu_summary),
-                    checked = nativePowerMenuEnabled,
-                    onCheckedChange = { enabled ->
-                        nativePowerMenuEnabled = enabled
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                LspConfig.setSystemUiNativePowerMenuEnabled(context, enabled)
-                            }
-                        }
-                    },
-                    hasDividerAbove = true,
-                    hasDividerBelow = true,
-                )
+                NativePowerMenuSettingsRow()
                 SettingsDivider()
                 AospVolumeSettingsRow()
                 SettingsDivider()
@@ -112,6 +95,8 @@ internal fun SystemUiFeaturesPage(
             }
         }
         FeaturePageMode.SystemUiVolume -> {
+            SettingsSection(title = stringResource(R.string.custom_volume_steps))
+            SystemCustomizationGroup(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.VolumeSteps)
             SideVolumePercentageSettingsGroup {
                 onOpenSubPage(FeaturePageMode.SystemUiSideVolumePercentageSettings)
             }
@@ -235,6 +220,7 @@ internal fun SystemUiFeaturesPage(
             }
         }
         FeaturePageMode.SystemUiNotificationCenter -> {
+            SettingsSection(title = stringResource(R.string.custom_group_notification_display))
             SettingsGroup {
                 SettingsToggleRow(
                     title = stringResource(R.string.feature_international_notification_style_title),
@@ -244,18 +230,23 @@ internal fun SystemUiFeaturesPage(
                     hasDividerBelow = true,
                 )
                 SettingsDivider()
+                RetainLockscreenNotificationsSettingsRow(hasDividerAbove = true, hasDividerBelow = false)
+            }
+            SettingsSection(title = stringResource(R.string.custom_group_notification_clear))
+            SettingsGroup {
+                SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.NotificationClearSize,
+                    hasDividerBelow = true)
                 NotificationClearButtonSettingsRow()
                 SettingsDivider()
-                HideNotificationClearSettingsRow(hasDividerAbove = true, hasDividerBelow = true)
-                SettingsDivider()
-                RetainLockscreenNotificationsSettingsRow(hasDividerAbove = true, hasDividerBelow = true)
-                SettingsDivider()
+                HideNotificationClearSettingsRow(hasDividerAbove = true, hasDividerBelow = false)
+            }
+            SettingsSection(title = stringResource(R.string.notification_removal_title))
+            SettingsGroup {
                 SettingsCardRow(
                     title = stringResource(R.string.notification_removal_title),
                     summary = stringResource(R.string.notification_removal_entry_summary),
                     onClick = { onOpenSubPage(FeaturePageMode.NotificationRemoval) },
                     showArrow = true,
-                    hasDividerAbove = true,
                 )
             }
         }

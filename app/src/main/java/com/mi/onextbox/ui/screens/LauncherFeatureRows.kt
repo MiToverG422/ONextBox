@@ -61,7 +61,8 @@ internal object LauncherFeatureItems {
 }
 
 @Composable
-internal fun LauncherFeatureRows(items: List<LauncherFeatureItem>, hasDividerBelow: Boolean = false) {
+internal fun LauncherFeatureRows(items: List<LauncherFeatureItem>, hasDividerBelow: Boolean = false,
+    hasDividerAbove: Boolean = false) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -80,7 +81,7 @@ internal fun LauncherFeatureRows(items: List<LauncherFeatureItem>, hasDividerBel
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    FeatureAnimatedRows(hasDividerBelow = hasDividerBelow) {
+    FeatureAnimatedRows(hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow) {
     items.forEach { item ->
         val rowEnabled = item.feature != LauncherFeature.DockBlur || states[LauncherFeature.Dock] == true
         row(item.feature, visible = rowEnabled) { above, below ->

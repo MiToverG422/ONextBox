@@ -25,21 +25,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit
 
-/** Collects a passive, privacy-safe C17 eUICC status snapshot in the privileged LPA process. */
+/** Collects a passive, privacy-safe eUICC status snapshot in the privileged LPA process. */
 internal object EuiccDiagnosticsHooker {
     private const val TAG = "ONextBox-EuiccDiag"
     private const val APPLICATION_CLASS = "com.oplus.euicc.OplusEuiccApplication"
     private const val DOWNLOAD_CHECKER_CLASS = "com.oplus.euicc.DownloadChecker"
-    private const val PROFILE_ASSISTANT_FACTORY_CLASS = "p5.a"
-    private const val RUS_PROVIDER_CLASS = "x5.a"
-    private const val EUICC_INFO_CALLBACK_CLASS =
-        "com.oplus.euicc.sdk.profileassistant.EuiccManager\$b"
-    private const val SMDP_CALLBACK_CLASS =
-        "com.oplus.euicc.sdk.profileassistant.EuiccManager\$e"
-    private const val EUICC_INFO_MODEL_CLASS =
-        "com.oplus.euicc.sdk.profileassistant.internal.protocol.phase2.models.l"
-    private const val SMDP_MODEL_CLASS =
-        "com.oplus.euicc.sdk.profileassistant.internal.protocol.phase2.models.c0"
     private const val ESIM_EID_PROPERTY = "persist.sys.oplus.radio.esim.eid"
     private const val ESIM_POWER_PROPERTY = "persist.vendor.oplus.radio.esim.gpio.status"
     private const val ESIM_BINDING_PROPERTY =
@@ -55,6 +45,7 @@ internal object EuiccDiagnosticsHooker {
     private var refreshReceiver: BroadcastReceiver? = null
     private var application: Application? = null
     private var applicationLoader: ClassLoader? = null
+    private var sdkTargets: EuiccCompatibilityTargets.Diagnostics? = null
     private val collecting = AtomicBoolean(false)
     private val receiverRegistered = AtomicBoolean(false)
     private val snapshotLock = Any()
@@ -62,7 +53,16 @@ internal object EuiccDiagnosticsHooker {
     @Volatile
     private var latestSnapshot: EsimDiagnosticsSnapshot? = null
 
-    fun hook(classLoader: ClassLoader?, google: Boolean = false): Boolean {
+    fun hook(classLoader: ClassLoader?, google: Boolean = false, apkPath: String? = null): Boolean {
+        if (!google) {
+            val stateKey = "euicc:diagnostics-targets:v1"
+            sdkTargets = runCatching {
+                val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
+                saved?.let { EuiccCompatibilityTargets.Diagnostics(it) }
+                    ?: EuiccCompatibilityTargets.diagnostics(requireNotNull(classLoader), requireNotNull(apkPath))
+            }.onFailure { HookLog.e(TAG, "OEM diagnostics SDK targets unavailable", it) }.getOrNull()
+            sdkTargets?.let { targets -> HotReloadLifecycle.register(stateKey, capture = { targets.values }) }
+        }
         HotReloadLifecycle.register("euicc:diagnostics", capture = {
             arrayOf(application, applicationLoader, latestSnapshot?.lastDownloadResult)
         }, canReload = { !collecting.get() && pendingCallbacks.get() == 0 }, detach = {
@@ -88,7 +88,7 @@ internal object EuiccDiagnosticsHooker {
             method.name == "onCreate" && method.parameterCount == 0 && method.returnType == Void.TYPE
         }
         if (onCreate == null) {
-            HookLog.w(TAG, "Compatible C17 eUICC Application.onCreate target was not found")
+            HookLog.w(TAG, "Compatible eUICC Application.onCreate target was not found")
             return false
         }
 
@@ -98,10 +98,10 @@ internal object EuiccDiagnosticsHooker {
                 onApplicationReady(application, classLoader)
             }
             if (!google) hookLastDownloadResult(classLoader)
-            HookLog.i(TAG, "Installed passive C17 eSIM diagnostics collector")
+            HookLog.i(TAG, "Installed passive eSIM diagnostics collector")
             true
         }.onFailure { throwable ->
-            HookLog.e(TAG, "Failed to install C17 eSIM diagnostics collector", throwable)
+            HookLog.e(TAG, "Failed to install eSIM diagnostics collector", throwable)
         }.getOrDefault(false)
     }
 
@@ -193,8 +193,8 @@ internal object EuiccDiagnosticsHooker {
             collectGoogleStatus(context)
             return
         }
-        val assistant = loadProfileAssistant(classLoader)
-        readProfileLimit(context, classLoader)?.let { limit ->
+        val assistant = loadProfileAssistant()
+        readProfileLimit(context)?.let { limit ->
             updateSnapshot(context) { it.copy(profileLimit = limit) }
         }
 
@@ -214,8 +214,8 @@ internal object EuiccDiagnosticsHooker {
                     )
                 }
             }
-            requestEuiccInfo(context, assistant, classLoader)
-            requestSmdpInfo(context, assistant, classLoader)
+            requestEuiccInfo(context, assistant)
+            requestSmdpInfo(context, assistant)
         } else {
             updateSnapshot(context) { it.copy(collectionMessage = "esim_power_off") }
         }
@@ -249,45 +249,25 @@ internal object EuiccDiagnosticsHooker {
         ) }
     }
 
-    private fun loadProfileAssistant(classLoader: ClassLoader?): Any? = runCatching {
-        val factory = requireNotNull(findClass(PROFILE_ASSISTANT_FACTORY_CLASS, classLoader))
-        val getter = factory.declaredMethods.single { method ->
-            method.name == "b" && Modifier.isStatic(method.modifiers) && method.parameterCount == 0
-        }
-        getter.isAccessible = true
-        getter.invoke(null)
+    private fun loadProfileAssistant(): Any? = runCatching {
+        requireNotNull(sdkTargets).factory.invoke(null)
     }.onFailure { throwable ->
         HookLog.e(TAG, "Could not obtain the OEM profile assistant", throwable)
     }.getOrNull()
 
-    private fun readProfileLimit(context: Context, classLoader: ClassLoader?): Int? = runCatching {
-        val providerClass = requireNotNull(findClass(RUS_PROVIDER_CLASS, classLoader))
-        val getInstance = providerClass.declaredMethods.single { method ->
-            method.name == "d" && Modifier.isStatic(method.modifiers) &&
-                method.parameterTypes.contentEquals(arrayOf(Context::class.java))
-        }
-        val provider = getInstance.invoke(null, context)
-        val getLimit = provider.javaClass.methods.single { method ->
-            method.name == "e" && method.parameterCount == 0 &&
-                method.returnType == Int::class.javaPrimitiveType
-        }
-        getLimit.invoke(provider) as? Int
+    private fun readProfileLimit(context: Context): Int? = runCatching {
+        val targets = requireNotNull(sdkTargets)
+        val provider = targets.provider.invoke(null, context)
+        targets.limit.invoke(provider) as? Int
     }.onFailure { throwable ->
         HookLog.e(TAG, "Could not read the current OEM profile limit", throwable)
     }.getOrNull()
 
     private fun readProfiles(assistant: Any): ProfileCollection? = runCatching {
-        val registryGetter = assistant.javaClass.methods.single { method ->
-            method.name == "c" && method.parameterCount == 0
-        }
-        val registry = requireNotNull(registryGetter.invoke(assistant))
+        val targets = requireNotNull(sdkTargets)
+        val registry = requireNotNull(targets.registry.invoke(assistant))
         val profiles = ArrayList<Any>()
-        val getProfiles = registry.javaClass.methods.single { method ->
-            method.name == "g" && method.parameterCount == 1 &&
-                List::class.java.isAssignableFrom(method.parameterTypes[0]) &&
-                method.returnType == Boolean::class.javaPrimitiveType
-        }
-        val succeeded = getProfiles.invoke(registry, profiles) as? Boolean ?: false
+        val succeeded = targets.profiles.invoke(registry, profiles) as? Boolean ?: false
         if (!succeeded) return@runCatching null
         val diagnostics = profiles.map { profile ->
             val nickname = invokeNoArg(profile, "z") as? String
@@ -324,17 +304,13 @@ internal object EuiccDiagnosticsHooker {
     private fun requestEuiccInfo(
         context: Context,
         assistant: Any,
-        classLoader: ClassLoader?,
     ) {
         if (HotReloadLifecycle.isRetiring) return
         val waiting = EuiccPendingCallback(pendingCallbacks)
         runCatching {
-            val manager = requireNotNull(
-                assistant.javaClass.methods.single { method ->
-                    method.name == "b" && method.parameterCount == 0
-                }.invoke(assistant),
-            )
-            val callbackClass = requireNotNull(findClass(EUICC_INFO_CALLBACK_CLASS, classLoader))
+            val targets = requireNotNull(sdkTargets)
+            val manager = requireNotNull(targets.manager.invoke(assistant))
+            val callbackClass = targets.infoCallback
             val callback = Proxy.newProxyInstance(
                 callbackClass.classLoader,
                 arrayOf(callbackClass),
@@ -345,8 +321,8 @@ internal object EuiccDiagnosticsHooker {
                     method.name == "equals" -> proxy === args?.getOrNull(0)
                     else -> waiting.complete {
                         HotReloadLifecycle.withHook(fallback = { defaultReturnValue(method.returnType) }) {
-                            if (!HotReloadLifecycle.isRetiring && args?.firstOrNull()?.javaClass?.name == EUICC_INFO_MODEL_CLASS) {
-                                val info = args.first()
+                            if (!HotReloadLifecycle.isRetiring && targets.infoModel.isInstance(args?.firstOrNull())) {
+                                val info = requireNotNull(args?.firstOrNull())
                                 updateSnapshot(context) { current ->
                                     current.copy(
                                         capturedAtMillis = System.currentTimeMillis(),
@@ -364,11 +340,8 @@ internal object EuiccDiagnosticsHooker {
                     }
                 }
             }
-            val request = manager.javaClass.methods.single { method ->
-                method.name == "b" && method.parameterTypes.contentEquals(arrayOf(callbackClass))
-            }
             waiting.begin()
-            request.invoke(manager, callback)
+            targets.info.invoke(manager, callback)
         }.onFailure { throwable ->
             waiting.cancel()
             HookLog.e(TAG, "Could not request OEM eUICC information", throwable)
@@ -378,17 +351,13 @@ internal object EuiccDiagnosticsHooker {
     private fun requestSmdpInfo(
         context: Context,
         assistant: Any,
-        classLoader: ClassLoader?,
     ) {
         if (HotReloadLifecycle.isRetiring) return
         val waiting = EuiccPendingCallback(pendingCallbacks)
         runCatching {
-            val manager = requireNotNull(
-                assistant.javaClass.methods.single { method ->
-                    method.name == "b" && method.parameterCount == 0
-                }.invoke(assistant),
-            )
-            val callbackClass = requireNotNull(findClass(SMDP_CALLBACK_CLASS, classLoader))
+            val targets = requireNotNull(sdkTargets)
+            val manager = requireNotNull(targets.manager.invoke(assistant))
+            val callbackClass = targets.addressCallback
             val callback = Proxy.newProxyInstance(
                 callbackClass.classLoader,
                 arrayOf(callbackClass),
@@ -399,8 +368,8 @@ internal object EuiccDiagnosticsHooker {
                     method.name == "equals" -> proxy === args?.getOrNull(0)
                     else -> waiting.complete {
                         HotReloadLifecycle.withHook(fallback = { defaultReturnValue(method.returnType) }) {
-                            if (!HotReloadLifecycle.isRetiring && args?.firstOrNull()?.javaClass?.name == SMDP_MODEL_CLASS) {
-                                val text = args.first().toString()
+                            if (!HotReloadLifecycle.isRetiring && targets.addressModel.isInstance(args?.firstOrNull())) {
+                                val text = requireNotNull(args?.firstOrNull()).toString()
                                 val smdp = Regex("mSmdpAddress='([^']*)'").find(text)?.groupValues?.get(1).orEmpty()
                                 val smds = Regex("mSmdsAddress='([^']*)'").find(text)?.groupValues?.get(1).orEmpty()
                                 updateSnapshot(context) { current ->
@@ -416,11 +385,8 @@ internal object EuiccDiagnosticsHooker {
                     }
                 }
             }
-            val request = manager.javaClass.methods.single { method ->
-                method.name == "a" && method.parameterTypes.contentEquals(arrayOf(callbackClass))
-            }
             waiting.begin()
-            request.invoke(manager, callback)
+            targets.addresses.invoke(manager, callback)
         }.onFailure { throwable ->
             waiting.cancel()
             HookLog.e(TAG, "Could not request OEM SM-DP+/SM-DS information", throwable)

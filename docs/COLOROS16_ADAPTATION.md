@@ -224,15 +224,14 @@
 | 目标未核准，关闭 | 统一卡片材质 | SystemUiFluidCloud | com.android.systemui |
 | 目标未核准，关闭 | 原生返回气泡 | SystemUiNative | com.android.systemui |
 | 目标未核准，关闭 | 原生实时通知胶囊 | SystemUiNative | com.android.systemui |
-| 目标未核准，关闭 | 原生音量面板 | SystemUiNative | com.android.systemui |
+| 已接入，待 C16 实机验证 | 原生音量面板、比例大小、在控制中心不显示 | SystemUiNative | com.android.systemui |
 | 目标未核准，关闭 | 去广告 | ThemeStore | com.heytap.themestore |
 | 缺少备份，跳过 | 强制开启Hey Google唤醒 | Assistant | com.google.android.googlequicksearchbox |
 | 缺少备份，跳过 | 国际版智能助手（实验性） | Assistant | com.google.android.googlequicksearchbox |
-| 缺少备份，跳过 | 运营商验证码输入 | Esim | com.oplus.euicc |
-| 缺少备份，跳过 | 绕过 eSIM 数量限制 | Esim | com.oplus.euicc |
-| 缺少备份，跳过 | 解除境内下载限制 | Esim | com.oplus.euicc |
-| 缺少备份，跳过 | 解除境内下载限制 | Esim | com.oplus.euicc |
-| 缺少备份，跳过 | eSIM 诊断信息 | EsimDiagnostics | com.oplus.euicc |
+| 已接入，待 C16 实机验证 | 运营商验证码输入 | Esim | com.oplus.euicc |
+| 已接入，待 C16 实机验证 | 绕过 eSIM 数量限制 | Esim | com.oplus.euicc, com.android.phone |
+| 已接入，待 C16 实机验证 | 解除境内下载限制 | Esim | com.oplus.euicc |
+| 已接入，待 C16 实机验证 | eSIM 诊断信息 | EsimDiagnostics | com.oplus.euicc |
 | 缺少备份，跳过 | 复制验证码 | GoogleMessages | com.google.android.apps.messaging |
 | 缺少备份，跳过 | 启用 Gemini 聊天 | GoogleMessages | com.google.android.apps.messaging |
 | 缺少备份，跳过 | 修复初始化底栏抬高问题 | Keyboard | com.oplus.keyboard |
@@ -242,4 +241,4 @@
 | 缺少备份，跳过 | 强制显示心率检测 | SettingsRealme | com.android.settings |
 | 缺少备份，跳过 | 强制显示入眠胶囊 | SettingsRealme | com.android.settings |
 
-C16 中缺少备份的主要包为 eSIM、Google App、Google Messages 和键盘。没有开放相册 AI 修图、未核准的游戏皮肤/开发者/音乐入口、桌面分类页/强制模糊/部件替换及助手圈搜等路径。清单中的“已接入”表示已完成离线接口核准与接线，不表示全部已通过 C16 实机验收。
+C16 中缺少备份的主要包为 Google App、Google Messages 和键盘。eSIM 已补充接口适配和接线。没有开放相册 AI 修图、未核准的游戏皮肤/开发者/音乐入口、桌面分类页/强制模糊/部件替换及助手圈搜等路径。清单中的“已接入”表示已完成离线接口核准与接线，不表示全部已通过 C16 实机验收。

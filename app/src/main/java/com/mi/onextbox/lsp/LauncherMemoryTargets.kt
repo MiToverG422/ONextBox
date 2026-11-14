@@ -80,12 +80,6 @@ internal class LauncherMemoryTargets(val values: Array<*>) {
                 }
                 val panel = ModernReflect.findClass("com.oplus.quickstep.views.OplusClearAllPanelView", loader)
                 check(View::class.java.isAssignableFrom(panel))
-                val update = (detail.readers + gates.flatMap { it.callers }).distinctBy { it.descriptor }.singleOrNull {
-                    it.className == panel.name && it.returnTypeName == "void" && it.paramTypeNames == listOf("boolean")
-                }?.getMethodInstance(loader) ?: run {
-                    check(type.name == "bh6" && detail.name == "d")
-                    panel.getDeclaredMethod("y", Boolean::class.javaPrimitiveType)
-                }
                 val bind = panel.declaredMethods.single {
                     val parameters = it.parameterTypes.toSet()
                     it.returnType == Void.TYPE && if (Modifier.isStatic(it.modifiers)) {
@@ -94,6 +88,10 @@ internal class LauncherMemoryTargets(val values: Array<*>) {
                         parameters == setOf(type, format.returnType, Boolean::class.javaPrimitiveType) && it.parameterCount == 3
                     }
                 }
+                val update = (detail.readers + gates.flatMap { it.callers } +
+                    requireNotNull(dex.getMethodData(bind)).callers).distinctBy { it.descriptor }.single {
+                    it.className == panel.name && it.returnTypeName == "void" && it.paramTypeNames == listOf("boolean")
+                }.getMethodInstance(loader)
                 val direct = gates.flatMap { it.callers }
                 val callers = (direct + direct.flatMap { it.callers } + refresh)
                     .filter { it.isMethod }.distinctBy { it.descriptor }.map { it.getMethodInstance(loader) }

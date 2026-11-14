@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.content.Context
 import android.appwidget.AppWidgetHostView
 import android.content.res.Configuration
 import android.graphics.Canvas
@@ -215,20 +216,20 @@ internal object LauncherCategoryPageHooker {
             }
             // Select the return target before the gesture to avoid briefly showing the home page.
             runCatching {
-                val (homeTarget, getActivity) = listOf(
-                    Triple("com.android.quickstep.r3", "J", "S"), Triple("uh5", "I", "N"),
-                ).firstNotNullOf { (owner, target, getter) ->
-                    val type = runCatching { loader.loadClass(owner) }.getOrNull() ?: return@firstNotNullOf null
-                    val targetMethod = type.declaredMethods.singleOrNull {
-                        it.name == target && !it.isBridge && it.parameterTypes.singleOrNull()?.name ==
-                            "com.android.quickstep.GestureState\$GestureEndTarget"
-                    } ?: return@firstNotNullOf null
-                    val getterMethod = type.declaredMethods.singleOrNull {
-                        it.name == getter && it.parameterCount == 0 && java.lang.reflect.Modifier.isStatic(it.modifiers) &&
-                            Activity::class.java.isAssignableFrom(it.returnType)
-                    } ?: return@firstNotNullOf null
-                    targetMethod to getterMethod.apply { isAccessible = true }
+                val type = ModernReflect.findClassIfExists("com.android.quickstep.r3", loader)
+                    ?: LauncherDexResolver.type(loader, "category-home-return") { dex ->
+                        dex.findMethod { matcher { usingStrings("resetFullscreenProgress, state =")
+                            paramTypes("com.android.launcher3.BaseQuickstepLauncher"); returnType = "void" } }.single().className
+                    }
+                val homeTarget = type.declaredMethods.single {
+                    !it.isBridge && it.parameterTypes.singleOrNull()?.name ==
+                        "com.android.quickstep.GestureState\$GestureEndTarget" &&
+                        api.baseState.isAssignableFrom(it.returnType)
                 }
+                val getActivity = type.declaredMethods.single {
+                    it.parameterCount == 0 && Modifier.isStatic(it.modifiers) &&
+                        Activity::class.java.isAssignableFrom(it.returnType)
+                }.apply { isAccessible = true }
                 install(homeTarget) { chain ->
                     if ((chain.getArg(0) as? Enum<*>)?.name != "HOME") return@install chain.proceed()
                     val activity = getActivity.invoke(null)
@@ -642,13 +643,16 @@ internal object LauncherCategoryPageHooker {
             if (legacyAssets != null) {
                 ModernReflect.callMethod(ModernReflect.callStaticMethod(legacyAssets, "q", context), "z", installed)
             } else {
-                val assets = ModernReflect.findClass("qj5", loader)
-                ModernReflect.callMethod(ModernReflect.callStaticMethod(assets, "o", context), "y", installed)
+                val assets = LauncherDynamicTargets.assets(loader)
+                val instance = assets.declaredMethods.single { Modifier.isStatic(it.modifiers) &&
+                    it.returnType == assets && it.parameterTypes.contentEquals(arrayOf(Context::class.java)) }
+                LauncherDynamicTargets.updateAssets(loader).invoke(instance.invoke(null, context), installed)
             }
             HookLog.d(TAG, "Standard loader prepared: apps=${installed.size}")
             val palette = ModernReflect.findClass("com.android.launcher3.allapps.colorfilter.DrawerIconPalette", loader)
-            val executors = ModernReflect.findClassIfExists("ej.a", loader) ?: ModernReflect.findClass("ui3", loader)
-            val executor = executors.getDeclaredField("a").apply { isAccessible = true }.get(null) as Executor
+            val executors = ModernReflect.findClassIfExists("ej.a", loader)
+            val executor = (executors?.getDeclaredField("a")?.apply { isAccessible = true }
+                ?: LauncherDynamicTargets.executor(loader)).get(null) as Executor
             pendingPaletteJobs.incrementAndGet()
             try {
                 executor.execute {

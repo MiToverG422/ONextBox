@@ -24,12 +24,13 @@ class SystemUiLauncherHotReloadContractTest {
     @Test fun volumeCallbackBridgeIsRestoredWithoutConstructingAnotherVolumeDialog() {
         val source = source("AospVolumeCallbackBridge.kt")
         assertTrue(source.contains("registerReplay(\"aosp-volume:callback-bridge@"))
-        assertTrue(source.contains("capture = { installed }, replay = { if (it == true) install(loader) }"))
+        assertTrue(source.contains("capture = { installed }, replay = { if (it == true) install(loader, producerName) }"))
         assertTrue(source.contains("ModernHotReloadSession.current?.previousTargets.orEmpty()"))
         assertTrue(source.contains("if (installed) return"))
         assertTrue(source.contains("HotReloadLifecycle.withHook(fallback = {}, action = {"))
         assertFalse(source.contains("AospVolumeGraph.create"))
         assertContains("AospVolumeHooker.kt", "AospVolumeCallbackBridge.registerHotReload(loader)")
+        assertContains("ColorOs16AospVolumeHooker.kt", "AospVolumeCallbackBridge.registerHotReload(loader, CALLBACK)")
     }
 
     @Test fun powerIndicatorHandsOverHostRootsInsteadOfVetoingAttachedViews() {

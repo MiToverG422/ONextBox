@@ -169,6 +169,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     PhoneManager,
     ThemeStore,
     Gallery,
+    MultiApp,
     SecurePay,
     GameAssistant,
     OShare,
@@ -640,6 +641,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.PhoneManager -> stringResource(R.string.phone_manager_title)
     FeaturePageMode.ThemeStore -> stringResource(R.string.theme_store_title)
     FeaturePageMode.Gallery -> stringResource(R.string.gallery_page_title)
+    FeaturePageMode.MultiApp -> stringResource(R.string.multiapp_page_title)
     FeaturePageMode.SecurePay -> stringResource(R.string.secure_pay_title)
     FeaturePageMode.GameAssistant -> stringResource(R.string.game_assistant_title)
     FeaturePageMode.OShare -> stringResource(R.string.oshare_title)
@@ -690,10 +692,10 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
         "com.android.launcher",
     )
     FeaturePageMode.SystemUiBackGesture -> listOf("com.android.systemui", "com.android.launcher")
+    FeaturePageMode.SystemUiVolume -> listOf("system", "com.android.systemui")
     FeaturePageMode.SystemUi,
     FeaturePageMode.SystemUiBackGestureArea,
     FeaturePageMode.SystemUiNative,
-    FeaturePageMode.SystemUiVolume,
     FeaturePageMode.SystemUiDynamicColor,
     FeaturePageMode.SystemUiClock,
     FeaturePageMode.SystemUiStatusBar,
@@ -726,13 +728,14 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.CorePatch -> emptyList() // Full device reboot, never kill system_server from this page.
     FeaturePageMode.SideKey -> listOf("android", "system", "com.android.systemui")
     FeaturePageMode.Installer -> listOf("android", "system")
-    FeaturePageMode.Esim -> com.mi.onextbox.lsp.RegionalAppPackages.esim
+    FeaturePageMode.Esim -> com.mi.onextbox.lsp.RegionalAppPackages.esim + "com.android.phone"
     FeaturePageMode.AppMarket -> listOf("com.heytap.market")
     FeaturePageMode.Battery -> listOf("android", "system", "com.oplus.battery")
     FeaturePageMode.TrafficManagement -> listOf("com.oplus.trafficmonitor")
     FeaturePageMode.PhoneManager -> listOf(PhoneManagerSettings.PACKAGE_NAME)
     FeaturePageMode.ThemeStore -> com.mi.onextbox.lsp.RegionalAppPackages.themes
     FeaturePageMode.Gallery -> listOf(com.mi.onextbox.lsp.GalleryAiRetouchSettings.PACKAGE_NAME)
+    FeaturePageMode.MultiApp -> listOf("system", com.mi.onextbox.lsp.SystemCustomizationSettings.MULTI_APP)
     FeaturePageMode.SecurePay -> listOf(SecurePaySettings.PACKAGE_NAME)
     FeaturePageMode.GameAssistant -> listOf(GameAssistantSettings.PACKAGE_NAME)
     FeaturePageMode.OShare -> listOf(OShareSettings.PACKAGE_NAME)
@@ -1117,6 +1120,13 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
                 titleRes = R.string.gallery_page_title,
                 iconPackages = listOf(com.mi.onextbox.lsp.GalleryAiRetouchSettings.PACKAGE_NAME),
                 pageMode = FeaturePageMode.Gallery,
+            )
+        )
+        add(
+            FeatureMainEntry(
+                titleRes = R.string.multiapp_page_title,
+                iconPackages = listOf(com.mi.onextbox.lsp.SystemCustomizationSettings.MULTI_APP),
+                pageMode = FeaturePageMode.MultiApp,
             )
         )
         add(
@@ -1723,6 +1733,12 @@ private fun FeatureSubPage(
         FeaturePageMode.PhoneManager -> PhoneManagerFeaturesPage()
         FeaturePageMode.ThemeStore -> ThemeStoreFeaturesPage()
         FeaturePageMode.Gallery -> GalleryFeaturesPage()
+        FeaturePageMode.MultiApp -> SettingsGroup {
+            SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.MultiAppRestrictions,
+                hasDividerBelow = true)
+            SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.MultiAppPerAppLimit,
+                hasDividerAbove = true)
+        }
         FeaturePageMode.SecurePay -> SecurePayFeaturesPage()
         FeaturePageMode.GameAssistant -> GameAssistantFeaturesPage()
         FeaturePageMode.OShare -> OShareFeaturesPage()

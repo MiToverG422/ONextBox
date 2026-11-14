@@ -19,8 +19,8 @@ class AdaptationRuntimePolicyTest {
     }
     @Test fun colorOs16OnlyAllowsItsAdaptedPackagesWhileColorOs17KeepsItsExistingScopes() {
         val supported = setOf("com.android.launcher", "com.android.systemui", "com.android.settings",
-            "com.coloros.phonemanager", "com.oplus.games", "com.oplus.screenrecorder", "system")
-        val absent = setOf("com.coloros.gallery3d", "com.oplus.euicc", "com.oplus.keyboard",
+            "com.coloros.phonemanager", "com.oplus.games", "com.oplus.screenrecorder", "com.oplus.euicc", "system")
+        val absent = setOf("com.coloros.gallery3d", "com.oplus.keyboard",
             "com.google.android.googlequicksearchbox", "com.google.android.apps.messaging", "android", "unknown.app")
         for (packageName in supported + absent) {
             assertTrue(AdaptationRuntimePolicy.allowsPackage(SystemAdaptationVersion.ColorOs17, packageName))
@@ -33,6 +33,8 @@ class AdaptationRuntimePolicyTest {
 
     @Test fun colorOs16AllowsVerifiedFeaturesAndRejectsAbsentOrUnverifiedCapabilities() {
         val adapted = setOf(
+            "esim_region_restriction_bypass", "esim_region_restriction_override",
+            "esim_profile_limit_bypass", "esim_confirmation_code_prompt",
             "systemui_hide_notification_clear", "systemui_hide_rotation_suggestion",
             "systemui_hide_disconnected_bluetooth", "settings_force_google_entry",
             "settings_restore_app_open_button", "settings_international_enabled",
@@ -40,6 +42,7 @@ class AdaptationRuntimePolicyTest {
             "systemui_qs_slider_percentage_enabled", "settings_international_wallet",
             "allow_secure_window_capture", "corepatch_downgrade", "small_window_landscape_ratio",
             "keyguard_screen_off_recording", "assistant_native_power_enabled",
+            "systemui_aosp_volume", "systemui_aosp_volume_hide_in_qs",
         )
         val unadapted = setOf(
             "systemui_native_live_update", "corepatch_bypass_block",
@@ -61,6 +64,7 @@ class AdaptationRuntimePolicyTest {
     @Test fun numericAndTextConfigurationUsesTheSameCapabilityBoundary() {
         val c16 = SystemAdaptationVersion.ColorOs16
         assertTrue(AdaptationRuntimePolicy.allowsFeatureValue(c16, "recent_task_radius_dp"))
+        assertTrue(AdaptationRuntimePolicy.allowsFeatureValue(c16, "systemui_aosp_volume_scale"))
         assertTrue(AdaptationRuntimePolicy.allowsFeatureValue(c16, "systemui_qs_slider_percentage_color"))
         assertTrue(AdaptationRuntimePolicy.allowsFeatureValue(c16, "installer_selected_package"))
         assertFalse(AdaptationRuntimePolicy.allowsFeatureValue(c16, "assistant_power_mode"))

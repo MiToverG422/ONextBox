@@ -1,6 +1,5 @@
 package com.mi.onextbox.lsp
 
-import java.io.File
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -12,16 +11,21 @@ class AospVolumeCallbackBridgeTest {
         assertFalse(AospVolumeCallbackBridge.shouldForward(false, false))
     }
 
-    @Test fun bridgeDoesNotReplaceExistingOverridesOrRedispatchToAllCallbacks() {
-        val source = listOf(File("src/main/java/com/mi/onextbox/lsp/AospVolumeCallbackBridge.kt"),
-            File("app/src/main/java/com/mi/onextbox/lsp/AospVolumeCallbackBridge.kt"))
-            .first { it.isFile }.readText()
-        assertTrue(source.contains("method.declaringClass != callbacks"))
-        assertTrue(source.contains("update.invoke(target, snapshot)"))
-        assertTrue(source.contains("handler.post"))
-        assertTrue(source.contains("listeners[target] === handler"))
-        assertTrue(source.contains("copy.invoke(source)"))
-        assertFalse(source.contains("getDeclaredMethod(\"onInitStateChange\""))
-        assertFalse(source.contains("getState()"))
+    private fun targets(callbacks: Class<*>, producer: Class<*>) = AospVolumeCallbackMethods.bridgeTargets(
+        callbacks, AospVolumeCallbackFixtures.State::class.java, producer, AospVolumeCallbackFixtures.Dispatcher::class.java)
+
+    @Test fun currentRomWithoutTwoArgumentCallbackBridgesThreeArguments() {
+        val methods = targets(AospVolumeCallbackFixtures.Current::class.java, AospVolumeCallbackFixtures.CurrentProducer::class.java)
+        assertEquals(listOf(3), methods.map { it.parameterCount })
+    }
+    @Test fun oldRomStillBridgesTwoArguments() {
+        val methods = targets(AospVolumeCallbackFixtures.Old::class.java, AospVolumeCallbackFixtures.OldProducer::class.java)
+        assertEquals(listOf(2), methods.map { it.parameterCount })
+    }
+    @Test fun existingNativeOverrideDoesNotReceiveDuplicateState() {
+        assertTrue(targets(AospVolumeCallbackFixtures.Current::class.java, AospVolumeCallbackFixtures.NativeOverride::class.java).isEmpty())
+    }
+    @Test fun stockInterfaceWithoutOemOverloadNeedsNoBridge() {
+        assertTrue(targets(AospVolumeCallbackFixtures.Stock::class.java, AospVolumeCallbackFixtures.StockProducer::class.java).isEmpty())
     }
 }

@@ -36,4 +36,60 @@ class FaceAuthCapsuleLayoutTest {
         assertTrue(middle.width < pill.width && middle.width > hole.width)
         assertEquals(hole, pill.toward(hole, 1f))
     }
+
+    @Test fun nativeCameraPaddingDeterminesThePositionEvenWithoutACapsuleChildLayout() {
+        // Current device's idle keyguard: child is 0 x 0, parent is 1080 x 120 with 2 px top padding.
+        val layout = FaceAuthCapsulePosition.fromNativeArea(
+            FaceAuthCapsuleBounds(0f, 2f, 1080f, 120f), 90f, 300f, 60f, 61f, 14f, 76f,
+        )!!
+        assertEquals(16f, layout.top, 0f)
+        assertEquals(540f, layout.centerX!!, 0f)
+        assertEquals(30f, layout.hole!!.top, 0f)
+        assertEquals(92f, layout.hole.bottom, 0f)
+        assertNotEquals((120f - 90f) / 2f, layout.top)
+    }
+
+    @Test fun nativeModelHeightAndAsymmetricPaddingAreNotReplacedByStatusBarCentering() {
+        for (scale in listOf(1f, 0.75f, 1.5f)) {
+            // A deeper camera and the OEM's taller 33 dp cloud profile.
+            val layout = FaceAuthCapsulePosition.fromNativeArea(
+                FaceAuthCapsuleBounds(0f, 28f * scale, 1080f * scale, 144f * scale),
+                99f * scale, 300f * scale, 60f * scale, 64f * scale, 18f * scale, 82f * scale,
+            )!!
+            assertEquals(36.5f * scale, layout.top, 0.001f)
+            assertEquals(99f * scale, layout.height, 0.001f)
+            assertEquals(540f * scale, layout.centerX!!, 0.001f)
+            assertEquals(54.5f * scale, layout.hole!!.top, 0.001f)
+        }
+    }
+
+    @Test fun fallbackAlignsToTheCameraVerticallyAndKeepsCornerCameraCloudsCentered() {
+        val centered = FaceAuthCapsulePosition.fallback(400f, 48f, 30f, 100f, 20f,
+            FaceAuthCapsuleBounds(190f, 19f, 210f, 39f), 20f, 4f)
+        assertEquals(14f, centered.top, 0f)
+        assertEquals(29f, centered.hole!!.centerY, 0f)
+        val corner = FaceAuthCapsulePosition.fallback(400f, 48f, 30f, 100f, 20f,
+            FaceAuthCapsuleBounds(20f, 19f, 40f, 39f), 20f, 4f)
+        assertEquals(200f, corner.centerX!!, 0f)
+        assertEquals(200f, corner.hole!!.centerX, 0f)
+        val noCamera = FaceAuthCapsulePosition.fallback(400f, 40f, 30f, 100f, 20f, null, 20f, 4f)
+        assertEquals(5f, noCamera.top, 0f)
+    }
+
+    @Test fun nativeScreenCoordinatesAreTranslatedTogetherWithTheRetractionTarget() {
+        val layout = FaceAuthCapsuleNativeLayout(36f, 90f, 300f, 45f, 560f,
+            FaceAuthCapsuleBounds(530f, 50f, 590f, 112f))
+        val local = layout.offset(-20f, -20f)
+        assertEquals(16f, local.top, 0f)
+        assertEquals(540f, local.centerX!!, 0f)
+        assertEquals(layout, local.offset(20f, 20f))
+    }
+
+    @Test fun incompleteOrInvalidNativeLayoutsAreRetriedInsteadOfUsedAsCoordinates() {
+        val area = FaceAuthCapsuleBounds(0f, 2f, 1080f, 120f)
+        assertNull(FaceAuthCapsulePosition.fromNativeArea(area, 0f, 300f, 60f, null, null, null))
+        assertNull(FaceAuthCapsulePosition.fromNativeArea(area, 140f, 300f, 60f, null, null, null))
+        assertNull(FaceAuthCapsulePosition.fromNativeArea(area.copy(top = Float.NaN), 90f, 300f, 60f, null, null, null))
+        assertNull(FaceAuthCapsulePosition.fromNativeArea(area, 90f, 300f, 60f, 61f, -30f, 40f)!!.hole)
+    }
 }

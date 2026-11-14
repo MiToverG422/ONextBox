@@ -68,12 +68,19 @@ internal object LauncherGestureHooker {
         val c16 = SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16
         val prefix = "com.oplus.quickstep.rapidreaction."
         val namedBase = "${prefix}panelparams.TriggerPanelParams"
-        val base = ModernReflect.findClassIfExists(namedBase, loader) ?: ModernReflect.findClass("zgb", loader)
         val options = ModernReflect.findClass("$namedBase\$SelectionOptions", loader)
+        val resolvedAxis = if (ModernReflect.findClassIfExists(namedBase, loader) == null)
+            LauncherDexResolver.method(loader, "gesture-entrance-axis") { dex ->
+                dex.findMethod { matcher { paramTypes(options.name); returnType = "int" } }.single {
+                    !java.lang.reflect.Modifier.isStatic(it.modifiers)
+                }
+            } else null
+        val base = resolvedAxis?.declaringClass ?: ModernReflect.findClass(namedBase, loader)
         val enums = requireNotNull(options.enumConstants).associateBy { (it as Enum<*>).name }
         val floating = requireNotNull(enums["FLOATING_WINDOW"])
         val none = requireNotNull(enums["NONE"])
-        val axisFor = base.getDeclaredMethod(if (c16) "getEntranceAxisCode" else "c", options).apply { isAccessible = true }
+        val axisFor = (resolvedAxis ?: base.getDeclaredMethod(if (c16) "getEntranceAxisCode" else "c", options))
+            .apply { isAccessible = true }
         val widths = WeakHashMap<Any, Int>()
         fun restoreWidths(state: Any?) {
             (state as? List<*>)?.forEach { entry ->
@@ -89,7 +96,14 @@ internal object LauncherGestureHooker {
             detach = { synchronized(widths) { widths.clear() } }, restore = ::restoreWidths)
         HotReloadLifecycle.restoredState(ownerKey)?.let(::restoreWidths)
         val types = when {
-            base.name != namedBase -> listOf("h6a", "k6a")
+            base.name != namedBase -> LauncherDexResolver.scan(loader) { dex ->
+                dex.findMethod {
+                    matcher { usingStrings("initBoundaryProgress: thresholdScale")
+                        paramTypes(Context::class.java.name, "int", "int"); returnType = "void" }
+                }.map { it.className }.distinct().filter {
+                    Class.forName(it, false, loader).superclass == base
+                }.also { require(it.size == 2) }
+            }
             c16 -> listOf("${prefix}panelparams.SplitFloatParams", "${prefix}panelparams.SplitCapsuleFloatParams")
             else -> listOf("${prefix}panelparams.a", "${prefix}panelparams.b")
         }
@@ -97,7 +111,10 @@ internal object LauncherGestureHooker {
             val type = ModernReflect.findClass(name, loader)
             check(base.isAssignableFrom(type))
             val updateName = if (c16) "updateParams" else if (base.name == namedBase) "l" else "f"
-            val update = type.getDeclaredMethod(updateName, Context::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+            val update = if (base.name != namedBase) LauncherDexResolver.method(loader, "gesture-bounds:$name") { dex ->
+                dex.findMethod { matcher { declaredClass = name; usingStrings("initBoundaryProgress: thresholdScale")
+                    paramTypes(Context::class.java.name, "int", "int"); returnType = "void" } }.single()
+            } else type.getDeclaredMethod(updateName, Context::class.java, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
             val select = if (c16) type.getDeclaredMethod("calculateSelectArea", Float::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)

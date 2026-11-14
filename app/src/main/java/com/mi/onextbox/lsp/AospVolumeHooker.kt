@@ -11,6 +11,8 @@ internal object AospVolumeHooker {
     private val bypass = ThreadLocal.withInitial { false }
 
     fun hook(loader: ClassLoader) {
+        AospVolumeOptionsHooker.hook(loader)
+        AospVolumePanelHooker.hook(loader)
         runCatching {
             AospVolumeCallbackBridge.registerHotReload(loader)
             val type = Class.forName("com.oplus.systemui.dagger.DaggerOplusReferenceGlobalRootComponent\$OplusReferenceSysUIComponentImpl", false, loader)
@@ -34,7 +36,10 @@ internal object AospVolumeHooker {
         }.onFailure { HookLog.i(TAG, "Native volume factory not compatible: $it") }
     }
 
-    private class Session(private val native: Any, private val stockFactory: () -> Any) {
+    internal fun wrapColorOs16(native: Any, stockFactory: () -> Any): Any =
+        Session(native, isolateScope = false, stockFactory = stockFactory).proxy()
+
+    private class Session(private val native: Any, private val isolateScope: Boolean = true, private val stockFactory: () -> Any) {
         private val loader = native.javaClass.classLoader!!
         private val dialogType = Class.forName("com.android.systemui.plugins.VolumeDialog", false, loader)
         private val main = Handler(Looper.getMainLooper())
@@ -46,7 +51,7 @@ internal object AospVolumeHooker {
         private var ownedScope: Any? = null
 
         fun proxy(): Any {
-            installIsolatedScope()
+            if (isolateScope) installIsolatedScope()
             return Proxy.newProxyInstance(loader, arrayOf(dialogType)) { proxy, method, args ->
                 when (method.name) {
                     "toString" -> "ONextBox Native Volume"

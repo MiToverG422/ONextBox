@@ -412,6 +412,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureGallery : RootRoute
 
     @Serializable
+    data object FeatureMultiApp : RootRoute
+
+    @Serializable
     data object FeatureSecurePay : RootRoute
 
     @Serializable
@@ -606,6 +609,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.PhoneManager -> RootRoute.FeaturePhoneManager
     FeaturePageMode.ThemeStore -> RootRoute.FeatureThemeStore
     FeaturePageMode.Gallery -> RootRoute.FeatureGallery
+    FeaturePageMode.MultiApp -> RootRoute.FeatureMultiApp
     FeaturePageMode.SecurePay -> RootRoute.FeatureSecurePay
     FeaturePageMode.GameAssistant -> RootRoute.FeatureGameAssistant
     FeaturePageMode.OShare -> RootRoute.FeatureOShare
@@ -1253,6 +1257,7 @@ fun Root(
                     subclass(RootRoute.FeaturePhoneManager::class)
                     subclass(RootRoute.FeatureThemeStore::class)
                     subclass(RootRoute.FeatureGallery::class)
+                    subclass(RootRoute.FeatureMultiApp::class)
                     subclass(RootRoute.FeatureSecurePay::class)
                     subclass(RootRoute.FeatureGameAssistant::class)
                     subclass(RootRoute.FeatureOShare::class)
@@ -1299,6 +1304,9 @@ fun Root(
                     subclass(RootRoute.SoftwareUpdateReleaseNotes::class)
                     subclass(RootRoute.Contributors::class)
                     subclass(RootRoute.References::class)
+                    // A removed settings page can survive in a saved task after
+                    // an app update. Restore the main page instead of failing.
+                    defaultDeserializer { RootRoute.Main.serializer() }
                 }
             }
         }
@@ -2576,6 +2584,9 @@ fun Root(
             }
             entry<RootRoute.FeatureGallery> {
                 featureEntryContent(FeaturePageMode.Gallery)
+            }
+            entry<RootRoute.FeatureMultiApp> {
+                featureEntryContent(FeaturePageMode.MultiApp)
             }
             entry<RootRoute.FeatureSecurePay> {
                 featureEntryContent(FeaturePageMode.SecurePay)

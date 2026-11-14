@@ -19,6 +19,7 @@ internal object ColorOs16SystemUiFeatureHooks {
         install("volume-percentage") { SideVolumePercentageHooker.hookColorOs16(loader) }
         install("volume-appearance") { SideVolumeAppearanceHooker.hook(loader) }
         install("volume-safety") { VolumeSafetyWarningHooker.hook(loader) }
+        install("native-volume") { ColorOs16AospVolumeHooker.hook(loader) }
         install("navigation") { ImmersiveNavigationHooker.hook(loader) }
         install("assistant-power") { AssistantHooker.hook("com.android.systemui", loader) }
         install("presentation") { SystemUiHooker.hookColorOs16(loader) }

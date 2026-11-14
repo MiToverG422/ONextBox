@@ -123,6 +123,8 @@ class OosLspModuleEntry : XposedModule() {
             return
         }
         com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CorePatchIntegration.hook") { CorePatchIntegration.hook(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("VolumeStepsHooker.hook") { VolumeStepsHooker.hook(loader) }
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MultiAppRestrictionHooker.system") { MultiAppRestrictionHooker.hookSystem(loader) }
         if (LspConfig.isImmersiveNavigationEnabledXposed()) {
             com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ImmersiveNavigationHooker.hook") { ImmersiveNavigationHooker.hook() }
         }
@@ -270,6 +272,8 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyguardCaptureHooker.hookSystemUi") { KeyguardCaptureHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PasswordDialHighlightHooker.hook") { PasswordDialHighlightHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PinSwipeInputHooker.hook") { PinSwipeInputHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PinShuffleInputHooker.hook") { PinShuffleInputHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PasswordEmergencyHooker.hook") { PasswordEmergencyHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FluidCloudMediaBlacklistHooker.hook") { FluidCloudMediaBlacklistHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FluidCloudRecentsHooker.hook") { FluidCloudRecentsHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("StatusBarKeepHooker.hook") { StatusBarKeepHooker.hook(classLoader) }
@@ -293,6 +297,8 @@ class OosLspModuleEntry : XposedModule() {
             }
 
             PACKAGE_LAUNCHER -> {
+                runCatching { LauncherDexResolver.bind(classLoader, target.sourceDir) }
+                    .onFailure { HookLog.w(TAG, "Launcher APK metadata unavailable", it) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FrameworkHooker.hook") { FrameworkHooker.hook(packageName, classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AssistantHooker.hook") { AssistantHooker.hook(packageName, classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LauncherHooker.hook") { LauncherHooker.hook(classLoader) }
@@ -314,8 +320,8 @@ class OosLspModuleEntry : XposedModule() {
             RegionalAppPackages.ESIM_GLOBAL -> EuiccDiagnosticsHooker.hook(classLoader, google = true)
 
             PACKAGE_OPLUS_EUICC -> {
-                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccRegionRestrictionHooker.hook") { EuiccRegionRestrictionHooker.hook(classLoader) }
-                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccDiagnosticsHooker.hook") { EuiccDiagnosticsHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccRegionRestrictionHooker.hook") { EuiccRegionRestrictionHooker.hook(classLoader, target.sourceDir) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccDiagnosticsHooker.hook") { EuiccDiagnosticsHooker.hook(classLoader, apkPath = target.sourceDir) }
             }
 
             PACKAGE_WALLPAPERS -> {
@@ -328,6 +334,7 @@ class OosLspModuleEntry : XposedModule() {
             }
 
             PACKAGE_PHONE -> {
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccProfileLimitHooker.hookPhone") { EuiccProfileLimitHooker.hookPhone(classLoader, target.sourceDir) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NativeFiveGaPhoneHooker.hook") { NativeFiveGaPhoneHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MobileNetworkHooker.hook") { MobileNetworkHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NetworkIdentityHooker.hook") { NetworkIdentityHooker.hook(classLoader, processName) }
@@ -382,9 +389,13 @@ class OosLspModuleEntry : XposedModule() {
             ThemeStoreSettings.PACKAGE_NAME, RegionalAppPackages.THEME_GLOBAL -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ThemeStoreHooker.hook") { ThemeStoreHooker.hook(classLoader) }
             GalleryAiRetouchSettings.PACKAGE_NAME -> {
                 if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GalleryDeleteCountdownHooker.hook") { GalleryDeleteCountdownHooker.hook(classLoader, target.sourceDir) }
+                if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
                     com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GalleryAiRetouchHooker.hook") { GalleryAiRetouchHooker.hook(classLoader, target.sourceDir) }
             }
             SecurePaySettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SecurePayHooker.hook") { SecurePayHooker.hook(classLoader, target.sourceDir) }
+            SystemCustomizationSettings.MULTI_APP ->
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MultiAppRestrictionHooker.app") { MultiAppRestrictionHooker.hookApp(classLoader) }
             GameAssistantSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GameAssistantHooker.hook") { GameAssistantHooker.hook(classLoader, target.sourceDir) }
 
             SoftwareUpdateSettings.PACKAGE_NAME ->

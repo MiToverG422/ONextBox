@@ -1,6 +1,8 @@
 package com.mi.onextbox.lsp
 
+import android.graphics.Path
 import android.graphics.Rect
+import android.graphics.RectF
 import android.view.View
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
@@ -20,6 +22,9 @@ internal object QsControlCenterSliderCorners {
     private val materialUpdating = ThreadLocal<Boolean>()
     private val materialStates = WeakHashMap<View, QsSliderMaterialState>()
     private val detailTransitions = WeakHashMap<View, QsSliderDetailCornerTransition>()
+    private data class PaintedCorner(val seek: View, val background: Float)
+    private val paintedCorner = ThreadLocal<PaintedCorner>()
+    private val smoothPath = QsSliderProgressShape()
 
     fun hook(loader: ClassLoader) {
         val observers = QsCornerViewObservers("qs:slider-views", content = ::contentState) { updateSafely(it, force = true) }
@@ -57,6 +62,7 @@ internal object QsControlCenterSliderCorners {
             }
         }
         hookDetailTransitions(loader)
+        hookMaterialUpdates(loader)
         val base = Reflect.findClassIfExists(QsControlCenterCornerTargets.BASE_SLIDER, loader)
         base?.declaredMethods?.filter { it.name == "setCornerRadius" && it.parameterCount == 1 }?.forEach { method ->
             ModernHookRegistry.installCompat("$TAG:after-native-radius", method, object : ModernMethodHook() {
@@ -72,11 +78,45 @@ internal object QsControlCenterSliderCorners {
         // onDraw on the concrete seekbar is guaranteed to run even when its
         // FrameLayout parent skips its own onDraw. No framework-wide View hooks.
         val seekType = Reflect.findClassIfExists(QsControlCenterCornerTargets.SEEK_BAR, loader)
-        seekType?.declaredMethods?.filter { it.name == "updateBaseMixColorDrawableRadius" && it.parameterCount == 1 }
+        seekType?.declaredMethods?.filter {
+            it.name == "updateSpotLightPath" && it.parameterCount == 2 && it.parameterTypes[0] == Path::class.java
+        }?.forEach { method ->
+            ModernHookRegistry.installFast("$TAG:spotlight-path", method, XposedInterface.Hooker { chain ->
+                if (HotReloadLifecycle.isRetiring) return@Hooker chain.proceed()
+                val seek = chain.thisObject as? View ?: return@Hooker chain.proceed()
+                val radius = sliderOwner(seek)?.let(::paintRadius) ?: return@Hooker chain.proceed()
+                val path = chain.getArg(0) as? Path ?: return@Hooker chain.proceed()
+                try {
+                    val bounds = Reflect.callMethod(seek, "getBackgroundRect") as Rect
+                    if (bounds.isEmpty) return@Hooker chain.proceed()
+                    val painted = paintedCorner.get()?.takeIf { it.seek === seek }?.background
+                        ?: QsSliderCornerPaintScope.scaled(radius,
+                            (Reflect.getObjectField(seek, QsSliderCornerPaintScope.BACKGROUND) as Number).toFloat(),
+                            (Reflect.getObjectField(seek, "mBackgroundRadius") as Number).toFloat())
+                    val weight = QsCornerSmoothness.weight(
+                        (Reflect.getObjectField(seek, "mBackgroundRoundCornerWeight") as Number).toFloat())
+                    smoothPath.replace(path, RectF(bounds), painted, weight)
+                    if (reported.add("spotlight")) HookLog.i(TAG, "Slider drag spotlight follows custom corners")
+                    null
+                } catch (error: Throwable) {
+                    diagnose("Slider drag spotlight", error)
+                    path.rewind()
+                    chain.proceed()
+                }
+            })
+            runCatching { ModernHookRuntime.requireModule().deoptimize(method) }
+                .onFailure { diagnose("Slider spotlight deoptimization", it) }
+        }
+        seekType?.declaredMethods?.filter {
+            (it.name == "updateBaseMixColorDrawableRadius" && it.parameterCount == 1) || it.name == "updateColor"
+        }
             ?.forEach { method ->
-                ModernHookRegistry.installCompat("$TAG:material-native-update", method, object : ModernMethodHook() {
+                val key = if (method.name == "updateColor") "$TAG:material-color-update:${method.toGenericString()}"
+                    else "$TAG:material-native-update"
+                ModernHookRegistry.installCompat(key, method, object : ModernMethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         // A native animation/theme update may overwrite the custom material.
+                        // updateColor mutates the same drawables, hiding the reset from identity checks.
                         // Our own update must not invalidate its newly recorded cache entry.
                         if (materialUpdating.get() != true) (param.thisObject as? View)?.let {
                             synchronized(materialStates) { materialStates.remove(it) }
@@ -92,8 +132,7 @@ internal object QsControlCenterSliderCorners {
                     if (HotReloadLifecycle.isRetiring || nativeRadius.get() == true) return@Hooker chain.proceed()
                     if (!QsTileCornerSettings.enabledXposed() && synchronized(applied) { applied.isEmpty() }) return@Hooker chain.proceed()
                     val seek = chain.thisObject as? View ?: return@Hooker chain.proceed()
-                    val owner = generateSequence(seek.parent) { it.parent }.filterIsInstance<View>()
-                        .firstOrNull { QsControlCenterCornerTargets.isSlider(it.javaClass.name) }
+                    val owner = sliderOwner(seek)
                     val radius = owner?.let(::paintRadius) ?: return@Hooker chain.proceed()
                     var entered = false
                     try {
@@ -109,9 +148,15 @@ internal object QsControlCenterSliderCorners {
                         withSmoothCorners(seek) {
                             scope.paint(paintedProgress, paintedBackground) {
                                 entered = true
-                                runCatching { updateMaterialIfChanged(seek, paintedProgress) }
-                                    .onFailure { diagnose("Slider paint material", it) }
-                                chain.proceed()
+                                val previous = paintedCorner.get()
+                                paintedCorner.set(PaintedCorner(seek, paintedBackground))
+                                try {
+                                    runCatching { updateMaterialIfChanged(seek, paintedProgress) }
+                                        .onFailure { diagnose("Slider paint material", it) }
+                                    chain.proceed()
+                                } finally {
+                                    if (previous == null) paintedCorner.remove() else paintedCorner.set(previous)
+                                }
                             }
                         }
                     } catch (error: Throwable) {
@@ -135,11 +180,51 @@ internal object QsControlCenterSliderCorners {
         HookLog.i(TAG, "Control Center brightness/volume corner adapters installed")
     }
 
+    private fun hookMaterialUpdates(loader: ClassLoader) {
+        val manager = Reflect.findClassIfExists("com.oplus.systemui.qs.base.util.QsSeekBarBlurManager", loader) ?: return
+        manager.declaredMethods.filter {
+            (it.name == "applyBlurConfig" && it.parameterCount == 8) ||
+                (it.name == "createSeekBarBlurDrawable" && it.parameterCount == 8)
+        }.forEach { method ->
+            val factory = method.name == "createSeekBarBlurDrawable"
+            ModernHookRegistry.installCompat("$TAG:material-input:${method.name}", method, object : ModernMethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    if (HotReloadLifecycle.isRetiring || materialUpdating.get() == true || nativeRadius.get() == true) return
+                    runCatching {
+                        val seek = if (factory) param.args[0] as? View else {
+                            val proxy = Reflect.callMethod(param.args[3], "getViewBlurProxy")
+                            Reflect.callMethod(proxy, "getView") as? View
+                        } ?: return@runCatching
+                        // Our paint scope has already supplied the deformed visual radius.
+                        if (paintedCorner.get()?.seek === seek) return@runCatching
+                        val radius = sliderOwner(seek)?.let(::paintRadius) ?: return@runCatching
+                        val painted = QsSliderCornerPaintScope.scaled(radius,
+                            (Reflect.getObjectField(seek, QsSliderCornerPaintScope.PROGRESS) as Number).toFloat(),
+                            (Reflect.getObjectField(seek, "mProgressRadius") as Number).toFloat())
+                        val radiusIndex = if (factory) 2 else 1
+                        param.args[radiusIndex] = painted
+                        param.args[radiusIndex + 1] = QsCornerSmoothness.weight((param.args[radiusIndex + 1] as Number).toFloat())
+                        if (factory) param.args[4] = false
+                    }.onFailure { diagnose("Slider material input", it) }
+                }
+            })
+            runCatching { ModernHookRuntime.requireModule().deoptimize(method) }
+                .onFailure { diagnose("Slider material input deoptimization", it) }
+        }
+        // Keep material updates observable even when the vendor precompiles the
+        // factories and color/radius adapters with these calls inlined.
+        manager.declaredMethods.filter { it.name in setOf("applySeekBarBgBlurConfig",
+            "applySeekBarActiveBlurConfig", "getSeekBarBackground", "getSeekBarActiveDrawable") }.forEach { method ->
+            runCatching { ModernHookRuntime.requireModule().deoptimize(method) }
+                .onFailure { diagnose("Slider material caller deoptimization", it) }
+        }
+    }
+
     private fun hookDetailTransitions(loader: ClassLoader) {
         val type = Reflect.findClassIfExists(QsControlCenterCornerTargets.DETAIL_ANIMATION, loader) ?: return
-        type.declaredMethods.filter { it.name == "beginTransition" && it.parameterCount == 3 }.forEach { method ->
-            ModernHookRegistry.installCompat("$TAG:detail-transition", method, object : ModernMethodHook() {
-                private val pending = WeakHashMap<MethodHookParam, Pair<View, QsSliderDetailCornerTransition>>()
+        type.declaredMethods.filter { it.name == "beginTransition" && it.parameterCount in setOf(3, 5) }.forEach { method ->
+            ModernHookRegistry.installCompat("$TAG:detail-transition:${method.parameterCount}", method, object : ModernMethodHook() {
+                private val pending = WeakHashMap<MethodHookParam, Pair<View, QsSliderDetailCornerTransition?>>()
 
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     if (HotReloadLifecycle.isRetiring) return
@@ -151,6 +236,12 @@ internal object QsControlCenterSliderCorners {
                             !QsControlCenterCornerTargets.isMainSlider(from.javaClass.name)) return@runCatching
                         val priorRadius = paintRadius(detail)
                         synchronized(detailTransitions) { detailTransitions.remove(detail) }
+                        // Newer panels animate real bounds. Their radius follows the current
+                        // short side each frame; applying the old scale interpolation would snap.
+                        if (method.parameterCount == 5) {
+                            synchronized(pending) { pending[param] = detail to null }
+                            return@runCatching
+                        }
                         val percent = QsTileCornerSettings.radiusXposed(QsTileCornerSettings.Size.OneXTwo)
                             ?: return@runCatching
                         val detailRadius = customRadius(detail) ?: return@runCatching
@@ -176,7 +267,8 @@ internal object QsControlCenterSliderCorners {
                     if (param.throwable != null || HotReloadLifecycle.isRetiring) return
                     // beginTransition cancels the old spring first. Publish only after
                     // its cancellation/end callbacks have cleared the previous state.
-                    synchronized(detailTransitions) { detailTransitions[detail] = transition }
+                    if (transition == null) updateSafely(detail, force = true)
+                    else synchronized(detailTransitions) { detailTransitions[detail] = transition }
                 }
             })
             runCatching { ModernHookRuntime.requireModule().deoptimize(method) }
@@ -188,8 +280,8 @@ internal object QsControlCenterSliderCorners {
 
     private fun hookDetailTransitionEnd(loader: ClassLoader, suffix: String, viewsField: String) {
         val type = Reflect.findClassIfExists(QsControlCenterCornerTargets.DETAIL_ANIMATION + suffix, loader) ?: return
-        type.declaredMethods.filter { it.name == "onAnimationEnd" && it.parameterCount == 4 }.forEach { method ->
-            ModernHookRegistry.installCompat("$TAG:detail-end:$suffix", method, object : ModernMethodHook() {
+        type.declaredMethods.filter { it.name == "onAnimationEnd" && it.parameterCount in setOf(1, 4) }.forEach { method ->
+            ModernHookRegistry.installCompat("$TAG:detail-end:$suffix:${method.parameterCount}", method, object : ModernMethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     runCatching {
                         val views = Reflect.getObjectField(param.thisObject!!, viewsField) ?: return@runCatching
@@ -198,6 +290,14 @@ internal object QsControlCenterSliderCorners {
                         detail.invalidate()
                     }.onFailure { diagnose("Slider detail transition cleanup", it) }
                 }
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    if (param.throwable != null || HotReloadLifecycle.isRetiring) return
+                    runCatching {
+                        val views = Reflect.getObjectField(param.thisObject!!, viewsField) ?: return@runCatching
+                        val detail = Reflect.callMethod(views, "getDetailSlider") as? View ?: return@runCatching
+                        updateSafely(detail, force = true)
+                    }.onFailure { diagnose("Slider detail final corners", it) }
+                }
             })
             runCatching { ModernHookRuntime.requireModule().deoptimize(method) }
                 .onFailure { diagnose("Detail transition end deoptimization", it) }
@@ -205,6 +305,9 @@ internal object QsControlCenterSliderCorners {
     }
 
     private fun detailScale(view: View) = QsSliderDetailCornerTransition.Scale(view.scaleX, view.scaleY)
+
+    private fun sliderOwner(seek: View): View? = generateSequence(seek.parent) { it.parent }.filterIsInstance<View>()
+        .firstOrNull { QsControlCenterCornerTargets.isSlider(it.javaClass.name) }
 
     private fun mainPaintedRadius(view: View, radius: Float): Float = runCatching {
         val seek = requireNotNull(Reflect.callMethod(view, "getSlider"))

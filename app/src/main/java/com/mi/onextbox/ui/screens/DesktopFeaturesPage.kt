@@ -183,12 +183,18 @@ internal fun DesktopFeaturesPage(
 
     }
     if (mode == FeaturePageMode.DesktopIcons) {
+        SettingsSection(title = stringResource(R.string.custom_icon_size))
+        SystemCustomizationGroup(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.DesktopIconSize)
         LauncherIconMenuSettingsGroup()
         SettingsSection(title = stringResource(R.string.launcher_group_badges))
         SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.badges) }
 
         SettingsSection(title = stringResource(R.string.launcher_group_folder))
-        SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.folder) }
+        SettingsGroup {
+            SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.FolderLayout,
+                hasDividerBelow = true)
+            LauncherFeatureRows(LauncherFeatureItems.folder, hasDividerAbove = true)
+        }
 
     }
 }

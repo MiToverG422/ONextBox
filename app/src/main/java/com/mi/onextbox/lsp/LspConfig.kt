@@ -704,6 +704,8 @@ object LspConfig {
         FaceTapAnimation("keyguard_face_tap_animation"),
         BlockPasswordHighlight("keyguard_block_password_highlight"),
         SwipePinInput("keyguard_swipe_pin_input"),
+        ShufflePinKeys("keyguard_shuffle_pin_keys"),
+        HidePasswordEmergency("keyguard_hide_password_emergency"),
         AodScreenshot("keyguard_aod_screenshot"),
         ScreenOffRecording("keyguard_screen_off_recording");
 
@@ -2423,6 +2425,7 @@ object LspConfig {
     }
 
     fun setEsimProfileLimitBypassEnabled(context: Context, enabled: Boolean) {
+        if (enabled) LspFrameworkService.requestScopes(setOf("com.oplus.euicc", "com.android.phone"))
         setSyncedBooleanPreference(
             context = context,
             prefsKey = KEY_ESIM_PROFILE_LIMIT_BYPASS,
@@ -2802,7 +2805,7 @@ object LspConfig {
             setRoundNotificationClearButtonEnabled(context, false)
             setAospBackPanelEnabled(context, false)
             BackGestureSettings.reset(context)
-            AospVolumeSettings.set(context, false)
+            AospVolumeSettings.reset(context)
             VolumeSafetyWarningSettings.set(context, false)
             ScreenCaptureSettings.set(context, false)
             LargeNetworkTypeSettings.set(context, false)

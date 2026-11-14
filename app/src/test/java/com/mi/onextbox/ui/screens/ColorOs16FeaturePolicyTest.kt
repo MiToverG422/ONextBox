@@ -87,7 +87,10 @@ class ColorOs16FeaturePolicyTest {
     @Test fun reusedWholePagesRequireEveryCurrentOptionAndRealmeFiltersUnsupportedChildren() {
         assertTrue(colorOs16PageHasAll(FeaturePageMode.MobileNetwork, colorOs16MobileNetworkTitles))
         assertTrue(colorOs16PageHasAll(FeaturePageMode.SecurityPermission, colorOs16SecurityPermissionTitles))
-        assertFalse(colorOs16PageHasAll(FeaturePageMode.SystemUiNative, setOf(R.string.feature_aosp_volume_title)))
+        assertTrue(colorOs16PageHasAll(FeaturePageMode.SystemUiNative, setOf(R.string.feature_aosp_volume_title,
+            R.string.feature_aosp_volume_scale, R.string.feature_aosp_volume_hide_in_qs)))
+        assertFalse(colorOs16PageHasAll(FeaturePageMode.SystemUiNative, setOf(R.string.feature_aosp_volume_title,
+            R.string.native_live_update_title)))
         val actions = EnabledFeatureActions()
         colorOs16AdditionalCatalogEntries.forEach { entry ->
             assertTrue(actions.supports(entry.title))

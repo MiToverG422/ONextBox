@@ -10,6 +10,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ScrollView
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
+import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernMethodHook
 import com.mi.onextbox.lsp.compat.ModernReflect
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
@@ -18,7 +19,6 @@ import java.lang.ref.WeakReference
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.util.Locale
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** eSIM region and confirmation-code hooks, preserving device binding and the separate profile-count policy. */
@@ -26,15 +26,6 @@ internal object EuiccRegionRestrictionHooker {
     private const val TAG = "ONextBox-Euicc"
     private const val DOWNLOAD_CHECKER_CLASS = "com.oplus.euicc.DownloadChecker"
     private const val COUNTRY_PRECHECK_METHOD = "d"
-    private const val PROFILE_LIMIT_CHECK_METHOD = "q"
-    private const val DOWNLOAD_ACTIVITY_CLASS =
-        "com.oplus.euicc.lui.activity.EsimDownloadActivity"
-    private const val DOWNLOAD_VIEW_MODEL_CLASS =
-        "com.oplus.euicc.lui.viewmodel.EsimDownloadViewModel"
-    private const val AGENT_IMPLEMENTATION_CLASS =
-        "com.oplus.euicc.sdk.profileassistant.internal.b"
-    private const val CONFIRMATION_CALLBACK_CLASS =
-        "com.oplus.euicc.sdk.profileassistant.Agent\$ConfirmationCodeResponseCallback"
     private const val AGENT_SERVICE_CLASS =
         "com.oplus.euicc.sdk.profileassistant.internal.AgentService"
     private const val COUI_DIALOG_BUILDER_CLASS =
@@ -59,7 +50,7 @@ internal object EuiccRegionRestrictionHooker {
     private var pendingDownload: PendingDownload? = null
     private val replayingDownload = ThreadLocal<ReplayDownload?>()
 
-    fun hook(classLoader: ClassLoader?): Boolean {
+    fun hook(classLoader: ClassLoader, apkPath: String): Boolean {
         HotReloadLifecycle.register("euicc:confirmation", capture = { activityReference.get() },
             canReload = {
                 synchronized(stateLock) {
@@ -79,15 +70,15 @@ internal object EuiccRegionRestrictionHooker {
                 activityReference = WeakReference(null)
             }, restore = { state -> activityReference = WeakReference(state as? Activity) })
         val countryHooked = hookCountryPrecheck(classLoader)
-        val profileLimitHooked = hookProfileLimitCheck(classLoader)
-        val confirmationHooked = hookConfirmationCodeFlow(classLoader)
+        val profileLimitHooked = hookProfileLimitCheck(classLoader, apkPath)
+        val confirmationHooked = hookConfirmationCodeFlow(classLoader, apkPath)
         return countryHooked || profileLimitHooked || confirmationHooked
     }
 
     private fun hookCountryPrecheck(classLoader: ClassLoader?): Boolean {
         val checkerClass = findClass(DOWNLOAD_CHECKER_CLASS, classLoader)
         if (checkerClass == null) {
-            HookLog.w(TAG, "ColorOS 17 DownloadChecker was not found")
+            HookLog.w(TAG, "ColorOS DownloadChecker was not found")
             return false
         }
 
@@ -125,31 +116,20 @@ internal object EuiccRegionRestrictionHooker {
                     0
                 },
             )
-            HookLog.i(TAG, "Installed ColorOS 17 eSIM region-precheck hook")
+            HookLog.i(TAG, "Installed ColorOS eSIM region-precheck hook")
             true
         }.onFailure { throwable ->
             HookLog.e(TAG, "Failed to install the eSIM region-precheck hook", throwable)
         }.getOrDefault(false)
     }
 
-    private fun hookProfileLimitCheck(classLoader: ClassLoader?): Boolean {
-        val checkerClass = findClass(DOWNLOAD_CHECKER_CLASS, classLoader)
-        if (checkerClass == null) {
-            HookLog.w(TAG, "ColorOS 17 DownloadChecker was not found for profile-limit bypass")
-            return false
-        }
-        val method = checkerClass.declaredMethods.singleOrNull { candidate ->
-            candidate.name == PROFILE_LIMIT_CHECK_METHOD &&
-                !Modifier.isStatic(candidate.modifiers) &&
-                candidate.returnType == Boolean::class.javaPrimitiveType &&
-                candidate.parameterCount == 0
-        }
-        if (method == null) {
-            HookLog.w(TAG, "Compatible DownloadChecker.q() profile-limit target was not found")
-            return false
-        }
-
+    private fun hookProfileLimitCheck(classLoader: ClassLoader, apkPath: String): Boolean {
         return runCatching {
+            val stateKey = "euicc:download-profile-limit:targets-v1"
+            val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
+            val targets = saved?.let { EuiccProfileLimitTargets.Download(it) }
+                ?: EuiccProfileLimitTargets.download(classLoader, apkPath)
+            val method = targets.check
             ModernHookRegistry.installFast(
                 key = "euicc:profile-limit-check:${method.toGenericString()}",
                 executable = method,
@@ -163,130 +143,78 @@ internal object EuiccRegionRestrictionHooker {
                     false
                 },
             )
-            HookLog.i(TAG, "Installed ColorOS 17 eSIM profile-limit hook")
+            targets.callers.forEach { caller ->
+                runCatching { ModernHookRuntime.requireModule().deoptimize(caller) }
+                    .onFailure { HookLog.w(TAG, "Profile-limit caller deoptimization failed", it) }
+            }
+            HotReloadLifecycle.register(stateKey, capture = { targets.values })
+            HookLog.i(TAG, "Installed ColorOS eSIM profile-limit hook")
             true
         }.onFailure { throwable ->
             HookLog.e(TAG, "Failed to install the eSIM profile-limit hook", throwable)
         }.getOrDefault(false)
     }
 
-    private fun hookConfirmationCodeFlow(classLoader: ClassLoader?): Boolean {
-        val activityClass = findClass(DOWNLOAD_ACTIVITY_CLASS, classLoader)
-        val viewModelClass = findClass(DOWNLOAD_VIEW_MODEL_CLASS, classLoader)
-        val callbackClass = findClass(CONFIRMATION_CALLBACK_CLASS, classLoader)
-        val agentClass = findClass(AGENT_IMPLEMENTATION_CLASS, classLoader)
-        if (activityClass == null || viewModelClass == null || callbackClass == null || agentClass == null) {
-            HookLog.w(TAG, "C17 eSIM confirmation-code classes were not found")
-            return false
+    private fun hookConfirmationCodeFlow(classLoader: ClassLoader, apkPath: String): Boolean = runCatching {
+        val stateKey = "euicc:confirmation-targets:v1"
+        val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
+        val targets = saved?.let { EuiccCompatibilityTargets.Confirmation(it) }
+            ?: EuiccCompatibilityTargets.confirmation(classLoader, apkPath)
+        val activityClass = Activity::class.java
+        val onResume = activityClass.declaredMethods.single { method ->
+            method.name == "onResume" && method.parameterCount == 0 && method.returnType == Void.TYPE
         }
-
-        val onResume = activityClass.declaredMethods.singleOrNull { method ->
-            method.name == "onResume" && method.parameterCount == 0 &&
-                method.returnType == Void.TYPE
+        val onDestroy = activityClass.declaredMethods.single { method ->
+            method.name == "onDestroy" && method.parameterCount == 0 && method.returnType == Void.TYPE
         }
-        val onDestroy = activityClass.declaredMethods.singleOrNull { method ->
-            method.name == "onDestroy" && method.parameterCount == 0 &&
-                method.returnType == Void.TYPE
+        installAfterHook("euicc:download-activity-resume", onResume) { param ->
+            val activity = param.thisObject as? Activity ?: return@installAfterHook
+            if (activity.packageName != "com.oplus.euicc") return@installAfterHook
+            activityReference = WeakReference(activity)
+            showPendingPrompts(activity)
         }
-        val confirmationMethod = viewModelClass.declaredClasses
-            .asSequence()
-            .flatMap { nestedClass -> nestedClass.declaredMethods.asSequence() }
-            .singleOrNull { method ->
-                !Modifier.isStatic(method.modifiers) &&
-                    method.returnType == Void.TYPE &&
-                    method.parameterTypes.contentEquals(
-                        arrayOf(Boolean::class.javaPrimitiveType, callbackClass),
-                    )
+        installAfterHook("euicc:download-activity-destroy", onDestroy) { param ->
+            val activity = param.thisObject as? Activity ?: return@installAfterHook
+            if (activityReference.get() === activity) {
+                activityReference = WeakReference(null)
+                // Activity recreation must not cancel an in-flight carrier request.
+                dialogReference.get()?.dismiss()
+                dialogReference = WeakReference(null)
             }
-        val downloadMethod = viewModelClass.declaredMethods.singleOrNull { method ->
-            method.name == "m" &&
-                !Modifier.isStatic(method.modifiers) &&
-                method.returnType == Void.TYPE &&
-                method.parameterTypes.contentEquals(arrayOf(String::class.java))
         }
-        val agentDownloadMethod = agentClass.declaredMethods.singleOrNull { method ->
-            method.name == "a" &&
-                !Modifier.isStatic(method.modifiers) &&
-                method.returnType == Long::class.javaPrimitiveType &&
-                method.parameterCount == 3 &&
-                method.parameterTypes[0] == String::class.java &&
-                method.parameterTypes[1] == String::class.java
+        targets.callbacks.forEach { method ->
+            installAfterHook("euicc:confirmation-code-required:${method.toGenericString()}", method) { param ->
+                if (!LspConfig.isEsimConfirmationCodePromptEnabledXposed()) return@installAfterHook
+                val callback = param.args.getOrNull(1) ?: return@installAfterHook
+                onConfirmationCodeRequired(callback, param.args.getOrNull(0) as? Boolean ?: false)
+            }
         }
-
-        if (
-            onResume == null || onDestroy == null || downloadMethod == null ||
-            agentDownloadMethod == null
-        ) {
-            val missing = buildList {
-                if (onResume == null) add("activity.onResume")
-                if (onDestroy == null) add("activity.onDestroy")
-                if (downloadMethod == null) add("view-model download")
-                if (agentDownloadMethod == null) add("agent download")
-            }
-            HookLog.w(TAG, "Compatible C17 eSIM targets were not found: ${missing.joinToString()}")
-            return false
-        }
-
-        return runCatching {
-            installAfterHook("euicc:download-activity-resume", onResume) { param ->
-                val activity = param.thisObject as? Activity ?: return@installAfterHook
-                activityReference = WeakReference(activity)
-                showPendingPrompts(activity)
-            }
-            installAfterHook("euicc:download-activity-destroy", onDestroy) { param ->
-                val activity = param.thisObject as? Activity ?: return@installAfterHook
-                if (activityReference.get() === activity) {
-                    activityReference = WeakReference(null)
-                    // Preserve a pending server request across Activity recreation. Dismissing a
-                    // dialog directly does not invoke its cancel listener.
-                    dialogReference.get()?.dismiss()
-                    dialogReference = WeakReference(null)
-                }
-            }
-            if (confirmationMethod != null) {
-                installAfterHook(
-                    key = "euicc:confirmation-code-required:${confirmationMethod.toGenericString()}",
-                    method = confirmationMethod,
-                ) { param ->
-                    if (!LspConfig.isEsimConfirmationCodePromptEnabledXposed()) {
-                        return@installAfterHook
-                    }
-                    val retry = param.args.getOrNull(0) as? Boolean ?: false
-                    val callback = param.args.getOrNull(1) ?: return@installAfterHook
-                    onConfirmationCodeRequired(callback, retry)
-                }
-            } else {
-                HookLog.w(TAG, "Server-requested confirmation callback is unavailable; pre-download entry remains active")
-            }
-            installBeforeHook(
-                key = "euicc:prompt-before-download:${downloadMethod.toGenericString()}",
-                method = downloadMethod,
-            ) { param ->
-                if (!LspConfig.isEsimConfirmationCodePromptEnabledXposed()) {
-                    return@installBeforeHook
-                }
+        targets.downloads.forEach { method ->
+            val codeIndex = method.parameterTypes.indexOf(String::class.java)
+            installBeforeHook("euicc:prompt-before-download:${method.toGenericString()}", method) { param ->
+                if (!LspConfig.isEsimConfirmationCodePromptEnabledXposed()) return@installBeforeHook
                 val viewModel = param.thisObject ?: return@installBeforeHook
-                if (replayingDownload.get()?.viewModel === viewModel) {
-                    return@installBeforeHook
-                }
-                val activationCode = param.args.getOrNull(0) as? String ?: return@installBeforeHook
+                if (replayingDownload.get()?.viewModel === viewModel) return@installBeforeHook
+                val activationCode = param.args.getOrNull(codeIndex) as? String ?: return@installBeforeHook
                 param.result = null
-                onDownloadRequested(viewModel, downloadMethod, activationCode)
+                onDownloadRequested(viewModel, method, activationCode, param.args.copyOf())
             }
-            installBeforeHook(
-                key = "euicc:inject-confirmation-code:${agentDownloadMethod.toGenericString()}",
-                method = agentDownloadMethod,
-            ) { param ->
-                val replay = replayingDownload.get() ?: return@installBeforeHook
-                param.args[1] = replay.confirmationCode
-                HookLog.i(TAG, "Passing the carrier confirmation code to the OEM eSIM agent")
-            }
-            HookLog.i(TAG, "Installed ColorOS 17 eSIM confirmation-code UI repair")
-            true
-        }.onFailure { throwable ->
-            HookLog.e(TAG, "Failed to install the eSIM confirmation-code UI repair", throwable)
-        }.getOrDefault(false)
-    }
+        }
+        installBeforeHook("euicc:inject-confirmation-code:${targets.agent.toGenericString()}", targets.agent) { param ->
+            val replay = replayingDownload.get() ?: return@installBeforeHook
+            param.args[1] = replay.confirmationCode
+            HookLog.i(TAG, "Passing the carrier confirmation code to the OEM eSIM agent")
+        }
+        targets.downloads.forEach { caller ->
+            runCatching { ModernHookRuntime.requireModule().deoptimize(caller) }
+                .onFailure { HookLog.w(TAG, "Confirmation-code caller deoptimization failed", it) }
+        }
+        HotReloadLifecycle.register(stateKey, capture = { targets.values })
+        HookLog.i(TAG, "Installed eSIM confirmation-code UI repair for ${targets.downloads.size} download paths")
+        true
+    }.onFailure { throwable ->
+        HookLog.e(TAG, "Failed to install the eSIM confirmation-code UI repair", throwable)
+    }.getOrDefault(false)
 
     private fun installAfterHook(
         key: String,
@@ -316,16 +244,16 @@ internal object EuiccRegionRestrictionHooker {
         )
     }
 
-    private fun onDownloadRequested(viewModel: Any, method: Method, activationCode: String) {
+    private fun onDownloadRequested(viewModel: Any, method: Method, activationCode: String, arguments: Array<Any?>) {
         val request = synchronized(stateLock) {
             val current = pendingDownload
             if (
                 current != null && current.viewModel === viewModel &&
-                current.activationCode == activationCode && !current.completed.get()
+                current.method == method && current.activationCode == activationCode && !current.completed.get()
             ) {
                 current
             } else {
-                PendingDownload(viewModel, method, activationCode).also { pendingDownload = it }
+                PendingDownload(viewModel, method, activationCode, arguments).also { pendingDownload = it }
             }
         }
         HookLog.i(TAG, "Waiting for optional carrier confirmation-code entry before download")
@@ -594,7 +522,7 @@ internal object EuiccRegionRestrictionHooker {
         val replay = ReplayDownload(request.viewModel, confirmationCode)
         val resumed = runCatching {
             replayingDownload.set(replay)
-            request.method.invoke(request.viewModel, request.activationCode)
+            request.method.invoke(request.viewModel, *request.arguments)
         }.onFailure { throwable ->
             HookLog.e(TAG, "Could not resume the OEM eSIM download", throwable)
         }.isSuccess
@@ -632,40 +560,12 @@ internal object EuiccRegionRestrictionHooker {
         return true
     }
 
-    /**
-     * C17's marker callback has no methods. It retains ProgressionCallback -> AgentService, where
-     * the OEM implementation expects its String field to be set before its latch is released.
-     */
-    private fun deliverConfirmationCode(callback: Any, code: String?): Boolean {
-        return runCatching {
-            val progressionField = callback.javaClass.declaredFields.singleOrNull { field ->
-                field.type.name.endsWith("AgentService\$ProgressionCallback")
-            } ?: callback.javaClass.getDeclaredField("this\$1")
-            progressionField.isAccessible = true
-            val progression = requireNotNull(progressionField.get(callback))
-
-            val serviceField = progression.javaClass.declaredFields.singleOrNull { field ->
-                field.type.name == AGENT_SERVICE_CLASS
-            } ?: progression.javaClass.getDeclaredField("b")
-            serviceField.isAccessible = true
-            val service = requireNotNull(serviceField.get(progression))
-
-            val codeField = service.javaClass.declaredFields.singleOrNull { field ->
-                field.type == String::class.java
-            } ?: service.javaClass.getDeclaredField("f")
-            val latchField = service.javaClass.declaredFields.singleOrNull { field ->
-                field.type == CountDownLatch::class.java
-            } ?: service.javaClass.getDeclaredField("g")
-            codeField.isAccessible = true
-            latchField.isAccessible = true
-            val latch = latchField.get(service) as? CountDownLatch
-                ?: error("AgentService confirmation latch is unavailable")
-            codeField.set(service, code)
-            latch.countDown()
-        }.onFailure { throwable ->
-            HookLog.e(TAG, "Could not resume the OEM eSIM confirmation-code transaction", throwable)
-        }.isSuccess
-    }
+    private fun deliverConfirmationCode(callback: Any, code: String?): Boolean = runCatching {
+        val serviceType = requireNotNull(findClass(AGENT_SERVICE_CLASS, callback.javaClass.classLoader))
+        EuiccConfirmationDelivery.deliver(callback, serviceType, code)
+    }.onFailure { throwable ->
+        HookLog.e(TAG, "Could not resume the OEM eSIM confirmation-code transaction", throwable)
+    }.isSuccess
 
     private fun findClass(className: String, classLoader: ClassLoader?): Class<*>? {
         listOf(classLoader, null, ClassLoader.getSystemClassLoader())
@@ -686,6 +586,7 @@ internal object EuiccRegionRestrictionHooker {
         val viewModel: Any,
         val method: Method,
         val activationCode: String,
+        val arguments: Array<Any?>,
         val completed: AtomicBoolean = AtomicBoolean(false),
     )
 

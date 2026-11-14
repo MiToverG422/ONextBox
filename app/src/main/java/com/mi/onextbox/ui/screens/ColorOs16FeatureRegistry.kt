@@ -6,6 +6,16 @@ internal object ColorOs16FeatureRegistry {
     data class Entry(val id: String, val titles: Set<Int>, val pages: Set<FeaturePageMode>, val packages: Set<String>)
 
     val entries = listOf(
+        Entry("systemui:native_volume", setOf(R.string.feature_aosp_volume_title, R.string.feature_aosp_volume_scale,
+            R.string.feature_aosp_volume_hide_in_qs), setOf(FeaturePageMode.SystemUiNative), setOf("com.android.systemui")),
+        Entry("app:esim_region", setOf(R.string.feature_esim_region_bypass_title),
+            setOf(FeaturePageMode.Esim), setOf("com.oplus.euicc")),
+        Entry("app:esim_profile_limit", setOf(R.string.feature_esim_profile_limit_bypass_title),
+            setOf(FeaturePageMode.Esim), setOf("com.oplus.euicc", "com.android.phone")),
+        Entry("app:esim_confirmation", setOf(R.string.feature_esim_confirmation_prompt_title),
+            setOf(FeaturePageMode.Esim), setOf("com.oplus.euicc")),
+        Entry("app:esim_diagnostics", setOf(R.string.feature_group_esim_diagnostics),
+            setOf(FeaturePageMode.Esim, FeaturePageMode.EsimDiagnostics), setOf("com.oplus.euicc")),
         Entry("systemui:clock_period", setOf(R.string.clock_period_title, R.string.clock_period_format, R.string.clock_period_small, R.string.clock_period_shade, R.string.clock_compact_spacing, R.string.clock_tabular_digits),
             setOf(FeaturePageMode.SystemUiClock), setOf("com.android.systemui")),
         Entry("systemui:network_speed", setOf(R.string.network_speed_title, R.string.network_speed_refresh_second,

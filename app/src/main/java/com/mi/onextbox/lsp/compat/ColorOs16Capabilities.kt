@@ -2,6 +2,13 @@ package com.mi.onextbox.lsp.compat
 
 internal object ColorOs16Capabilities {
     val featureKeys = setOf(
+        "systemui_aosp_volume",
+        "systemui_aosp_volume_scale",
+        "systemui_aosp_volume_hide_in_qs",
+        "esim_region_restriction_bypass",
+        "esim_region_restriction_override",
+        "esim_profile_limit_bypass",
+        "esim_confirmation_code_prompt",
         "developer_trace_until",
         "developer_trace_tags",
         "developer_debug_logging",
@@ -283,6 +290,7 @@ internal object ColorOs16Capabilities {
         "wallpaper_motion_percent",
     )
     val packages = setOf(
+        "com.oplus.euicc",
         "com.android.launcher",
         "com.android.permissioncontroller",
         "com.android.phone",
@@ -314,6 +322,11 @@ internal object ColorOs16Capabilities {
         "system",
     )
     val featureIds = setOf(
+        "systemui:native_volume",
+        "app:esim_region",
+        "app:esim_profile_limit",
+        "app:esim_confirmation",
+        "app:esim_diagnostics",
         "coui:hide_dividers",
         "systemui:clock_period",
         "systemui:network_speed",
