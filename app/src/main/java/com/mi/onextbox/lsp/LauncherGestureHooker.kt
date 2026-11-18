@@ -101,7 +101,7 @@ internal object LauncherGestureHooker {
                     matcher { usingStrings("initBoundaryProgress: thresholdScale")
                         paramTypes(Context::class.java.name, "int", "int"); returnType = "void" }
                 }.map { it.className }.distinct().filter {
-                    Class.forName(it, false, loader).superclass == base
+                    HostClassLookup.load(it, false, loader).superclass == base
                 }.also { require(it.size == 2) }
             }
             c16 -> listOf("${prefix}panelparams.SplitFloatParams", "${prefix}panelparams.SplitCapsuleFloatParams")

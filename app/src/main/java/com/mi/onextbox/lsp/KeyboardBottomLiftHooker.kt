@@ -9,7 +9,6 @@ import android.view.WindowInsets
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernMethodHook
-import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
@@ -139,9 +138,8 @@ internal object KeyboardBottomLiftHooker {
     }
 
     private fun resolve(loader: ClassLoader, apkPath: String): Array<Any> {
-        System.loadLibrary("dexkit")
-        return DexKitBridge.create(apkPath).use { dex ->
-            dex.setThreadNum(1)
+        return ApkDexSession.withSession(apkPath, threadCount = 1) { open ->
+            val dex = open()
             val attached = dex.findMethod {
                 matcher {
                     name = "onAttachedToWindow"
@@ -189,7 +187,7 @@ internal object KeyboardBottomLiftHooker {
                     (it.type == Any::class.java || container.isAssignableFrom(it.type))
             }.toTypedArray()
             check(ownerFields.isNotEmpty())
-            val service = Class.forName("com.oplus.keyboard.service.ImeService", false, loader)
+            val service = HostClassLookup.load("com.oplus.keyboard.service.ImeService", false, loader)
             val serviceRoot = service.declaredFields.single {
                 !Modifier.isStatic(it.modifiers) && it.type == container
             }

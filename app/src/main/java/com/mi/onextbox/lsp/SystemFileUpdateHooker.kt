@@ -6,7 +6,6 @@ import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import io.github.libxposed.api.XposedInterface
-import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
@@ -20,8 +19,7 @@ internal object SystemFileUpdateHooker {
         val saved = DexTargetCache.restoredState("$prefix:targets") as? Map<String, Array<Method>>
         val targets = if (saved?.containsKey(SCHEMA) == true) saved else {
             val refreshed = runCatching {
-                System.loadLibrary("dexkit")
-                DexKitBridge.create(apkPath).use { dex ->
+                HostDexMetadata.methods(loader, apkPath, "system-file-update", SCHEMA) { dex ->
                     val data = dex.findMethod {
                         matcher {
                             usingStrings("can not handle this task: ")

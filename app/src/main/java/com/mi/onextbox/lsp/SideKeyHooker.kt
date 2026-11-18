@@ -19,7 +19,7 @@ internal object SideKeyHooker {
     fun hookSystemServer(loader: ClassLoader) {
         if (!SideKeyFeaturePolicy.available) return
         runCatching {
-            val type = Class.forName(TARGET, false, loader)
+            val type = HostClassLookup.load(TARGET, false, loader)
             val method = type.getDeclaredMethod("actionInterceptKeyBeforeQueueing", KeyEvent::class.java,
                 Int::class.javaPrimitiveType, Int::class.javaPrimitiveType,
                 Boolean::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
@@ -47,7 +47,7 @@ internal object SideKeyHooker {
             .apply { isAccessible = true }
         private val nativePressed = type.getDeclaredField("mHasProcessedDownEvent").apply { isAccessible = true }
         private val inject = type.getMethod("injectActionButtonPressKeyEvent", KeyEvent::class.java)
-        private val currentUser = Class.forName("android.app.ActivityManager").getMethod("getCurrentUser")
+        private val currentUser = HostClassLookup.load("android.app.ActivityManager").getMethod("getCurrentUser")
         private val userOf = UserHandle::class.java.getMethod("of", Int::class.javaPrimitiveType)
         private val broadcast = Context::class.java.getMethod("sendBroadcastAsUser",
             Intent::class.java, UserHandle::class.java, String::class.java)

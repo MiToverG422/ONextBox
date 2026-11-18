@@ -117,7 +117,9 @@ private fun ColorOs16CatalogRows(mode: FeaturePageMode, advancedTitles: Set<Int>
     var savingTitle by remember { mutableStateOf<Int?>(null) }
     DisposableEffect(app, owner) {
         val preferences = LspPreferenceStore.prefs(app)
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> revision++ }
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (isFeatureInventoryPreference(key)) revision++
+        }
         preferences.registerOnSharedPreferenceChangeListener(listener)
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) revision++ }
         owner.lifecycle.addObserver(observer)
@@ -126,8 +128,12 @@ private fun ColorOs16CatalogRows(mode: FeaturePageMode, advancedTitles: Set<Int>
             owner.lifecycle.removeObserver(observer)
         }
     }
-    LaunchedEffect(app, revision) {
-        configured = withContext(Dispatchers.IO) { EnabledFeatureCatalog.configured(app) }
+    LaunchedEffect(app, revision, savingTitle, entries) {
+        if (savingTitle != null) return@LaunchedEffect
+        if (ready) kotlinx.coroutines.delay(75)
+        configured = withContext(Dispatchers.IO) {
+            EnabledFeatureCatalog.configured(app, entries.mapTo(mutableSetOf()) { it.title })
+        }
         ready = true
     }
     val visibleEntries = if (ready) entries.filter { EnabledFeatureCatalog.dependenciesActive(it.title, configured) } else emptyList()

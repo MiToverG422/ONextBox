@@ -15,12 +15,18 @@ import android.provider.Settings
 import android.telephony.ServiceState
 import android.telephony.SubscriptionInfo
 import android.util.Log
+import com.mi.onextbox.diagnostics.SafeModePolicy
+import com.mi.onextbox.lsp.compat.AdaptationHookGate
+import com.mi.onextbox.lsp.compat.AdaptationRuntimePolicy
+import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookBridge as Bridge
 import com.mi.onextbox.lsp.compat.ModernMethodHook as Hook
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernReflect
 import com.mi.onextbox.lsp.compat.MODERN_PREFERENCES_READY_KEY
+import java.lang.reflect.Method
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** System-wide property publication, with genuine values retained inside the phone process. */
 internal object NetworkIdentityHooker {
@@ -34,10 +40,15 @@ internal object NetworkIdentityHooker {
     private var application: Context? = null
     private var preferences: SharedPreferences? = null
     private var registered = false
-    private var propertyClass: Class<*>? = null
-    private val update = Runnable { HotReloadLifecycle.withHook({}, { refreshSafely() }) }
+    private var receiverRegistered = false
+    private lateinit var propertyGet: Method
+    private lateinit var propertySet: Method
+    private val configurationDirty = AtomicBoolean(true)
+    private var configuredProfiles: Map<Int, NetworkIdentityRules.Profile> = emptyMap()
+    private val update = Runnable { HotReloadLifecycle.withInfrastructureHook({}, { refreshSafely() }) }
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == null || key in NetworkIdentitySettings.keys || key == MODERN_PREFERENCES_READY_KEY) schedule()
+        if (key == null || key in NetworkIdentitySettings.keys || key == MODERN_PREFERENCES_READY_KEY ||
+            key == SafeModePolicy.MANUAL || key == SafeModePolicy.AUTOMATIC) schedule(configurationChanged = true)
     }
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) { schedule() }
@@ -47,22 +58,28 @@ internal object NetworkIdentityHooker {
         if (processName != "com.android.phone" || installed) return
         installed = true
         val properties = ModernReflect.findClassIfExists("android.os.SystemProperties", loader) ?: return
-        propertyClass = properties
+        propertyGet = properties.getDeclaredMethod("get", String::class.java, String::class.java).apply { isAccessible = true }
         val setter = properties.getDeclaredMethod("set", String::class.java, String::class.java)
-        Bridge.hookMethodFast(setter) { chain ->
+        propertySet = setter.apply { isAccessible = true }
+        Bridge.hookInfrastructureFast(setter) { chain ->
             val key = chain.args[0] as? String
             if (bypass.get() == true || key !in NetworkIdentityRules.properties) chain.proceed()
             else synchronized(lock) {
                 // Native telephony updates still run; only published identity is overridden afterwards.
                 val result = chain.proceed()
-                runCatching { engine?.afterNativeWrite(key!!, (chain.args[1] as? String).orEmpty()) }
-                    .onFailure { log("Cannot journal native update", it) }
-                refreshSafely()
+                val current = engine
+                val selected = selectedProfiles()
+                if (current != null && (current.hasOverrides || selected.isNotEmpty())) {
+                    runCatching {
+                        raw { current.refreshAfterNativeWrite(key!!, (chain.args[1] as? String).orEmpty(), selected) }
+                        publishedProfiles = selected
+                    }.onFailure(::restoreAfterFailure)
+                }
                 result
             }
         }
         properties.declaredMethods.filter { it.name == "get" && it.returnType == String::class.java }.forEach { getter ->
-            Bridge.hookMethodFast(getter) { chain ->
+            Bridge.hookInfrastructureFast(getter) { chain ->
                 val key = chain.args.firstOrNull() as? String
                 if (bypass.get() == true || key !in NetworkIdentityRules.properties) chain.proceed()
                 else synchronized(lock) {
@@ -82,11 +99,11 @@ internal object NetworkIdentityHooker {
         }
         installCountryService(loader)
         installSubscriptionService(loader)
-        Bridge.hookAllMethods(Application::class.java, "attach", object : Hook() {
-            override fun afterHookedMethod(param: MethodHookParam) {
-                if (param.throwable == null) (param.args.firstOrNull() as? Context)?.let(::startAfterCommit)
+        Application::class.java.declaredMethods.filter { it.name == "attach" }.forEach { method ->
+            Bridge.hookInfrastructureFast(method) { chain ->
+                chain.proceed().also { (chain.args.firstOrNull() as? Context)?.let(::startAfterCommit) }
             }
-        })
+        }
         val current = runCatching {
             ModernReflect.callStaticMethod(ModernReflect.findClass("android.app.ActivityThread", loader), "currentApplication") as? Context
         }.getOrNull()
@@ -94,7 +111,8 @@ internal object NetworkIdentityHooker {
         HotReloadLifecycle.register("network-identity", detach = {
             unregister()
             synchronized(lock) { raw { engine?.refresh(null) }; publishedProfiles = emptyMap() }
-        }, restore = { register(); refreshSafely() }, resumeAfterRejection = { register(); schedule() })
+        }, restore = { register(); configurationDirty.set(true); refreshSafely() },
+            resumeAfterRejection = { register(); schedule(configurationChanged = true) })
     }
 
     // Runs in the privileged phone process on the platform's already permission-filtered return
@@ -208,46 +226,62 @@ internal object NetworkIdentityHooker {
         }.onFailure { log("Initialization failed; no new overrides will be applied", it) }
     }
 
-    private fun profiles(): Map<Int, NetworkIdentityRules.Profile> {
-        val prefs = preferences ?: return emptyMap()
-        if (!prefs.getBoolean(MODERN_PREFERENCES_READY_KEY, false)) return emptyMap()
-        return NetworkIdentitySettings.read(prefs).profiles()
-    }
+    private fun selectedProfiles(): Map<Int, NetworkIdentityRules.Profile> =
+        if (identityHooksActive()) configuredProfiles else emptyMap()
+    private fun identityHooksActive() = AdaptationHookGate.isBoundProfileActive() &&
+        AdaptationRuntimePolicy.allowsFeatureValue(HookConfigSnapshot.adaptationVersion(), NetworkIdentitySettings.ENABLED)
     private fun register() {
-        val context = application ?: return
+        if (application == null) return
         if (registered) return
         preferences?.registerOnSharedPreferenceChangeListener(listener)
-        context.registerReceiver(receiver, IntentFilter().apply {
+        registered = true
+    }
+    private fun updateReceiver(active: Boolean) {
+        val context = application ?: return
+        if (active == receiverRegistered) return
+        if (active) context.registerReceiver(receiver, IntentFilter().apply {
             addAction("android.intent.action.SIM_STATE_CHANGED")
             addAction("android.intent.action.SERVICE_STATE")
-        }, Context.RECEIVER_EXPORTED)
-        registered = true
+        }, Context.RECEIVER_EXPORTED) else context.unregisterReceiver(receiver)
+        receiverRegistered = active
     }
     private fun unregister() {
         main.removeCallbacks(update)
         if (!registered) return
         preferences?.unregisterOnSharedPreferenceChangeListener(listener)
-        application?.unregisterReceiver(receiver)
+        updateReceiver(false)
         registered = false
     }
-    private fun schedule() { main.removeCallbacks(update); main.postDelayed(update, 100) }
+    private fun schedule(configurationChanged: Boolean = false) {
+        if (configurationChanged) configurationDirty.set(true)
+        main.removeCallbacks(update); main.postDelayed(update, 100)
+    }
     private fun refreshSafely() {
         synchronized(lock) {
             if (bypass.get() == true || engine == null) return
             runCatching {
-                val selected = profiles()
+                if (configurationDirty.getAndSet(false)) {
+                    // A failed remote read must not leave an old active profile cached.
+                    configuredProfiles = emptyMap()
+                    configuredProfiles = NetworkIdentitySettings.activeProfiles(
+                        preferences?.all.orEmpty(), identityHooksActive())
+                }
+                val selected = selectedProfiles()
                 raw { engine?.refreshSlots(selected) }
                 publishedProfiles = selected
-            }.onFailure {
-                publishedProfiles = emptyMap()
-                log("Property refresh failed; attempting restoration", it)
-                runCatching { raw { engine?.refresh(null) } }
-                    .onFailure { failure -> log("Restoration failed; recovery journal retained", failure) }
-            }
+            }.onFailure(::restoreAfterFailure)
+            runCatching { updateReceiver(selectedProfiles().isNotEmpty() || engine?.hasOverrides == true) }
+                .onFailure { log("Cannot update identity broadcast subscription", it) }
         }
     }
-    private fun readProperty(key: String) = ModernReflect.callStaticMethod(propertyClass!!, "get", key, "") as String
-    private fun writeProperty(key: String, value: String) { ModernReflect.callStaticMethod(propertyClass!!, "set", key, value) }
+    private fun restoreAfterFailure(error: Throwable) {
+        publishedProfiles = emptyMap()
+        log("Property refresh failed; attempting restoration", error)
+        runCatching { raw { engine?.refresh(null) } }
+            .onFailure { failure -> log("Restoration failed; recovery journal retained", failure) }
+    }
+    private fun readProperty(key: String) = propertyGet.invoke(null, key, "") as String
+    private fun writeProperty(key: String, value: String) { propertySet.invoke(null, key, value) }
     private inline fun <T> raw(block: () -> T): T {
         val previous = bypass.get(); bypass.set(true)
         return try { block() } finally { bypass.set(previous) }

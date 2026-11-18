@@ -43,7 +43,10 @@ class KeyboardDismissButtonHookContractTest {
 
     @Test fun preferenceIsResetSyncedAndKeyboardScoped() {
         val config = source("lsp/LspConfig.kt")
-        assertTrue(config.contains("setKeyboardDismissHidden(context, false)"))
+        assertTrue(config.contains("KeyboardFeatureSettings.reset(context)"))
+        val settings = source("lsp/KeyboardFeatureSettings.kt")
+        assertTrue(settings.contains("HideDismiss(\"keyboard_hide_dismiss\")"))
+        assertTrue(settings.contains("Option.entries.forEach { set(context, it, false) }"))
         assertTrue(config.contains("value = if (isKeyboardDismissHidden(context)) \"1\" else \"0\""))
         assertTrue(source("lsp/OosLspModuleEntry.kt").contains("KeyboardDismissButtonHooker.hook(classLoader)"))
         assertTrue(source("ui/screens/KeyboardFeaturesPage.kt").contains("R.string.keyboard_hide_dismiss_title"))

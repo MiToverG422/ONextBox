@@ -168,7 +168,7 @@ internal object NotificationClearButtonHooker {
     }
 
     internal fun resolve(loader: ClassLoader): Array<Any> {
-        val controller = Class.forName("com.oplus.systemui.notification.clearall.ClearAllController", false, loader)
+        val controller = HostClassLookup.load("com.oplus.systemui.notification.clearall.ClearAllController", false, loader)
         val button = controller.getDeclaredField("clearAll")
         check(button.type.name == "com.oplus.systemui.notification.clearall.OplusClearAllButton")
         check(View::class.java.isAssignableFrom(button.type))
@@ -188,7 +188,7 @@ internal object NotificationClearButtonHooker {
         check(callers.any { it.name == "updateResource" })
         check(callers.any { it.name == "onConfigChanged" })
         val marginCallers = runCatching {
-            Class.forName("com.oplus.systemui.shade.NotificationPanelViewControllerExImp", false, loader)
+            HostClassLookup.load("com.oplus.systemui.shade.NotificationPanelViewControllerExImp", false, loader)
                 .declaredMethods.filter { it.name == "updateClearAllButtonLayoutParams" }.toTypedArray()
         }.getOrDefault(emptyArray())
         return arrayOf(layout, margin, button, width, callers + marginCallers)

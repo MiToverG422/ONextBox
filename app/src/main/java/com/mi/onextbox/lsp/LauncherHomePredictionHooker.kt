@@ -17,8 +17,8 @@ internal object LauncherHomePredictionHooker {
     private const val KEY = "$TAG:launcherHome"
     private data class Frame(val owner: Any, val progress: Float, val edge: Int, val touchY: Float)
 
-    fun hook(loader: ClassLoader) {
-        if (BackGestureSettings.xposed().predictive != 1 && HotReloadLifecycle.restoredState(KEY) != true) return
+    fun hook(loader: ClassLoader, enabled: Boolean = BackGestureSettings.xposed().predictiveHooks) {
+        if (!enabled) return
         runCatching { install(loader) }
             .onFailure { HookLog.w(TAG, "Launcher predictive preview unavailable; native animation retained", it) }
     }

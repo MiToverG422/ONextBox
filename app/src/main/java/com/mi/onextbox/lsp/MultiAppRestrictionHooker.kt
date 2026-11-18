@@ -25,7 +25,7 @@ internal object MultiAppRestrictionHooker {
     private fun extendedSlots() = SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.MultiAppPerAppLimit)
 
     private fun context(loader: ClassLoader, system: Boolean): Context? = runCatching {
-        val thread = Class.forName("android.app.ActivityThread", false, loader)
+        val thread = HostClassLookup.load("android.app.ActivityThread", false, loader)
         if (!system) thread.getDeclaredMethod("currentApplication").invoke(null) as? Context
         else thread.getDeclaredMethod("getSystemContext").invoke(
             thread.getDeclaredMethod("currentActivityThread").invoke(null)) as? Context
@@ -69,12 +69,12 @@ internal object MultiAppRestrictionHooker {
     }
 
     internal fun systemTargets(loader: ClassLoader): Array<Method> {
-        val config = Class.forName("com.android.server.am.OplusMultiAppConfigManager", false, loader)
+        val config = HostClassLookup.load("com.android.server.am.OplusMultiAppConfigManager", false, loader)
         val list = config.getDeclaredMethod("getAllowedList")
         val allowed = config.declaredMethods.filter { it.name == "isAllowed" &&
             it.returnType == Boolean::class.javaPrimitiveType && it.parameterTypes.firstOrNull() == String::class.java }
         require(allowed.isNotEmpty())
-        val service = Class.forName("com.android.server.am.OplusMultiAppManagerService", false, loader)
+        val service = HostClassLookup.load("com.android.server.am.OplusMultiAppManagerService", false, loader)
         return arrayOf(list, service.getDeclaredMethod("hasMaxCreatedNumLimitedFeature"),
             config.getDeclaredMethod("getMaxCreatedNum"), *allowed.toTypedArray())
     }
@@ -115,7 +115,7 @@ internal object MultiAppRestrictionHooker {
     }
 
     private fun hookSystemData(loader: ClassLoader, key: String) {
-        val data = runCatching { Class.forName("com.android.server.pm.OplusMultiAppDataManager", false, loader) }
+        val data = runCatching { HostClassLookup.load("com.android.server.pm.OplusMultiAppDataManager", false, loader) }
             .getOrNull() ?: return
         val black = data.getDeclaredMethod("getBlackAppSnapshot").apply { isAccessible = true }
         val lists = data.getDeclaredMethod("getMultiAppInfos", Int::class.javaPrimitiveType)
@@ -154,16 +154,16 @@ internal object MultiAppRestrictionHooker {
     fun hookApp(loader: ClassLoader) {
         val key = "$TAG:app"
         runCatching {
-            val platform = Class.forName("com.oplus.multiapp.platform.MultiAppAPI", false, loader)
+            val platform = HostClassLookup.load("com.oplus.multiapp.platform.MultiAppAPI", false, loader)
             installList("$key:list", platform.getDeclaredMethod("getAllowedMultiApp"), loader, false)
-            val data = Class.forName("com.oplus.multiapp.data.MultiAppDataManager", false, loader)
+            val data = HostClassLookup.load("com.oplus.multiapp.data.MultiAppDataManager", false, loader)
             installList("$key:cached-list", data.getDeclaredMethod("getAllowedAppList"), loader, false)
             val black = data.getDeclaredMethod("getBlackApps")
             ModernHookRegistry.installFast("$key:blacklist", black) { chain ->
                 val native = chain.proceed()
                 if (!active()) native else (native as? List<*>)?.filterNot { it in eligible(loader, false) }?.let(::ArrayList) ?: native
             }
-            val helper = Class.forName("com.oplus.multiapp.utils.CustomHelper", false, loader)
+            val helper = HostClassLookup.load("com.oplus.multiapp.utils.CustomHelper", false, loader)
             ModernHookRegistry.installFast("$key:limited", helper.getDeclaredMethod("isAppLimited")) { chain ->
                 if (active()) false else chain.proceed()
             }
@@ -177,7 +177,7 @@ internal object MultiAppRestrictionHooker {
             listOf("com.oplus.multiapp.ui.entry.ActivityMainPresenter", "com.oplus.multiapp.data.MultiAppDataAPI",
                 "com.oplus.multiapp.ui.entry.FragmentMain", "com.oplus.multiapp.ui.other.FragmentOtherApp",
                 "com.oplus.multiapp.ui.other.ActivityOtherAppPresenter").forEach { name ->
-                Class.forName(name, false, loader).declaredMethods.forEach { method ->
+                HostClassLookup.load(name, false, loader).declaredMethods.forEach { method ->
                     ModernHookRuntime.requireModule().deoptimize(method)
                 }
             }

@@ -20,7 +20,7 @@ internal object ColorOs16SignalPresentationHooks {
         LspConfig::isSystemUiHideNetworkActivityIndicatorEnabledXposed)
 
     private fun install(loader: ClassLoader, key: String, names: Set<String>, enabled: () -> Boolean) {
-        val binder = Class.forName("com.android.systemui.statusbar.pipeline.mobile.ui.binder.MobileIconBinder", false, loader)
+        val binder = HostClassLookup.load("com.android.systemui.statusbar.pipeline.mobile.ui.binder.MobileIconBinder", false, loader)
         val bind = binder.declaredMethods.single { it.name == "bind" && it.parameterCount == 4 &&
             it.parameterTypes[0] == ViewGroup::class.java }
         val guards = WeakHashMap<View, Guard>()

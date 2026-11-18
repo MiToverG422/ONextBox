@@ -1547,7 +1547,7 @@ object AssistantHooker {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
         val token = Binder.clearCallingIdentity()
         return runCatching {
-            val userHandleClass = Class.forName("android.os.UserHandle")
+            val userHandleClass = HostClassLookup.load("android.os.UserHandle")
             val user = userHandleClass.getMethod("of", Integer.TYPE).invoke(null, userId)
             val userContext = Context::class.java
                 .getMethod("createContextAsUser", userHandleClass, Integer.TYPE)
@@ -1652,7 +1652,7 @@ object AssistantHooker {
         serviceInfo: android.content.pm.ServiceInfo,
     ): VoiceInteractionCapability? {
         return runCatching {
-            val infoClass = Class.forName("android.service.voice.VoiceInteractionServiceInfo")
+            val infoClass = HostClassLookup.load("android.service.voice.VoiceInteractionServiceInfo")
             val info = infoClass
                 .getConstructor(
                     android.content.pm.PackageManager::class.java,
@@ -2288,7 +2288,7 @@ object AssistantHooker {
     private fun tryShowSessionViaVims(attempt: Int): Boolean {
         return runCatching {
             val binder = getService("voiceinteraction") ?: return@runCatching false
-            val stubClass = Class.forName("com.android.internal.app.IVoiceInteractionManagerService\$Stub")
+            val stubClass = HostClassLookup.load("com.android.internal.app.IVoiceInteractionManagerService\$Stub")
             val service = stubClass
                 .getMethod("asInterface", IBinder::class.java)
                 .invoke(null, binder) ?: return@runCatching false
@@ -2382,7 +2382,7 @@ object AssistantHooker {
         val token = Binder.clearCallingIdentity()
         return runCatching {
             val binder = getService("contextual_search") ?: return@runCatching false
-            val stubClass = Class.forName("android.app.contextualsearch.IContextualSearchManager\$Stub")
+            val stubClass = HostClassLookup.load("android.app.contextualsearch.IContextualSearchManager\$Stub")
             val service = stubClass
                 .getMethod("asInterface", IBinder::class.java)
                 .invoke(null, binder)
@@ -2403,7 +2403,7 @@ object AssistantHooker {
         val token = Binder.clearCallingIdentity()
         return runCatching {
             val binder = getService("contextual_search") ?: return@runCatching false
-            val stubClass = Class.forName("android.app.contextualsearch.IContextualSearchManager\$Stub")
+            val stubClass = HostClassLookup.load("android.app.contextualsearch.IContextualSearchManager\$Stub")
             val service = stubClass
                 .getMethod("asInterface", IBinder::class.java)
                 .invoke(null, binder)
@@ -2425,7 +2425,7 @@ object AssistantHooker {
 
     private fun getService(name: String): IBinder? {
         return runCatching {
-            Class.forName("android.os.ServiceManager")
+            HostClassLookup.load("android.os.ServiceManager")
                 .getMethod("getService", String::class.java)
                 .invoke(null, name) as? IBinder
         }.getOrNull()
@@ -2488,7 +2488,7 @@ object AssistantHooker {
     private fun findSystemContext(): Context? {
         systemContext?.let { return it }
         return runCatching {
-            val activityThreadClass = Class.forName("android.app.ActivityThread")
+            val activityThreadClass = HostClassLookup.load("android.app.ActivityThread")
             val thread = activityThreadClass
                 .getMethod("currentActivityThread")
                 .invoke(null) ?: return@runCatching null

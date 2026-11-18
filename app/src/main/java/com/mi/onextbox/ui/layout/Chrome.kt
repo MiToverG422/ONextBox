@@ -119,6 +119,8 @@ fun BottomNavigationBar(
     unselectedIcons: List<ImageVector>? = null,
     hideLabels: Boolean = false,
     startupRevealProgress: () -> Float = { 1f },
+    collapseState: BottomBarCollapseState? = null,
+    onCapsuleBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit = {},
 ) {
     ColorOs17BottomNavigationBar(
         items = items,
@@ -129,6 +131,8 @@ fun BottomNavigationBar(
         unselectedIcons = unselectedIcons,
         hideLabels = hideLabels,
         startupRevealProgress = startupRevealProgress,
+        collapseState = collapseState,
+        onCapsuleBoundsChanged = onCapsuleBoundsChanged,
     )
 }
 

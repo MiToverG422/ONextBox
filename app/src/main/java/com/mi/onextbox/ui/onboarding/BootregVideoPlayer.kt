@@ -48,6 +48,7 @@ internal fun BootregVideoPlayer(
     autoPlay: Boolean = true,
     visible: Boolean = true,
     backgroundColor: Color = Color.Black,
+    @RawRes hapticResId: Int? = null,
     onFirstFrame: () -> Unit = {},
     onCompleted: () -> Unit = {},
     onError: (what: Int, extra: Int) -> Unit = { _, _ -> },
@@ -67,12 +68,13 @@ internal fun BootregVideoPlayer(
             alpha = 0f
         }
     }
-    val controller = remember(context, textureView, videoResId, playCount) {
+    val controller = remember(context, textureView, videoResId, playCount, hapticResId) {
         BootregVideoController(
             context = context,
             textureView = textureView,
             videoResId = videoResId,
             playCount = playCount,
+            hapticResId = hapticResId,
             onFirstFrame = { currentFirstFrame() },
             onCompleted = { currentCompleted() },
             onError = { what, extra -> currentError(what, extra) },
@@ -85,10 +87,15 @@ internal fun BootregVideoPlayer(
                 Lifecycle.Event.ON_START ->
                     controller.setPlaybackAllowed(currentAutoPlay && currentVisible)
                 Lifecycle.Event.ON_STOP -> controller.setPlaybackAllowed(false)
+                Lifecycle.Event.ON_RESUME -> controller.setHapticsAllowed(currentAutoPlay && currentVisible)
+                Lifecycle.Event.ON_PAUSE -> controller.setHapticsAllowed(false)
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
+        controller.setHapticsAllowed(
+            autoPlay && visible && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED),
+        )
         controller.setVisible(visible)
         controller.setPlaybackAllowed(
             autoPlay && visible &&
@@ -100,6 +107,9 @@ internal fun BootregVideoPlayer(
         }
     }
     SideEffect {
+        controller.setHapticsAllowed(
+            autoPlay && visible && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED),
+        )
         controller.setVisible(visible)
         controller.setPlaybackAllowed(
             autoPlay && visible &&
@@ -125,11 +135,15 @@ private class BootregVideoController(
     private val textureView: TextureView,
     @RawRes private val videoResId: Int,
     private val playCount: Int,
+    @RawRes hapticResId: Int?,
     private val onFirstFrame: () -> Unit,
     private val onCompleted: () -> Unit,
     private val onError: (what: Int, extra: Int) -> Unit,
 ) : TextureView.SurfaceTextureListener, View.OnLayoutChangeListener {
     private val appContext = context.applicationContext
+    private val haptics = hapticResId?.let { OnboardingAnimationHaptics(appContext, it) }
+    private var seeking = false
+    private var hapticFailed = false
     private var mediaPlayer: MediaPlayer? = null
     private var surface: Surface? = null
     private var prepared = false
@@ -156,6 +170,7 @@ private class BootregVideoController(
 
     fun setPlaybackAllowed(allowed: Boolean) {
         playbackAllowed = allowed
+        if (!allowed) haptics?.reset()
         val player = mediaPlayer ?: return
         if (!prepared || completed) return
         runCatching {
@@ -165,6 +180,10 @@ private class BootregVideoController(
                 player.pause()
             }
         }
+    }
+
+    fun setHapticsAllowed(allowed: Boolean) {
+        haptics?.setAllowed(allowed && !hapticFailed)
     }
 
     fun setVisible(visible: Boolean) {
@@ -219,8 +238,10 @@ private class BootregVideoController(
                 false
             }
             player.setOnCompletionListener {
+                haptics?.reset()
                 completedPlayCount++
                 if (completedPlayCount < playCount) {
+                    seeking = true
                     it.seekTo(0)
                     if (playbackAllowed) it.start()
                 } else {
@@ -228,12 +249,17 @@ private class BootregVideoController(
                     onCompleted()
                 }
             }
+            player.setOnSeekCompleteListener { seeking = false }
             player.setOnErrorListener { _, what, extra ->
+                hapticFailed = true
+                haptics?.setAllowed(false)
                 onError(what, extra)
                 true
             }
             player.prepareAsync()
         } catch (throwable: Throwable) {
+            hapticFailed = true
+            haptics?.setAllowed(false)
             release()
             onError(MediaPlayer.MEDIA_ERROR_UNKNOWN, 0)
         }
@@ -273,7 +299,12 @@ private class BootregVideoController(
         return true
     }
 
-    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
+    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+        val currentPlayer = mediaPlayer ?: return
+        if (prepared && playbackAllowed && layerVisible && !completed && !seeking && textureView.alpha > 0f) {
+            haptics?.onFrame { currentPlayer.currentPosition.toLong() }
+        }
+    }
 
     override fun onLayoutChange(
         view: View,
@@ -290,6 +321,7 @@ private class BootregVideoController(
     }
 
     fun release() {
+        haptics?.release()
         textureView.removeOnLayoutChangeListener(this)
         if (textureView.surfaceTextureListener === this) {
             textureView.surfaceTextureListener = null
@@ -298,6 +330,8 @@ private class BootregVideoController(
     }
 
     private fun releasePlayer() {
+        haptics?.reset()
+        seeking = false
         prepared = false
         textureView.alpha = 0f
         textureView.visibility = View.INVISIBLE

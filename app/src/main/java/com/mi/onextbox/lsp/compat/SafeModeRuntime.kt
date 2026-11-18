@@ -45,7 +45,7 @@ internal object SafeModeRuntime {
             automaticBlocked = state!!.blocked
             save()
             RuntimeDiagnostics.event("safe_mode", scope, if (automaticBlocked) "Automatic protection active; reboot to clear" else "Crash protection ready")
-            val handler = Class.forName("com.android.internal.os.RuntimeInit\$KillApplicationHandler")
+            val handler = com.mi.onextbox.lsp.HostClassLookup.load("com.android.internal.os.RuntimeInit\$KillApplicationHandler")
             val method = handler.getDeclaredMethod("uncaughtException", Thread::class.java, Throwable::class.java)
             method.isAccessible = true
             ModernHotReloadSession.install(method) { chain ->
@@ -85,7 +85,7 @@ internal object SafeModeRuntime {
     private fun bootIdentity(): String = runCatching {
         File("/proc/sys/kernel/random/boot_id").readText().trim()
     }.getOrNull()?.takeIf { it.isNotBlank() } ?: runCatching {
-        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
+        com.mi.onextbox.lsp.HostClassLookup.load("android.os.SystemProperties").getMethod("get", String::class.java)
             .invoke(null, "ro.runtime.firstboot") as String
     }.getOrDefault("")
 }

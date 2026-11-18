@@ -33,6 +33,7 @@ secrets.properties
 /_external/
 /tmp/
 /backup/
+/dist/
 /OplusLauncher/
 /design/
 /github-profile/
@@ -51,6 +52,7 @@ replay_pid*.log
 
 # Editor / tool caches and temporary files
 .cache/
+__pycache__/
 node_modules/
 .vscode/
 *.bak

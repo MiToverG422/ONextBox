@@ -54,7 +54,7 @@ internal object OppoPushMonitorHooker {
         }, restore = { state -> (state as? Context)?.let(::initialize) })
         HotReloadLifecycle.afterCommit {
             val app = runCatching {
-                ModernReflect.callStaticMethod(Class.forName("android.app.ActivityThread"), "currentApplication") as? Application
+                ModernReflect.callStaticMethod(HostClassLookup.load("android.app.ActivityThread"), "currentApplication") as? Application
             }.getOrNull()
             if (app?.packageName == MCS_PACKAGE) initialize(app)
         }
@@ -70,7 +70,7 @@ internal object OppoPushMonitorHooker {
             })
         }.onFailure { warn() }
         runCatching {
-            val proxy = Class.forName("android.app.INotificationManager\$Stub\$Proxy", false, loader)
+            val proxy = HostClassLookup.load("android.app.INotificationManager\$Stub\$Proxy", false, loader)
             val signature = arrayOf(String::class.java, String::class.java, String::class.java,
                 Int::class.javaPrimitiveType, Notification::class.java, Int::class.javaPrimitiveType)
             val method = proxy.declaredMethods.single {

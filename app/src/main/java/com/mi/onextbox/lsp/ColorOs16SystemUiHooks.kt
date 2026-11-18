@@ -21,7 +21,7 @@ internal object ColorOs16SystemUiHooks {
 
     fun hook(loader: ClassLoader) {
         dispatch(
-            findClass = { Class.forName(it, false, loader) },
+            findClass = { HostClassLookup.load(it, false, loader) },
             install = { feature ->
                 when (feature) {
                     Feature.HideNotificationClear -> HideNotificationClearHooker.hook(loader)

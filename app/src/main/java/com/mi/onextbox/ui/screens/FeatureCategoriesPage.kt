@@ -11,7 +11,7 @@ import com.mi.onextbox.ui.settings.SettingsGroup
 private data class FeatureCategoryLink(
     val page: FeaturePageMode,
     @param:StringRes val title: Int,
-    @param:StringRes val summary: Int,
+    @param:StringRes val summary: Int = 0,
 )
 
 @Composable
@@ -22,6 +22,7 @@ internal fun DesktopCategoriesPage(onOpen: (FeaturePageMode) -> Unit) {
             FeatureCategoryLink(FeaturePageMode.DesktopIcons, R.string.desktop_category_icons, R.string.desktop_icons_entry_summary),
             FeatureCategoryLink(FeaturePageMode.DesktopRecent, R.string.feature_group_recent_tasks, R.string.desktop_recent_entry_summary),
             FeatureCategoryLink(FeaturePageMode.DesktopPages, R.string.desktop_category_pages, R.string.desktop_pages_entry_summary),
+            FeatureCategoryLink(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_motion_title, R.string.launcher_ios_motion_summary),
         ),
         onOpen = onOpen,
     )
@@ -156,7 +157,7 @@ private fun FeatureCategoryLinks(
             if (index > 0) SettingsDivider()
             SettingsCardRow(
                 title = stringResource(entry.title),
-                summary = stringResource(entry.summary),
+                summary = if (entry.summary != 0) stringResource(entry.summary) else "",
                 onClick = { onOpen(entry.page) },
                 showArrow = true,
                 hasDividerAbove = index > 0,
@@ -164,4 +165,11 @@ private fun FeatureCategoryLinks(
             )
         }
     }
+}
+
+@Composable
+internal fun MediaCategoriesPage(app: com.mi.onextbox.lsp.MediaUnlockCatalog.App, onOpen: (FeaturePageMode) -> Unit) {
+    FeatureCategoryLinks(MediaUnlockPage.entries.filter { it.app == app }.map {
+        FeatureCategoryLink(it.mode, it.title)
+    }, onOpen)
 }

@@ -12,8 +12,8 @@ import io.github.libxposed.api.XposedInterface
 internal object AospVolumePanelHooker {
     private const val MODEL = "com.android.systemui.volume.dialog.settings.ui.viewmodel.VolumeDialogSettingsButtonViewModel"
     fun hook(loader: ClassLoader) = runCatching {
-        val model = Class.forName(MODEL, false, loader)
-        val activityStarter = Class.forName("com.android.systemui.plugins.ActivityStarter", false, loader)
+        val model = HostClassLookup.load(MODEL, false, loader)
+        val activityStarter = HostClassLookup.load("com.android.systemui.plugins.ActivityStarter", false, loader)
             .getMethod("startActivity", Intent::class.java, Boolean::class.javaPrimitiveType)
         ModernHookRegistry.installFast("aosp-volume:expanded-panel", model.getDeclaredMethod("onButtonClicked"),
             XposedInterface.Hooker { chain ->
@@ -34,7 +34,7 @@ internal object AospVolumePanelHooker {
                 if (opened) null else chain.proceed()
             })
         // The native click listener is small enough for ART to inline the ViewModel call.
-        Class.forName("com.android.systemui.volume.dialog.settings.ui.binder.VolumeDialogSettingsButtonViewBinder\$bind\$4", false, loader)
+        HostClassLookup.load("com.android.systemui.volume.dialog.settings.ui.binder.VolumeDialogSettingsButtonViewBinder\$bind\$4", false, loader)
             .getDeclaredMethod("onClick", View::class.java).let { ModernHookRuntime.requireModule().deoptimize(it) }
     }.onFailure { HookLog.i("ONextBox-AospVolume", "Expanded panel adapter unavailable: $it") }
 

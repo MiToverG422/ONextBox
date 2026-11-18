@@ -40,7 +40,8 @@ internal object ColorOs16SystemUiFeatureHooks {
         install("screen-off-recording") { KeyguardCaptureHooker.hookColorOs16Recorder(loader) }
     }
 
-    private inline fun install(group: String, action: () -> Unit) {
-        runCatching(action).onFailure { HookLog.w(TAG, "$group unavailable; stock handling retained", it) }
+    private fun install(group: String, action: () -> Unit) {
+        runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16SystemUI.$group") { action() } }
+            .onFailure { HookLog.w(TAG, "$group unavailable; stock handling retained", it) }
     }
 }

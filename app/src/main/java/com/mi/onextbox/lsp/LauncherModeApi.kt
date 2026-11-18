@@ -22,7 +22,7 @@ internal class LauncherModeApi(private val loader: ClassLoader?) {
 
     private fun predicate(name: String, mode: String): java.lang.reflect.Method {
         val method = if (named != null) owner.getDeclaredMethod(name) else {
-            val enum = Class.forName("com.android.launcher.mode.LauncherMode", false, loader)
+            val enum = HostClassLookup.load("com.android.launcher.mode.LauncherMode", false, loader)
             val constant = enum.declaredFields.single {
                 it.isEnumConstant && (it.get(null) as Enum<*>).name.equals(mode, ignoreCase = true)
             }

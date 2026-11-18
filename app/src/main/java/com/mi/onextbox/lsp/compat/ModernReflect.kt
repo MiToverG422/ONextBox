@@ -10,7 +10,8 @@ import java.util.concurrent.ConcurrentHashMap
 internal object ModernReflect {
     private data class FieldKey(val targetClass: Class<*>, val fieldName: String)
 
-    private val methodTableCache = ConcurrentHashMap<Class<*>, List<Method>>()
+    private data class MethodCandidate(val method: Method, val parameters: Array<Class<*>>, val isStatic: Boolean)
+    private val methodTableCache = ConcurrentHashMap<Class<*>, Map<String, List<MethodCandidate>>>()
     private val constructorTableCache = ConcurrentHashMap<Class<*>, List<Constructor<*>>>()
     private val fieldCache = ConcurrentHashMap<FieldKey, Field>()
 
@@ -18,7 +19,7 @@ internal object ModernReflect {
         runCatching { findClass(name, classLoader) }.getOrNull()
 
     fun findClass(name: String, classLoader: ClassLoader?): Class<*> =
-        Class.forName(name, false, classLoader)
+        com.mi.onextbox.lsp.HostClassLookup.load(name, false, classLoader)
 
     fun getObjectField(target: Any, fieldName: String): Any? =
         findField(target.javaClass, fieldName).read(target)
@@ -49,12 +50,13 @@ internal object ModernReflect {
     }
 
     fun newInstance(targetClass: Class<*>, vararg args: Any?): Any {
-        val constructor = allConstructors(targetClass)
-            .mapNotNull { constructor ->
-                compatibilityScore(constructor.parameterTypes, args)?.let { constructor to it }
-            }
-            .minByOrNull { it.second }
-            ?.first
+        var best: Constructor<*>? = null
+        var bestScore = Int.MAX_VALUE
+        for (candidate in allConstructors(targetClass)) {
+            val score = compatibilityScore(candidate.parameterTypes, args) ?: continue
+            if (score < bestScore) { best = candidate; bestScore = score }
+        }
+        val constructor = best
             ?: throw NoSuchMethodException(
                 "No compatible constructor for ${targetClass.name}(${argumentTypes(args)})"
             )
@@ -140,15 +142,15 @@ internal object ModernReflect {
         args: Array<out Any?>,
         requireStatic: Boolean,
     ): Method {
-        val method = allMethods(targetClass)
-            .asSequence()
-            .filter { it.name == methodName }
-            .filter { !requireStatic || Modifier.isStatic(it.modifiers) }
-            .mapNotNull { candidate ->
-                compatibilityScore(candidate.parameterTypes, args)?.let { candidate to it }
-            }
-            .minByOrNull { it.second }
-            ?.first
+        var best: Method? = null
+        var bestScore = Int.MAX_VALUE
+        for (candidate in allMethods(targetClass)[methodName].orEmpty()) {
+            if (requireStatic && !candidate.isStatic) continue
+            val score = compatibilityScore(candidate.parameters, args) ?: continue
+            // Keep the original first-match ordering for equal compatibility scores.
+            if (score < bestScore) { best = candidate.method; bestScore = score }
+        }
+        val method = best
             ?: throw NoSuchMethodException(
                 "${targetClass.name}#$methodName(${argumentTypes(args)})"
             )
@@ -156,7 +158,7 @@ internal object ModernReflect {
         return method
     }
 
-    private fun allMethods(targetClass: Class<*>): List<Method> {
+    private fun allMethods(targetClass: Class<*>): Map<String, List<MethodCandidate>> {
         methodTableCache[targetClass]?.let { return it }
         val methods = LinkedHashMap<String, Method>()
         var current: Class<*>? = targetClass
@@ -173,7 +175,9 @@ internal object ModernReflect {
                 methods.putIfAbsent(key, method)
             }
         }
-        val resolved = methods.values.toList()
+        val resolved = methods.values.map { method ->
+            MethodCandidate(method, method.parameterTypes, Modifier.isStatic(method.modifiers))
+        }.groupBy { it.method.name }
         return methodTableCache.putIfAbsent(targetClass, resolved) ?: resolved
     }
 

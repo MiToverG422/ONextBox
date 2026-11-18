@@ -68,7 +68,7 @@ internal object SoftLightGlassHooker {
         }
 
     private fun isUpdatedSystemApp(packageName: String): Boolean = runCatching {
-        val threadType = Class.forName("android.app.ActivityThread")
+        val threadType = HostClassLookup.load("android.app.ActivityThread")
         val thread = threadType.getMethod("currentActivityThread").invoke(null) ?: return false
         val bound = ModernReflect.getObjectField(thread, "mBoundApplication") ?: return false
         val info = ModernReflect.getObjectField(bound, "appInfo") as? ApplicationInfo ?: return false
@@ -91,7 +91,7 @@ internal object SoftLightGlassHooker {
         private val reported = ConcurrentHashMap.newKeySet<String>()
         private val materialOwners = ConcurrentHashMap.newKeySet<Class<*>>()
         private val keyguardLoaders = ConcurrentHashMap.newKeySet<ClassLoader>()
-        private val currentApp by lazy { Class.forName("android.app.ActivityThread").getMethod("currentApplication") }
+        private val currentApp by lazy { HostClassLookup.load("android.app.ActivityThread").getMethod("currentApplication") }
         @Volatile private var application: Application? = null
         @Volatile private var running = true
         private var preferences: SharedPreferences? = null

@@ -14,7 +14,7 @@ import java.io.FileDescriptor
 
 internal object InstallerCleanupHooker {
     private const val TAG = "ONextBox-InstallerCleanup"
-    private val application by lazy { Class.forName("android.app.ActivityThread").getDeclaredMethod("currentApplication") }
+    private val application by lazy { HostClassLookup.load("android.app.ActivityThread").getDeclaredMethod("currentApplication") }
     private fun context() = runCatching { application.invoke(null) as? Context }.getOrNull()
     private fun maySkip(context: Context? = context()): Boolean = context != null && runCatching {
         InstallerCleanupRules.maySkip(

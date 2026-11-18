@@ -7,11 +7,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppLogsContractTest {
-    @Test fun aboutEntryIsBetweenUpdateAndSettingsAndUsesAnIndependentRoute() {
+    @Test fun aboutHidesTheEntryWhileTheIndependentLogRouteIsRetained() {
         val page = mainFile("java/com/mi/onextbox/ui/settings/SettingsMainPage.kt").readText()
             .substringAfter("fun AboutMainPage(").substringBefore("private fun AboutGroupSpacer()")
-        assertTrue(page.indexOf("R.string.about_logs_title") > page.indexOf("R.string.setting_software_update"))
-        assertTrue(page.indexOf("R.string.setting_theme_settings") > page.indexOf("R.string.about_logs_title"))
+        assertFalse(page.contains("R.string.about_logs_title"))
+        assertTrue(page.indexOf("R.string.setting_theme_settings") > page.indexOf("R.string.setting_software_update"))
         val root = mainFile("java/com/mi/onextbox/ui/Root.kt").readText()
         assertTrue(root.contains("AboutPageMode.Logs -> RootRoute.Logs"))
         assertTrue(root.contains("subclass(RootRoute.Logs::class)"))

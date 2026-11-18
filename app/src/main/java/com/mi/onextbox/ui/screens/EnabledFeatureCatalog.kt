@@ -16,7 +16,7 @@ internal object EnabledFeatureCatalog {
         val excludes: Set<Int> = emptySet(),
         val read: suspend (Context) -> Boolean,
     )
-    val entries = KeyboardPictorialSettings.options.map { option ->
+    val entries = AospFeatureDefinitions.all.map { it.catalogEntry() } + MediaUnlockFeatureDefinitions.all.map { it.catalogEntry() } + KeyboardPictorialSettings.options.map { option ->
         Entry(option.title, if (option.key.startsWith("keyboard_")) FeaturePageMode.Keyboard else FeaturePageMode.Pictorial) { context -> KeyboardPictorialSettings.enabled(context, option.key) }
     } + BrowserSettings.options.map { option ->
         Entry(option.title, FeaturePageMode.Browser) { context -> BrowserSettings.enabled(context, option.key) }
@@ -81,7 +81,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_aod_enhance_toggle_title, FeaturePageMode.Aod) { context -> LspConfig.isAodEnhanceEnabled(context) },
         Entry(R.string.feature_aod_all_day_unlock_title, FeaturePageMode.Aod) { context -> LspConfig.isAodAllDayUnlockEnabled(context) },
         Entry(R.string.feature_aod_single_click_block_title, FeaturePageMode.Aod) { context -> LspConfig.isAodSingleClickBlockEnabled(context) },
-        Entry(R.string.feature_aosp_volume_title, FeaturePageMode.SystemUiNative) { context -> AospVolumeSettings.enabled(context) },
+        AdditionalFeatureDefinitions.aospVolume.catalogEntry(),
         SharedFeatureDefinitions.stackedSignal.catalogEntry(),
         Entry(R.string.app_errors_enable, FeaturePageMode.AppErrors) { context -> AppErrorTrackingSettings.isEnabled(context) },
         Entry(R.string.feature_assistant_native_combined_title, FeaturePageMode.Assistant) { context ->
@@ -111,10 +111,11 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.fluid_recents_title, FeaturePageMode.SystemUiFluidCloud) { context -> FluidCloudRecentsSettings.isEnabled(context) },
         Entry(R.string.feature_google_messages_gemini_title, FeaturePageMode.GoogleMessages) { context -> GoogleMessagesConfig.isEnabled(context, GoogleMessagesConfig.Switch.Gemini) },
         Entry(R.string.feature_google_messages_copy_otp_title, FeaturePageMode.GoogleMessages) { context -> GoogleMessagesConfig.isEnabled(context, GoogleMessagesConfig.Switch.CopyOtp) },
-        Entry(R.string.keyboard_material_unlock_title, FeaturePageMode.Keyboard) { context -> LspConfig.isKeyboardMaterialUnlocked(context) },
-        Entry(R.string.keyboard_bottom_lift_fix_title, FeaturePageMode.Keyboard) { context -> LspConfig.isKeyboardBottomLiftFixEnabled(context) },
-        Entry(R.string.keyboard_hide_dismiss_title, FeaturePageMode.Keyboard) { context -> LspConfig.isKeyboardDismissHidden(context) },
-        Entry(R.string.keyboard_flag_emoji_title, FeaturePageMode.Keyboard) { context -> LspConfig.isKeyboardFlagEmojiEnabled(context) },
+        AdditionalFeatureDefinitions.launcherIosMotion.catalogEntry(),
+        AdditionalFeatureDefinitions.keyboardMaterial.catalogEntry(),
+        AdditionalFeatureDefinitions.keyboardBottomLift.catalogEntry(),
+        AdditionalFeatureDefinitions.keyboardHideDismiss.catalogEntry(),
+        AdditionalFeatureDefinitions.keyboardFlagEmoji.catalogEntry(),
         Entry(R.string.keyguard_face_tap_title, FeaturePageMode.SystemUiLockScreen) { context -> LspConfig.isKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceTapUnlock) },
         Entry(R.string.keyguard_face_capsule_title, FeaturePageMode.SystemUiLockScreen) { context -> LspConfig.isKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceAuthCapsule) },
         Entry(R.string.keyguard_face_tap_animation_title, FeaturePageMode.SystemUiLockScreen, parents = setOf(R.string.keyguard_face_tap_title)) { context -> LspConfig.isKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceTapAnimation) },
@@ -143,15 +144,15 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.theme_store_vip_title, FeaturePageMode.ThemeStore) { context -> ThemeStoreSettings.enabled(context) },
         Entry(R.string.theme_store_ads_title, FeaturePageMode.ThemeStore) { context -> ThemeStoreSettings.adsEnabled(context) },
         Entry(R.string.secure_pay_hide_risk_cloud_title, FeaturePageMode.SecurePay) { context -> SecurePaySettings.enabled(context) },
-        Entry(R.string.game_assistant_promotions_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.PROMOTIONS) },
-        Entry(R.string.game_assistant_realme_startup_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.REALME_STARTUP_ANIMATION) },
-        Entry(R.string.game_assistant_unlimited_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.UNLIMITED) },
-        Entry(R.string.game_assistant_music_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.MUSIC) },
-        Entry(R.string.game_assistant_temperature_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.TEMPERATURE) },
-        Entry(R.string.game_assistant_toolbar_temperature_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.TOOLBAR_TEMPERATURE) },
-        Entry(R.string.game_assistant_root_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.BLOCK_ROOT) },
-        Entry(R.string.game_assistant_developer_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.DEVELOPER) },
-        Entry(R.string.game_assistant_skins_title, FeaturePageMode.GameAssistant) { GameAssistantSettings.enabled(it, GameAssistantSettings.SKINS) },
+        AdditionalFeatureDefinitions.gamePromotions.catalogEntry(),
+        AdditionalFeatureDefinitions.gameStartup.catalogEntry(),
+        AdditionalFeatureDefinitions.gameUnlimited.catalogEntry(),
+        AdditionalFeatureDefinitions.gameMusic.catalogEntry(),
+        AdditionalFeatureDefinitions.gameTemperature.catalogEntry(),
+        AdditionalFeatureDefinitions.gameToolbarTemperature.catalogEntry(),
+        AdditionalFeatureDefinitions.gameRoot.catalogEntry(),
+        AdditionalFeatureDefinitions.gameDeveloper.catalogEntry(),
+        AdditionalFeatureDefinitions.gameSkins.catalogEntry(),
         Entry(R.string.feature_express_no_mini_program_title, FeaturePageMode.QuickAppServices) { context -> LspConfig.isExpressNoMiniProgramEnabled(context) },
         Entry(R.string.feature_screen_capture_title, FeaturePageMode.AndroidSystem) { context -> ScreenCaptureSettings.enabled(context) },
         Entry(R.string.feature_permission_old_dialog_title, FeaturePageMode.SecurityPermission) { context -> LspConfig.isPermissionFeatureEnabled(context, LspConfig.PermissionFeature.OldAppStartDialog) },
@@ -293,9 +294,15 @@ internal object EnabledFeatureCatalog {
         return entries.filter { isActive(it.title, configured) }
     }
 
-    suspend fun configured(context: Context): Set<Int> =
-        (entries + if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16)
-            colorOs16AdditionalCatalogEntries else emptyList()).filter { it.read(context) }.mapTo(mutableSetOf()) { it.title }
+    suspend fun configured(context: Context, requestedTitles: Set<Int>? = null): Set<Int> {
+        val all = entries + if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16)
+            colorOs16AdditionalCatalogEntries else emptyList()
+        val selected = if (requestedTitles == null) all else {
+            val dependencies = featureInventoryDependencyClosure(requestedTitles, all.associate { it.title to (it.parents + it.excludes) })
+            all.filter { it.title in dependencies }
+        }
+        return selected.filter { it.read(context) }.mapTo(mutableSetOf()) { it.title }
+    }
 
     internal fun dependenciesActive(title: Int, configured: Set<Int>): Boolean {
         val entry = entries.firstOrNull { it.title == title }
@@ -335,6 +342,8 @@ internal object EnabledFeatureCatalog {
     }
 
     fun group(page: FeaturePageMode): FeaturePageMode = when {
+        page.name.startsWith("Camera") -> FeaturePageMode.Camera
+        page.name.startsWith("Gallery") -> FeaturePageMode.Gallery
         page.name.startsWith("Desktop") -> FeaturePageMode.Desktop
         page.name.startsWith("SystemUi") || page == FeaturePageMode.NotificationRemoval -> FeaturePageMode.SystemUi
         page.name.startsWith("Settings") -> FeaturePageMode.Settings

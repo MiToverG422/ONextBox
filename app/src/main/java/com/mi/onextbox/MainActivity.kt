@@ -39,6 +39,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.lsp.LsposedScopeRequester
@@ -133,6 +134,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appearanceTransition = remember { AppAppearanceTransitionState() }
             val appearanceTransitionScope = rememberCoroutineScope()
+            val onboardingAppearanceWriteLock = remember { kotlinx.coroutines.sync.Mutex() }
             fun changeAppAppearance(changed: Boolean, commit: () -> Unit) {
                 if (changed && !appearanceTransition.isChanging) {
                     appearanceTransitionScope.launch { appearanceTransition.change(commit) }
@@ -381,6 +383,7 @@ class MainActivity : ComponentActivity() {
             var recentTaskRadiusEnabled by recentTaskRadiusEnabledState
             val recentTaskRadiusDpState = rememberConfigState(
                 initialLspConfig.recentTaskRadiusDp,
+                conflateWrites = true,
             ) { value ->
                 LspConfig.setRecentTaskRadiusDp(this@MainActivity, value)
             }
@@ -393,18 +396,21 @@ class MainActivity : ComponentActivity() {
             var aodEnhanceEnabled by aodEnhanceEnabledState
             val aodInitDarkBrightnessState = rememberConfigState(
                 initialLspConfig.aodInitDarkBrightness,
+                conflateWrites = true,
             ) { value ->
                 LspConfig.setAodInitDarkBrightness(this@MainActivity, value)
             }
             var aodInitDarkBrightness by aodInitDarkBrightnessState
             val aodInitBrightBrightnessState = rememberConfigState(
                 initialLspConfig.aodInitBrightBrightness,
+                conflateWrites = true,
             ) { value ->
                 LspConfig.setAodInitBrightBrightness(this@MainActivity, value)
             }
             var aodInitBrightBrightness by aodInitBrightBrightnessState
             val aodRunningBrightnessMultiplierState = rememberConfigState(
                 initialLspConfig.aodRunningBrightnessMultiplier,
+                conflateWrites = true,
             ) { value ->
                 LspConfig.setAodRunningBrightnessMultiplier(
                     this@MainActivity,
@@ -824,16 +830,28 @@ class MainActivity : ComponentActivity() {
                         },
                         appUiStyle = appUiStyle,
                         onAppUiStyleChange = { style ->
-                            OnboardingAppearance.apply(this@MainActivity, style, appThemeMode)
-                                ?.let { effectiveMode ->
-                                    appUiStyle = style
-                                    appThemeMode = effectiveMode
+                            appearanceTransitionScope.launch {
+                                onboardingAppearanceWriteLock.withLock {
+                                    val mode = appThemeMode
+                                    withContext(Dispatchers.IO) {
+                                        OnboardingAppearance.apply(this@MainActivity, style, mode)
+                                    }?.let { effectiveMode ->
+                                        appUiStyle = style
+                                        appThemeMode = effectiveMode
+                                    }
                                 }
+                            }
                         },
                         appThemeMode = appThemeMode,
                         onAppThemeModeChange = { mode ->
-                            OnboardingAppearance.apply(this@MainActivity, appUiStyle, mode)
-                                ?.let { effectiveMode -> appThemeMode = effectiveMode }
+                            appearanceTransitionScope.launch {
+                                onboardingAppearanceWriteLock.withLock {
+                                    val style = appUiStyle
+                                    withContext(Dispatchers.IO) {
+                                        OnboardingAppearance.apply(this@MainActivity, style, mode)
+                                    }?.let { effectiveMode -> appThemeMode = effectiveMode }
+                                }
+                            }
                         },
                         featurePageNewStyleEnabled = featurePageNewStyleEnabled,
                         onFeaturePageNewStyleEnabledChange = { enabled ->

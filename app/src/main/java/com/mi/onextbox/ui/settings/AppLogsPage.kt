@@ -2,6 +2,7 @@
 
 package com.mi.onextbox.ui.settings
 
+import com.mi.onextbox.ui.common.ColorOsRefreshButton
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
@@ -244,15 +245,17 @@ internal fun AppLogsRoute(
                 }
             }
             item(key = "count") { SettingsSection(stringResource(R.string.logs_count, visibleRecords.size, records.size)) }
-            if (source == LogSource.MODULE && !loading && moduleLogs.failure == null) {
+            if (source == LogSource.MODULE && moduleLogs.failure == null && (moduleLogs.records.isNotEmpty() || !loading)) {
                 item(key = "hook_evidence") { HookEvidenceSummary(moduleLogs.records) }
             }
             val failure = if (source == LogSource.MODULE) moduleLogs.failure else null
-            if (loading || failure != null || visibleRecords.isEmpty()) {
+            if (failure != null || visibleRecords.isEmpty()) {
                 item(key = "status") {
+                    Box(Modifier.animateItem(placementSpec = null)) {
                     SettingsGroup {
-                        SettingsCardRow(
+                        SettingsDataRow(
                             summary = "",
+                            refreshing = loading,
                             title = stringResource(when {
                                 loading -> R.string.logs_loading
                                 failure == ModuleLogFailure.ROOT_REQUIRED -> R.string.logs_root_required
@@ -262,6 +265,7 @@ internal fun AppLogsRoute(
                                 else -> R.string.logs_no_matches
                             }),
                         )
+                    }
                     }
                 }
             } else {
@@ -448,7 +452,7 @@ private fun RowScope.LogsTopBarActions(
     onClear: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    LogsToolbarButton(Icons.Rounded.Refresh, stringResource(R.string.logs_refresh), !loading, onRefresh)
+    ColorOsRefreshButton(loading, stringResource(R.string.logs_refresh), onRefresh)
     Box {
         LogsToolbarButton(Icons.Rounded.MoreVert, stringResource(R.string.logs_menu), true) { menuExpanded = true }
         val menuItems = buildList {

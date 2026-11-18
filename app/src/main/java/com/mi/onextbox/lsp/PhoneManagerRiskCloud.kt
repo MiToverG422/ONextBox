@@ -5,7 +5,6 @@ import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import io.github.libxposed.api.XposedInterface
-import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -25,13 +24,12 @@ internal object PhoneManagerRiskCloudHooker {
     fun hook(loader: ClassLoader, apkPath: String) {
         val key = "$TAG@${System.identityHashCode(loader)}"
         runCatching {
-            val owner = Class.forName(OWNER, false, loader)
+            val owner = HostClassLookup.load(OWNER, false, loader)
             val visual = owner.getDeclaredMethod("getVisualContext", Context::class.java)
             require(Modifier.isStatic(visual.modifiers) && visual.returnType == Context::class.java)
             // Verify the native ordinary-notification fallback exists before changing its input.
-            System.loadLibrary("dexkit")
-            val callers = DexKitBridge.create(apkPath).use { dex ->
-                dex.findMethod {
+            val callers = HostDexMetadata.methods(loader, apkPath, "phone-manager-risk-cloud", "v1") { dex ->
+                val methods = dex.findMethod {
                     matcher {
                         usingStrings("showRiskTips: no display context, fallback to notification")
                         name = "invokeSuspend"
@@ -41,7 +39,8 @@ internal object PhoneManagerRiskCloudHooker {
                 }.filter { it.className.startsWith(OWNER + "\$showRiskTips\$") }
                     .filter { candidate -> candidate.invokes.any { it.className == OWNER && it.name == "getVisualContext" } }
                     .map { it.getMethodInstance(loader) }.also { require(it.isNotEmpty()) }
-            }
+                mapOf("callers" to methods.toTypedArray())
+            }.getValue("callers").toList()
             // Do not hook showRiskTips, sendNotification, dismissRiskTips, or shared Seedling APIs.
             (callers + visual).forEach { ModernHookRuntime.requireModule().deoptimize(it) }
             val reached = AtomicBoolean()

@@ -138,7 +138,7 @@ internal object LargeNetworkArtworkHooker {
                 if (res.getResourcePackageName(id) != "com.android.systemui") return@runCatching null
                 val name = resourceLabels[res.getResourceEntryName(id)] ?: return@runCatching null
                 val key = label(name, LargeNetworkTypeSettings.usesLteXposed()) ?: return@runCatching null
-                val context = Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as? Context
+                val context = HostClassLookup.load("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as? Context
                     ?: return@runCatching null
                 val module = context.createPackageContext("com.mi.onextbox", 0)
                 module.resources.getDrawableForDensity(icons.getValue(key), chain.getArg(1) as Int, module.theme)?.mutate()
@@ -148,7 +148,7 @@ internal object LargeNetworkArtworkHooker {
     }
 
     private fun hookView(loader: ClassLoader) {
-        val binding = Class.forName("com.oplus.systemui.statusbar.pipeline.mobile.ui.view.OplusStatusBarMobileViewBinder\$Os17Binding", false, loader)
+        val binding = HostClassLookup.load("com.oplus.systemui.statusbar.pipeline.mobile.ui.view.OplusStatusBarMobileViewBinder\$Os17Binding", false, loader)
         val field = binding.getDeclaredField("mobileTypeText").apply { isAccessible = true }
         val bind = binding.declaredMethods.single { it.name == "bindNetworkTypeText" && it.parameterCount == 1 }
         ModernHookRegistry.installFast("large-network-artwork:view", bind, XposedInterface.Hooker { chain ->
@@ -201,7 +201,7 @@ internal object LargeNetworkArtworkHooker {
     }
 
     private fun hookCompose(loader: ClassLoader, tigo: Boolean = false) {
-        fun type(name: String) = Class.forName(name, false, loader)
+        fun type(name: String) = HostClassLookup.load(name, false, loader)
         val ownerName = if (tigo) "TigoFiveGStackedMobileIconLayoutStrategyKt" else "OplusStackedMobileIconLayoutStrategyKt"
         val prefix = if (tigo) "TigoFiveGNetworkTypeText-" else "NetworkTypeText-"
         val owner = type("com.android.systemui.statusbar.pipeline.shared.ui.composable.$ownerName")
@@ -248,7 +248,7 @@ internal object LargeNetworkArtworkHooker {
                 val key = label(name, LargeNetworkTypeSettings.usesLteXposed()) ?: return@runCatching null
                 val vm = chain.getArg(0) ?: return@runCatching null
                 val context = vm.javaClass.getMethod("getMobileContext").invoke(vm) as? Context
-                    ?: Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as? Context
+                    ?: HostClassLookup.load("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as? Context
                     ?: return@runCatching null
                 val cacheKey = "$key:${context.resources.displayMetrics.densityDpi}"
                 val image = synchronized(bitmaps) {

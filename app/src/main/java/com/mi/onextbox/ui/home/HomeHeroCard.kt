@@ -17,20 +17,21 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspStatus
@@ -97,20 +98,25 @@ fun HomeHeroCard(
                 }
             },
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 22.dp, end = 22.dp),
-            ) {
-                ONextBoxLogo(
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 32.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.height(10.dp))
+        HomeHeroCardContent(appVersionName, deviceMarketName)
+    }
+}
+
+@Composable
+internal fun HomeHeroCardContent(appVersionName: String, deviceMarketName: String) {
+    val beta = appVersionName.contains("beta", ignoreCase = true)
+    Layout(
+        modifier = Modifier.fillMaxSize(),
+        content = {
+            ONextBoxLogo(
+                modifier = Modifier.testTag("homeHeroTitle"),
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 32.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Column(Modifier.testTag("homeHeroDetails")) {
                 Text(
                     text = stringResource(R.string.about_version, appVersionName),
                     style = COUITheme.textStyles.title3,
@@ -131,6 +137,27 @@ fun HomeHeroCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            if (beta) HomeBetaBadge()
+        },
+    ) { measurables, constraints ->
+        val contentInset = 22.dp.roundToPx()
+        val badgeGap = 10.dp.roundToPx()
+        val textWidth = (constraints.maxWidth - contentInset * 2).coerceAtLeast(0)
+        val badge = measurables.getOrNull(2)?.measure(Constraints(
+            maxWidth = constraints.maxWidth,
+            maxHeight = constraints.maxHeight,
+        ))
+        val titleWidth = if (badge == null) textWidth else minOf(textWidth,
+            (constraints.maxWidth - contentInset - badge.width - badgeGap).coerceAtLeast(0))
+        val title = measurables[0].measure(Constraints(maxWidth = titleWidth, maxHeight = constraints.maxHeight))
+        val lineGap = 10.dp.roundToPx().coerceAtMost((constraints.maxHeight - title.height).coerceAtLeast(0))
+        val details = measurables[1].measure(Constraints(maxWidth = textWidth,
+            maxHeight = (constraints.maxHeight - title.height - lineGap).coerceAtLeast(0)))
+        val textTop = (constraints.maxHeight - title.height - lineGap - details.height) / 2
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            title.placeRelative(contentInset, textTop)
+            details.placeRelative(contentInset, textTop + title.height + lineGap)
+            badge?.placeRelative(constraints.maxWidth - badge.width, 0)
         }
     }
 }

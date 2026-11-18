@@ -38,7 +38,7 @@ class LiquidGlassUpstreamSyncContractTest {
         assertTrue(bar.contains("com.kyant.shapes.Capsule"))
         assertTrue(bar.contains("if (tabs.isEmpty()) return"))
         assertTrue(bar.contains("remember(animationScope, tabs.size, tabWidth, isLtr)"))
-        assertTrue(bar.contains("remember(density, constraints.maxWidth)"))
+        assertTrue(bar.contains("remember(density, barWidthPx)"))
         assertTrue(bar.contains("latestOnTabSelected(index)"))
         assertTrue(bar.contains("clearAndSetSemantics {}"))
     }

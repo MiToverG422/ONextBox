@@ -1,5 +1,6 @@
 package com.mi.onextbox.lsp
 
+import android.content.ContentProviderClient
 import android.content.Context
 import android.os.Binder
 import android.os.Bundle
@@ -9,45 +10,71 @@ import android.os.IBinder
 import android.os.Parcel
 import android.os.Process
 import android.os.SystemClock
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.FutureTask
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.SynchronousQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal object NativeFiveGaBridge {
     private val worker by lazy { Handler(HandlerThread("native-5ga-bridge").apply { start() }.looper) }
     private val io = ThreadPoolExecutor(0, 2, 30, TimeUnit.SECONDS, SynchronousQueue(), { task ->
         Thread(task, "native-5ga-ipc").apply { isDaemon = true }
     })
+    // Cleanup cannot queue behind discovery/notification calls. Reservations bound both live
+    // provider leases and queued cleanup work; exhausted capacity stops further acquisition.
+    private val cleanup by lazy {
+        val executor = ThreadPoolExecutor(2, 2, 30, TimeUnit.SECONDS,
+            ArrayBlockingQueue<Runnable>(NativeFiveGaCleanup.CAPACITY), { task ->
+                Thread(task, "native-5ga-cleanup").apply { isDaemon = true }
+            }).apply { allowCoreThreadTimeOut(true) }
+        NativeFiveGaCleanup(executor)
+    }
     @Volatile private var publisher: Publisher? = null
     private var publisherSource: String? = null
     private val publisherRetired = AtomicBoolean(false)
 
-    fun publish(context: Context, snapshot: NativeFiveGaSnapshot) {
+    fun publish(context: Context, snapshot: NativeFiveGaSnapshot, enabled: () -> Boolean) {
         check(Process.myUid() == NativeFiveGaProtocol.PHONE_UID)
+        if (!enabled()) { pausePublisher(); return }
         worker.post {
-            if (publisherRetired.get()) return@post
+            if (publisherRetired.get() || !enabled()) return@post
             if (publisherSource == null) publisherSource = snapshot.source
             if (publisherSource != snapshot.source) return@post
-            var current = publisher
-            if (current == null) {
-                current = Publisher(context.applicationContext ?: context)
-                publisher = current
+            runCatching {
+                val current = publisher ?: Publisher(context.applicationContext ?: context, enabled).also { publisher = it }
+                current.update(snapshot)
+            }.onFailure {
+                retirePublisher()
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("failure", "native_5ga:publisher",
+                    "Publication paused: ${it.javaClass.simpleName}")
             }
-            current.update(snapshot)
+        }
+    }
+
+    /** Pause is reversible; retiring an old module generation is permanent. Neither starts a provider. */
+    fun pausePublisher() {
+        val previous = publisher ?: return
+        previous.invalidate()
+        worker.post {
+            if (publisher === previous) { publisher = null; publisherSource = null }
+            previous.close()
         }
     }
 
     fun retirePublisher() {
         publisherRetired.set(true)
-        publisher?.invalidate()
-        worker.post { publisher?.close(); publisher = null }
+        pausePublisher()
     }
 
-    fun subscribe(context: Context, listener: (NativeFiveGaSnapshot?) -> Unit): AutoCloseable {
-        val consumer = Consumer(context.applicationContext ?: context, listener)
-        worker.post(consumer.connect)
+    fun subscribe(context: Context, enabled: () -> Boolean, listener: (NativeFiveGaSnapshot?) -> Unit): AutoCloseable {
+        if (!enabled()) {
+            runCatching { listener(null) }
+            return AutoCloseable {}
+        }
+        val consumer = Consumer(context.applicationContext ?: context, enabled, listener)
+        worker.post { consumer.start() }
         return AutoCloseable { if (consumer.closed.compareAndSet(false, true)) worker.post { consumer.close() } }
     }
 
@@ -58,55 +85,114 @@ internal object NativeFiveGaBridge {
         catch (error: Exception) { future.cancel(false); throw error }
     }
 
-    private fun call(context: Context, method: String, extras: Bundle): Bundle? = bounded {
-        context.contentResolver.acquireUnstableContentProviderClient(NativeFiveGaProtocol.AUTHORITY)?.use {
-            it.call(method, null, extras)
+    /** Keep the already-acquired client so cleanup cannot cold-start the module again. */
+    private class Discovery(
+        private val client: ContentProviderClient,
+        private val cleanupMethod: String,
+        private val cleanupExtras: Bundle,
+        private val reservation: NativeFiveGaCleanup.Reservation,
+    ) : AutoCloseable {
+        var response: Bundle? = null
+        private val closed = AtomicBoolean(false)
+
+        fun read(method: String, extras: Bundle) { response = client.call(method, null, extras) }
+
+        override fun close() {
+            if (!closed.compareAndSet(false, true)) return
+            try {
+                reservation.finish {
+                    try { runCatching { client.call(cleanupMethod, null, cleanupExtras) }.onFailure(::cleanupFailure) }
+                    finally { runCatching { client.close() }.onFailure(::cleanupFailure) }
+                }
+            } catch (error: Exception) { cleanupFailure(error); runCatching { client.close() } }
         }
     }
+
+    private fun discover(context: Context, method: String, extras: Bundle, enabled: () -> Boolean): Discovery {
+        val lease = NativeFiveGaIpcLease<Discovery>()
+        return try {
+            bounded {
+                check(enabled()) { "Native network bridge is inactive" }
+                val reservation = cleanup.reserve()
+                val client = try { requireNotNull(context.contentResolver
+                    .acquireUnstableContentProviderClient(NativeFiveGaProtocol.AUTHORITY)) }
+                catch (error: Exception) { reservation.cancel(); throw error }
+                val next = Discovery(client, if (method == "publish") "retire" else "unwatch", Bundle(extras), reservation)
+                try { next.read(method, extras); lease.offer(next) }
+                catch (error: Exception) { next.close(); throw error }
+            }
+            requireNotNull(lease.take())
+        } catch (error: Exception) { lease.abandon(); throw error }
+    }
+
+    private fun cleanupFailure(error: Throwable) {
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("failure", "native_5ga:cleanup",
+            "Registration cleanup failed: ${error.javaClass.simpleName}")
+    }
+
+    private fun retry(enabled: () -> Boolean, role: String, attempt: () -> Boolean) = NativeFiveGaConnectionRetry(
+        enabled = enabled,
+        post = { task, delay -> worker.postDelayed(task, delay) },
+        remove = { worker.removeCallbacks(it) },
+        attempt = attempt,
+        suspended = {
+            com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("bridge", "native_5ga:$role",
+                "Connection suspended after ${NativeFiveGaConnectionRetry.MAX_ATTEMPTS} failed attempts")
+        },
+    )
 
     private fun moduleUid(context: Context) = context.packageManager
         .getApplicationInfo(NativeFiveGaProtocol.PACKAGE, 0).uid
 
-    private class Publisher(private val context: Context) : Binder() {
+    private class Publisher(private val context: Context, private val enabled: () -> Boolean) : Binder() {
         @Volatile var snapshot: NativeFiveGaSnapshot? = null
             private set
         @Volatile private var retired = false
+        private var released = false
         private var discovery: IBinder? = null
+        private var discoveryClient: Discovery? = null
         private val targets = linkedMapOf<IBinder, IBinder.DeathRecipient>()
-        private val ownModuleUid = moduleUid(context)
-        private val systemUiUid = NativeFiveGaProtocol.systemUiUid(context)
-        private val incarnation = SystemClock.elapsedRealtimeNanos()
+        private val ownModuleUid by lazy { moduleUid(context) }
+        private val systemUiUid by lazy { NativeFiveGaProtocol.systemUiUid(context) }
+        private fun active() = !retired && enabled()
+        private val connection = retry(::active, "publisher", ::connect)
         private val discoveryDeath = IBinder.DeathRecipient {
-            worker.post { discovery = null; if (!retired) worker.postDelayed(publish, 1000) }
-        }
-        private val publish: Runnable = object : Runnable {
-            override fun run() {
-                if (!retired && discovery == null) {
-                    runCatching {
-                        val response = call(context, "publish", NativeFiveGaProtocol.envelope().apply {
-                            putBinder("endpoint", this@Publisher)
-                            putLong("incarnation", incarnation)
-                        })
-                        check(NativeFiveGaProtocol.compatible(response))
-                        check(response?.getBinder("endpoint") == this@Publisher)
-                        requireNotNull(response?.getBinder("discovery")).also {
-                            it.linkToDeath(discoveryDeath, 0)
-                            discovery = it
-                        }
-                    }.onFailure { if (!retired) worker.postDelayed(this, 3000) }
-                }
+            worker.post {
+                discoveryClient?.close(); discoveryClient = null; discovery = null
+                if (active()) connection.reconnect(1000)
             }
+        }
+
+        private fun connect(): Boolean {
+            if (!active()) return false
+            require(ownModuleUid >= 0) { "Module UID unavailable" }
+            // A timed-out registration may already have been retired by its late cleanup.
+            val incarnation = SystemClock.elapsedRealtimeNanos()
+            val next = discover(context, "publish", NativeFiveGaProtocol.envelope().apply {
+                putBinder("endpoint", this@Publisher)
+                putLong("incarnation", incarnation)
+            }, ::active)
+            return try {
+                check(active())
+                check(NativeFiveGaProtocol.compatible(next.response))
+                check(next.response?.getBinder("endpoint") == this@Publisher)
+                val broker = requireNotNull(next.response?.getBinder("discovery"))
+                broker.linkToDeath(discoveryDeath, 0)
+                discoveryClient = next
+                discovery = broker
+                true
+            } catch (error: Exception) { next.close(); throw error }
         }
 
         fun update(value: NativeFiveGaSnapshot) {
             synchronized(this) {
-                if (retired) return
+                if (!active()) return
                 val previous = snapshot
                 if (previous != null && value.sequence <= previous.sequence) return
                 check(NativeFiveGaProtocol.decode(NativeFiveGaProtocol.encode(value)) != null)
                 snapshot = value
             }
-            if (discovery == null) worker.post(publish)
+            if (discovery == null) connection.request()
             notifyTargets(value)
         }
 
@@ -117,7 +203,7 @@ internal object NativeFiveGaBridge {
             val callback = if (code != NativeFiveGaProtocol.READ) data.readStrongBinder() else null
             data.enforceNoDataAvail()
             synchronized(targets) {
-                if (code == NativeFiveGaProtocol.REGISTER && callback != null && callback !in targets && !retired) {
+                if (code == NativeFiveGaProtocol.REGISTER && callback != null && callback !in targets && active()) {
                     require(targets.size < 32)
                     val death = IBinder.DeathRecipient { remove(callback) }
                     callback.linkToDeath(death, 0)
@@ -125,7 +211,7 @@ internal object NativeFiveGaBridge {
                 } else if (code == NativeFiveGaProtocol.UNREGISTER && callback != null) remove(callback)
             }
             reply?.writeNoException()
-            reply?.writeBundle(NativeFiveGaProtocol.encode(if (retired) null else snapshot))
+            reply?.writeBundle(NativeFiveGaProtocol.encode(if (active()) snapshot else null))
             return true
         }
 
@@ -151,128 +237,105 @@ internal object NativeFiveGaBridge {
         }
 
         fun close() {
+            if (released) return
+            released = true
             invalidate()
-            worker.removeCallbacks(publish)
+            connection.close()
             notifyTargets(null)
-            runCatching { call(context, "retire", NativeFiveGaProtocol.envelope().apply {
-                putBinder("endpoint", this@Publisher)
-                putLong("incarnation", incarnation)
-            }) }
             discovery?.let { runCatching { it.unlinkToDeath(discoveryDeath, 0) } }
             discovery = null
+            discoveryClient?.close(); discoveryClient = null
             synchronized(targets) { targets.keys.toList() }.forEach(::remove)
         }
 
         @Synchronized fun invalidate() { retired = true; snapshot = null }
     }
 
-    private class Consumer(private val context: Context, private val listener: (NativeFiveGaSnapshot?) -> Unit) {
+    private class Consumer(
+        private val context: Context,
+        private val enabled: () -> Boolean,
+        private val listener: (NativeFiveGaSnapshot?) -> Unit,
+    ) {
         val closed = AtomicBoolean(false)
+        private var released = false
         private val stateLock = Any()
-        private val ownModuleUid = moduleUid(context)
+        private val ownModuleUid by lazy { moduleUid(context) }
         private var endpoint: IBinder? = null
-        private var discovery: IBinder? = null
+        @Volatile private var discovery: IBinder? = null
+        private var discoveryClient: Discovery? = null
+        private var discoveryObserver: IBinder? = null
         private var callback: IBinder? = null
         private var receipt = NativeFiveGaReceipt()
-        private var connection = 0L
+        private var generation = 0L
         private var endpointDeath: IBinder.DeathRecipient? = null
         private var discoveryDeath: IBinder.DeathRecipient? = null
-        private val observer = object : Binder() {
-            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-                if (code != NativeFiveGaProtocol.INVALIDATED) return super.onTransact(code, data, reply, flags)
-                if (Binder.getCallingUid() != ownModuleUid) throw SecurityException("Discovery UID required")
-                data.enforceInterface(NativeFiveGaProtocol.DESCRIPTOR)
-                val broker = data.readStrongBinder()
-                data.enforceNoDataAvail()
-                if (broker != null) invalidate(expectedDiscovery = broker)
-                return true
-            }
-        }
-        val connect = Runnable { connectNow() }
+        private fun active() = !closed.get() && enabled()
+        private val connection = retry(::active, "consumer", ::connect)
         private val health: Runnable = object : Runnable {
             override fun run() {
-                if (closed.get()) return
+                if (!active()) { close(); return }
                 val remote = endpoint ?: return
                 val receiver = callback ?: return
-                val generation = synchronized(stateLock) { connection }
-                // Re-register idempotently so a dropped callback recovers without restarting a scope.
-                runCatching { accept(transact(remote, NativeFiveGaProtocol.REGISTER, receiver), generation, remote) }
+                val ticket = synchronized(stateLock) { generation }
+                runCatching { accept(transact(remote, NativeFiveGaProtocol.REGISTER, receiver), ticket, remote) }
                     .onFailure { invalidate(expectedEndpoint = remote) }
-                if (!closed.get() && endpoint == remote) worker.postDelayed(this, 5000)
+                if (active() && endpoint == remote) worker.postDelayed(this, 5000)
             }
         }
+
+        fun start() { if (active()) connection.request() else close() }
 
         private fun invalidate(expectedEndpoint: IBinder? = null, expectedDiscovery: IBinder? = null) {
-            val invalidated = synchronized(stateLock) {
+            val ticket = synchronized(stateLock) {
                 if (closed.get() || expectedEndpoint != null && endpoint != expectedEndpoint ||
-                    expectedDiscovery != null && discovery != null && discovery != expectedDiscovery) return
-                ++connection
+                    expectedDiscovery != null && discovery != expectedDiscovery) return
+                ++generation
                 runCatching { listener(null) }
-                connection
+                generation
             }
             worker.post {
-                if (synchronized(stateLock) { !closed.get() && connection == invalidated }) {
+                if (synchronized(stateLock) { !closed.get() && generation == ticket }) {
                     disconnect()
-                    worker.removeCallbacks(connect)
-                    worker.postDelayed(connect, 500)
+                    dropDiscovery()
+                    if (active()) connection.reconnect(500) else close()
                 }
             }
         }
 
-        private fun connectNow() {
-            val ticket = synchronized(stateLock) {
-                if (closed.get()) return
-                connection
+        private fun connect(): Boolean {
+            if (!active()) { close(); return false }
+            require(ownModuleUid >= 0) { "Module UID unavailable" }
+            val observer = object : Binder() {
+                override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                    if (code != NativeFiveGaProtocol.INVALIDATED) return super.onTransact(code, data, reply, flags)
+                    if (Binder.getCallingUid() != ownModuleUid) throw SecurityException("Discovery UID required")
+                    data.enforceInterface(NativeFiveGaProtocol.DESCRIPTOR)
+                    val broker = data.readStrongBinder()
+                    data.enforceNoDataAvail()
+                    worker.post { if (discoveryObserver === this && broker != null) invalidate(expectedDiscovery = broker) }
+                    return true
+                }
             }
-            runCatching {
-                val response = requireNotNull(call(context, "read", NativeFiveGaProtocol.envelope().apply { putBinder("observer", observer) }))
+            val next = discover(context, "read", NativeFiveGaProtocol.envelope().apply { putBinder("observer", observer) }, ::active)
+            return try {
+                check(active())
+                val response = requireNotNull(next.response)
                 check(NativeFiveGaProtocol.compatible(response))
                 val broker = requireNotNull(response.getBinder("discovery"))
+                val brokerDeath = IBinder.DeathRecipient { invalidate(expectedDiscovery = broker) }
+                broker.linkToDeath(brokerDeath, 0)
+                discovery = broker; discoveryDeath = brokerDeath
+                discoveryClient = next; discoveryObserver = observer
                 val remote = response.getBinder("endpoint")
-                val generation = synchronized(stateLock) {
-                    if (closed.get() || ticket != connection) return@runCatching
-                    if (discovery != broker) {
-                        discoveryDeath?.let { previous -> discovery?.let { runCatching { it.unlinkToDeath(previous, 0) } } }
-                        val brokerDeath = IBinder.DeathRecipient {
-                            worker.post {
-                                if (discovery == broker) {
-                                    discovery = null
-                                    discoveryDeath = null
-                                    // Package replacement kills discovery, not the phone-owned endpoint.
-                                    // Its authenticated updates and health checks remain authoritative.
-                                    if (endpoint?.isBinderAlive != true) invalidate()
-                                    else {
-                                        worker.removeCallbacks(connect)
-                                        worker.postDelayed(connect, 500)
-                                    }
-                                }
-                            }
-                        }
-                        discovery = broker
-                        discoveryDeath = brokerDeath
-                        broker.linkToDeath(brokerDeath, 0)
-                    }
-                    if (remote == null) {
-                        // Broker replacement can precede the live phone endpoint's re-publication.
-                        if (endpoint != null) {
-                            worker.removeCallbacks(connect)
-                            worker.postDelayed(connect, 1000)
-                        }
-                        return@runCatching
-                    }
-                    if (remote == endpoint && callback != null) return@runCatching
-                    if (endpoint != null) {
-                        invalidate(expectedEndpoint = endpoint)
-                        return@runCatching
-                    }
-                    val remoteDeath = IBinder.DeathRecipient { invalidate(expectedEndpoint = remote) }
-                    endpoint = remote
-                    endpointDeath = remoteDeath
-                    remote.linkToDeath(remoteDeath, 0)
+                // The registered observer will notify us when the phone publishes. No polling is needed.
+                if (remote == null) return true
+                val remoteDeath = IBinder.DeathRecipient { invalidate(expectedEndpoint = remote) }
+                remote.linkToDeath(remoteDeath, 0)
+                val ticket = synchronized(stateLock) {
+                    endpoint = remote; endpointDeath = remoteDeath
                     receipt = NativeFiveGaReceipt()
-                    ++connection
+                    ++generation
                 }
-                requireNotNull(remote)
                 val receiver = object : Binder() {
                     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
                         if (code != NativeFiveGaProtocol.CHANGED) return super.onTransact(code, data, reply, flags)
@@ -280,26 +343,30 @@ internal object NativeFiveGaBridge {
                         data.enforceInterface(NativeFiveGaProtocol.DESCRIPTOR)
                         val value = NativeFiveGaProtocol.decode(data.readBundle(Bundle::class.java.classLoader))
                         data.enforceNoDataAvail()
-                        worker.post { accept(value, generation, remote) }
+                        worker.post { accept(value, ticket, remote) }
                         return true
                     }
                 }
                 callback = receiver
-                accept(transact(remote, NativeFiveGaProtocol.REGISTER, receiver), generation, remote)
+                check(accept(transact(remote, NativeFiveGaProtocol.REGISTER, receiver), ticket, remote, false))
                 worker.removeCallbacks(health)
                 worker.postDelayed(health, 5000)
-            }.onFailure { disconnect() }
-            if (endpoint == null && !closed.get()) worker.postDelayed(connect, 3000)
+                true
+            } catch (error: Exception) {
+                disconnect(); dropDiscovery(); next.close()
+                throw error
+            }
         }
 
-        private fun accept(value: NativeFiveGaSnapshot?, generation: Long, remote: IBinder) = synchronized(stateLock) {
-            if (closed.get() || generation != connection || endpoint != remote) return@synchronized
+        private fun accept(value: NativeFiveGaSnapshot?, ticket: Long, remote: IBinder, reconnectInvalid: Boolean = true): Boolean = synchronized(stateLock) {
+            if (!active() || ticket != generation || endpoint != remote) return@synchronized false
             when (receipt.receive(value?.source, value?.sequence ?: -1)) {
-                NativeFiveGaReceipt.Result.ACCEPT -> runCatching { listener(value) }
-                NativeFiveGaReceipt.Result.IGNORE -> Unit
+                NativeFiveGaReceipt.Result.ACCEPT -> { runCatching { listener(value) }; true }
+                NativeFiveGaReceipt.Result.IGNORE -> true
                 NativeFiveGaReceipt.Result.INVALID -> {
                     runCatching { listener(null) }
-                    invalidate()
+                    if (reconnectInvalid) invalidate(expectedEndpoint = remote)
+                    false
                 }
             }
         }
@@ -307,11 +374,9 @@ internal object NativeFiveGaBridge {
         private fun disconnect() {
             worker.removeCallbacks(health)
             val (remote, receiver, previousDeath) = synchronized(stateLock) {
-                ++connection
+                ++generation
                 val result = Triple(endpoint, callback, endpointDeath)
-                endpoint = null
-                callback = null
-                endpointDeath = null
+                endpoint = null; callback = null; endpointDeath = null
                 runCatching { listener(null) }
                 result
             }
@@ -321,13 +386,19 @@ internal object NativeFiveGaBridge {
             }
         }
 
-        fun close() {
-            worker.removeCallbacks(connect)
-            disconnect()
+        private fun dropDiscovery() {
             discoveryDeath?.let { previous -> discovery?.let { runCatching { it.unlinkToDeath(previous, 0) } } }
-            discovery = null
-            discoveryDeath = null
-            runCatching { call(context, "unwatch", NativeFiveGaProtocol.envelope().apply { putBinder("observer", observer) }) }
+            discovery = null; discoveryDeath = null; discoveryObserver = null
+            discoveryClient?.close(); discoveryClient = null
+        }
+
+        fun close() {
+            closed.set(true)
+            if (released) return
+            released = true
+            connection.close()
+            disconnect()
+            dropDiscovery()
         }
     }
 

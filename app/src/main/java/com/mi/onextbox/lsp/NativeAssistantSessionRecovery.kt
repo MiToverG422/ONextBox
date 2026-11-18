@@ -286,7 +286,7 @@ internal object NativeAssistantSessionRecovery {
     }
 
     private fun createCallback(callbackClass: Class<*>, onComplete: (Boolean) -> Unit): Any {
-        val stubClass = Class.forName("$CALLBACK_DESCRIPTOR\$Stub", false, callbackClass.classLoader)
+        val stubClass = HostClassLookup.load("$CALLBACK_DESCRIPTOR\$Stub", false, callbackClass.classLoader)
         fun transaction(name: String): Int = stubClass.getDeclaredField("TRANSACTION_$name")
             .apply { isAccessible = true }.getInt(null)
         val shownCode = transaction("onShown")

@@ -2,6 +2,9 @@
 
 package com.mi.onextbox.ui.screens
 
+import com.mi.onextbox.ui.common.AnimatedDataContent
+
+import com.mi.onextbox.ui.settings.SettingsDataRow
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
@@ -249,7 +252,7 @@ internal fun AppErrorTrackingRoute(
                 }
                 if (filtered.isEmpty()) item("empty") {
                     SettingsGroup {
-                        SettingsCardRow(title = stringResource(when {
+                        SettingsDataRow(title = stringResource(when {
                             readFailed -> R.string.app_errors_read_failed
                             loading -> R.string.app_errors_loading
                             records.isEmpty() -> R.string.app_errors_empty
@@ -258,7 +261,9 @@ internal fun AppErrorTrackingRoute(
                     }
                 }
                 items(filtered, key = { it.id }) { record ->
-                    AppErrorSummaryCard(record, onOpen = { onOpenDetail(record.id) }, onCopy = { copy(record.id) })
+                    Box(Modifier.animateItem(placementSpec = null)) {
+                        AppErrorSummaryCard(record, onOpen = { onOpenDetail(record.id) }, onCopy = { copy(record.id) })
+                    }
                 }
             }
         } else {
@@ -318,18 +323,20 @@ private fun AppErrorDetailPage(id: Long, onCopy: () -> Unit, onShare: () -> Unit
         catch (_: Exception) { failed = true }
         finally { loading = false }
     }
-    val value = record
+    AnimatedDataContent(Triple(record, loading, failed), modifier = Modifier.fillMaxSize()) { displayed ->
+    val value = displayed.first
     if (value == null) {
         LazyColumn(contentPadding = PaddingValues(bottom = errorBottomPadding()), modifier = Modifier.fillMaxSize()) {
             item {
-                SettingsGroup { SettingsCardRow(title = stringResource(when {
-                    loading -> R.string.app_errors_loading
-                    failed -> R.string.app_errors_read_failed
+                SettingsGroup { SettingsDataRow(title = stringResource(when {
+                    displayed.second -> R.string.app_errors_loading
+                    displayed.third -> R.string.app_errors_read_failed
                     else -> R.string.app_errors_missing
                 }), summary = "") }
             }
         }
     } else AppErrorDetailContent(value, onCopy, onShare, onExport, exportEnabled)
+    }
 }
 
 @Composable
@@ -360,8 +367,8 @@ internal fun AppErrorDetailContent(value: AppErrorRecord, onCopy: () -> Unit, on
         if (value.version.isNotBlank()) add(stringResource(R.string.app_errors_version) to value.version)
         add("UID / PID" to "${value.uid} / ${value.pid}")
         add(stringResource(R.string.app_errors_user) to (value.uid / 100_000).toString())
-        if (meta.targetSdk > 0) add("Target SDK" to meta.targetSdk.toString())
-        if (meta.minSdk > 0) add("Min SDK" to meta.minSdk.toString())
+        if (meta.targetSdk > 0) add(stringResource(R.string.app_errors_target_sdk) to meta.targetSdk.toString())
+        if (meta.minSdk > 0) add(stringResource(R.string.app_errors_min_sdk) to meta.minSdk.toString())
         meta.systemApp?.let { add(stringResource(R.string.app_errors_app_type) to stringResource(if (it) R.string.app_errors_system_app else R.string.app_errors_user_app)) }
     }
     val environmentRows = buildList {

@@ -19,6 +19,7 @@ internal object SafeModePolicy {
 
     fun scope(process: String, system: Boolean): String? = when {
         system -> "system"
+        process == "com.android.phone" -> process
         process == "com.android.systemui" -> process
         process in setOf("com.android.launcher", "com.android.launcher3", "com.oplus.launcher", "com.oneplus.launcher") -> process
         else -> null

@@ -19,7 +19,7 @@ internal object CameraGalleryIntents {
         if (reported.size < 16 && reported.add(message)) HookLog.i("ONextBox-Camera", message)
     }
     fun customizedGallery(context: Context): String? = runCatching {
-        val owner = Class.forName("android.content.pm.OplusPackageManager")
+        val owner = HostClassLookup.load("android.content.pm.OplusPackageManager")
         val manager = HiddenApiBypass.invoke(owner, null, "getOplusPackageManager", context.applicationContext)
             ?: return@runCatching null
         CameraGalleryRules.packageFromDefault(HiddenApiBypass.invoke(owner, manager,

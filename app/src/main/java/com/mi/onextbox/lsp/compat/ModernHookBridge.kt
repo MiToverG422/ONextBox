@@ -22,7 +22,18 @@ internal object ModernHookBridge {
         val profile = AdaptationHookGate.bind()
         return ModernHotReloadSession.install(executable) { chain ->
             if (!AdaptationHookGate.isActive(profile)) chain.proceed()
-            else HotReloadLifecycle.withHook({ chain.proceed() }) { hooker.intercept(chain) }
+            else HotReloadLifecycle.withInfrastructureHook({ chain.proceed() }) { hooker.intercept(chain) }
+        }
+    }
+
+    /** Recovery/real-value protection only: must remain active while feature hooks are gated. */
+    fun hookInfrastructureFast(
+        executable: Executable,
+        hooker: XposedInterface.Hooker,
+    ): XposedInterface.HookHandle {
+        executable.isAccessible = true
+        return ModernHotReloadSession.install(executable) { chain ->
+            HotReloadLifecycle.withInfrastructureHook({ chain.proceed() }) { hooker.intercept(chain) }
         }
     }
 
@@ -34,7 +45,7 @@ internal object ModernHookBridge {
         val profile = AdaptationHookGate.bind()
         return ModernHotReloadSession.install(executable) { chain ->
             if (!AdaptationHookGate.isActive(profile)) chain.proceed()
-            else HotReloadLifecycle.withHook({ chain.proceed() }) { intercept(chain, callback) }
+            else HotReloadLifecycle.withInfrastructureHook({ chain.proceed() }) { intercept(chain, callback) }
         }
     }
 

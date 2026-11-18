@@ -15,7 +15,7 @@ class LargeNetworkToggleUiContractTest {
     @Test fun savingDoesNotDimTheGroupButStillGuardsEveryWrite() {
         assertFalse(source.contains("enabled = !saving"))
         assertEquals(5, Regex("if \\(!saving\\)").findAll(source).count())
-        assertEquals(5, Regex("finally \\{").findAll(source).count())
+        assertEquals(6, Regex("finally \\{").findAll(source).count())
     }
 
     @Test fun resumeCannotOverwriteAnOptimisticPendingChange() {

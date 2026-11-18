@@ -39,12 +39,12 @@ internal object AospVolumeGraph {
         val hostRoot = requireNotNull(host.javaClass.declaredFields.single {
             it.type.name.endsWith("\$OplusReferenceGlobalRootComponentImpl")
         }.apply { isAccessible = true }.get(host))
-        val rootType = Class.forName(PREFIX + "ReferenceGlobalRootComponentImpl", false, loader)
+        val rootType = HostClassLookup.load(PREFIX + "ReferenceGlobalRootComponentImpl", false, loader)
         val rootConstructor = rootType.declaredConstructors.single()
         val root = rootConstructor.apply { isAccessible = true }.newInstance(
             *rootConstructor.parameterTypes.map { argument(hostRoot, it, parameterCount == 24) }.toTypedArray())
         shareProviders(hostRoot, root)
-        val type = Class.forName(PREFIX + "ReferenceSysUIComponentImpl", false, loader)
+        val type = HostClassLookup.load(PREFIX + "ReferenceSysUIComponentImpl", false, loader)
         val constructor = type.declaredConstructors.single()
         // Each audited graph has ordered Optional values; never infer their positions.
         require(constructor.parameterCount == parameterCount && constructor.parameterTypes[0] == rootType)
@@ -98,7 +98,7 @@ internal object AospVolumeGraph {
             type.declaredFields.none { !Modifier.isStatic(it.modifiers) }) {
             "Volume graph module has unaudited state: ${type.name}"
         }
-        val unsafe = Class.forName("sun.misc.Unsafe")
+        val unsafe = HostClassLookup.load("sun.misc.Unsafe")
         val allocator = unsafe.getDeclaredField("theUnsafe").apply { isAccessible = true }.get(null)
         return unsafe.getMethod("allocateInstance", Class::class.java).invoke(allocator, type)
     }

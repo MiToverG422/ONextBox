@@ -1,5 +1,11 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedVisibility
 import android.content.SharedPreferences
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -59,8 +65,9 @@ internal fun FeatureUpdatesButton(unread: Boolean, onClick: () -> Unit) {
     ColorOsTopBarButton(onClick = onClick, modifier = Modifier.testTag("featureUpdatesAction")) {
         Icon(COUIIcons.Update, stringResource(R.string.feature_updates_title),
             tint = COUITheme.colorScheme.onSurface, modifier = Modifier.size(24.dp))
-        if (unread) {
-            Box(Modifier.align(Alignment.TopEnd).padding(top = 7.dp, end = 7.dp)
+        AnimatedVisibility(visible = unread, modifier = Modifier.align(Alignment.TopEnd), enter = fadeIn(tween(180)) + scaleIn(tween(180)),
+            exit = fadeOut(tween(140)) + scaleOut(tween(140))) {
+            Box(Modifier.padding(top = 7.dp, end = 7.dp)
                 .size(5.dp).background(COUITheme.colorScheme.primary, CircleShape)
                 .testTag("featureUpdatesUnread"))
         }
@@ -112,18 +119,35 @@ internal fun ColumnScope.FeatureUpdatesContent(
     val resources = LocalResources.current
     val configuration = LocalConfiguration.current
     val query = search.text.toString()
-    val filtered = remember(items, query, configuration, resources) {
-        if (query.isBlank()) items else items.filter {
-            featureSearchScore(query, resources.getString(it.change.title),
-                listOf(it.destination.description, it.change.note).filter { id -> id != 0 }
-                    .joinToString(" ") { id -> resources.getString(id) }) > 0
+    val documents = remember(items, configuration, resources) {
+        lazy(LazyThreadSafetyMode.NONE) {
+            items.map { item ->
+                FeatureSearchDocument(item, resources.getString(item.change.title),
+                    listOf(item.destination.description, item.change.note).filter { it != 0 }
+                        .joinToString(" ") { resources.getString(it) })
+            }
         }
     }
-    val overview = remember(query, configuration, resources) {
-        FeatureUpdatesCatalog.overview.filter {
-            query.isBlank() || featureSearchScore(query, resources.getString(it.title), resources.getString(it.note)) > 0
+    val overviewDocuments = remember(configuration, resources) {
+        lazy(LazyThreadSafetyMode.NONE) {
+            FeatureUpdatesCatalog.overview.map {
+                FeatureSearchDocument(it, resources.getString(it.title), resources.getString(it.note))
+            }
         }
     }
+    val filtered = remember(items, query, documents) {
+        if (query.isBlank()) items else {
+            val matcher = FeatureSearchQuery(query)
+            documents.value.filter { matcher.score(it) > 0 }.map { it.item }
+        }
+    }
+    val overview = remember(query, overviewDocuments) {
+        if (query.isBlank()) FeatureUpdatesCatalog.overview else {
+            val matcher = FeatureSearchQuery(query)
+            overviewDocuments.value.filter { matcher.score(it) > 0 }.map { it.item }
+        }
+    }
+
     SettingsGroup {
         SettingsCardRow(
             title = stringResource(R.string.feature_updates_version, BuildConfig.VERSION_NAME),

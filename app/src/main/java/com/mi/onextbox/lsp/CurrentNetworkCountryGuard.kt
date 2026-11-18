@@ -92,7 +92,7 @@ internal object CurrentNetworkCountryGuard {
 
     private fun readSystemProperty(key: String): String? {
         return runCatching {
-            val systemProperties = Class.forName("android.os.SystemProperties")
+            val systemProperties = HostClassLookup.load("android.os.SystemProperties")
             systemProperties.getMethod("get", String::class.java, String::class.java)
                 .invoke(null, key, "") as? String
         }.getOrNull()
@@ -100,7 +100,7 @@ internal object CurrentNetworkCountryGuard {
 
     private fun currentApplicationContext(): Context? {
         return runCatching {
-            val activityThread = Class.forName("android.app.ActivityThread")
+            val activityThread = HostClassLookup.load("android.app.ActivityThread")
             activityThread.getMethod("currentApplication").invoke(null) as? Context
         }.getOrNull()?.applicationContext
     }

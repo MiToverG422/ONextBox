@@ -19,6 +19,7 @@ internal fun SystemCustomizationRows(
     feature: Settings.Feature,
     hasDividerAbove: Boolean = false,
     hasDividerBelow: Boolean = false,
+    showSummary: Boolean = true,
 ) {
     val definition = systemCustomizationDefinition(feature)
     val values = when (feature) {
@@ -39,7 +40,7 @@ internal fun SystemCustomizationRows(
     FeatureAnimatedRows(hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow) {
         row(feature.key) { above, below ->
             SettingsToggleRow(title = stringResource(definition.title),
-                summary = if (definition.summary != 0) stringResource(definition.summary) else "",
+                summary = if (showSummary && definition.summary != 0) stringResource(definition.summary) else "",
                 checked = state.enabled, interactionEnabled = editor.savingKey == null,
                 onCheckedChange = { enabled -> editor.save(feature.key, state.copy(enabled = enabled)) {
                     Settings.set(context, feature, enabled)
@@ -77,7 +78,7 @@ internal fun systemCustomizationDefinition(feature: Settings.Feature): SharedFea
 private fun createSystemCustomizationDefinition(feature: Settings.Feature): SharedFeatureDefinitions.Toggle {
     val (title, summary, page) = when (feature) {
         Settings.Feature.GalleryDeleteCountdown -> Triple(R.string.gallery_skip_delete_countdown,
-            R.string.gallery_skip_delete_countdown_summary, FeaturePageMode.Gallery)
+            R.string.gallery_skip_delete_countdown_summary, FeaturePageMode.GalleryGeneral)
         Settings.Feature.MultiAppRestrictions -> Triple(R.string.multiapp_remove_restrictions,
             R.string.multiapp_remove_restrictions_summary, FeaturePageMode.MultiApp)
         Settings.Feature.MultiAppPerAppLimit -> Triple(R.string.multiapp_extend_per_app_limit,

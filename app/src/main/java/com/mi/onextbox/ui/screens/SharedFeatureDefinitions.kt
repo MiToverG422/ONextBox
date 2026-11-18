@@ -18,6 +18,7 @@ internal object SharedFeatureDefinitions {
         val page: FeaturePageMode,
         val read: suspend (Context) -> Boolean,
         val write: suspend (Context, Boolean) -> Unit,
+        val preferenceKey: String? = null,
     ) {
         fun catalogEntry() = EnabledFeatureCatalog.Entry(title, page, read = read)
         fun searchEntry() = FeatureSearchIndex.Entry(page, title, summary)
@@ -29,15 +30,15 @@ internal object SharedFeatureDefinitions {
         { context, enabled -> NetworkIdentitySettings.setEnabled(context, enabled) })
 
     val cameraDefaultGallery = Toggle(R.string.camera_default_gallery_title, R.string.camera_default_gallery_summary,
-        FeaturePageMode.Camera, { com.mi.onextbox.lsp.CameraGallerySettings.enabled(it) },
-        { context, enabled -> com.mi.onextbox.lsp.CameraGallerySettings.set(context, enabled) })
+        FeaturePageMode.CameraGeneral, { com.mi.onextbox.lsp.CameraGallerySettings.enabled(it) },
+        { context, enabled -> com.mi.onextbox.lsp.CameraGallerySettings.set(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.CameraGallerySettings.FOLLOW_DEFAULT)
 
     private fun translation(key: String, title: Int, summary: Int) = Toggle(title, summary,
         FeaturePageMode.Translation, { ScreenTranslationSettings.enabled(it, key) },
-        { context, enabled -> ScreenTranslationSettings.set(context, key, enabled) })
+        { context, enabled -> ScreenTranslationSettings.set(context, key, enabled) }, preferenceKey = key)
     private fun sidebar(key: String, title: Int, summary: Int) = Toggle(title, summary,
         FeaturePageMode.SmartSidebar, { com.mi.onextbox.lsp.SmartSidebarSettings.enabled(it, key) },
-        { context, enabled -> com.mi.onextbox.lsp.SmartSidebarSettings.set(context, key, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.SmartSidebarSettings.set(context, key, enabled) }, preferenceKey = key)
     val sidebarApps = sidebar(com.mi.onextbox.lsp.SmartSidebarSettings.ALLOW_APPS,
         R.string.sidebar_allow_apps_title, R.string.sidebar_allow_apps_summary)
     val sidebarDisplay = sidebar(com.mi.onextbox.lsp.SmartSidebarSettings.ALLOW_IN_APPS,
@@ -65,7 +66,7 @@ internal object SharedFeatureDefinitions {
     )
     private fun installer(key: String, title: Int, summary: Int, page: FeaturePageMode) = Toggle(title, summary,
         page, { com.mi.onextbox.lsp.InstallerCleanupSettings.enabled(it, key) },
-        { context, enabled -> com.mi.onextbox.lsp.InstallerCleanupSettings.set(context, key, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.InstallerCleanupSettings.set(context, key, enabled) }, preferenceKey = key)
     val installerNative = installer(com.mi.onextbox.lsp.InstallerCleanupSettings.NATIVE_UI,
         R.string.installer_native_ui_title, R.string.installer_native_ui_summary, FeaturePageMode.PackageInstaller)
     val installerSkipScan = installer(com.mi.onextbox.lsp.InstallerCleanupSettings.APP_SKIP_SCAN,
@@ -94,56 +95,57 @@ internal object SharedFeatureDefinitions {
     )
     val qsCorner = Toggle(R.string.qs_tile_corner_title, R.string.qs_tile_corner_summary,
         FeaturePageMode.SystemUiControlCenter, { QsTileCornerSettings.state(it).enabled },
-        { context, enabled -> QsTileCornerSettings.setEnabled(context, enabled) })
+        { context, enabled -> QsTileCornerSettings.setEnabled(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.QsTileCornerSettings.ENABLED)
     val qsPercentage = Toggle(R.string.qs_slider_percentage_title, R.string.qs_slider_percentage_summary,
         FeaturePageMode.SystemUiControlCenter, { QsSliderPercentageSettings.state(it).enabled },
-        { context, enabled -> QsSliderPercentageSettings.setEnabled(context, enabled) })
+        { context, enabled -> QsSliderPercentageSettings.setEnabled(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.QsSliderPercentageSettings.ENABLED)
     val sideVolumePercentage = Toggle(R.string.side_volume_percentage_title, R.string.side_volume_percentage_summary,
         FeaturePageMode.SystemUiVolume, { SideVolumePercentageSettings.state(it).enabled },
-        { context, enabled -> SideVolumePercentageSettings.setEnabled(context, enabled) })
+        { context, enabled -> SideVolumePercentageSettings.setEnabled(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.SideVolumePercentageSettings.ENABLED)
     val sideVolumeKeepWide = Toggle(R.string.side_volume_keep_wide_title, 0,
         FeaturePageMode.SystemUiVolume, { com.mi.onextbox.lsp.SideVolumeAppearanceSettings.state(it).keepWide },
         { context, enabled -> com.mi.onextbox.lsp.SideVolumeAppearanceSettings.setKeepWide(context, enabled) })
     val stackedSignal = Toggle(R.string.feature_c16_stacked_signal_title, R.string.feature_c16_stacked_signal_summary,
         FeaturePageMode.SystemUiNative, { C16StackedSignalSettings.enabled(it) },
-        { context, enabled -> C16StackedSignalSettings.set(context, enabled) })
+        { context, enabled -> C16StackedSignalSettings.set(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.C16StackedSignalSettings.KEY)
     val volumeSafetyWarning = Toggle(
         R.string.volume_block_hearing_safety_warning_title,
         R.string.volume_block_hearing_safety_warning_summary,
         FeaturePageMode.SystemUiVolume,
         { VolumeSafetyWarningSettings.enabled(it) },
         { context, enabled -> VolumeSafetyWarningSettings.set(context, enabled) },
+        preferenceKey = com.mi.onextbox.lsp.VolumeSafetyWarningSettings.KEY,
     )
     val powerIndicator = Toggle(R.string.power_indicator_title, R.string.power_indicator_summary,
         FeaturePageMode.SystemUiStatusBarPower, { com.mi.onextbox.lsp.PowerIndicatorSettings.state(it).enabled },
-        { context, enabled -> com.mi.onextbox.lsp.PowerIndicatorSettings.setEnabled(context, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.PowerIndicatorSettings.setEnabled(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.PowerIndicatorSettings.ENABLED)
     val phoneManagerRiskCloud = Toggle(R.string.phone_manager_risk_cloud_title, R.string.phone_manager_risk_cloud_summary,
         FeaturePageMode.PhoneManager, { com.mi.onextbox.lsp.PhoneManagerRiskCloudSettings.enabled(it) },
-        { context, enabled -> com.mi.onextbox.lsp.PhoneManagerRiskCloudSettings.set(context, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.PhoneManagerRiskCloudSettings.set(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.PhoneManagerRiskCloudSettings.KEY)
     val rotationSuggestion = Toggle(R.string.rotation_suggestion_hide_title, R.string.rotation_suggestion_hide_summary,
         FeaturePageMode.SystemUiNavigationBar, { com.mi.onextbox.lsp.RotationSuggestionSettings.enabled(it) },
-        { context, enabled -> com.mi.onextbox.lsp.RotationSuggestionSettings.set(context, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.RotationSuggestionSettings.set(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.RotationSuggestionSettings.KEY)
     val launcherLabelSpacing = Toggle(R.string.launcher_icon_label_spacing_title, R.string.launcher_icon_label_spacing_summary,
         FeaturePageMode.DesktopIcons, { com.mi.onextbox.lsp.LauncherGestureSettings.iconLabelSpacingEnabled(it) },
-        { context, enabled -> com.mi.onextbox.lsp.LauncherGestureSettings.save(context, com.mi.onextbox.lsp.LauncherGestureSettings.SPACING_ENABLED, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.LauncherGestureSettings.save(context, com.mi.onextbox.lsp.LauncherGestureSettings.SPACING_ENABLED, enabled) }, preferenceKey = com.mi.onextbox.lsp.LauncherGestureSettings.SPACING_ENABLED)
     val hideRecentApps = Toggle(R.string.hide_recent_apps_title, R.string.hide_recent_apps_summary,
         FeaturePageMode.DesktopHiddenApps, { com.mi.onextbox.lsp.HideRecentAppsSettings.enabled(it) },
-        { context, enabled -> com.mi.onextbox.lsp.HideRecentAppsSettings.setEnabled(context, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.HideRecentAppsSettings.setEnabled(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.HideRecentAppsSettings.ENABLED)
     val hideNotificationClear = Toggle(R.string.hide_notification_clear_title, R.string.hide_notification_clear_summary,
         FeaturePageMode.SystemUiNotificationCenter, { com.mi.onextbox.lsp.HideNotificationClearSettings.enabled(it) },
-        { context, enabled -> com.mi.onextbox.lsp.HideNotificationClearSettings.set(context, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.HideNotificationClearSettings.set(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.HideNotificationClearSettings.KEY)
     val retainLockscreenNotifications = Toggle(R.string.retain_lockscreen_notifications_title, R.string.retain_lockscreen_notifications_summary,
         FeaturePageMode.SystemUiNotificationCenter, { com.mi.onextbox.lsp.RetainLockscreenNotificationsSettings.enabled(it) },
-        { context, enabled -> com.mi.onextbox.lsp.RetainLockscreenNotificationsSettings.set(context, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.RetainLockscreenNotificationsSettings.set(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.RetainLockscreenNotificationsSettings.KEY)
     val hideScreenshotFloating = Toggle(R.string.hide_screenshot_floating_title, R.string.hide_screenshot_floating_summary,
         FeaturePageMode.Screenshot, { com.mi.onextbox.lsp.HideScreenshotFloatingSettings.enabled(it) },
         { context, enabled -> com.mi.onextbox.lsp.HideScreenshotFloatingSettings.set(context, enabled) })
     val galleryAiRetouch = Toggle(R.string.gallery_ai_retouch_title, R.string.gallery_ai_retouch_summary,
-        FeaturePageMode.Gallery, { com.mi.onextbox.lsp.GalleryAiRetouchSettings.enabled(it) },
-        { context, enabled -> com.mi.onextbox.lsp.GalleryAiRetouchSettings.set(context, enabled) })
+        FeaturePageMode.GalleryAI, { com.mi.onextbox.lsp.GalleryAiRetouchSettings.enabled(it) },
+        { context, enabled -> com.mi.onextbox.lsp.GalleryAiRetouchSettings.set(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.GalleryAiRetouchSettings.KEY)
     val nativeLiveUpdate = Toggle(R.string.native_live_update_title, R.string.native_live_update_summary,
         FeaturePageMode.SystemUiNative, { com.mi.onextbox.lsp.NativeLiveUpdateSettings.enabled(it) },
-        { context, enabled -> com.mi.onextbox.lsp.NativeLiveUpdateSettings.set(context, enabled) })
+        { context, enabled -> com.mi.onextbox.lsp.NativeLiveUpdateSettings.set(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.NativeLiveUpdateSettings.KEY)
     val all = listOf(
         networkIdentity,
         qsCorner,
@@ -176,5 +178,7 @@ internal object SharedFeatureDefinitions {
         installerHideCollectionNotice,
         installerBlockNetwork,
         stdspAllowInstall,
+        *AdditionalFeatureDefinitions.all.toTypedArray(),
+        *MediaUnlockFeatureDefinitions.all.toTypedArray(),
     )
 }

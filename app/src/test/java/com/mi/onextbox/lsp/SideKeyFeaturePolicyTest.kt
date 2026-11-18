@@ -32,7 +32,7 @@ class SideKeyFeaturePolicyTest {
             val text = source("lsp/$name")
             val guard = text.indexOf("if (!SideKeyFeaturePolicy.available) return")
             assertTrue(name, guard >= 0)
-            assertTrue(name, guard < text.indexOf("Class.forName("))
+            assertTrue(name, guard < text.indexOf("HostClassLookup.load("))
             assertTrue(name, guard < text.indexOf("ModernHookRegistry.install"))
         }
     }
@@ -55,7 +55,12 @@ class SideKeyFeaturePolicyTest {
         val sync = source("lsp/ModernXposedPreferenceSync.kt")
         assertTrue(sync.contains("SideKeySettings.enforceDisabled(it)"))
         assertTrue(sync.contains("SideKeySettings.enforceDisabled(source)"))
-        assertTrue(sync.contains("editor.putBoolean(SideKeySettings.ENABLED, false)"))
+        val requested = mapOf(SideKeySettings.ENABLED to true, "unrelated" to true)
+        val published = frameworkPreferenceValues(requested, sideKeyAvailable = false)
+        assertEquals(false, published[SideKeySettings.ENABLED])
+        assertEquals(true, published["unrelated"])
+        assertEquals(true, requested[SideKeySettings.ENABLED])
+        assertTrue(sync.contains("frameworkPreferenceValues(source.all, SideKeyFeaturePolicy.available)"))
         val backup = source("ui/common/ConfigBackup.kt")
         assertTrue(backup.contains("key == SideKeySettings.ENABLED && value is Boolean"))
         assertTrue(backup.contains("SideKeyFeaturePolicy.enabled(value)"))

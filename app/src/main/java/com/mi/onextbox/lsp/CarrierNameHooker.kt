@@ -155,7 +155,7 @@ internal object CarrierNameHooker {
             ModernHookRegistry.installFast("$TAG:operatorFlow", method, XposedInterface.Hooker { chain ->
                 val text = chain.getArg(0) as? String
                 val replacement = if (enabled() && !text.isNullOrEmpty()) runCatching {
-                    val context = Reflect.callStaticMethod(Class.forName("android.app.ActivityThread"), "currentApplication") as? Context
+                    val context = Reflect.callStaticMethod(HostClassLookup.load("android.app.ActivityThread"), "currentApplication") as? Context
                         ?: return@runCatching null
                     val nativeDependency = dependency.getDeclaredField("sDependency").apply { isAccessible = true }.get(null)
                         ?: return@runCatching null

@@ -15,12 +15,14 @@ internal object LargeNetworkTypeHooker {
         if (enabled && follow) { if (bold) 700 else 400 } else weight
 
     fun hook(loader: ClassLoader) {
+        LargeNetworkPositionHooker.hook(loader)
         LargeNetworkArtworkHooker.hook(loader)
         hookFont(loader)
         hookNativeFeature(loader)
     }
 
     fun hookColorOs16(loader: ClassLoader) {
+        LargeNetworkPositionHooker.hook(loader, compose = false)
         // C16 uses drawable network labels, with no C17 text typeface helper or Compose ABI.
         LargeNetworkArtworkHooker.hookColorOs16()
         hookNativeFeature(loader)
@@ -28,7 +30,7 @@ internal object LargeNetworkTypeHooker {
 
     private fun hookNativeFeature(loader: ClassLoader) {
         runCatching {
-            val provider = Class.forName("com.oplus.coreapp.appfeature.AppFeatureProviderUtils", false, loader)
+            val provider = HostClassLookup.load("com.oplus.coreapp.appfeature.AppFeatureProviderUtils", false, loader)
             val methods = provider.declaredMethods.filter {
                 it.name == "isFeatureSupport" && it.returnType == Boolean::class.javaPrimitiveType &&
                     it.parameterTypes.count { type -> type == String::class.java } == 1
@@ -50,7 +52,7 @@ internal object LargeNetworkTypeHooker {
 
     private fun hookFont(loader: ClassLoader) {
         runCatching {
-            val helper = Class.forName("com.oplusos.systemui.common.typeface.SystemTypefaceHelper", false, loader)
+            val helper = HostClassLookup.load("com.oplusos.systemui.common.typeface.SystemTypefaceHelper", false, loader)
             val defaultFont = helper.getDeclaredMethod("getDefaultTypeface", Int::class.javaPrimitiveType)
             fun weight(value: Int) = fontWeight(LargeNetworkTypeSettings.enabledXposed(),
                 LargeNetworkTypeSettings.followsSystemFontXposed(), LargeNetworkTypeSettings.usesBoldXposed(), value)
@@ -80,7 +82,7 @@ internal object LargeNetworkTypeHooker {
             // FourG/ThreeG.isLarge() is false even inside the big-type layout, so the
             // width-25 helper above alone cannot cover those labels. Override the final
             // mobile TextView assignment, not the shared Wi-Fi/font callback.
-            val binding = Class.forName("com.oplus.systemui.statusbar.pipeline.mobile.ui.view.OplusStatusBarMobileViewBinder\$Os17Binding", false, loader)
+            val binding = HostClassLookup.load("com.oplus.systemui.statusbar.pipeline.mobile.ui.view.OplusStatusBarMobileViewBinder\$Os17Binding", false, loader)
             val text = binding.getDeclaredField("mobileTypeText").apply { isAccessible = true }
             val fonts = binding.getDeclaredField("systemTypefaceHelper").apply { isAccessible = true }
             val assign = binding.getDeclaredMethod("access\$setMobileTypeTextTypeface", binding,

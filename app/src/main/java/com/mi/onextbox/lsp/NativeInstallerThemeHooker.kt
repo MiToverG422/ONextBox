@@ -104,7 +104,7 @@ internal object NativeInstallerThemeHooker {
             return
         }
         listOf(Resources::class.java, Resources.Theme::class.java,
-            runCatching { Class.forName("android.content.res.ResourcesImpl\$ThemeImpl") }.getOrNull(),
+            runCatching { HostClassLookup.load("android.content.res.ResourcesImpl\$ThemeImpl") }.getOrNull(),
         ).filterNotNull().forEach { type ->
             type.declaredMethods.filter {
                 it.returnType == TypedArray::class.java && it.name in setOf("obtainAttributes", "obtainStyledAttributes", "resolveAttributes")

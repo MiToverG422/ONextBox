@@ -44,14 +44,14 @@ internal object HardwareInfoRules {
         .map { (it * 100).roundToInt() / 100.0 }.distinct().sorted()
         .joinToString(" / ") { String.format(Locale.ROOT, "%.2f", it).trimEnd('0').trimEnd('.') }
 
-    fun colorModes(line: String?): String? {
+    fun colorModes(line: String?, nativeMode: String = "Native", unknownMode: (Int) -> String = { "Mode $it" }): String? {
         val values = Regex("supportedColorModes[ =]+\\[([^]]*)]").find(line.orEmpty())?.groupValues?.get(1) ?: return null
         return values.split(',').mapNotNull { it.trim().toIntOrNull() }.distinct().joinToString(" / ") {
             when (it) {
-                0 -> "原生模式"; 1 -> "BT.601 625"; 2 -> "BT.601 625 Unadjusted"
+                0 -> nativeMode; 1 -> "BT.601 625"; 2 -> "BT.601 625 Unadjusted"
                 3 -> "BT.601 525"; 4 -> "BT.601 525 Unadjusted"; 5 -> "BT.709"
                 6 -> "DCI-P3"; 7 -> "sRGB"; 8 -> "Adobe RGB"; 9 -> "Display P3"
-                10 -> "BT.2020"; 11 -> "BT.2100 PQ"; 12 -> "BT.2100 HLG"; else -> "模式 $it"
+                10 -> "BT.2020"; 11 -> "BT.2100 PQ"; 12 -> "BT.2100 HLG"; else -> unknownMode(it)
             }
         }.takeIf { it.isNotBlank() }
     }

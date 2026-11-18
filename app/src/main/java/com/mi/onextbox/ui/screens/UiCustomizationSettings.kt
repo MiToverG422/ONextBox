@@ -107,14 +107,14 @@ internal fun SettingsAccountCardSizeGroup() {
 }
 
 @Composable
-internal fun CameraFeaturesPage() {
+internal fun CameraGeneralPage() {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(CameraGallerySettings.keys, CameraGallerySettings::state)
     val feature = SharedFeatureDefinitions.cameraDefaultGallery
     SettingsSection(title = stringResource(R.string.camera_preview_group))
     FeatureAnimatedGroup(animateChanges = true) {
         row(CameraGallerySettings.FOLLOW_DEFAULT) { above, below ->
-            SettingsToggleRow(title = stringResource(feature.title), summary = stringResource(feature.summary),
+            SettingsToggleRow(title = stringResource(feature.title), summary = "",
                 checked = editor.state[CameraGallerySettings.FOLLOW_DEFAULT] == true,
                 interactionEnabled = editor.savingKey == null, hasDividerAbove = above, hasDividerBelow = below,
                 onCheckedChange = { enabled -> editor.save(CameraGallerySettings.FOLLOW_DEFAULT,

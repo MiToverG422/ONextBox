@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
+import com.mi.onextbox.diagnostics.SafeModePolicy
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernHotReloadSession
@@ -33,7 +34,7 @@ internal object NativeFiveGaUiHooker {
     }
 
     private class Runtime(private val loader: ClassLoader) {
-        private fun type(name: String) = Class.forName(name, false, loader)
+        private fun type(name: String) = HostClassLookup.load(name, false, loader)
         private val main = Handler(Looper.getMainLooper())
         private val frames = ThreadLocal.withInitial { ArrayList<Frame>() }
         private val handles = arrayListOf<XposedInterface.HookHandle>()
@@ -86,12 +87,16 @@ internal object NativeFiveGaUiHooker {
         private val gaKey = type("com.oplus.systemui.statusbar.policy.MobileIconSets\$Companion")
             .getMethod("toDisplayIconKey", Int::class.javaPrimitiveType).invoke(mobileCompanion, 105) as String
         private var subscription: AutoCloseable? = null
+        private var bridgeContext: Context? = null
         private var prefs: SharedPreferences? = null
         private var revision = 0L
         @Volatile private var snapshot: NativeFiveGaSnapshot? = null
         @Volatile private var installed = false
         @Volatile private var retired = false
-        private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> refresh() }
+        private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key == NativeFiveGaSettings.ENABLED || key == SafeModePolicy.MANUAL || key == SafeModePolicy.AUTOMATIC ||
+                key == com.mi.onextbox.lsp.compat.MODERN_PREFERENCES_READY_KEY) refresh()
+        }
 
         private inner class Frame(val repository: Any, val context: Context, val scope: Any) {
             var matches = 0
@@ -246,10 +251,12 @@ internal object NativeFiveGaUiHooker {
                     snapshot = null
                     refreshNow()
                     subscription?.close()
+                    subscription = null
+                    bridgeContext = null
                     prefs?.unregisterOnSharedPreferenceChangeListener(preferenceListener)
                 }, resumeAfterRejection = { refresh() })
                 HotReloadLifecycle.afterCommit {
-                    val app = Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as? Context
+                    val app = HostClassLookup.load("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as? Context
                     app?.let(::bootstrap)
                 }
                 HookLog.i(TAG, "Native 5G-A UI contract installed before repository construction")
@@ -388,21 +395,34 @@ internal object NativeFiveGaUiHooker {
 
         private fun bootstrap(context: Context) {
             main.post {
-                if (retired || subscription != null) return@post
+                if (retired) return@post
                 runCatching {
-                    prefs = ModernHookRuntime.remotePreferences("lsp_features")?.also {
+                    bridgeContext = context.applicationContext ?: context
+                    if (prefs == null) prefs = ModernHookRuntime.remotePreferences("lsp_features")?.also {
                         it.registerOnSharedPreferenceChangeListener(preferenceListener)
                     }
-                    subscription = NativeFiveGaBridge.subscribe(context.applicationContext ?: context) {
-                        snapshot = it
-                        refresh()
-                    }
+                    refresh()
                 }.onFailure(::failure)
+            }
+        }
+
+        private fun updateSubscription() {
+            if (!enabled()) {
+                val previous = subscription
+                subscription = null
+                snapshot = null
+                previous?.close()
+            } else if (subscription == null) bridgeContext?.let { context ->
+                subscription = NativeFiveGaBridge.subscribe(context, ::enabled) {
+                    snapshot = if (enabled()) it else null
+                    refresh()
+                }
             }
         }
 
         private fun refresh() { main.post { HotReloadLifecycle.withInfrastructureHook({}) { refreshNow() } } }
         private fun refreshNow() {
+            updateSubscription()
             revision = NativeFiveGaUiPolicy.nextRevision(revision)
             textBindings.entries().forEach { (owner, binding) ->
                 val token = binding.token as Token

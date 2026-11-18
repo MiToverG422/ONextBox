@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun EnabledFeaturesAction(onClick: () -> Unit) {
@@ -82,7 +83,9 @@ internal fun EnabledFeaturesPage(
             if (event == Lifecycle.Event.ON_RESUME) revision++
         }
         val prefs = LspPreferenceStore.prefs(context)
-        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> revision++ }
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (isFeatureInventoryPreference(key)) revision++
+        }
         owner.lifecycle.addObserver(observer)
         prefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose {
@@ -92,6 +95,7 @@ internal fun EnabledFeaturesPage(
     }
     LaunchedEffect(revision, saving, configuration, version) {
         if (saving) return@LaunchedEffect
+        if (entries != null) delay(75) // Coalesce one multi-key commit/import before scanning.
         failed = false
         try {
             val snapshot = withContext(Dispatchers.IO) {

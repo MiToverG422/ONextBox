@@ -47,7 +47,10 @@ class KeyboardBottomLiftHookContractTest {
 
     @Test fun preferenceIsExposedResetSyncedAndDispatched() {
         val config = source("lsp/LspConfig.kt")
-        assertTrue(config.contains("setKeyboardBottomLiftFixEnabled(context, false)"))
+        assertTrue(config.contains("KeyboardFeatureSettings.reset(context)"))
+        val settings = source("lsp/KeyboardFeatureSettings.kt")
+        assertTrue(settings.contains("BottomLift(\"keyboard_bottom_lift_fix\")"))
+        assertTrue(settings.contains("Option.entries.forEach { set(context, it, false) }"))
         assertTrue(config.contains("value = if (isKeyboardBottomLiftFixEnabled(context)) \"1\" else \"0\""))
         assertTrue(source("lsp/OosLspModuleEntry.kt").contains("KeyboardBottomLiftHooker.hook(classLoader, target.sourceDir)"))
         assertTrue(source("ui/screens/KeyboardFeaturesPage.kt").contains("R.string.keyboard_bottom_lift_fix_title"))

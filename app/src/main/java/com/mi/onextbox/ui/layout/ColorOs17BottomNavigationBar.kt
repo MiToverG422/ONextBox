@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -31,6 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -84,6 +89,8 @@ internal fun ColorOs17BottomNavigationBar(
     unselectedIcons: List<ImageVector>? = null,
     hideLabels: Boolean = false,
     startupRevealProgress: () -> Float = { 1f },
+    collapseState: BottomBarCollapseState? = null,
+    onCapsuleBoundsChanged: (Rect) -> Unit = {},
 ) {
     if (items.isEmpty()) return
 
@@ -128,13 +135,7 @@ internal fun ColorOs17BottomNavigationBar(
             .height(BottomBarHostHeight),
         contentAlignment = Alignment.Center,
     ) {
-        val desiredWidth = BottomBarHorizontalPadding * 2 +
-            BottomBarItemWidth * items.size +
-            BottomBarItemSpacing * (items.size - 1)
-        val maximumWidth = maxWidth - BottomBarScreenPadding * 2
-        val barWidth = (
-            minOf(desiredWidth, maximumWidth.coerceAtLeast(0.dp)) - BottomBarWidthInset * 2
-            ).coerceAtLeast(0.dp)
+        val barWidth = floatingBottomBarWidth(maxWidth, items.size)
         val contentHorizontalPadding = BottomBarHorizontalPadding
         val itemsAvailableWidth = (
             barWidth - contentHorizontalPadding * 2 -
@@ -173,18 +174,23 @@ internal fun ColorOs17BottomNavigationBar(
 
         Box(
             modifier = Modifier
+                .bottomBarCollapseGeometry(collapseState, barWidth, BottomBarHeight, maxWidth)
                 .width(barWidth)
                 .height(BottomBarHeight)
+                .testTag("standardBottomBarSurface")
+                .onGloballyPositioned { onCapsuleBoundsChanged(it.boundsInWindow()) }
                 .bottomBarStartupReveal(startupRevealProgress)
                 .graphicsLayer {
-                    translationX = touchMotion.translationX
-                    translationY = touchMotion.translationY
+                    val nativeMotion = 1f - (collapseState?.progress ?: 0f)
+                    translationX = touchMotion.translationX * nativeMotion
+                    translationY = touchMotion.translationY * nativeMotion
                     // The native compose-motion aggregator adds each unit's delta from 1.
-                    scaleX = pressScale.value + touchMotion.scaleX - 1f
-                    scaleY = pressScale.value + touchMotion.scaleY - 1f
+                    scaleX = 1f + (pressScale.value + touchMotion.scaleX - 2f) * nativeMotion
+                    scaleY = 1f + (pressScale.value + touchMotion.scaleY - 2f) * nativeMotion
                     clip = false
                 }
-                .pointerInput(items.size, itemWidth, contentHorizontalPadding, layoutDirection) {
+                .bottomBarCollapseGestures(collapseState, startupRevealProgress)
+                .pointerInput(items.size, itemWidth, contentHorizontalPadding, layoutDirection, collapseState) {
                     val horizontalPaddingPx = contentHorizontalPadding.toPx()
                     val itemSpacingPx = BottomBarItemSpacing.toPx()
                     val itemWidthPx = itemWidth.toPx()
@@ -215,6 +221,7 @@ internal fun ColorOs17BottomNavigationBar(
                             requireUnconsumed = false,
                             pass = PointerEventPass.Initial,
                         )
+                        if (collapseState?.interactionReady == false) return@awaitEachGesture
                         if (currentStartupRevealProgress() < 1f) {
                             down.consume()
                             do {
@@ -244,6 +251,7 @@ internal fun ColorOs17BottomNavigationBar(
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
                                 val change = event.changes.firstOrNull { it.id == down.id }
                                 if (change == null) break
+                                if (change.isConsumed) break
                                 lastPosition = change.position
                                 velocityTracker.addPosition(change.uptimeMillis, change.position)
                                 val localPosition = lastPosition
@@ -334,6 +342,7 @@ internal fun ColorOs17BottomNavigationBar(
                 },
             contentAlignment = Alignment.Center,
         ) {
+            CollapsibleBottomBarSurface(collapseState, background = {
             AndroidView(
                 factory = { context ->
                     ColorOsBottomBarMaterialView(
@@ -345,7 +354,8 @@ internal fun ColorOs17BottomNavigationBar(
                 update = { view ->
                     view.updateAppearance(darkTheme, fallbackColor.toArgb())
                 },
-                modifier = Modifier.fillMaxSize().bottomBarStartupMaterialWidth(startupRevealProgress),
+                modifier = Modifier.fillMaxSize()
+                    .bottomBarStartupMaterialWidth(startupRevealProgress),
             )
 
             // BaseBottomFloatingMenuView draws the spotlight after its material edge but before
@@ -363,14 +373,20 @@ internal fun ColorOs17BottomNavigationBar(
                 },
                 modifier = Modifier.fillMaxSize(),
             )
+            }) {
 
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
+            Box(
+                modifier = Modifier.fillMaxSize()
                     .graphicsLayer {
-                        alpha = contentOpacity().coerceIn(0f, 1f)
+                        alpha = contentOpacity().coerceIn(0f, 1f) * (collapseState?.expandedContentAlpha ?: 1f)
+                        clip = collapseState != null
                         compositingStrategy = CompositingStrategy.ModulateAlpha
                     }
+                    .then(if (collapseState?.collapsed == true) Modifier.clearAndSetSemantics {} else Modifier),
+                contentAlignment = Alignment.Center,
+            ) {
+            Row(
+                modifier = Modifier.requiredWidth(barWidth).height(BottomBarHeight)
                     .bottomBarStartupContentClip(startupRevealProgress)
                     .padding(horizontal = contentHorizontalPadding),
                 horizontalArrangement = Arrangement.spacedBy(BottomBarItemSpacing),
@@ -379,28 +395,27 @@ internal fun ColorOs17BottomNavigationBar(
                 items.forEachIndexed { index, item ->
                     val itemSelected = index == previewIndex
                     val itemColor = if (itemSelected) selectedColor else unselectedColor
-                    val startupCenterOffset = with(density) {
-                        val logicalCenter = contentHorizontalPadding.toPx() + itemWidth.toPx() / 2f +
+                    val logicalCenter = with(density) {
+                        contentHorizontalPadding.toPx() + itemWidth.toPx() / 2f +
                             index * (itemWidth.toPx() + BottomBarItemSpacing.toPx())
-                        val physicalCenter = if (layoutDirection == LayoutDirection.Ltr) {
-                            logicalCenter
-                        } else barWidth.toPx() - logicalCenter
-                        barWidth.toPx() / 2f - physicalCenter
                     }
                     Column(
                         modifier = Modifier
                             .width(itemWidth)
                             .height(BottomBarItemHeight)
                             .graphicsLayer {
-                                translationX = startupCenterOffset *
-                                    (1f - currentStartupRevealProgress().coerceIn(0f, 1f))
+                                val collapse = collapseState?.progress ?: 0f
+                                val width = with(density) { barWidth.toPx() }
+                                val center = if (layoutDirection == LayoutDirection.Ltr) logicalCenter else width - logicalCenter
+                                translationX = (width / 2f - center) *
+                                    (1f - currentStartupRevealProgress().coerceIn(0f, 1f) * (1f - collapse))
                             }
                             .clearAndSetSemantics {
                                 selected = itemSelected
                                 role = Role.Tab
                                 contentDescription = item.label
                                 onClick(label = item.label) {
-                                    if (currentStartupRevealProgress() >= 1f) {
+                                    if (currentStartupRevealProgress() >= 1f && collapseState?.interactionReady != false) {
                                         currentOnItemSelected(index)
                                         true
                                     } else false
@@ -441,6 +456,9 @@ internal fun ColorOs17BottomNavigationBar(
                         }
                     }
                 }
+            }
+            }
+            BottomBarFolderIcon(collapseState, BottomBarHeight, selectedColor, contentOpacity)
             }
         }
     }
@@ -768,16 +786,7 @@ private class BottomBarSpotlightHolder {
     var view: ColorOsTopBarSpotlightView? = null
 }
 
-private val BottomBarHostHeight = 88.dp
-private val BottomBarHeight = 56.dp
-private val BottomBarScreenPadding = 16.dp
-private val BottomBarHorizontalPadding = 12.dp
-private val BottomBarWidthInset = 8.dp
-private val BottomBarItemHeight = 48.dp
 private val BottomBarItemTop = 4.dp
-private val BottomBarItemWidth = 70.dp
-private val BottomBarItemSpacing = 8.dp
-private val BottomBarIconSize = 24.dp
 private val BottomBarIconTopMargin = 4.dp
 private val BottomBarIconTitleGap = 2.dp
 private val BottomBarMaxStretchDistance = 28.dp

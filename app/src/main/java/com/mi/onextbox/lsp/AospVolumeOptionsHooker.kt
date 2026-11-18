@@ -30,7 +30,7 @@ internal object AospVolumeOptionsHooker {
         val sizer = AospVolumeViewSize()
         HotReloadLifecycle.register("aosp-volume:size", detach = sizer::restore, restore = { sizer.reapply() },
             canPrepare = { !sizer.isShowing() }, canReload = { !sizer.isShowing() })
-        val binder = Class.forName("com.android.systemui.volume.dialog.ui.binder.VolumeDialogViewBinder", false, loader)
+        val binder = HostClassLookup.load("com.android.systemui.volume.dialog.ui.binder.VolumeDialogViewBinder", false, loader)
         val bind = binder.declaredMethods.single { it.name == "bind" && Dialog::class.java in it.parameterTypes }
         ModernHookRegistry.installFast("aosp-volume:size:dialog", bind, XposedInterface.Hooker { chain ->
             val result = chain.proceed()
@@ -42,17 +42,17 @@ internal object AospVolumeOptionsHooker {
             result
         })
         // Floating stream sliders are inflated after the main dialog is bound.
-        val slider = Class.forName("com.android.systemui.volume.dialog.sliders.ui.VolumeDialogSliderViewBinder", false, loader)
+        val slider = HostClassLookup.load("com.android.systemui.volume.dialog.sliders.ui.VolumeDialogSliderViewBinder", false, loader)
         ModernHookRegistry.installFast("aosp-volume:size:slider", slider.getDeclaredMethod("bind", View::class.java),
             XposedInterface.Hooker { chain ->
                 val result = chain.proceed()
                 runCatching { sizer.apply(chain.getArg(0) as View, AospVolumeSettings.scaleXposed()) }
                 result
             })
-        val dimensions = Class.forName("com.android.systemui.volume.dialog.sliders.ui.VolumeSliderDimensions", false, loader)
+        val dimensions = HostClassLookup.load("com.android.systemui.volume.dialog.sliders.ui.VolumeSliderDimensions", false, loader)
         val constructor = dimensions.getDeclaredConstructor(*Array(4) { Float::class.javaPrimitiveType!! }).apply { isAccessible = true }
         val fields = listOf("iconSize", "thumbHeight", "thumbWidth", "trackSize").map { dimensions.getDeclaredField(it).apply { isAccessible = true } }
-        val companion = Class.forName("${dimensions.name}\$Companion", false, loader)
+        val companion = HostClassLookup.load("${dimensions.name}\$Companion", false, loader)
         listOf("getVertical", "getHorizontal").forEach { name ->
             ModernHookRegistry.installFast("aosp-volume:size:$name", companion.getDeclaredMethod(name), XposedInterface.Hooker { chain ->
                 val original = chain.proceed() ?: return@Hooker null
@@ -63,14 +63,14 @@ internal object AospVolumeOptionsHooker {
             })
         }
         // The small dimension getters can be inlined into the native Compose call site.
-        Class.forName("com.android.systemui.volume.dialog.sliders.ui.VolumeDialogSliderViewBinderKt", false, loader)
+        HostClassLookup.load("com.android.systemui.volume.dialog.sliders.ui.VolumeDialogSliderViewBinderKt", false, loader)
             .declaredMethods.filter { it.name == "VolumeDialogSlider" }.forEach { method ->
                 runCatching { ModernHookRuntime.requireModule().deoptimize(method) }
             }
     }
 
     private fun hookQsVisibility(loader: ClassLoader) {
-        val producer = Class.forName(PRODUCER, false, loader)
+        val producer = HostClassLookup.load(PRODUCER, false, loader)
         val dismiss = producer.getMethod("onDismissRequested", Int::class.javaPrimitiveType)
         val main = Handler(Looper.getMainLooper())
         var wasQsVisible = false
@@ -101,7 +101,7 @@ internal object AospVolumeOptionsHooker {
                 null
             } else chain.proceed()
         })
-        val controller = Class.forName("com.android.systemui.shade.NotificationShadeWindowControllerImpl", false, loader)
+        val controller = HostClassLookup.load("com.android.systemui.shade.NotificationShadeWindowControllerImpl", false, loader)
         val apply = controller.declaredMethods.single { it.name == "apply" && it.parameterTypes.singleOrNull()?.simpleName == "NotificationShadeWindowState" }
         ModernHookRegistry.installFast("aosp-volume:qs:state", apply, XposedInterface.Hooker { chain ->
             shadeState = WeakReference(chain.getArg(0))

@@ -18,7 +18,7 @@ internal object ColorOs16AospVolumeOptions {
     private var shadeState = WeakReference<Any>(null)
 
     fun hook(loader: ClassLoader) {
-        val native = Class.forName(ColorOs16AospVolumeHooker.NATIVE, false, loader)
+        val native = HostClassLookup.load(ColorOs16AospVolumeHooker.NATIVE, false, loader)
         val contextField = native.getDeclaredField("mContext").apply { isAccessible = true }
         val changed = native.getDeclaredField("mConfigChanged").apply { isAccessible = true }
         val showing = native.getDeclaredField("mShowing").apply { isAccessible = true }
@@ -58,7 +58,7 @@ internal object ColorOs16AospVolumeOptions {
                 dialogs[host] = Original(base, percent)
                 chain.proceed()
             })
-        val callback = Class.forName(ColorOs16AospVolumeHooker.CALLBACK, false, loader)
+        val callback = HostClassLookup.load(ColorOs16AospVolumeHooker.CALLBACK, false, loader)
         val owner = callback.getDeclaredField("this\$0").apply { isAccessible = true }
         ModernHookRegistry.installFast("aosp-volume:c16-show", callback.getDeclaredMethod("onShowRequested",
             Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType, Int::class.javaPrimitiveType), XposedInterface.Hooker { chain ->
@@ -68,7 +68,7 @@ internal object ColorOs16AospVolumeOptions {
                 chain.proceed()
             }
         })
-        val shade = Class.forName("com.android.systemui.shade.NotificationShadeWindowControllerImpl", false, loader)
+        val shade = HostClassLookup.load("com.android.systemui.shade.NotificationShadeWindowControllerImpl", false, loader)
         val apply = shade.declaredMethods.single { it.name == "apply" && it.parameterTypes.singleOrNull()?.simpleName == "NotificationShadeWindowState" }
         val main = Handler(Looper.getMainLooper())
         var wasQsVisible = AospVolumeQsState.visible(shadeState.get())
@@ -85,13 +85,13 @@ internal object ColorOs16AospVolumeOptions {
             }
             result
         })
-        val click = Class.forName("${ColorOs16AospVolumeHooker.NATIVE}\$\$ExternalSyntheticLambda11", false, loader)
+        val click = HostClassLookup.load("${ColorOs16AospVolumeHooker.NATIVE}\$\$ExternalSyntheticLambda11", false, loader)
         val clickOwner = click.getDeclaredField("f\$0").apply { isAccessible = true }
         val settingsIcon = native.getDeclaredField("mSettingsIcon").apply { isAccessible = true }
         val navigator = native.getDeclaredField("mVolumeNavigator").apply { isAccessible = true }
         val navigatorType = navigator.type
         val starter = navigatorType.getDeclaredField("activityStarter").apply { isAccessible = true }
-        val start = Class.forName("com.android.systemui.plugins.ActivityStarter", false, loader)
+        val start = HostClassLookup.load("com.android.systemui.plugins.ActivityStarter", false, loader)
             .getMethod("startActivity", Intent::class.java, Boolean::class.javaPrimitiveType)
         ModernHookRegistry.installFast("aosp-volume:c16-panel", click.getDeclaredMethod("onClick", View::class.java), XposedInterface.Hooker { chain ->
             val host = clickOwner.get(chain.thisObject)

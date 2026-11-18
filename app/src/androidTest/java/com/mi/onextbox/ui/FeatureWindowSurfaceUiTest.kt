@@ -62,7 +62,7 @@ class FeatureWindowSurfaceUiTest {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             COUITheme {
-                C17ClosingFeatureWindowLayer(animation, Rect(0f, 0f, 360f, 640f), 1f, null,
+                C17ClosingFeatureWindowLayer(animation, Rect(0f, 0f, 360f, 640f), { 1f }, null,
                     onFinished = { completed.incrementAndGet() }, surface = FeatureWindowSurface.Task) { }
             }
         }
@@ -81,7 +81,7 @@ class FeatureWindowSurfaceUiTest {
         compose.setContent {
             COUITheme {
                 for (surface in listOf(FeatureWindowSurface.Icon, FeatureWindowSurface.Task)) {
-                    C17ClosingFeatureWindowLayer(animation, Rect(0f, 0f, 360f, 640f), 1f, null,
+                    C17ClosingFeatureWindowLayer(animation, Rect(0f, 0f, 360f, 640f), { 1f }, null,
                         onFinished = { completed.incrementAndGet() }, surface = surface) { }
                 }
             }

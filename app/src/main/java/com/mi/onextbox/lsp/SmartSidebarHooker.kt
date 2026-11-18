@@ -19,7 +19,9 @@ internal object SmartSidebarHooker {
             val saved = DexTargetCache.restoredState(stateKey) as? Map<*, *>
             val groups = saved?.takeIf { it.containsKey(SmartSidebarTargets.SCHEMA) }?.mapNotNull { (name, value) ->
                 (name as? String)?.let { it to ((value as? Array<*>)?.filterIsInstance<Method>()?.toTypedArray() ?: emptyArray()) }
-            }?.toMap() ?: ApkDexSession.withSession(apkPath) { open -> SmartSidebarTargets.resolve(open(), loader) }
+            }?.toMap() ?: HostDexMetadata.methods(loader, apkPath, "smart-sidebar", SmartSidebarTargets.SCHEMA) {
+                SmartSidebarTargets.resolve(it, loader)
+            }
             fun install(name: String, count: Int, action: (Array<Method>) -> Unit) {
                 val methods = groups[name] ?: return
                 runCatching {

@@ -18,7 +18,9 @@ internal object ScreenTranslationHooker {
                 (name as? String)?.let { it to ((value as? Array<*>)?.filterIsInstance<Method>()?.toTypedArray() ?: emptyArray()) }
             }?.toMap()
             val targets = if (saved?.containsKey(ScreenTranslationTargets.SCHEMA) == true) saved else {
-                ApkDexSession.withSession(apkPath) { open -> ScreenTranslationTargets.resolveAll(open(), loader) }
+                HostDexMetadata.methods(loader, apkPath, "screen-translation", ScreenTranslationTargets.SCHEMA) {
+                    ScreenTranslationTargets.resolveAll(it, loader)
+                }
             }.toMutableMap()
             if (targets["floating"].isNullOrEmpty()) {
                 (DexTargetCache.restoredState(oldStateKey) as? Array<*>)?.filterIsInstance<Method>()

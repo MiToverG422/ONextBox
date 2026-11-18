@@ -25,7 +25,7 @@ internal object LauncherBlurHooker {
         val prefix = "$TAG@${System.identityHashCode(loader)}:"
         val session = Session()
         runCatching {
-            LauncherBlurTargets.open(apkPath).use { dex ->
+            LauncherBlurTargets.withDex(apkPath) { dex ->
                 install("${prefix}platform:") {
                     val native = LauncherBlurTargets.platform(dex, loader)
                     session.hook("${prefix}platform:unavailable", native.unavailable) { chain ->
@@ -97,7 +97,7 @@ internal object LauncherBlurHooker {
             if (!enabled()) return false
             return runCatching {
                 val current = context?.applicationContext ?: app ?: run {
-                    val type = Class.forName("android.app.ActivityThread", false, Context::class.java.classLoader)
+                    val type = HostClassLookup.load("android.app.ActivityThread", false, Context::class.java.classLoader)
                     ModernReflect.callStaticMethod(type, "currentApplication") as? Context
                 } ?: return@runCatching false
                 app = current

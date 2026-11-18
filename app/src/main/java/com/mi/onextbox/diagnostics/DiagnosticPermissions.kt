@@ -1,5 +1,6 @@
 package com.mi.onextbox.diagnostics
 
+import com.mi.onextbox.ui.settings.SettingsDataRow
 import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
@@ -31,6 +32,7 @@ internal data class AppPermissionStatus(val name: String, val label: String, val
 internal fun readAppPermissions(context: Context): List<AppPermissionStatus> {
     val manager = context.packageManager
     val info = manager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+    val labelContexts = mutableMapOf<String, Context>()
     return info.requestedPermissions.orEmpty().mapIndexed { index, name ->
         val permission = runCatching { manager.getPermissionInfo(name, 0) }.getOrNull()
         val granted = when (name) {
@@ -41,7 +43,14 @@ internal fun readAppPermissions(context: Context): List<AppPermissionStatus> {
                 context.getSystemService(NotificationManager::class.java).canPostPromotedNotifications() else false
             else -> (info.requestedPermissionsFlags?.getOrNull(index) ?: 0) and PackageInfo.REQUESTED_PERMISSION_GRANTED != 0
         }
-        AppPermissionStatus(name, permission?.loadLabel(manager)?.toString() ?: name.substringAfterLast('.'), granted,
+        val label = permission?.let {
+            it.nonLocalizedLabel?.toString() ?: runCatching {
+                labelContexts.getOrPut(it.packageName) {
+                    context.createPackageContext(it.packageName, 0).createConfigurationContext(context.resources.configuration)
+                }.getString(it.labelRes)
+            }.getOrNull() ?: it.loadLabel(manager)?.toString()
+        } ?: name.substringAfterLast('.')
+        AppPermissionStatus(name, label, granted,
             permission?.protectionLevel?.and(PermissionInfo.PROTECTION_MASK_BASE) == PermissionInfo.PROTECTION_DANGEROUS)
     }.filterNot { it.name == "android.permission.POST_PROMOTED_NOTIFICATIONS" && Build.VERSION.SDK_INT < 36 }
 }
@@ -59,12 +68,14 @@ internal fun readAppPermissions(context: Context): List<AppPermissionStatus> {
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(revision) {
+    LaunchedEffect(context, revision) {
         loading = true
-        runCatching { withContext(Dispatchers.IO) { readAppPermissions(context) } }
-            .onSuccess { permissions = it; failure = null }
-            .onFailure { failure = it.message ?: it.toString() }
-        loading = false
+        try {
+            permissions = withContext(Dispatchers.IO) { readAppPermissions(context) }
+            failure = null
+        } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+        catch (error: Exception) { failure = error.message ?: error.toString() }
+        finally { loading = false }
     }
     fun settings(action: String, notification: Boolean = false) {
         val intent = Intent(action).apply {
@@ -76,11 +87,11 @@ internal fun readAppPermissions(context: Context): List<AppPermissionStatus> {
         }.onFailure { Toast.makeText(context, it.message, Toast.LENGTH_LONG).show() }
     }
     SettingsGroup {
-        SettingsCardRow(stringResource(R.string.diagnostics_permissions), when {
-            loading -> stringResource(R.string.diagnostics_loading)
+        SettingsDataRow(stringResource(R.string.diagnostics_permissions), when {
+            loading && permissions.isEmpty() -> stringResource(R.string.diagnostics_loading)
             failure != null -> failure.orEmpty()
             else -> stringResource(R.string.diagnostics_permissions_count, permissions.count { it.granted == true }, permissions.size)
-        })
+        }, refreshing = loading, onClick = { revision++ })
         SettingsDivider()
         SettingsCardRow(stringResource(R.string.diagnostics_permission_settings), "", showArrow = true,
             onClick = { settings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS) })

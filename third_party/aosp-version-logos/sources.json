@@ -1,0 +1,50 @@
+[
+  {
+    "version": 15,
+    "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-15.0.0_r1/core/res/res/drawable-nodpi/platlogo.xml?format=TEXT",
+    "sha256": "b40ca3868272e6a6588a55ecacc690a049d6d9f6b6c21a884f99a30c4649c1a2",
+    "bytes": 13795,
+    "width": "512",
+    "height": "512",
+    "paths": 25,
+    "tags": [
+      "clip-path",
+      "group",
+      "path",
+      "vector"
+    ],
+    "appResource": "app/src/main/res/drawable/ic_android_easter_15.xml",
+    "resourceSha256": "e8f6a7c1cd441da7eb97b58199c4d504d4d823355dbfadabdfec5c7445c6fefe"
+  },
+  {
+    "version": 16,
+    "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-16.0.0_r1/core/res/res/drawable-nodpi/platlogo.xml?format=TEXT",
+    "sha256": "dd46096048bf4aa996bc652fcd73066f1d105076eb77fc890d884692e9ab5426",
+    "bytes": 13831,
+    "width": "512",
+    "height": "512",
+    "paths": 40,
+    "tags": [
+      "path",
+      "vector"
+    ],
+    "appResource": "app/src/main/res/drawable/ic_android_easter_16.xml",
+    "resourceSha256": "5ccc0e4adc3640e55c90d517d836e53744ebca2535891a7e313ea9768a48a4cc"
+  },
+  {
+    "version": 17,
+    "url": "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-17.0.0_r1/core/res/res/drawable-nodpi/platlogo.xml?format=TEXT",
+    "sha256": "4e1e1dd8f1c72d9891aad8d6f8a65d2f49719f0ce2afa7dbf49cb80cbc3a216e",
+    "bytes": 40692,
+    "width": "512",
+    "height": "512",
+    "paths": 95,
+    "tags": [
+      "group",
+      "path",
+      "vector"
+    ],
+    "appResource": "app/src/main/res/drawable/ic_android_easter_17.xml",
+    "resourceSha256": "9ef6ac29203abd8a4be96e13ea6cf274804b1307ebbca3934fa77930b1757f11"
+  }
+]

@@ -18,7 +18,7 @@ internal object GalleryDeleteCountdownHooker {
         }.single()
         val timer = dialog.invokes.filter { it.isConstructor &&
             it.paramTypeNames == listOf(Button::class.java.name, String::class.java.name, Resources::class.java.name)
-        }.map { Class.forName(it.className, false, loader) }
+        }.map { HostClassLookup.load(it.className, false, loader) }
             .single { CountDownTimer::class.java.isAssignableFrom(it) }
         return arrayOf(timer.getDeclaredMethod("onFinish"), dialog.getMethodInstance(loader))
     }

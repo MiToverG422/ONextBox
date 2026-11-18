@@ -45,7 +45,7 @@ internal object EuiccCompatibilityTargets {
                 starts.any { callback.className.startsWith(it.className + "$") }
         }.map { it.getMethodInstance(loader).apply { isAccessible = true } }.toTypedArray()
         require(callbacks.isNotEmpty()) { "LPA confirmation response callback unavailable" }
-        val agent = Class.forName("com.oplus.euicc.sdk.profileassistant.internal.b", false, loader)
+        val agent = HostClassLookup.load("com.oplus.euicc.sdk.profileassistant.internal.b", false, loader)
             .declaredMethods.single { method ->
                 !Modifier.isStatic(method.modifiers) && method.returnType == java.lang.Long.TYPE &&
                     method.parameterCount == 3 && method.parameterTypes[0] == String::class.java &&

@@ -99,7 +99,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -114,7 +113,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowInsetsCompat
@@ -297,6 +295,7 @@ fun OnboardingScreen(
     var stateErrorMessage by remember { mutableStateOf<Int?>(null) }
     var isExiting by remember { mutableStateOf(false) }
     var pageTransitioning by remember { mutableStateOf(false) }
+    var stateWriteInProgress by remember { mutableStateOf(false) }
     var completeButtonBoundsInRoot by remember {
         mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     }
@@ -309,7 +308,7 @@ fun OnboardingScreen(
             pageTransition.targetState == activePage) pageTransitioning = false
     }
 
-    fun acceptsPageAction(page: ActivationPage): Boolean = OnboardingNavigationRules.acceptsAction(
+    fun acceptsPageAction(page: ActivationPage): Boolean = !stateWriteInProgress && OnboardingNavigationRules.acceptsAction(
         page.step, step, pageTransitioning, isExiting,
     )
 
@@ -325,20 +324,29 @@ fun OnboardingScreen(
         }
     }
 
-    fun navigateTo(newStep: DraftStep, errorMessage: Int? = null): Boolean {
-        val saved = OnboardingPreferences.saveDraftStep(context, newStep)
-        if (!saved) {
-            reportStateWriteFailure()
-            return false
+    fun navigateTo(newStep: DraftStep, errorMessage: Int? = null) {
+        if (stateWriteInProgress) return
+        // Guard repeated clicks synchronously; keep the atomic disk confirmation off Main.
+        stateWriteInProgress = true
+        scope.launch {
+            try {
+                val saved = withContext(Dispatchers.IO) {
+                    OnboardingPreferences.saveDraftStep(context, newStep)
+                }
+                if (!saved) {
+                    reportStateWriteFailure()
+                    return@launch
+                }
+                if (step != newStep) {
+                    pageTransitioning = true
+                }
+                completionVerified = false
+                step = newStep
+                stateErrorMessage = errorMessage
+            } finally {
+                stateWriteInProgress = false
+            }
         }
-        if (step != newStep) {
-            // Lock synchronously, before Compose can recompose/dispose the outgoing page.
-            pageTransitioning = true
-        }
-        completionVerified = false
-        step = newStep
-        stateErrorMessage = errorMessage
-        return true
     }
 
     fun returnToMissingAgreement(reason: CompletionResult) {
@@ -403,7 +411,7 @@ fun OnboardingScreen(
     }
 
     BackHandler(enabled = isExiting || step != DraftStep.Welcome) {
-        if (!isExiting && !pageTransitioning) {
+        if (!isExiting && !pageTransitioning && !stateWriteInProgress) {
             when (step) {
                 DraftStep.Welcome -> Unit
                 DraftStep.Language -> moveTo(DraftStep.Welcome)
@@ -559,11 +567,21 @@ fun OnboardingScreen(
                             errorMessage = stateErrorMessage,
                             onAgreementChanged = { accepted ->
                                 if (acceptsPageAction(page)) {
-                                    if (OnboardingPreferences.setAllAgreementsAccepted(context, accepted)) {
-                                        Agreement.entries.forEach { agreementState[it] = accepted }
-                                        stateErrorMessage = null
-                                    } else {
-                                        reportStateWriteFailure()
+                                    stateWriteInProgress = true
+                                    scope.launch {
+                                        try {
+                                            val saved = withContext(Dispatchers.IO) {
+                                                OnboardingPreferences.setAllAgreementsAccepted(context, accepted)
+                                            }
+                                            if (saved) {
+                                                Agreement.entries.forEach { agreementState[it] = accepted }
+                                                stateErrorMessage = null
+                                            } else {
+                                                reportStateWriteFailure()
+                                            }
+                                        } finally {
+                                            stateWriteInProgress = false
+                                        }
                                     }
                                 }
                             },
@@ -651,10 +669,12 @@ fun OnboardingScreen(
                                                 moveTo(DraftStep.Lsposed)
                                                 return@launch
                                             }
-                                            val result = OnboardingPreferences.completeWithResult(
-                                                context,
-                                                allowBackgroundUpdates,
-                                            )
+                                             val result = withContext(Dispatchers.IO) {
+                                                 OnboardingPreferences.completeWithResult(
+                                                     context,
+                                                     allowBackgroundUpdates,
+                                                 )
+                                             }
                                             if (result == CompletionResult.Completed) {
                                                 committed = true
                                                 onActivationCommitted(
@@ -738,7 +758,6 @@ private fun ActivationBackground() {
 
 @Composable
 private fun WelcomePage(onNext: () -> Unit) {
-    val hapticFeedback = LocalHapticFeedback.current
     val firstTitle = stringResource(R.string.onboarding_welcome_first)
     val secondTitle = stringResource(R.string.onboarding_welcome_second)
     var startupCompleted by remember { mutableStateOf(false) }
@@ -754,9 +773,6 @@ private fun WelcomePage(onNext: () -> Unit) {
     val panelCorner = remember { Animatable(0f) }
     val titleAlpha = remember { Animatable(1f) }
 
-    LaunchedEffect(Unit) {
-        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-    }
     LaunchedEffect(startupCompleted) {
         if (!startupCompleted) return@LaunchedEffect
         val slideEasing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)
@@ -892,6 +908,7 @@ private fun WelcomePage(onNext: () -> Unit) {
             if (guideContentVisible) {
                 BootregVideoPlayer(
                     videoResId = R.raw.c17_guide_content_animation,
+                    hapticResId = R.raw.c17_guide_next_morph_haptic,
                     playCount = 5,
                     scaleMode = BootregVideoScaleMode.Stretch,
                     autoPlay = !leavingGuide,
@@ -937,6 +954,7 @@ private fun WelcomePage(onNext: () -> Unit) {
         if (!backgroundFirstFrame) {
             BootregVideoPlayer(
                 videoResId = R.raw.c17_guide_first_startup,
+                hapticResId = R.raw.c17_welcome_startup_haptic,
                 playCount = 1,
                 scaleMode = BootregVideoScaleMode.Stretch,
                 backgroundColor = Color.Black,
@@ -3095,6 +3113,7 @@ private fun CompletePage(
         )
         BootregMatteVideoSandwich(
             videoResId = R.raw.c17_anim_of_complete_page,
+            hapticResId = R.raw.c17_vibration_res_of_complete_page,
             scaleMode = BootregVideoScaleMode.Stretch,
             playCount = 1,
             autoPlay = !isExiting,

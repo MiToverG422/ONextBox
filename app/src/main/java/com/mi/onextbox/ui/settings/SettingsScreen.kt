@@ -45,6 +45,7 @@ enum class AboutPageMode {
     UpdateReleaseNotes,
     Contributors,
     References,
+    Donation,
 }
 
 @Composable
@@ -57,9 +58,9 @@ fun AboutMainRoute(
     externalTopAppBarState: TopAppBarState? = null,
     onOpenAppSettings: () -> Unit,
     onOpenSoftwareUpdate: () -> Unit,
-    onOpenLogs: () -> Unit,
     onOpenContributors: () -> Unit,
     onOpenReferences: () -> Unit,
+    onOpenDonation: () -> Unit,
 ) {
     SettingsPageSurface(
         title = stringResource(R.string.section_about),
@@ -73,9 +74,9 @@ fun AboutMainRoute(
         AboutMainPage(
             onOpenAppSettings = onOpenAppSettings,
             onOpenSoftwareUpdate = onOpenSoftwareUpdate,
-            onOpenLogs = onOpenLogs,
             onOpenContributors = onOpenContributors,
             onOpenReferences = onOpenReferences,
+            onOpenDonation = onOpenDonation,
         )
     }
 }
@@ -147,6 +148,7 @@ fun AboutSubRoute(
                 AboutPageMode.UpdateReleaseNotes -> stringResource(R.string.software_update_release_notes_title)
                 AboutPageMode.Contributors -> stringResource(R.string.about_contributors_title)
                 AboutPageMode.References -> stringResource(R.string.about_references_title)
+                AboutPageMode.Donation -> stringResource(R.string.about_donate_title)
                 AboutPageMode.Main -> stringResource(R.string.section_about)
             },
             showBack = true,
@@ -208,6 +210,7 @@ fun AboutSubRoute(
                 AboutPageMode.UpdateReleaseNotes -> SoftwareUpdateReleaseNotesPage(softwareUpdateState, onOpenFeatureUpdates)
                 AboutPageMode.Contributors -> AboutContributorsPage()
                 AboutPageMode.References -> AboutReferencesPage()
+                AboutPageMode.Donation -> AboutDonationPage()
                 AboutPageMode.Logs -> Unit
                 AboutPageMode.Main -> Unit
             }

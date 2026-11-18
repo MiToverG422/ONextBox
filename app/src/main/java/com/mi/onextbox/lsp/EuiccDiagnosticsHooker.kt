@@ -479,7 +479,7 @@ internal object EuiccDiagnosticsHooker {
     }.getOrNull()
 
     private fun readSystemProperty(key: String): String = runCatching {
-        Class.forName("android.os.SystemProperties")
+        HostClassLookup.load("android.os.SystemProperties")
             .getMethod("get", String::class.java, String::class.java)
             .invoke(null, key, "") as? String
     }.getOrNull()?.trim().orEmpty()
@@ -509,7 +509,7 @@ internal object EuiccDiagnosticsHooker {
     }
 
     private fun currentApplicationContext(): Context? = runCatching {
-        val activityThread = Class.forName("android.app.ActivityThread")
+        val activityThread = HostClassLookup.load("android.app.ActivityThread")
         activityThread.getMethod("currentApplication").invoke(null) as? Context
     }.getOrNull()?.applicationContext
 

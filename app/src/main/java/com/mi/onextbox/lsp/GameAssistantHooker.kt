@@ -31,8 +31,8 @@ internal object GameAssistantHooker {
         if (!colorOs16) adapter("Skins") { skins(loader) }
         if (!colorOs16) adapter("Developer options") { GameAssistantDeveloperController.hook(loader) }
         adapter("Semantic adapters") {
-            System.loadLibrary("dexkit")
-            DexKitBridge.create(apkPath).use { dex ->
+            ApkDexSession.withSession(apkPath) { open ->
+                val dex = open()
                 adapter("Promotion dialog") {
                     val data = dex.findMethod { matcher {
                         declaredClass = "business.module.toolsrecommend.ToolsRecommendAssistantDialogHelper"

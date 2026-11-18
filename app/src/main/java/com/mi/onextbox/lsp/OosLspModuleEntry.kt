@@ -176,6 +176,8 @@ class OosLspModuleEntry : XposedModule() {
 
     private fun dispatchLifecycle(target: ReloadTarget) {
         if (!HookConfigSnapshot.isAvailable) {
+            // Restoring a persisted identity must not wait for app-side preference sync.
+            preparePhoneRecovery(target)
             deferLifecycle(target.export())
             // READY may have drained the mailbox between the check and this enqueue.
             observedPreferences?.let(::replayWhenPreferencesReady)
@@ -190,6 +192,18 @@ class OosLspModuleEntry : XposedModule() {
     }
 
     private fun dispatchPackage(target: ReloadTarget) {
+        ApkDexSession.withSession(target.sourceDir) { dispatchPackageHooks(target) }
+    }
+
+    private fun preparePhoneRecovery(target: ReloadTarget) {
+        if (target.system || target.packageName != PACKAGE_PHONE || processName != PACKAGE_PHONE) return
+        SystemAdaptationDetector.initialize(target.packageName, target.classLoader)
+        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NetworkIdentityHooker.hook") {
+            NetworkIdentityHooker.hook(target.classLoader, processName)
+        }
+    }
+
+    private fun dispatchPackageHooks(target: ReloadTarget) {
         val packageName = target.packageName
         val classLoader = target.classLoader
 
@@ -197,6 +211,8 @@ class OosLspModuleEntry : XposedModule() {
         if (processName.substringBefore(':') == PACKAGE_LAUNCHER && packageName != PACKAGE_LAUNCHER) return
         SystemAdaptationDetector.initialize(packageName, classLoader)
         val profile = AdaptationHookGate.bind()
+        // Recovery and genuine phone reads stay active when feature hooks enter safe mode.
+        preparePhoneRecovery(target)
         if (!AdaptationHookGate.isActive(profile)) return
         com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CouiDividerHooker.hook") { CouiDividerHooker.hook(packageName, classLoader, target.sourceDir) }
         if (profile == SystemAdaptationVersion.ColorOs17) {
@@ -226,6 +242,7 @@ class OosLspModuleEntry : XposedModule() {
 
         when (packageName) {
             PACKAGE_SYSTEM_UI -> {
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AospSystemUiHooker.hook") { AospSystemUiHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NativeFiveGaUiHooker.hook") { NativeFiveGaUiHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PictorialCustomizationHooker.hookSystemUi") { PictorialCustomizationHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LargeNetworkTypeHooker.hook") { LargeNetworkTypeHooker.hook(classLoader) }
@@ -337,7 +354,6 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("EuiccProfileLimitHooker.hookPhone") { EuiccProfileLimitHooker.hookPhone(classLoader, target.sourceDir) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NativeFiveGaPhoneHooker.hook") { NativeFiveGaPhoneHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MobileNetworkHooker.hook") { MobileNetworkHooker.hook(classLoader) }
-                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NetworkIdentityHooker.hook") { NetworkIdentityHooker.hook(classLoader, processName) }
             }
 
             PACKAGE_APP_MARKET -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AppMarketHooker.hook") { AppMarketHooker.hook(classLoader) }
@@ -367,7 +383,20 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BatteryOptimizationHooker.hookBattery") { BatteryOptimizationHooker.hookBattery(classLoader, target.sourceDir) }
             }
 
-            CameraGallerySettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraGalleryHooker.hook") { CameraGalleryHooker.hook(classLoader, target.sourceDir) }
+            CameraGallerySettings.PACKAGE_NAME -> {
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraGalleryHooker.hook") { CameraGalleryHooker.hook(classLoader, target.sourceDir) }
+                if (processName == CameraGallerySettings.PACKAGE_NAME) {
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MediaUnlockHooker.camera") { MediaUnlockHooker.camera(classLoader, target.sourceDir) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraFilterSdkHooker.hook") { CameraFilterSdkHooker.hook(classLoader, target.sourceDir) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraXpanFilterHooker.hook") { CameraXpanFilterHooker.hook(classLoader, target.sourceDir) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraMediaGuardHooker.hook") { CameraMediaGuardHooker.hook(classLoader, target.sourceDir) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraAiCompositionHooker.hook") { CameraAiCompositionHooker.hook(classLoader) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraPaletteHooker.camera") { CameraPaletteHooker.camera(classLoader) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MediaWatermarkHooker.hook") { MediaWatermarkHooker.hook(classLoader, target.sourceDir, true) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraFilterCatalogHooker.hook") { CameraFilterCatalogHooker.hook(classLoader) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraFilterRecommendationHooker.hook") { CameraFilterRecommendationHooker.hook(classLoader, target.sourceDir) }
+                }
+            }
             ScreenTranslationSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ScreenTranslationHooker.hook") { ScreenTranslationHooker.hook(classLoader, target.sourceDir) }
             SmartSidebarSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SmartSidebarHooker.hook") { SmartSidebarHooker.hook(classLoader, target.sourceDir) }
             RegionalAppPackages.APP_INSTALLER_GLOBAL ->
@@ -388,6 +417,16 @@ class OosLspModuleEntry : XposedModule() {
             OShareSettings.PACKAGE_NAME -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("OShareVisibilityHooker.hook") { OShareVisibilityHooker.hook(classLoader) }
             ThemeStoreSettings.PACKAGE_NAME, RegionalAppPackages.THEME_GLOBAL -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ThemeStoreHooker.hook") { ThemeStoreHooker.hook(classLoader) }
             GalleryAiRetouchSettings.PACKAGE_NAME -> {
+                  if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
+                      com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GalleryNativeFilterGroups.hook") { GalleryNativeFilterGroups.hook(classLoader) }
+                  if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
+                      com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CameraPaletteHooker.gallery") { CameraPaletteHooker.gallery(classLoader) }
+                if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MediaUnlockHooker.gallery") { MediaUnlockHooker.gallery(classLoader, target.sourceDir) }
+                if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GalleryWatermarkCatalogHooker.hook") { GalleryWatermarkCatalogHooker.hook(classLoader, target.sourceDir) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GalleryWatermarkDeviceHooker.hook") { GalleryWatermarkDeviceHooker.hook(classLoader, target.sourceDir) }
+                    com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MediaWatermarkHooker.hook") { MediaWatermarkHooker.hook(classLoader, target.sourceDir, false) }
                 if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
                     com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("GalleryDeleteCountdownHooker.hook") { GalleryDeleteCountdownHooker.hook(classLoader, target.sourceDir) }
                 if (processName == GalleryAiRetouchSettings.PACKAGE_NAME)
@@ -533,7 +572,7 @@ class OosLspModuleEntry : XposedModule() {
 
     private companion object {
         const val TAG = "ONextBox-Entry"
-        const val RELOAD_PROTOCOL = "onextbox.reload.lifecycle.v3"
+        const val RELOAD_PROTOCOL = "onextbox.reload.lifecycle.v5"
         const val PREFERENCES_GROUP = "lsp_features"
         const val PACKAGE_SYSTEM = "system"
         const val PACKAGE_ANDROID = "android"

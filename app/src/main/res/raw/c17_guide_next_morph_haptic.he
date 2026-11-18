@@ -1,0 +1,718 @@
+{
+    "Metadata": {
+        "Version": 2,
+        "Created": "2026-07-02",
+        "Description": "Exported from RichTap Creator Pro"
+    },
+    "PatternList": [
+        {
+            "AbsoluteTime": 1133,
+            "Pattern": [
+                {
+                    "Event": {
+                        "Type": "continuous",
+                        "Duration": 700,
+                        "RelativeTime": 0,
+                        "Parameters": {
+                            "Intensity": 50,
+                            "Frequency": 10,
+                            "Curve": [
+                                {
+                                    "Time": 0,
+                                    "Intensity": 0,
+                                    "Frequency": -40
+                                },
+                                {
+                                    "Time": 239,
+                                    "Intensity": 0.35,
+                                    "Frequency": -40
+                                },
+                                {
+                                    "Time": 529,
+                                    "Intensity": 0.5,
+                                    "Frequency": -40
+                                },
+                                {
+                                    "Time": 697,
+                                    "Intensity": 1,
+                                    "Frequency": 10
+                                },
+                                {
+                                    "Time": 700,
+                                    "Intensity": 0,
+                                    "Frequency": 0
+                                }
+                            ]
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 715,
+                        "Parameters": {
+                            "Intensity": 70,
+                            "Frequency": 30
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "continuous",
+                        "Duration": 600,
+                        "RelativeTime": 2367,
+                        "Parameters": {
+                            "Intensity": 60,
+                            "Frequency": 0,
+                            "Curve": [
+                                {
+                                    "Time": 0,
+                                    "Intensity": 0,
+                                    "Frequency": 0
+                                },
+                                {
+                                    "Time": 7,
+                                    "Intensity": 0.33,
+                                    "Frequency": -63
+                                },
+                                {
+                                    "Time": 37,
+                                    "Intensity": 0.48,
+                                    "Frequency": -52
+                                },
+                                {
+                                    "Time": 79,
+                                    "Intensity": 0.72,
+                                    "Frequency": -90
+                                },
+                                {
+                                    "Time": 200,
+                                    "Intensity": 0.44,
+                                    "Frequency": -11
+                                },
+                                {
+                                    "Time": 283,
+                                    "Intensity": 0.72,
+                                    "Frequency": -49
+                                },
+                                {
+                                    "Time": 377,
+                                    "Intensity": 0.46,
+                                    "Frequency": -8
+                                },
+                                {
+                                    "Time": 491,
+                                    "Intensity": 0.72,
+                                    "Frequency": -58
+                                },
+                                {
+                                    "Time": 599,
+                                    "Intensity": 0.36,
+                                    "Frequency": -34
+                                },
+                                {
+                                    "Time": 600,
+                                    "Intensity": 0,
+                                    "Frequency": -30
+                                }
+                            ]
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "continuous",
+                        "Duration": 1200,
+                        "RelativeTime": 5796,
+                        "Parameters": {
+                            "Intensity": 70,
+                            "Frequency": 10,
+                            "Curve": [
+                                {
+                                    "Time": 0,
+                                    "Intensity": 0,
+                                    "Frequency": 0
+                                },
+                                {
+                                    "Time": 143,
+                                    "Intensity": 0.66,
+                                    "Frequency": 0
+                                },
+                                {
+                                    "Time": 144,
+                                    "Intensity": 0,
+                                    "Frequency": 0
+                                },
+                                {
+                                    "Time": 617,
+                                    "Intensity": 0,
+                                    "Frequency": -11
+                                },
+                                {
+                                    "Time": 816,
+                                    "Intensity": 0.38,
+                                    "Frequency": 0
+                                },
+                                {
+                                    "Time": 1199,
+                                    "Intensity": 0,
+                                    "Frequency": 15
+                                },
+                                {
+                                    "Time": 1200,
+                                    "Intensity": 0,
+                                    "Frequency": -8
+                                }
+                            ]
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 7357,
+                        "Parameters": {
+                            "Intensity": 20,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 7427,
+                        "Parameters": {
+                            "Intensity": 20,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 7509,
+                        "Parameters": {
+                            "Intensity": 20,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 7593,
+                        "Parameters": {
+                            "Intensity": 35,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 7680,
+                        "Parameters": {
+                            "Intensity": 35,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 7763,
+                        "Parameters": {
+                            "Intensity": 35,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 7846,
+                        "Parameters": {
+                            "Intensity": 35,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 7930,
+                        "Parameters": {
+                            "Intensity": 50,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 8000,
+                        "Parameters": {
+                            "Intensity": 50,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 8084,
+                        "Parameters": {
+                            "Intensity": 70,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 8160,
+                        "Parameters": {
+                            "Intensity": 70,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 8238,
+                        "Parameters": {
+                            "Intensity": 90,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                }
+            ]
+        },
+        {
+            "AbsoluteTime": 9470,
+            "Pattern": [
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 0,
+                        "Parameters": {
+                            "Intensity": 90,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 96,
+                        "Parameters": {
+                            "Intensity": 90,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 200,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 310,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 417,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 529,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 60
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 655,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 45
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 806,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 0
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 988,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 0
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 1193,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 0
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "continuous",
+                        "Duration": 50,
+                        "RelativeTime": 1549,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 50,
+                            "Curve": [
+                                {
+                                    "Time": 0,
+                                    "Intensity": 0,
+                                    "Frequency": 0
+                                },
+                                {
+                                    "Time": 1,
+                                    "Intensity": 1,
+                                    "Frequency": 0
+                                },
+                                {
+                                    "Time": 49,
+                                    "Intensity": 1,
+                                    "Frequency": 0
+                                },
+                                {
+                                    "Time": 50,
+                                    "Intensity": 0,
+                                    "Frequency": 0
+                                }
+                            ]
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "continuous",
+                        "Duration": 1500,
+                        "RelativeTime": 2218,
+                        "Parameters": {
+                            "Intensity": 60,
+                            "Frequency": 0,
+                            "Curve": [
+                                {
+                                    "Time": 0,
+                                    "Intensity": 0,
+                                    "Frequency": 38
+                                },
+                                {
+                                    "Time": 789,
+                                    "Intensity": 0.3,
+                                    "Frequency": -10
+                                },
+                                {
+                                    "Time": 1274,
+                                    "Intensity": 0.9,
+                                    "Frequency": 10
+                                },
+                                {
+                                    "Time": 1500,
+                                    "Intensity": 0,
+                                    "Frequency": 30
+                                }
+                            ]
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 3732,
+                        "Parameters": {
+                            "Intensity": 75,
+                            "Frequency": 45
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 5050,
+                        "Parameters": {
+                            "Intensity": 64,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 5095,
+                        "Parameters": {
+                            "Intensity": 77,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 5142,
+                        "Parameters": {
+                            "Intensity": 90,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                }
+            ]
+        },
+        {
+            "AbsoluteTime": 14663,
+            "Pattern": [
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 0,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 52,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 110,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 173,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 235,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 294,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 357,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 419,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 476,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 80
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 536,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 75
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 606,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 75
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 682,
+                        "Parameters": {
+                            "Intensity": 95,
+                            "Frequency": 75
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "continuous",
+                        "Duration": 399,
+                        "RelativeTime": 770,
+                        "Parameters": {
+                            "Intensity": 100,
+                            "Frequency": 0,
+                            "Curve": [
+                                {
+                                    "Time": 0,
+                                    "Intensity": 0,
+                                    "Frequency": 39
+                                },
+                                {
+                                    "Time": 210,
+                                    "Intensity": 0.14,
+                                    "Frequency": -10
+                                },
+                                {
+                                    "Time": 339,
+                                    "Intensity": 0.66,
+                                    "Frequency": 10
+                                },
+                                {
+                                    "Time": 399,
+                                    "Intensity": 0,
+                                    "Frequency": 39
+                                }
+                            ]
+                        },
+                        "Index": 0
+                    }
+                },
+                {
+                    "Event": {
+                        "Type": "transient",
+                        "RelativeTime": 1175,
+                        "Parameters": {
+                            "Intensity": 75,
+                            "Frequency": 45
+                        },
+                        "Index": 0
+                    }
+                }
+            ]
+        }
+    ]
+}

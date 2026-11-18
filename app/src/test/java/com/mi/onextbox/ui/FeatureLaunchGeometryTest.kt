@@ -8,6 +8,33 @@ import org.junit.Assert.assertSame
 import org.junit.Test
 
 class FeatureLaunchGeometryTest {
+    @Test fun deferredWindowGeometryKeepsIconAndTaskEndpointsAndAlphaHandoff() {
+        val source = FeatureLaunchOrigin(110f, 330f, 54f, 54f)
+        val viewport = Rect(10f, 30f, 1090f, 2430f)
+        val icon = c17FeatureWindowFrame(source, viewport, 0f, 0f, FeatureLaunchDirection.Opening)
+        assertEquals(C17FeatureWindowFrame(100f, 300f, 54f, 54f, 16f, 0f), icon)
+        val task = c17FeatureWindowFrame(source, viewport, 1f, 1f, FeatureLaunchDirection.Opening)
+        assertEquals(C17FeatureWindowFrame(0f, 0f, 1080f, 2400f, 30f, 1f), task)
+        // The task keeps the same alpha ownership when its physical direction is interrupted.
+        val interrupted = c17FeatureWindowFrame(source, viewport, .4f, .4f,
+            FeatureLaunchDirection.Closing, FeatureLaunchDirection.Opening)
+        assertEquals(2f / 3f, interrupted.taskAlpha, .00001f)
+        val closing = c17FeatureWindowFrame(source, viewport, .4f, .4f, FeatureLaunchDirection.Closing)
+        assertEquals(1f / 3f, closing.taskAlpha, .00001f)
+    }
+
+    @Test fun lateClosingReboundRemainsContinuousAndExtremeInterruptionIsStillBounded() {
+        val source = FeatureLaunchOrigin(110f, 330f, 162f, 162f)
+        val viewport = Rect(0f, 0f, 1080f, 2400f)
+        val icon = c17FeatureWindowFrame(source, viewport, 0f, 0f, FeatureLaunchDirection.Closing)
+        val rebound = c17FeatureWindowFrame(source, viewport, -.005f, -.1f, FeatureLaunchDirection.Closing)
+        org.junit.Assert.assertTrue(rebound.width < icon.width)
+        org.junit.Assert.assertTrue(rebound.height > 0f)
+        assertEquals(16f, rebound.cornerDp, 0f)
+        val bounded = c17FeatureWindowFrame(source, viewport, C17_CLOSE_MIN_RENDER_PROGRESS, 0f, FeatureLaunchDirection.Closing)
+        assertEquals(bounded, c17FeatureWindowFrame(source, viewport, -5f, 0f, FeatureLaunchDirection.Closing))
+    }
+
     private val origin = FeatureLaunchOrigin(
         left = 108f,
         top = 328f,

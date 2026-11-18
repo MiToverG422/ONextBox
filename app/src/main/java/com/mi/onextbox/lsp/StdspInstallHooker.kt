@@ -11,7 +11,7 @@ import io.github.libxposed.api.XposedInterface
 internal object StdspInstallHooker {
     fun hook(loader: ClassLoader) {
         runCatching {
-            val target = Class.forName("com.oplus.cloud.cloudscan.stdspcore.PackageVerifyReceiver", false, loader)
+            val target = HostClassLookup.load("com.oplus.cloud.cloudscan.stdspcore.PackageVerifyReceiver", false, loader)
                 .getDeclaredMethod("handleNeedsVerification", Context::class.java, Intent::class.java, Long::class.javaPrimitiveType)
             val verify = PackageManager::class.java.getMethod("verifyPendingInstall", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
             check(target.returnType == Void.TYPE)

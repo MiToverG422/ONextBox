@@ -8,7 +8,7 @@ internal object VolumeStepsHooker {
     private const val TAG = "VolumeSteps"
 
     internal fun target(loader: ClassLoader) =
-        Class.forName("com.android.server.audio.AudioService", false, loader)
+        HostClassLookup.load("com.android.server.audio.AudioService", false, loader)
             .getDeclaredMethod("createStreamStates").apply { require(returnType == Void.TYPE) }
 
     // Runs only in system_server via Xposed, using the host's AudioSystem fields.
@@ -22,7 +22,7 @@ internal object VolumeStepsHooker {
                 require(type == IntArray::class.java && Modifier.isStatic(modifiers)); isAccessible = true
             }
             val minimum = owner.getDeclaredField("MIN_STREAM_VOLUME").apply { isAccessible = true }
-            val defaults = Class.forName("android.media.AudioSystem", false, loader)
+            val defaults = HostClassLookup.load("android.media.AudioSystem", false, loader)
                 .getDeclaredField("DEFAULT_STREAM_VOLUME").apply { isAccessible = true }
             ModernHookRegistry.installFast("$TAG:create", create) { chain ->
                 if (SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.VolumeSteps)) {

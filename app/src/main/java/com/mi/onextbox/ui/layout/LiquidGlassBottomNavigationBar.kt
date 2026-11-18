@@ -49,6 +49,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -97,13 +100,14 @@ fun LiquidGlassBottomNavigationBar(
     hideLabels: Boolean = false,
     onCapsuleBoundsChanged: (Rect) -> Unit = {},
     startupRevealProgress: () -> Float = { 1f },
+    collapseState: BottomBarCollapseState? = null,
 ) {
     if (tabs.isEmpty()) return
     val contentOpacity = LocalBottomBarContentOpacity.current
     val latestOnCapsuleBoundsChanged by rememberUpdatedState(onCapsuleBoundsChanged)
     val latestStartupRevealProgress by rememberUpdatedState(startupRevealProgress)
     val startupInteractionReady by remember {
-        derivedStateOf { latestStartupRevealProgress() >= 1f }
+        derivedStateOf { latestStartupRevealProgress() >= 1f && collapseState?.interactionReady != false }
     }
     DisposableEffect(Unit) {
         onDispose { latestOnCapsuleBoundsChanged(Rect.Zero) }
@@ -120,40 +124,46 @@ fun LiquidGlassBottomNavigationBar(
 
     BoxWithConstraints(
         modifier = modifier
-            .padding(bottom = 16.dp)
-            .padding(horizontal = 40.dp)
-            .layout { measurable, constraints ->
-                val placeable = measurable.measure(constraints.copy(maxHeight = 64.dp.roundToPx()))
-                layout(placeable.width, placeable.height) {
-                    placeable.place(0, 0)
-                }
-            }
-            .bottomBarStartupReveal(startupRevealProgress)
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    if (latestStartupRevealProgress() >= 1f) return@awaitEachGesture
-                    down.consume()
-                    do {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        event.changes.forEach { it.consume() }
-                    } while (event.changes.any { it.pressed })
-                }
-            },
-        contentAlignment = Alignment.CenterStart,
+            .fillMaxWidth()
+            .height(BottomBarHostHeight)
+            .bottomBarStartupReveal(startupRevealProgress),
+        contentAlignment = Alignment.Center,
     ) {
         val density = LocalDensity.current
+        val exactTitleSize = with(density) { 10.dp.toSp() }
+        val expandedWidth = floatingBottomBarWidth(maxWidth, tabs.size)
+        Box(
+            modifier = Modifier
+                .bottomBarCollapseGeometry(collapseState, expandedWidth, BottomBarHeight, maxWidth)
+                .width(expandedWidth)
+                .height(BottomBarHeight)
+                .testTag("liquidBottomBarSurface")
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        if (latestStartupRevealProgress() >= 1f) return@awaitEachGesture
+                        down.consume()
+                        do {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            event.changes.forEach { it.consume() }
+                        } while (event.changes.any { it.pressed })
+                    }
+                }
+                .bottomBarCollapseGestures(collapseState, startupRevealProgress),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+        val barWidthPx = with(density) { expandedWidth.toPx() }
         val tabWidth = with(density) {
-            ((constraints.maxWidth.toFloat() - 8.dp.toPx()) / tabs.size).coerceAtLeast(1f)
+            ((barWidthPx - 8.dp.toPx()) / tabs.size).coerceAtLeast(1f)
         }
-        val barWidthPx = constraints.maxWidth.toFloat()
+        val tabWidthDp = with(density) { tabWidth.toDp() }
         val horizontalPaddingPx = with(density) { 4.dp.toPx() }
         val innerWidthPx = (barWidthPx - horizontalPaddingPx * 2f).coerceAtLeast(0f)
         val animationScope = rememberCoroutineScope()
         val offsetAnimation = remember { Animatable(0f) }
-        val panelOffset by remember(density, constraints.maxWidth) {
+        val panelOffset by remember(density, barWidthPx) {
             derivedStateOf {
-                val fraction = (offsetAnimation.value / constraints.maxWidth.coerceAtLeast(1).toFloat()).fastCoerceIn(-1f, 1f)
+                val fraction = (offsetAnimation.value / barWidthPx.coerceAtLeast(1f)).fastCoerceIn(-1f, 1f)
                 with(density) {
                     4.dp.toPx() * fraction.sign * EaseOut.transform(abs(fraction))
                 }
@@ -232,12 +242,12 @@ fun LiquidGlassBottomNavigationBar(
                     Modifier
                         .graphicsLayer {
                             translationX = startupCenterOffset *
-                                (1f - latestStartupRevealProgress().coerceIn(0f, 1f))
+                                (1f - latestStartupRevealProgress().coerceIn(0f, 1f) * (1f - (collapseState?.progress ?: 0f)))
                             scaleX = scale
                             scaleY = scale
                         }
                         .clip(capsuleShape)
-                        .clickable(enabled = startupInteractionReady) { latestOnTabSelected(index) }
+                        .then(if (startupInteractionReady) Modifier.clickable { latestOnTabSelected(index) } else Modifier)
                         .fillMaxHeight()
                         .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
@@ -248,7 +258,8 @@ fun LiquidGlassBottomNavigationBar(
                         imageVector = icon,
                         contentDescription = stringResource(tab.titleRes),
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(BottomBarIconSize)
+                            .testTag("liquidBottomBarIcon-$index")
                             .graphicsLayer {
                                 scaleX = contentScale
                                 scaleY = contentScale
@@ -266,7 +277,7 @@ fun LiquidGlassBottomNavigationBar(
                                 },
                             style = TextStyle(
                                 color = contentColor,
-                                fontSize = 12.sp,
+                                fontSize = exactTitleSize,
                                 textAlign = TextAlign.Center,
                             ),
                             maxLines = 1,
@@ -278,13 +289,15 @@ fun LiquidGlassBottomNavigationBar(
             }
         }
 
-
+        CollapsibleBottomBarSurface(collapseState, background = {
         Box(
             Modifier
-                .height(64.dp)
+                .height(BottomBarHeight)
                 .fillMaxWidth()
                 .bottomBarStartupMaterialWidth(startupRevealProgress)
-                .graphicsLayer { translationX = panelOffset }
+                .graphicsLayer {
+                    translationX = panelOffset
+                }
                 .drawBackdrop(
                     backdrop = backdrop,
                     shape = { capsuleShape },
@@ -312,15 +325,22 @@ fun LiquidGlassBottomNavigationBar(
                     ))
                 },
         )
+        }, contentAlignment = Alignment.CenterStart) {
 
+        Box(
+            Modifier.fillMaxSize()
+                .graphicsLayer {
+                    alpha = contentOpacity().coerceIn(0f, 1f) * (collapseState?.expandedContentAlpha ?: 1f)
+                    clip = collapseState != null
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                }
+                .then(if (collapseState?.collapsed == true) Modifier.clearAndSetSemantics {} else Modifier),
+            contentAlignment = Alignment.Center,
+        ) {
         Row(
-            Modifier
-                .height(64.dp)
-                .fillMaxWidth()
+            Modifier.height(BottomBarHeight).requiredWidth(expandedWidth)
                 .graphicsLayer {
                     translationX = panelOffset
-                    alpha = contentOpacity().coerceIn(0f, 1f)
-                    compositingStrategy = CompositingStrategy.ModulateAlpha
                     val scale = lerp(1f, 1f + 16.dp.toPx() / size.width,
                         dampedDragAnimation.pressProgress)
                     scaleX = scale
@@ -331,6 +351,7 @@ fun LiquidGlassBottomNavigationBar(
             verticalAlignment = Alignment.CenterVertically,
             content = content,
         )
+        }
 
         CompositionLocalProvider(
             LocalLiquidBottomTabScale provides { lerp(1f, 1.2f, dampedDragAnimation.pressProgress) },
@@ -340,7 +361,7 @@ fun LiquidGlassBottomNavigationBar(
                     .clearAndSetSemantics {}
                     .alpha(0f)
                     .layerBackdrop(tabsBackdrop)
-                    .height(56.dp)
+                    .height(BottomBarItemHeight)
                     .fillMaxWidth(),
             ) {
                 Box(
@@ -377,25 +398,32 @@ fun LiquidGlassBottomNavigationBar(
             }
         }
 
+        Box(Modifier.fillMaxSize().graphicsLayer {
+            clip = (collapseState?.progress ?: 0f) > 0f
+            shape = capsuleShape
+        }, contentAlignment = Alignment.CenterStart) {
         Box(
             Modifier
-                .padding(horizontal = 4.dp)
                 .graphicsLayer {
-                    alpha = contentOpacity().coerceIn(0f, 1f)
+                    alpha = contentOpacity().coerceIn(0f, 1f) * (collapseState?.expandedContentAlpha ?: 1f)
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                     val targetCenter = if (isLtr) {
                         (dampedDragAnimation.value + 0.5f) * tabWidth
                     } else {
                         innerWidthPx - (dampedDragAnimation.value + 0.5f) * tabWidth
                     }
-                    val center = lerp(innerWidthPx / 2f, targetCenter,
+                    val center = horizontalPaddingPx + lerp(innerWidthPx / 2f, targetCenter,
                         latestStartupRevealProgress().coerceIn(0f, 1f))
-                    translationX = center - tabWidth / 2f + panelOffset
+                    val collapse = collapseState?.progress ?: 0f
+                    val width = lerp(barWidthPx, with(density) { BottomBarHeight.toPx() }, collapse)
+                    val liveCenter = width / 2f + (center - barWidthPx / 2f) * (1f - collapse)
+                    translationX = liveCenter - tabWidth / 2f + panelOffset * (1f - collapse)
                 }
                 .then(if (startupInteractionReady) interactiveHighlight.gestureModifier else Modifier)
                 .then(if (startupInteractionReady) dampedDragAnimation.modifier else Modifier)
-                .height(56.dp)
-                .fillMaxWidth(1f / tabs.size)
+                .height(BottomBarItemHeight)
+                .width(tabWidthDp)
+                .testTag("liquidBottomBarSelection")
                 .bottomBarStartupMaterialWidth(startupRevealProgress)
                 .drawBackdrop(
                     backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
@@ -435,5 +463,9 @@ fun LiquidGlassBottomNavigationBar(
                     },
                 ),
         )
+        }
+        BottomBarFolderIcon(collapseState, BottomBarHeight, contentColor, contentOpacity, Modifier.align(Alignment.Center))
+        }
+        }
     }
 }

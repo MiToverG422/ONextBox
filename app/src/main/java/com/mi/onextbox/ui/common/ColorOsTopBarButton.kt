@@ -40,6 +40,10 @@ import io.github.suqi8.coui.kmp.theme.COUITheme
 fun ColorOsTopBarButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    feedbackProgress: () -> Float = { 1f },
+    background: (@Composable BoxScope.() -> Unit)? = null,
+    contentAlignment: Alignment = Alignment.Center,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -75,6 +79,7 @@ fun ColorOsTopBarButton(
     Box(
         modifier = modifier
             .size(40.dp)
+            .then(if (enabled) Modifier
             .pointerInput(motion, spotlight) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -126,20 +131,21 @@ fun ColorOsTopBarButton(
                 indication = null,
                 role = Role.Button,
                 onClick = onClick,
-            ),
+            ) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         Box(
             modifier = Modifier.fillMaxSize().graphicsLayer {
-                scaleX = motion.scaleX
-                scaleY = motion.scaleY
-                translationX = motion.translationX
-                translationY = motion.translationY
+                val feedback = feedbackProgress().coerceIn(0f, 1f)
+                scaleX = 1f + (motion.scaleX - 1f) * feedback
+                scaleY = 1f + (motion.scaleY - 1f) * feedback
+                translationX = motion.translationX * feedback
+                translationY = motion.translationY * feedback
                 clip = false
             },
-            contentAlignment = Alignment.Center,
+            contentAlignment = contentAlignment,
         ) {
-            AndroidView(
+            if (background != null) background() else AndroidView(
                 factory = { context ->
                     ColorOsTopBarMaterialView(
                         context = context,
@@ -156,14 +162,15 @@ fun ColorOsTopBarButton(
             Canvas(modifier = Modifier.fillMaxSize()) {
                 if (motion.maskProgress > 0.001f) {
                     drawCircle(
-                        color = maskColor.copy(alpha = maskColor.alpha * motion.maskProgress),
+                        color = maskColor.copy(alpha = maskColor.alpha * motion.maskProgress * feedbackProgress().coerceIn(0f, 1f)),
                         radius = size.minDimension / 2f,
                     )
                 }
             }
             content()
             // Draw-only overlay preserves the spotlight without adding an Android touch target.
-            Canvas(Modifier.fillMaxSize().clip(CircleShape).onSizeChanged {
+            Canvas(Modifier.fillMaxSize().graphicsLayer { alpha = feedbackProgress().coerceIn(0f, 1f) }
+                .clip(CircleShape).onSizeChanged {
                 spotlight.onSizeChanged(it.width, it.height)
             }) {
                 redraw.intValue

@@ -13,7 +13,6 @@ import com.mi.onextbox.lsp.LspPreferenceStore.prefs
 import com.mi.onextbox.lsp.LspPreferenceStore.readSystemPropertyToggle
 import com.topjohnwu.superuser.Shell
 import com.mi.onextbox.lsp.compat.HookConfigSnapshot
-import com.mi.onextbox.lsp.compat.ModernRemotePreferences as XSharedPreferences
 import java.io.File
 
 // Feature preferences and system-mirror synchronization.
@@ -21,9 +20,7 @@ import java.io.File
 object LspConfig {
     /** Collects boot-time writes so dozens of values can be synchronized in one root shell. */
     private val syncCommandBatch = ThreadLocal<MutableList<String>?>()
-    private val xposedPreferences by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        XSharedPreferences(PREFS_NAME)
-    }
+    private val xposedPreferences get() = LspXposedReads.preferences
 
     private const val MODULE_PACKAGE = "com.mi.onextbox"
     private const val PREFS_NAME = "lsp_features"
@@ -177,17 +174,13 @@ object LspConfig {
     private const val SETTINGS_KEYBOARD_MATERIAL_UNLOCK = "oost_$KEY_KEYBOARD_MATERIAL_UNLOCK"
 
     fun isKeyboardMaterialUnlocked(context: Context): Boolean =
-        LspPreferenceStore.readBoolean(context, KEY_KEYBOARD_MATERIAL_UNLOCK, false)
+        KeyboardFeatureSettings.enabled(context, KeyboardFeatureSettings.Option.Material)
 
-    fun setKeyboardMaterialUnlocked(context: Context, enabled: Boolean) {
-        setSyncedBooleanPreference(context, KEY_KEYBOARD_MATERIAL_UNLOCK, enabled,
-            listOf(PERSIST_PROP_KEYBOARD_MATERIAL_UNLOCK, PROP_KEYBOARD_MATERIAL_UNLOCK), SETTINGS_KEYBOARD_MATERIAL_UNLOCK)
-    }
+    fun setKeyboardMaterialUnlocked(context: Context, enabled: Boolean) =
+        KeyboardFeatureSettings.set(context, KeyboardFeatureSettings.Option.Material, enabled)
 
-    fun isKeyboardMaterialUnlockedXposed(): Boolean = readXposedBoolean(
-        PERSIST_PROP_KEYBOARD_MATERIAL_UNLOCK, PROP_KEYBOARD_MATERIAL_UNLOCK,
-        SETTINGS_KEYBOARD_MATERIAL_UNLOCK, KEY_KEYBOARD_MATERIAL_UNLOCK, false,
-    )
+    fun isKeyboardMaterialUnlockedXposed(): Boolean =
+        KeyboardFeatureSettings.enabledXposed(KeyboardFeatureSettings.Option.Material)
 
     private const val KEY_KEYBOARD_FLAG_EMOJI = "keyboard_flag_emoji"
     private const val PROP_KEYBOARD_FLAG_EMOJI = "oost.$KEY_KEYBOARD_FLAG_EMOJI"
@@ -195,17 +188,13 @@ object LspConfig {
     private const val SETTINGS_KEYBOARD_FLAG_EMOJI = "oost_$KEY_KEYBOARD_FLAG_EMOJI"
 
     fun isKeyboardFlagEmojiEnabled(context: Context): Boolean =
-        LspPreferenceStore.readBoolean(context, KEY_KEYBOARD_FLAG_EMOJI, false)
+        KeyboardFeatureSettings.enabled(context, KeyboardFeatureSettings.Option.FlagEmoji)
 
-    fun setKeyboardFlagEmojiEnabled(context: Context, enabled: Boolean) {
-        setSyncedBooleanPreference(context, KEY_KEYBOARD_FLAG_EMOJI, enabled,
-            listOf(PERSIST_PROP_KEYBOARD_FLAG_EMOJI, PROP_KEYBOARD_FLAG_EMOJI), SETTINGS_KEYBOARD_FLAG_EMOJI)
-    }
+    fun setKeyboardFlagEmojiEnabled(context: Context, enabled: Boolean) =
+        KeyboardFeatureSettings.set(context, KeyboardFeatureSettings.Option.FlagEmoji, enabled)
 
-    fun isKeyboardFlagEmojiEnabledXposed(): Boolean = readXposedBoolean(
-        PERSIST_PROP_KEYBOARD_FLAG_EMOJI, PROP_KEYBOARD_FLAG_EMOJI,
-        SETTINGS_KEYBOARD_FLAG_EMOJI, KEY_KEYBOARD_FLAG_EMOJI, false,
-    )
+    fun isKeyboardFlagEmojiEnabledXposed(): Boolean =
+        KeyboardFeatureSettings.enabledXposed(KeyboardFeatureSettings.Option.FlagEmoji)
 
     private const val KEY_KEYBOARD_BOTTOM_LIFT_FIX = "keyboard_bottom_lift_fix"
     private const val PROP_KEYBOARD_BOTTOM_LIFT_FIX = "oost.$KEY_KEYBOARD_BOTTOM_LIFT_FIX"
@@ -213,17 +202,13 @@ object LspConfig {
     private const val SETTINGS_KEYBOARD_BOTTOM_LIFT_FIX = "oost_$KEY_KEYBOARD_BOTTOM_LIFT_FIX"
 
     fun isKeyboardBottomLiftFixEnabled(context: Context): Boolean =
-        LspPreferenceStore.readBoolean(context, KEY_KEYBOARD_BOTTOM_LIFT_FIX, false)
+        KeyboardFeatureSettings.enabled(context, KeyboardFeatureSettings.Option.BottomLift)
 
-    fun setKeyboardBottomLiftFixEnabled(context: Context, enabled: Boolean) {
-        setSyncedBooleanPreference(context, KEY_KEYBOARD_BOTTOM_LIFT_FIX, enabled,
-            listOf(PERSIST_PROP_KEYBOARD_BOTTOM_LIFT_FIX, PROP_KEYBOARD_BOTTOM_LIFT_FIX), SETTINGS_KEYBOARD_BOTTOM_LIFT_FIX)
-    }
+    fun setKeyboardBottomLiftFixEnabled(context: Context, enabled: Boolean) =
+        KeyboardFeatureSettings.set(context, KeyboardFeatureSettings.Option.BottomLift, enabled)
 
-    fun isKeyboardBottomLiftFixEnabledXposed(): Boolean = readXposedBoolean(
-        PERSIST_PROP_KEYBOARD_BOTTOM_LIFT_FIX, PROP_KEYBOARD_BOTTOM_LIFT_FIX,
-        SETTINGS_KEYBOARD_BOTTOM_LIFT_FIX, KEY_KEYBOARD_BOTTOM_LIFT_FIX, false,
-    )
+    fun isKeyboardBottomLiftFixEnabledXposed(): Boolean =
+        KeyboardFeatureSettings.enabledXposed(KeyboardFeatureSettings.Option.BottomLift)
 
     private const val KEY_KEYBOARD_HIDE_DISMISS = "keyboard_hide_dismiss"
     private const val PROP_KEYBOARD_HIDE_DISMISS = "oost.$KEY_KEYBOARD_HIDE_DISMISS"
@@ -231,17 +216,13 @@ object LspConfig {
     private const val SETTINGS_KEYBOARD_HIDE_DISMISS = "oost_$KEY_KEYBOARD_HIDE_DISMISS"
 
     fun isKeyboardDismissHidden(context: Context): Boolean =
-        LspPreferenceStore.readBoolean(context, KEY_KEYBOARD_HIDE_DISMISS, false)
+        KeyboardFeatureSettings.enabled(context, KeyboardFeatureSettings.Option.HideDismiss)
 
-    fun setKeyboardDismissHidden(context: Context, enabled: Boolean) {
-        setSyncedBooleanPreference(context, KEY_KEYBOARD_HIDE_DISMISS, enabled,
-            listOf(PERSIST_PROP_KEYBOARD_HIDE_DISMISS, PROP_KEYBOARD_HIDE_DISMISS), SETTINGS_KEYBOARD_HIDE_DISMISS)
-    }
+    fun setKeyboardDismissHidden(context: Context, enabled: Boolean) =
+        KeyboardFeatureSettings.set(context, KeyboardFeatureSettings.Option.HideDismiss, enabled)
 
-    fun isKeyboardDismissHiddenXposed(): Boolean = readXposedBoolean(
-        PERSIST_PROP_KEYBOARD_HIDE_DISMISS, PROP_KEYBOARD_HIDE_DISMISS,
-        SETTINGS_KEYBOARD_HIDE_DISMISS, KEY_KEYBOARD_HIDE_DISMISS, false,
-    )
+    fun isKeyboardDismissHiddenXposed(): Boolean =
+        KeyboardFeatureSettings.enabledXposed(KeyboardFeatureSettings.Option.HideDismiss)
 
     enum class TrafficFeature(val key: String) {
         GoogleNetworkControl("traffic_google_network_control"),
@@ -2813,6 +2794,7 @@ object LspConfig {
             LargeNetworkTypeSettings.setBold(context, false)
             LargeNetworkTypeSettings.setArtwork(context, false)
             LargeNetworkTypeSettings.setLte(context, false)
+            LargeNetworkTypeSettings.setPosition(context, LargeNetworkPositionRules.RIGHT)
             setHideDisconnectedBluetoothEnabled(context, false)
             NetworkSpeedFeature.entries.forEach { setNetworkSpeedFeatureEnabled(context, it, false) }
             StatusBarInteractionFeature.entries.forEach { setStatusBarInteractionFeatureEnabled(context, it, false) }
@@ -2963,10 +2945,7 @@ object LspConfig {
             setFileManagerHideSecureAccessTipEnabled(context, false)
             setFileManagerNativePickerEnabled(context, false)
             DefaultFileManagerSettings.setEnabled(context, false)
-            setKeyboardMaterialUnlocked(context, false)
-            setKeyboardFlagEmojiEnabled(context, false)
-            setKeyboardBottomLiftFixEnabled(context, false)
-            setKeyboardDismissHidden(context, false)
+            KeyboardFeatureSettings.reset(context)
             setAthenaC17SwipeUpProtectionEnabled(
                 context,
                 DEFAULT_ATHENA_C17_SWIPE_UP_PROTECTION,
@@ -4510,7 +4489,7 @@ object LspConfig {
         defaultValue = false,
     )
 
-    private fun setSyncedBooleanPreference(
+    internal fun setSyncedBooleanPreference(
         context: Context,
         prefsKey: String,
         enabled: Boolean,
@@ -4538,55 +4517,17 @@ object LspConfig {
         return prefs(context).getStringSet(key, emptySet()).orEmpty()
     }
 
-    private fun readXposedString(key: String, defaultValue: String): String? {
-        HookConfigSnapshot.string(key, defaultValue)?.let { return it }
-        return runCatching {
-            val prefs = xposedPreferences
-            prefs.getString(key, defaultValue)
-        }.getOrDefault(defaultValue)
-    }
+    private fun readXposedString(key: String, defaultValue: String): String? = LspXposedReads.string(key, defaultValue)
 
-    private fun readXposedStringSet(key: String): Set<String> {
-        HookConfigSnapshot.stringSet(key, emptySet())?.let { return it }
-        return runCatching {
-            val prefs = xposedPreferences
-            prefs.getStringSet(key, emptySet()).orEmpty()
-        }.getOrDefault(emptySet())
-    }
+    private fun readXposedStringSet(key: String): Set<String> = LspXposedReads.stringSet(key)
 
-    private fun readXposedBoolean(
-        persistPropertyKey: String,
-        propertyKey: String,
-        settingsKey: String,
-        prefsKey: String,
-        defaultValue: Boolean
-    ): Boolean {
-        HookConfigSnapshot.boolean(prefsKey, defaultValue)?.let { return it }
-        readSystemPropertyToggle(persistPropertyKey)?.let { return it }
-        readSystemPropertyToggle(propertyKey)?.let { return it }
-        readSettingsGlobalToggle(settingsKey)?.let { return it }
-        return runCatching {
-            val prefs = xposedPreferences
-            prefs.getBoolean(prefsKey, defaultValue)
-        }.getOrDefault(defaultValue)
-    }
+    private fun readXposedBoolean(persistPropertyKey: String, propertyKey: String, settingsKey: String,
+        prefsKey: String, defaultValue: Boolean): Boolean =
+        LspXposedReads.boolean(persistPropertyKey, propertyKey, settingsKey, prefsKey, defaultValue)
 
-    private fun readXposedBooleanWithFallback(
-        persistPropertyKey: String,
-        propertyKey: String,
-        settingsKey: String,
-        prefsKey: String,
-        defaultValue: Boolean,
-    ): Boolean {
-        HookConfigSnapshot.boolean(prefsKey, defaultValue)?.let { return it }
-        readSystemPropertyToggle(persistPropertyKey)?.let { return it }
-        readSystemPropertyToggle(propertyKey)?.let { return it }
-        readSettingsGlobalToggle(settingsKey)?.let { return it }
-        return runCatching {
-            val prefs = xposedPreferences
-            prefs.getBoolean(prefsKey, defaultValue)
-        }.getOrDefault(defaultValue)
-    }
+    private fun readXposedBooleanWithFallback(persistPropertyKey: String, propertyKey: String, settingsKey: String,
+        prefsKey: String, defaultValue: Boolean): Boolean =
+        LspXposedReads.boolean(persistPropertyKey, propertyKey, settingsKey, prefsKey, defaultValue)
 
     private fun Int.sanitizeAssistantPowerMode(): Int {
         return when (this) {
@@ -4678,21 +4619,8 @@ object LspConfig {
         }.onFailure { ConfigSyncStatus.failed(settingsGlobalKey) }
     }
 
-    @Synchronized
-    private fun executeSyncCommands(tag: String, commands: List<String>): Boolean {
-        if (commands.isEmpty()) return true
-        val script = "(set -e;\n" + commands.joinToString("\n") + "\n)"
-        val success = runCatching {
-            ShellLogger.exec(tag, script).isSuccess ||
-                ShellLogger.exec("$tag su", "su -c ${shellQuote(script)}").isSuccess
-        }.getOrDefault(false)
-        LspPreferenceStore.invalidateMirrors()
-        if (!success) ConfigSyncStatus.failed(tag)
-        return success
-    }
+    private fun executeSyncCommands(tag: String, commands: List<String>): Boolean = LspMirrorCommands.execute(tag, commands)
 
-    private fun shellQuote(value: String): String {
-        return "'" + value.replace("'", "'\"'\"'") + "'"
-    }
+    private fun shellQuote(value: String): String = LspMirrorCommands.quote(value)
 
 }

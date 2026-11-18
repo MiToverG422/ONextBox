@@ -12,7 +12,7 @@ internal object VolumeSafetyWarningHooker {
 
     fun hook(loader: ClassLoader) {
         runCatching {
-            val type = Class.forName(CALLBACK_CLASS, false, loader)
+            val type = HostClassLookup.load(CALLBACK_CLASS, false, loader)
             val method = type.getDeclaredMethod(
                 "onShowSafetyWarning",
                 Int::class.javaPrimitiveType,

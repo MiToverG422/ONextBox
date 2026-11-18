@@ -1,5 +1,7 @@
 package com.mi.onextbox.ui.settings
 
+import com.mi.onextbox.ui.screens.FeatureExpandableVisibility
+import com.mi.onextbox.ui.common.AnimatedDataText
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
@@ -284,9 +286,9 @@ suspend fun prefetchAboutAuthorAvatars(context: Context) {
 fun AboutMainPage(
     onOpenAppSettings: () -> Unit,
     onOpenSoftwareUpdate: () -> Unit,
-    onOpenLogs: () -> Unit,
     onOpenContributors: () -> Unit,
     onOpenReferences: () -> Unit,
+    onOpenDonation: () -> Unit,
 ) {
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -306,15 +308,6 @@ fun AboutMainPage(
         )
         SettingsDivider()
         SettingsCardRow(
-            title = stringResource(R.string.about_logs_title),
-            summary = "",
-            showArrow = true,
-            hasDividerAbove = true,
-            hasDividerBelow = true,
-            onClick = onOpenLogs,
-        )
-        SettingsDivider()
-        SettingsCardRow(
             title = stringResource(R.string.setting_theme_settings),
             summary = "",
             showArrow = true,
@@ -326,6 +319,7 @@ fun AboutMainPage(
     AboutAuthorGroup(
         onOpenContributors = onOpenContributors,
         onOpenReferences = onOpenReferences,
+        onOpenDonation = onOpenDonation,
     )
 }
 
@@ -429,7 +423,7 @@ private fun AboutVersionDetails(
         )
         Spacer(modifier = Modifier.height(8.dp))
         AboutDetailText("${stringResource(R.string.info_version)}: $versionName ($versionCode)")
-        AboutDetailText("Build: ${BuildConfig.BUILD_TYPE}")
+        AboutDetailText("${stringResource(R.string.update_build_type_title)}: ${BuildConfig.BUILD_TYPE}")
         AboutDetailText("${stringResource(R.string.info_package_name)}: ${BuildConfig.APPLICATION_ID}")
         AboutDetailText("${stringResource(R.string.about_detail_build_time)}: ${BuildConfig.APP_BUILD_TIME}")
         AboutDetailText(
@@ -1008,12 +1002,14 @@ fun SoftwareUpdateReleaseNotesPage(state: SoftwareUpdateUiState, onOpenFeatureUp
     val versionName = availableUpdate?.versionName ?: currentVersionName
     val versionCode = availableUpdate?.versionCode?.toString()
         ?: currentVersionCode.takeIf { availableUpdate == null }
+    var notesLoading by remember(availableUpdate, versionName) { mutableStateOf(availableUpdate?.releaseNotes.isNullOrBlank()) }
     val remoteNotes by produceState<String?>(
         initialValue = availableUpdate?.releaseNotes,
         key1 = availableUpdate,
         key2 = versionName,
     ) {
         value = availableUpdate?.releaseNotes
+        notesLoading = value.isNullOrBlank()
         if (value.isNullOrBlank()) {
             value = try {
                 AppUpdater.findReleaseNotes(versionName)
@@ -1023,10 +1019,11 @@ fun SoftwareUpdateReleaseNotesPage(state: SoftwareUpdateUiState, onOpenFeatureUp
                 null
             }
         }
+        notesLoading = false
     }
     val releaseNotesText = remoteNotes
         ?.takeIf { it.isNotBlank() }
-        ?: stringResource(R.string.software_update_release_notes_empty)
+        ?: stringResource(if (notesLoading) R.string.diagnostics_loading else R.string.software_update_release_notes_empty)
     val versionSummary = buildString {
         append(versionName)
         versionCode?.let {
@@ -1126,7 +1123,7 @@ fun SoftwareUpdateReleaseNotesPage(state: SoftwareUpdateUiState, onOpenFeatureUp
 
 
 @Composable
-private fun SoftwareUpdateReleaseNotesGroup(
+internal fun SoftwareUpdateReleaseNotesGroup(
     releaseNotesText: String,
     stateKey: String,
     bottomPadding: Dp = 16.dp,
@@ -1143,10 +1140,10 @@ private fun SoftwareUpdateReleaseNotesGroup(
                 expandArrowExpanded = releaseNotesExpanded,
                 hasDividerBelow = releaseNotesExpanded,
             )
-            AnimatedVisibility(visible = releaseNotesExpanded) {
+            FeatureExpandableVisibility(visible = releaseNotesExpanded) {
                 Column {
                     SettingsDivider()
-                    Text(
+                    AnimatedDataText(
                         text = releaseNotesText,
                         style = COUITheme.textStyles.body1,
                         color = COUITheme.colorScheme.onSurfaceVariantSummary,
@@ -1461,6 +1458,7 @@ private fun SoftwareUpdateMenuDivider() {
 private fun AboutAuthorGroup(
     onOpenContributors: () -> Unit,
     onOpenReferences: () -> Unit,
+    onOpenDonation: () -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -1473,6 +1471,8 @@ private fun AboutAuthorGroup(
             onClick = { openUrl(context, GITHUB_PROFILE_URL) },
             leadingContent = { GitHubAuthorAvatar(MITOVERG_AVATAR_URL) },
         )
+        SettingsDivider()
+        AboutDonationEntry(onOpenDonation)
         SettingsDivider()
         SettingsCardRow(
             title = stringResource(R.string.about_contributors_title),

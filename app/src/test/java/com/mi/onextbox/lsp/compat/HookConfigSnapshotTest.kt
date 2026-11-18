@@ -13,6 +13,35 @@ import org.junit.Test
 class HookConfigSnapshotTest {
     private val stores = mutableListOf<FakePreferences>()
 
+    @Test fun onePublicationRefreshesTheWholeSnapshotOnlyOnce() {
+        val preferences = store(ready = true, enabled = false)
+        preferences.data[MODERN_PREFERENCES_REVISION_KEY] = 1L
+        assertTrue(HookConfigSnapshot.attach(preferences))
+        val before = preferences.allReads
+        preferences.data.putAll(mapOf("enabled" to true, "another" to 7, MODERN_PREFERENCES_REVISION_KEY to 2L))
+        preferences.notifyChanged("enabled")
+        assertTrue(HookConfigSnapshot.boolean("enabled", false)!!)
+        assertEquals(7, HookConfigSnapshot.int("another", 0))
+        preferences.notifyChanged("another")
+        preferences.notifyChanged(MODERN_PREFERENCES_REVISION_KEY)
+        assertEquals(before + 1, preferences.allReads)
+        assertEquals(-1L, HookConfigSnapshot.long(MODERN_PREFERENCES_REVISION_KEY, -1L))
+    }
+
+    @Test fun aFailedPublicationReadIsRetriedByTheNextCallback() {
+        val preferences = store(ready = true, enabled = false)
+        preferences.data[MODERN_PREFERENCES_REVISION_KEY] = 1L
+        assertTrue(HookConfigSnapshot.attach(preferences))
+        preferences.data[MODERN_PREFERENCES_REVISION_KEY] = 2L
+        preferences.data["enabled"] = true
+        preferences.failRead = true
+        preferences.notifyChanged("enabled")
+        assertFalse(HookConfigSnapshot.boolean("enabled", true)!!)
+        preferences.failRead = false
+        preferences.notifyChanged(MODERN_PREFERENCES_REVISION_KEY)
+        assertTrue(HookConfigSnapshot.boolean("enabled", false)!!)
+    }
+
     @Before
     fun resetBeforeTest() {
         clearSnapshot()

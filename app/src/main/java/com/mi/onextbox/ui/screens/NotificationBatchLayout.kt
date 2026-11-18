@@ -2,6 +2,8 @@
 
 package com.mi.onextbox.ui.screens
 
+import com.mi.onextbox.ui.common.ColorOsRefreshButton
+
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
@@ -169,7 +171,7 @@ internal fun NotificationBatchLayout(
             if (ui.operation.undo.isNotEmpty()) {
                 BatchToolbarButton(Icons.AutoMirrored.Rounded.Undo, stringResource(R.string.notification_batch_undo), !ui.busy) { onAction(3) }
             }
-            BatchToolbarButton(Icons.Rounded.Refresh, stringResource(R.string.notification_batch_refresh), !ui.busy, onRefresh)
+            ColorOsRefreshButton(ui.busy, stringResource(R.string.notification_batch_refresh), onRefresh)
         },
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {

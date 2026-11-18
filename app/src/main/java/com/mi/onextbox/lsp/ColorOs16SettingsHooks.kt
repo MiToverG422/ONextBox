@@ -16,7 +16,7 @@ internal object ColorOs16SettingsHooks {
         if (!loaders.add(classLoader)) return
         val loaderPrefix = "c16-settings@${System.identityHashCode(classLoader)}:"
         ColorOs16SettingsTargets.installCompatible(
-            resolveClass = { Class.forName(it, false, classLoader) },
+            resolveClass = { HostClassLookup.load(it, false, classLoader) },
             install = { targets ->
                 val prefix = "$loaderPrefix${targets.feature}:"
                 try {

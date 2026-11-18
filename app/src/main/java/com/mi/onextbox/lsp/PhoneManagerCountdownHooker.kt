@@ -3,7 +3,6 @@ package com.mi.onextbox.lsp
 import android.os.CountDownTimer
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import io.github.libxposed.api.XposedInterface
-import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
@@ -38,16 +37,15 @@ internal object PhoneManagerCountdownHooker {
     }
 
     private fun resolve(loader: ClassLoader, apkPath: String): Method {
-        val owner = Class.forName(OWNER, false, loader)
-        val data = Class.forName(DATA, false, loader)
+        val owner = HostClassLookup.load(OWNER, false, loader)
+        val data = HostClassLookup.load(DATA, false, loader)
         val initializer = owner.getDeclaredMethod("initCountdown", data)
         require(initializer.returnType == Void.TYPE && !Modifier.isStatic(initializer.modifiers))
         val direct = runCatching {
-            validate(Class.forName("$OWNER\$initCountdown\$2", false, loader), owner, data)
+            validate(HostClassLookup.load("$OWNER\$initCountdown\$2", false, loader), owner, data)
         }.getOrNull()
         if (direct != null) return direct
-        System.loadLibrary("dexkit")
-        return DexKitBridge.create(apkPath).use { dex ->
+        return HostDexMetadata.methods(loader, apkPath, "phone-manager-countdown", "v1") { dex ->
             val init = dex.findMethod {
                 matcher {
                     declaredClass = OWNER
@@ -56,14 +54,15 @@ internal object PhoneManagerCountdownHooker {
                     paramTypes(DATA)
                 }
             }.single()
-            init.invokes.asSequence()
+            val method = init.invokes.asSequence()
                 .filter { it.name == "<init>" && it.className.startsWith("$OWNER\$") }
                 .mapNotNull {
-                    runCatching { validate(Class.forName(it.className, false, loader), owner, data) }.getOrNull()
+                    runCatching { validate(HostClassLookup.load(it.className, false, loader), owner, data) }.getOrNull()
                 }
                 .distinct()
                 .single()
-        }
+            mapOf("tick" to arrayOf(method))
+        }.getValue("tick").single()
     }
 
     private fun validate(timer: Class<*>, owner: Class<*>, data: Class<*>): Method {

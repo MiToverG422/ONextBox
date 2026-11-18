@@ -136,7 +136,7 @@ internal object KeyboardFlagEmojiHooker {
                 constructor to entries
             }.getOrNull()
         }.single()
-        val pair = Class.forName("kotlin.Pair", false, loader)
+        val pair = HostClassLookup.load("kotlin.Pair", false, loader)
             .getDeclaredConstructor(Any::class.java, Any::class.java).apply { isAccessible = true }
         val pairProbe = pair.newInstance("ONextBox-first", "ONextBox-second")
         val pairFields = pair.declaringClass.declaredFields.filter { !Modifier.isStatic(it.modifiers) }

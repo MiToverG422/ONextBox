@@ -112,8 +112,8 @@ internal object KeyboardDismissButtonHooker {
     }
 
     private fun resolve(loader: ClassLoader): Array<Any> {
-        val view = Class.forName("android.inputmethodservice.navigationbar.NavigationBarView", false, loader)
-        val controller = Class.forName("android.inputmethodservice.NavigationBarController", false, loader)
+        val view = HostClassLookup.load("android.inputmethodservice.navigationbar.NavigationBarView", false, loader)
+        val controller = HostClassLookup.load("android.inputmethodservice.NavigationBarController", false, loader)
         check(ViewGroup::class.java.isAssignableFrom(view))
         val back = view.getDeclaredMethod("getBackButton")
         val dispatcher = back.returnType

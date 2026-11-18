@@ -53,7 +53,7 @@ internal object NotificationRemovalHooker {
         // Battery utility classes are obfuscated and change with every APK update. Filter
         // their exact channel + id at the server instead of guessing the obfuscated name.
         runCatching {
-            val type = Class.forName("com.android.server.notification.NotificationManagerService", false, loader)
+            val type = HostClassLookup.load("com.android.server.notification.NotificationManagerService", false, loader)
             val methods = type.declaredMethods.filter {
                 it.name == "enqueueNotificationInternal" && it.returnType == Void.TYPE &&
                     it.parameterTypes.firstOrNull() == String::class.java &&
@@ -105,7 +105,7 @@ internal object NotificationRemovalHooker {
             "com.coloros.systemui.notification.power.ColorosPowerNotificationWarnings",
         )
         powerTypes.forEach { name ->
-            val type = runCatching { Class.forName(name, false, loader) }.getOrNull() ?: return@forEach
+            val type = runCatching { HostClassLookup.load(name, false, loader) }.getOrNull() ?: return@forEach
             type.declaredMethods.filter { it.name == "showChargeErrorDialog" &&
                 it.parameterTypes.contentEquals(arrayOf(Int::class.javaPrimitiveType)) &&
                 it.returnType == Void.TYPE
@@ -134,7 +134,7 @@ internal object NotificationRemovalHooker {
     ) {
         var count = 0
         classes.forEach { name ->
-            val type = runCatching { Class.forName(name, false, loader) }.getOrNull() ?: return@forEach
+            val type = runCatching { HostClassLookup.load(name, false, loader) }.getOrNull() ?: return@forEach
             type.declaredMethods.filter { it.name in names && it.returnType == Void.TYPE }.forEach { method ->
                 if (install(method) { chain -> if (enabled(feature)) null else chain.proceed() }) count++
             }

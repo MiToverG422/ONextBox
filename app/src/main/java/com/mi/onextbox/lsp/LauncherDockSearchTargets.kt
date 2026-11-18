@@ -86,7 +86,7 @@ internal class LauncherDockSearchTargets(val loader: ClassLoader) {
     val coroutineScope by lazy { LauncherDexResolver.method(loader, "search-lifecycle-scope") { dex ->
         requireNotNull(dex.getMethodData(domesticSchedule)).invokes.single {
             it.paramCount == 1 && it.className.startsWith("androidx.lifecycle.") &&
-                dispatch.parameterTypes[0].isAssignableFrom(Class.forName(it.returnTypeName, false, loader))
+                dispatch.parameterTypes[0].isAssignableFrom(HostClassLookup.load(it.returnTypeName, false, loader))
         }
     } }
 }

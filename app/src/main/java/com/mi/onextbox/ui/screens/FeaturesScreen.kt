@@ -130,6 +130,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     DesktopRecent(true),
     DesktopHiddenApps(true),
     DesktopPages(true),
+    DesktopIosMotion(true),
     SystemUi,
     SystemUiNative(true),
     SystemUiBackGesture(true),
@@ -208,6 +209,18 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     AppInstaller,
     PackageInstaller,
     Camera,
+    CameraGeneral(true),
+    CameraModes(true),
+    CameraControls(true),
+    CameraFilters(true),
+    CameraWatermarks(true),
+    CameraLive(true),
+    GalleryGeneral(true),
+    GalleryFilters(true),
+    GalleryWatermarks(true),
+    GalleryEditing(true),
+    GalleryLive(true),
+    GalleryAI(true),
 }
 
 data class FeatureLaunchOrigin(
@@ -602,6 +615,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.DesktopRecent -> stringResource(R.string.feature_group_recent_tasks)
     FeaturePageMode.DesktopHiddenApps -> stringResource(R.string.hide_recent_apps_title)
     FeaturePageMode.DesktopPages -> stringResource(R.string.desktop_category_pages)
+    FeaturePageMode.DesktopIosMotion -> stringResource(R.string.launcher_ios_motion_title)
     FeaturePageMode.SystemUi -> stringResource(R.string.section_lsp)
     FeaturePageMode.SystemUiNative -> stringResource(R.string.feature_group_native)
     FeaturePageMode.SystemUiBackGesture -> stringResource(R.string.back_gesture_title)
@@ -673,6 +687,18 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Screenshot -> stringResource(R.string.feature_screenshot_title)
     FeaturePageMode.ScreenRecording -> stringResource(R.string.feature_screen_recording_title)
     FeaturePageMode.Camera -> stringResource(R.string.camera_page_title)
+    FeaturePageMode.CameraGeneral,
+    FeaturePageMode.CameraModes,
+    FeaturePageMode.CameraControls,
+    FeaturePageMode.CameraFilters,
+    FeaturePageMode.CameraWatermarks,
+    FeaturePageMode.CameraLive,
+    FeaturePageMode.GalleryGeneral,
+    FeaturePageMode.GalleryFilters,
+    FeaturePageMode.GalleryWatermarks,
+    FeaturePageMode.GalleryEditing,
+    FeaturePageMode.GalleryLive,
+    FeaturePageMode.GalleryAI -> stringResource(MediaUnlockPage.byMode.getValue(mode).title)
     FeaturePageMode.Translation -> stringResource(R.string.feature_translation_title)
     FeaturePageMode.SmartSidebar -> stringResource(R.string.sidebar_page_title)
     FeaturePageMode.AppInstaller -> if (com.mi.onextbox.lsp.RegionalAppPackages.stdspInstaller(LocalContext.current)) "StdSP Core" else stringResource(R.string.installer_cleanup_title)
@@ -681,6 +707,8 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
 }
 
 internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when (mode) {
+    FeaturePageMode.Camera, FeaturePageMode.Gallery, FeaturePageMode.CameraWatermarks, FeaturePageMode.GalleryWatermarks ->
+        listOf(com.mi.onextbox.lsp.CameraGallerySettings.PACKAGE_NAME, com.mi.onextbox.lsp.GalleryAiRetouchSettings.PACKAGE_NAME)
     FeaturePageMode.Coui -> com.mi.onextbox.lsp.CouiDividerSettings.recommendedPackages.toList()
     FeaturePageMode.SoftLightGlass -> com.mi.onextbox.lsp.SoftLightGlassSettings.mainPackages.toList()
     FeaturePageMode.Desktop,
@@ -688,7 +716,8 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.DesktopRecent,
     FeaturePageMode.DesktopHiddenApps,
     FeaturePageMode.DesktopIcons,
-    FeaturePageMode.DesktopPages -> listOf(
+    FeaturePageMode.DesktopPages,
+    FeaturePageMode.DesktopIosMotion -> listOf(
         "com.android.launcher",
     )
     FeaturePageMode.SystemUiBackGesture -> listOf("com.android.systemui", "com.android.launcher")
@@ -717,7 +746,12 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.SystemUiNavigationBar -> listOf("android", "system", "com.android.systemui")
     FeaturePageMode.Screenshot -> listOf("android", "system", "com.oplus.screenshot")
     FeaturePageMode.ScreenRecording -> listOf("android", "system", "com.android.systemui", "com.oplus.screenrecorder")
-    FeaturePageMode.Camera -> listOf(com.mi.onextbox.lsp.CameraGallerySettings.PACKAGE_NAME)
+    FeaturePageMode.CameraGeneral,
+    FeaturePageMode.CameraModes,
+    FeaturePageMode.CameraControls,
+    FeaturePageMode.CameraFilters,
+    FeaturePageMode.CameraLive -> listOf(com.mi.onextbox.lsp.CameraGallerySettings.PACKAGE_NAME)
+
     FeaturePageMode.Translation -> listOf(com.mi.onextbox.lsp.ScreenTranslationSettings.PACKAGE_NAME)
     FeaturePageMode.SmartSidebar -> listOf(com.mi.onextbox.lsp.SmartSidebarSettings.PACKAGE_NAME)
     FeaturePageMode.AppInstaller -> com.mi.onextbox.lsp.RegionalAppPackages.appInstallers
@@ -734,7 +768,12 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.TrafficManagement -> listOf("com.oplus.trafficmonitor")
     FeaturePageMode.PhoneManager -> listOf(PhoneManagerSettings.PACKAGE_NAME)
     FeaturePageMode.ThemeStore -> com.mi.onextbox.lsp.RegionalAppPackages.themes
-    FeaturePageMode.Gallery -> listOf(com.mi.onextbox.lsp.GalleryAiRetouchSettings.PACKAGE_NAME)
+    FeaturePageMode.GalleryGeneral,
+    FeaturePageMode.GalleryFilters,
+    FeaturePageMode.GalleryEditing,
+    FeaturePageMode.GalleryLive,
+    FeaturePageMode.GalleryAI -> listOf(com.mi.onextbox.lsp.GalleryAiRetouchSettings.PACKAGE_NAME)
+
     FeaturePageMode.MultiApp -> listOf("system", com.mi.onextbox.lsp.SystemCustomizationSettings.MULTI_APP)
     FeaturePageMode.SecurePay -> listOf(SecurePaySettings.PACKAGE_NAME)
     FeaturePageMode.GameAssistant -> listOf(GameAssistantSettings.PACKAGE_NAME)
@@ -1652,6 +1691,7 @@ private fun FeatureSubPage(
             onRecentTaskRadiusDpChange = onRecentTaskRadiusDpChange,
             onOpenSubPage = onOpenSubPage,
         )
+        FeaturePageMode.DesktopIosMotion -> LauncherIosMotionPage()
         FeaturePageMode.NotificationRemoval -> NotificationRemovalPage()
         FeaturePageMode.SystemUi -> SystemUiCategoriesPage(onOpenSubPage)
         FeaturePageMode.SystemUiIconOrder -> StatusBarIconOrderPage()
@@ -1670,7 +1710,19 @@ private fun FeatureSubPage(
         )
         FeaturePageMode.Screenshot -> CaptureFeaturesPage(LspConfig.KeyguardFeature.AodScreenshot)
         FeaturePageMode.ScreenRecording -> CaptureFeaturesPage(LspConfig.KeyguardFeature.ScreenOffRecording)
-        FeaturePageMode.Camera -> CameraFeaturesPage()
+        FeaturePageMode.Camera -> CameraFeaturesPage(onOpenSubPage)
+        FeaturePageMode.CameraGeneral,
+        FeaturePageMode.CameraModes,
+        FeaturePageMode.CameraControls,
+        FeaturePageMode.CameraFilters,
+        FeaturePageMode.CameraWatermarks,
+        FeaturePageMode.CameraLive,
+        FeaturePageMode.GalleryGeneral,
+        FeaturePageMode.GalleryFilters,
+        FeaturePageMode.GalleryWatermarks,
+        FeaturePageMode.GalleryEditing,
+        FeaturePageMode.GalleryLive,
+        FeaturePageMode.GalleryAI -> MediaUnlockSettingsPage(mode)
         FeaturePageMode.Translation -> TranslationFeaturesPage()
         FeaturePageMode.SmartSidebar -> SmartSidebarFeaturesPage()
         FeaturePageMode.AppInstaller, FeaturePageMode.PackageInstaller -> InstallerCleanupPage(mode, onOpenSubPage)
@@ -1732,7 +1784,7 @@ private fun FeatureSubPage(
         FeaturePageMode.TrafficManagement -> TrafficManagementPage()
         FeaturePageMode.PhoneManager -> PhoneManagerFeaturesPage()
         FeaturePageMode.ThemeStore -> ThemeStoreFeaturesPage()
-        FeaturePageMode.Gallery -> GalleryFeaturesPage()
+        FeaturePageMode.Gallery -> GalleryFeaturesPage(onOpenSubPage)
         FeaturePageMode.MultiApp -> SettingsGroup {
             SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.MultiAppRestrictions,
                 hasDividerBelow = true)

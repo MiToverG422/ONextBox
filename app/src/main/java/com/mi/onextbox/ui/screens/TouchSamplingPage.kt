@@ -1,5 +1,9 @@
 package com.mi.onextbox.ui.screens
 
+import com.mi.onextbox.ui.common.AnimatedDataContent
+import com.mi.onextbox.ui.settings.SettingsDataRow
+import androidx.compose.foundation.layout.Column
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -104,67 +108,74 @@ internal fun TouchSamplingPage() {
 
     SettingsSection(title = stringResource(R.string.feature_touch_rate_status_group))
     SettingsGroup {
-        when {
-            snapshot == null -> SettingsCardRow(
-                title = stringResource(R.string.feature_touch_rate_loading),
-                summary = "",
-            )
-            !snapshot.available -> SettingsCardRow(
-                title = stringResource(touchStatusMessage(snapshot)),
-                summary = "",
-            )
-            else -> {
-                val current = snapshot.presets.firstOrNull { it.index == snapshot.currentIndex }
-                val currentName = when {
-                    snapshot.currentIndex == 0 -> stringResource(R.string.feature_touch_rate_default)
-                    current != null -> presetName(current)
-                    snapshot.currentIndex != null -> stringResource(
-                        R.string.feature_touch_rate_mode_name, snapshot.currentIndex,
+        AnimatedDataContent(snapshot) { snapshot ->
+            Column {
+                val selectablePresets = snapshot?.presets?.filter { preset ->
+                    preset.index > 0 && (snapshot.defaultChipValue == null || preset.chipValue != snapshot.defaultChipValue)
+                }.orEmpty()
+                when {
+                    snapshot == null -> SettingsCardRow(
+                        title = stringResource(R.string.feature_touch_rate_loading),
+                        summary = "",
                     )
-                    else -> stringResource(R.string.feature_touch_rate_unknown)
-                }
-                val currentDetail = if (snapshot.currentIndex != null && snapshot.currentChipValue != null) {
-                    val detail = stringResource(
-                        R.string.feature_touch_rate_preset_summary,
-                        snapshot.currentIndex,
-                        snapshot.currentChipValue,
+                    !snapshot.available -> SettingsCardRow(
+                        title = stringResource(touchStatusMessage(snapshot)),
+                        summary = "",
                     )
-                    if (snapshot.currentIndex != 0 && snapshot.currentChipValue == snapshot.defaultChipValue) {
-                        "$detail · ${stringResource(R.string.feature_touch_rate_same_chip_as_default)}"
-                    } else {
-                        detail
+                    else -> {
+                        val current = snapshot.presets.firstOrNull { it.index == snapshot.currentIndex }
+                        val currentName = when {
+                            snapshot.currentIndex == 0 -> stringResource(R.string.feature_touch_rate_default)
+                            current != null -> presetName(current)
+                            snapshot.currentIndex != null -> stringResource(
+                                R.string.feature_touch_rate_mode_name, snapshot.currentIndex,
+                            )
+                            else -> stringResource(R.string.feature_touch_rate_unknown)
+                        }
+                        val currentDetail = if (snapshot.currentIndex != null && snapshot.currentChipValue != null) {
+                            val detail = stringResource(
+                                R.string.feature_touch_rate_preset_summary,
+                                snapshot.currentIndex,
+                                snapshot.currentChipValue,
+                            )
+                            if (snapshot.currentIndex != 0 && snapshot.currentChipValue == snapshot.defaultChipValue) {
+                                "$detail · ${stringResource(R.string.feature_touch_rate_same_chip_as_default)}"
+                            } else {
+                                detail
+                            }
+                        } else {
+                            stringResource(R.string.feature_touch_rate_unknown)
+                        }
+                        SettingsCardRow(
+                            title = stringResource(R.string.feature_touch_rate_current),
+                            summary = "$currentName · $currentDetail",
+                            hasDividerBelow = true,
+                        )
+                        SettingsDivider()
+                        val knownRates = selectablePresets.mapNotNull { it.hz }
+                        val min = knownRates.minOrNull()
+                        val max = knownRates.maxOrNull()
+                        val rangeText = when {
+                            min != null && max != null -> stringResource(
+                                R.string.feature_touch_rate_range_value, min, max,
+                            )
+                            selectablePresets.isNotEmpty() -> stringResource(
+                                R.string.feature_touch_rate_modes_without_labels, selectablePresets.size,
+                            )
+                            snapshot.presets.isNotEmpty() -> stringResource(R.string.feature_touch_rate_no_distinct_presets)
+                            else -> stringResource(R.string.feature_touch_rate_no_config)
+                        }
+                        SettingsCardRow(
+                            title = stringResource(R.string.feature_touch_rate_range),
+                            summary = if (knownRates.isNotEmpty() && knownRates.size < selectablePresets.size) {
+                                "$rangeText\n${stringResource(R.string.feature_touch_rate_unlabeled_note)}"
+                            } else {
+                                rangeText
+                            },
+                            hasDividerAbove = true,
+                        )
                     }
-                } else {
-                    stringResource(R.string.feature_touch_rate_unknown)
                 }
-                SettingsCardRow(
-                    title = stringResource(R.string.feature_touch_rate_current),
-                    summary = "$currentName · $currentDetail",
-                    hasDividerBelow = true,
-                )
-                SettingsDivider()
-                val knownRates = selectablePresets.mapNotNull { it.hz }
-                val min = knownRates.minOrNull()
-                val max = knownRates.maxOrNull()
-                val rangeText = when {
-                    min != null && max != null -> stringResource(
-                        R.string.feature_touch_rate_range_value, min, max,
-                    )
-                    selectablePresets.isNotEmpty() -> stringResource(
-                        R.string.feature_touch_rate_modes_without_labels, selectablePresets.size,
-                    )
-                    snapshot.presets.isNotEmpty() -> stringResource(R.string.feature_touch_rate_no_distinct_presets)
-                    else -> stringResource(R.string.feature_touch_rate_no_config)
-                }
-                SettingsCardRow(
-                    title = stringResource(R.string.feature_touch_rate_range),
-                    summary = if (knownRates.isNotEmpty() && knownRates.size < selectablePresets.size) {
-                        "$rangeText\n${stringResource(R.string.feature_touch_rate_unlabeled_note)}"
-                    } else {
-                        rangeText
-                    },
-                    hasDividerAbove = true,
-                )
             }
         }
     }
@@ -227,11 +238,11 @@ internal fun TouchSamplingPage() {
             hasDividerBelow = true,
         )
         SettingsDivider()
-        SettingsCardRow(
+        SettingsDataRow(
+            refreshing = busy,
             title = stringResource(R.string.feature_touch_rate_refresh),
             summary = "",
             onClick = if (busy) null else ({ refresh() }),
-            hasDividerAbove = true,
         )
     }
 

@@ -42,8 +42,11 @@ class KeyboardFlagEmojiHookContractTest {
 
     @Test fun settingHasDefaultResetAndBootSynchronization() {
         val text = source("lsp/LspConfig.kt")
-        assertTrue(text.contains("readBoolean(context, KEY_KEYBOARD_FLAG_EMOJI, false)"))
-        assertTrue(text.contains("setKeyboardFlagEmojiEnabled(context, false)"))
+        val settings = source("lsp/KeyboardFeatureSettings.kt")
+        assertTrue(settings.contains("FlagEmoji(\"keyboard_flag_emoji\")"))
+        assertTrue(settings.contains("LspPreferenceStore.readBoolean(context, option.key, false)"))
+        assertTrue(text.contains("KeyboardFeatureSettings.reset(context)"))
+        assertTrue(settings.contains("Option.entries.forEach { set(context, it, false) }"))
         assertTrue(text.contains("value = if (isKeyboardFlagEmojiEnabled(context)) \"1\" else \"0\""))
         assertTrue(source("ui/screens/KeyboardFeaturesPage.kt").contains("LspConfig.setKeyboardFlagEmojiEnabled(context, checked)"))
     }
@@ -53,8 +56,9 @@ class KeyboardFlagEmojiHookContractTest {
             .first { it.isFile }.readLines().map { it.trim() }
         assertTrue(rules.contains("-keepnames class kotlin.Pair"))
         assertTrue(source("lsp/KeyboardFlagEmojiHooker.kt").contains(
-            "Class.forName(\"kotlin.Pair\", false, loader)",
+            "HostClassLookup.load(\"kotlin.Pair\", false, loader)",
         ))
+        assertTrue(rules.contains("-keep class com.mi.onextbox.lsp.HostClassLookup { *; }"))
     }
 
     private fun source(path: String): String = listOf(File("src/main/java/com/mi/onextbox/$path"),

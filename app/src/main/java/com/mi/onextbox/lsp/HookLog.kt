@@ -17,14 +17,17 @@ internal object HookLog {
     }
 
     fun i(tag: String, message: String, throwable: Throwable? = null) {
+        if (throwable == null && !com.mi.onextbox.diagnostics.RuntimeDiagnostics.allowInformationalLog(tag, message)) return
         write("I", tag, message, throwable)
     }
 
     fun w(tag: String, message: String, throwable: Throwable? = null) {
+        HostDexMetadata.noteResolutionWarning()
         write("W", tag, message, throwable)
     }
 
     fun e(tag: String, message: String, throwable: Throwable? = null) {
+        HostDexMetadata.noteResolutionWarning()
         write("E", tag, message, throwable)
     }
 

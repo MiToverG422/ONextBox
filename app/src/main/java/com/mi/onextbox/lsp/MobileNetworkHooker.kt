@@ -54,11 +54,25 @@ internal object MobileNetworkHooker {
     fun hook(classLoader: ClassLoader, colorOs16: Boolean = false) {
         if (!hookedLoaders.add(System.identityHashCode(classLoader))) return
 
-        var hookCount = 0
-        val preferenceClass = XposedHelpers.findClassIfExists(PREFERENCE_CLASS, classLoader)
+        val report = HookInstallReport()
+        fun target(name: String): Class<*>? = XposedHelpers.findClassIfExists(name, classLoader).also {
+            if (it == null) report.missing("class:$name")
+        }
+        fun install(owner: Class<*>, name: String, callback: XC_MethodHook) {
+            val target = "${owner.name}#$name"
+            var installed = 0
+            // Count each success immediately; a failed overload must not hide earlier handles.
+            owner.declaredMethods.filter { it.name == name }.forEach { method ->
+                runCatching { XposedBridge.hookMethod(method, callback) }
+                    .onSuccess { installed++ }
+                    .onFailure { report.missing(method.toGenericString()); log("hook $target overload failed", it) }
+            }
+            report.record(target, installed)
+        }
+        val preferenceClass = target(PREFERENCE_CLASS)
         if (preferenceClass != null) {
             runCatching {
-                XposedBridge.hookAllMethods(
+                install(
                     preferenceClass,
                     "setVisible",
                     object : XC_MethodHook() {
@@ -70,17 +84,16 @@ internal object MobileNetworkHooker {
                         }
                     },
                 )
-                hookCount++
             }.onFailure { log("hook Preference.setVisible failed", it) }
         }
 
         val preferenceGroupClass =
-            XposedHelpers.findClassIfExists(PREFERENCE_GROUP_CLASS, classLoader)
+            target(PREFERENCE_GROUP_CLASS)
         if (preferenceGroupClass != null) {
             // ColorOS 17 shades AndroidX PreferenceGroup.addPreference() to e(). Hiding after
             // insertion also covers entries that the page adds asynchronously.
             runCatching {
-                XposedBridge.hookAllMethods(
+                install(
                     preferenceGroupClass,
                     "e",
                     object : XC_MethodHook() {
@@ -89,15 +102,14 @@ internal object MobileNetworkHooker {
                         }
                     },
                 )
-                hookCount++
             }.onFailure { log("hook PreferenceGroup.e failed", it) }
         }
 
-        val fragmentClass = XposedHelpers.findClassIfExists(FRAGMENT_CLASS, classLoader)
+        val fragmentClass = target(FRAGMENT_CLASS)
         if (fragmentClass != null) {
             listOf("onCreate", "onResume").forEach { methodName ->
                 runCatching {
-                    XposedBridge.hookAllMethods(
+                    install(
                         fragmentClass,
                         methodName,
                         object : XC_MethodHook() {
@@ -106,16 +118,15 @@ internal object MobileNetworkHooker {
                             }
                         },
                     )
-                    hookCount++
                 }.onFailure { log("hook $FRAGMENT_CLASS.$methodName failed", it) }
             }
         }
 
         val simCardPreferenceClass =
-            XposedHelpers.findClassIfExists(SIM_CARD_PREFERENCE_CLASS, classLoader)
+            target(SIM_CARD_PREFERENCE_CLASS)
         if (simCardPreferenceClass != null) {
             runCatching {
-                XposedBridge.hookAllMethods(
+                install(
                     simCardPreferenceClass,
                     "onBindViewHolder",
                     object : XC_MethodHook() {
@@ -125,17 +136,16 @@ internal object MobileNetworkHooker {
                         }
                     },
                 )
-                hookCount++
             }.onFailure { log("hook SIM card number binding failed", it) }
         }
 
         // SystemUI owns the dialog shell, while ColorOS renders its SIM rows in an embedded
         // com.android.phone surface. Mask the C17 inline adapter output in that process.
         val inlineSimAdapterClass =
-            XposedHelpers.findClassIfExists(INLINE_SIM_ADAPTER_CLASS, classLoader)
+            target(INLINE_SIM_ADAPTER_CLASS)
         if (inlineSimAdapterClass != null) {
             runCatching {
-                XposedBridge.hookAllMethods(
+                install(
                     inlineSimAdapterClass,
                     "onBindViewHolder",
                     object : XC_MethodHook() {
@@ -145,15 +155,14 @@ internal object MobileNetworkHooker {
                         }
                     },
                 )
-                hookCount++
             }.onFailure { log("hook inline SIM number binding failed", it) }
         }
 
         val couiPreferenceClass =
-            XposedHelpers.findClassIfExists(COUI_PREFERENCE_CLASS, classLoader)
+            target(COUI_PREFERENCE_CLASS)
         if (couiPreferenceClass != null) {
             runCatching {
-                XposedBridge.hookAllMethods(
+                install(
                     couiPreferenceClass,
                     "setAssignment",
                     object : XC_MethodHook() {
@@ -167,26 +176,24 @@ internal object MobileNetworkHooker {
                         }
                     },
                 )
-                hookCount++
             }.onFailure { log("hook SIM detail number assignment failed", it) }
         }
 
         SIM_INFO_FRAGMENT_CLASSES.forEach { className ->
-            val simInfoFragment = XposedHelpers.findClassIfExists(className, classLoader)
+            val simInfoFragment = target(className)
                 ?: return@forEach
             CARRIER_BOOLEAN_VISIBILITY_CALLBACKS.forEach { methodName ->
                 runCatching {
-                    XposedBridge.hookAllMethods(
+                    install(
                         simInfoFragment,
                         methodName,
                         forceCarrierVisibilityCallback(visibleArgumentIndex = 1, colorOs16 = colorOs16),
                     )
-                    hookCount++
                 }.onFailure { log("hook $className.$methodName failed", it) }
             }
             CARRIER_TEXT_VISIBILITY_CALLBACKS.forEach { methodName ->
                 runCatching {
-                    XposedBridge.hookAllMethods(
+                    install(
                         simInfoFragment,
                         methodName,
                         forceCarrierVisibilityCallback(
@@ -195,13 +202,12 @@ internal object MobileNetworkHooker {
                             colorOs16 = colorOs16,
                         ),
                     )
-                    hookCount++
                 }.onFailure { log("hook $className.$methodName failed", it) }
             }
         }
 
-        log("Mobile network entry hooks: $hookCount")
-        if (colorOs16) installColorOs16InlineNumberMask()
+        if (colorOs16) report.record("android.widget.TextView#setText", installColorOs16InlineNumberMask())
+        log("Mobile network entry hooks: ${report.summary()}")
     }
 
     private fun forceCarrierVisibilityCallback(
@@ -249,7 +255,7 @@ internal object MobileNetworkHooker {
     }
 
     /** C16's inline SIM adapter is shaded differently; target its semantic TextView ID. */
-    private fun installColorOs16InlineNumberMask() {
+    private fun installColorOs16InlineNumberMask(): Int =
         XposedBridge.hookAllMethods(TextView::class.java, "setText", object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
                 if (!LspConfig.isMobileNetworkHidePhoneNumberEnabledXposed()) return
@@ -262,8 +268,7 @@ internal object MobileNetworkHooker {
                     view.contentDescription = MASKED_PHONE_NUMBER
                 }
             }
-        })
-    }
+        }).size
 
     private fun maskPhoneNumbers(holder: Any) {
         val itemView = runCatching {

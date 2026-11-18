@@ -1,0 +1,9 @@
+Android 15, 16 and 17 Easter egg artwork
+Copyright (C) 2021 The Android Open Source Project
+Copyright (C) 2024 The Android Open Source Project
+Copyright (C) 2026 The Android Open Source Project
+
+Source: Android Open Source Project, frameworks/base/core/res/res/drawable-nodpi/platlogo.xml
+Release tags: android-15.0.0_r1, android-16.0.0_r1, android-17.0.0_r1
+License: Apache License, Version 2.0; see LICENSE.
+Path geometry, colors and viewport are unchanged. XML comment notices are reproduced here.

@@ -58,7 +58,7 @@ internal object LauncherDynamicTargets {
         val owner = dex.findMethod {
             matcher { usingStrings("THREAD_POOL_EXECUTOR"); name = "<clinit>" }
         }.single { it.className.indexOf('.') < 0 }.className
-        val type = Class.forName(owner, false, loader)
+        val type = HostClassLookup.load(owner, false, loader)
         val field = type.declaredFields.single {
             Modifier.isStatic(it.modifiers) && java.util.concurrent.ExecutorService::class.java.isAssignableFrom(it.type)
         }

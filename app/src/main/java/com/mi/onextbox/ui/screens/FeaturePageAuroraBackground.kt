@@ -24,12 +24,13 @@ import kotlin.math.sin
 
 private const val FeatureAuroraFrameIntervalMillis = 33L
 
-/** Shader background for the Features page, with drawing stopped when detached. */
+/** Retains the shader and its phase while an opaque page covers the Features page. */
 @Composable
 internal fun FeaturePageAuroraBackground(
     isDarkTheme: Boolean,
     surfaceColor: Color,
     modifier: Modifier = Modifier,
+    animationEnabled: Boolean = true,
 ) {
     if (!remember { isRuntimeShaderSupported() }) {
         Spacer(modifier = modifier)
@@ -48,6 +49,7 @@ internal fun FeaturePageAuroraBackground(
                 preset = preset,
                 isDarkTheme = isDarkTheme,
                 surfaceColor = surfaceColor,
+                animationEnabled = animationEnabled,
             ),
     )
 }
@@ -127,11 +129,13 @@ private fun Modifier.featureAuroraDraw(
     preset: FeatureAuroraPreset,
     isDarkTheme: Boolean,
     surfaceColor: Color,
+    animationEnabled: Boolean,
 ): Modifier = this then FeatureAuroraElement(
     painter = painter,
     preset = preset,
     isDarkTheme = isDarkTheme,
     surfaceColor = surfaceColor,
+    animationEnabled = animationEnabled,
 )
 
 private data class FeatureAuroraElement(
@@ -139,12 +143,14 @@ private data class FeatureAuroraElement(
     val preset: FeatureAuroraPreset,
     val isDarkTheme: Boolean,
     val surfaceColor: Color,
+    val animationEnabled: Boolean,
 ) : ModifierNodeElement<FeatureAuroraNode>() {
     override fun create(): FeatureAuroraNode = FeatureAuroraNode(
         painter = painter,
         preset = preset,
         isDarkTheme = isDarkTheme,
         surfaceColor = surfaceColor,
+        animationEnabled = animationEnabled,
     )
 
     override fun update(node: FeatureAuroraNode) {
@@ -153,6 +159,7 @@ private data class FeatureAuroraElement(
             preset = preset,
             isDarkTheme = isDarkTheme,
             surfaceColor = surfaceColor,
+            animationEnabled = animationEnabled,
         )
     }
 }
@@ -162,12 +169,13 @@ private class FeatureAuroraNode(
     private var preset: FeatureAuroraPreset,
     private var isDarkTheme: Boolean,
     private var surfaceColor: Color,
+    private var animationEnabled: Boolean,
 ) : Modifier.Node(), DrawModifierNode {
     private var animationJob: Job? = null
     private var animationTimeSeconds = 0f
 
     override fun onAttach() {
-        startAnimation()
+        if (animationEnabled) startAnimation()
     }
 
     override fun onDetach() {
@@ -180,11 +188,20 @@ private class FeatureAuroraNode(
         preset: FeatureAuroraPreset,
         isDarkTheme: Boolean,
         surfaceColor: Color,
+        animationEnabled: Boolean,
     ) {
         this.painter = painter
         this.preset = preset
         this.isDarkTheme = isDarkTheme
         this.surfaceColor = surfaceColor
+        if (this.animationEnabled != animationEnabled) {
+            this.animationEnabled = animationEnabled
+            if (isAttached && animationEnabled) startAnimation()
+            else {
+                animationJob?.cancel()
+                animationJob = null
+            }
+        }
         invalidateDraw()
     }
 

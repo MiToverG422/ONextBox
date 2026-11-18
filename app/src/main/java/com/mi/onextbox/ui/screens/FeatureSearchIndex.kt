@@ -54,15 +54,15 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.ThemeStore, R.string.theme_store_ads_title, R.string.theme_store_ads_summary),
         Entry(FeaturePageMode.SecurePay, R.string.secure_pay_title),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_title),
-        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_promotions_title, R.string.game_assistant_promotions_summary),
-        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_realme_startup_title, R.string.game_assistant_realme_startup_summary),
-        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_unlimited_title, R.string.game_assistant_unlimited_summary),
-        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_music_title, R.string.game_assistant_music_summary),
-        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_temperature_title, R.string.game_assistant_temperature_summary),
-        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_toolbar_temperature_title, R.string.game_assistant_toolbar_temperature_summary),
-        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_root_title, R.string.game_assistant_root_summary),
-        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_developer_title, R.string.game_assistant_developer_summary),
-        Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_skins_title),
+        AdditionalFeatureDefinitions.gamePromotions.searchEntry(),
+        AdditionalFeatureDefinitions.gameStartup.searchEntry(),
+        AdditionalFeatureDefinitions.gameUnlimited.searchEntry(),
+        AdditionalFeatureDefinitions.gameMusic.searchEntry(),
+        AdditionalFeatureDefinitions.gameTemperature.searchEntry(),
+        AdditionalFeatureDefinitions.gameToolbarTemperature.searchEntry(),
+        AdditionalFeatureDefinitions.gameRoot.searchEntry(),
+        AdditionalFeatureDefinitions.gameDeveloper.searchEntry(),
+        AdditionalFeatureDefinitions.gameSkins.searchEntry(),
         Entry(FeaturePageMode.GameAssistant, R.string.game_assistant_skin_title),
         Entry(FeaturePageMode.SecurePay, R.string.secure_pay_hide_risk_cloud_title, R.string.secure_pay_hide_risk_cloud_summary),
         Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_order_title),
@@ -103,12 +103,12 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.PhoneManager, R.string.phone_manager_skip_countdown_title, R.string.phone_manager_skip_countdown_summary),
         Entry(FeaturePageMode.Keyboard, R.string.keyboard_page_title),
         Entry(FeaturePageMode.Keyboard, R.string.keyboard_material_group),
-        Entry(FeaturePageMode.Keyboard, R.string.keyboard_material_unlock_title, R.string.keyboard_material_unlock_summary),
+        AdditionalFeatureDefinitions.keyboardMaterial.searchEntry(),
         Entry(FeaturePageMode.Keyboard, R.string.keyboard_emoji_group),
-        Entry(FeaturePageMode.Keyboard, R.string.keyboard_flag_emoji_title, R.string.keyboard_flag_emoji_summary),
+        AdditionalFeatureDefinitions.keyboardFlagEmoji.searchEntry(),
         Entry(FeaturePageMode.Keyboard, R.string.keyboard_layout_group),
-        Entry(FeaturePageMode.Keyboard, R.string.keyboard_bottom_lift_fix_title, R.string.keyboard_bottom_lift_fix_summary),
-        Entry(FeaturePageMode.Keyboard, R.string.keyboard_hide_dismiss_title, R.string.keyboard_hide_dismiss_summary),
+        AdditionalFeatureDefinitions.keyboardBottomLift.searchEntry(),
+        AdditionalFeatureDefinitions.keyboardHideDismiss.searchEntry(),
         Entry(FeaturePageMode.TrafficManagement, R.string.traffic_network_group),
         Entry(FeaturePageMode.TrafficManagement, R.string.traffic_rules_group),
         Entry(FeaturePageMode.TrafficManagement, R.string.traffic_data_group),
@@ -118,6 +118,19 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.DesktopLayout, R.string.launcher_group_dock),
         Entry(FeaturePageMode.DesktopRecent, R.string.feature_group_recent_tasks, R.string.desktop_recent_entry_summary),
         Entry(FeaturePageMode.DesktopPages, R.string.desktop_category_pages, R.string.desktop_pages_entry_summary),
+        AdditionalFeatureDefinitions.launcherIosMotion.searchEntry(),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_genie, R.string.launcher_ios_genie_summary),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_opening_apps),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_closing_apps),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_bend),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_droplet_corners, R.string.launcher_ios_droplet_corners_summary),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_motion_apps),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_open_speed),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_close_speed),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_bounce, R.string.launcher_ios_bounce_summary),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_bounce_strength),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_timing_group),
+        Entry(FeaturePageMode.DesktopIosMotion, R.string.launcher_ios_slow_motion),
         Entry(FeaturePageMode.Desktop, R.string.section_system_desktop),
         Entry(FeaturePageMode.DesktopPages, R.string.event_page_tool_title, R.string.event_page_tool_summary),
         Entry(FeaturePageMode.DesktopLayout, R.string.feature_launcher_taskbar_search_box_title, R.string.feature_launcher_taskbar_search_box_summary),
@@ -179,7 +192,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SystemUiBackGesture, R.string.back_gesture_predictive_style),
         Entry(FeaturePageMode.SystemUiBackGestureArea, R.string.back_gesture_area, R.string.back_gesture_area_summary),
         Entry(FeaturePageMode.SystemUiBackGestureArea, R.string.back_gesture_area_custom, R.string.back_gesture_area_custom_summary),
-        Entry(FeaturePageMode.SystemUiNative, R.string.feature_aosp_volume_title, R.string.feature_aosp_volume_summary),
+        AdditionalFeatureDefinitions.aospVolume.searchEntry(),
         SharedFeatureDefinitions.stackedSignal.searchEntry(),
         Entry(FeaturePageMode.SystemUiNative, R.string.feature_force_native_clipboard_overlay_title, R.string.feature_force_native_clipboard_overlay_summary),
         Entry(FeaturePageMode.SystemUiLockScreen, R.string.keyguard_page_title, R.string.keyguard_page_entry_summary),
@@ -304,6 +317,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.AndroidSystem, R.string.feature_settings_gms_region_bypass_title, R.string.feature_settings_gms_region_bypass_summary),
         Entry(FeaturePageMode.AndroidSystem, R.string.feature_screen_capture_title, R.string.feature_screen_capture_summary),
         Entry(FeaturePageMode.SystemUiStatusBarNetwork, R.string.feature_large_network_type_title, R.string.feature_large_network_type_summary),
+        Entry(FeaturePageMode.SystemUiStatusBarNetwork, R.string.feature_large_network_position_title),
         Entry(FeaturePageMode.SystemUiStatusBarNetwork, R.string.feature_large_network_artwork_title, R.string.feature_large_network_artwork_summary),
         Entry(FeaturePageMode.SystemUiStatusBarNetwork, R.string.feature_large_network_lte_title, R.string.feature_large_network_lte_summary),
         Entry(FeaturePageMode.Installer, R.string.installer_title),
@@ -440,24 +454,60 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.Assistant, R.string.feature_assistant_gesture_c17_title, R.string.feature_assistant_gesture_c17_summary),
     )
 
-    val entries = allEntries.filter { entry ->
+    val entries = (allEntries + AospFeatureDefinitions.all.map { it.searchEntry() } + MediaUnlockFeatureDefinitions.all.map { it.searchEntry() } + listOf(
+        Entry(FeaturePageMode.CameraWatermarks, R.string.media_watermark_model),
+        Entry(FeaturePageMode.CameraWatermarks, R.string.media_watermark_author),
+        Entry(FeaturePageMode.CameraWatermarks, R.string.media_watermark_location),
+        Entry(FeaturePageMode.CameraWatermarks, R.string.media_watermark_time),
+        Entry(FeaturePageMode.GalleryWatermarks, R.string.media_watermark_make),
+        Entry(FeaturePageMode.CameraWatermarks, R.string.media_watermark_hide_location),
+        Entry(FeaturePageMode.CameraWatermarks, R.string.media_watermark_hide_time),
+    )).filter { entry ->
         (entry.page != FeaturePageMode.SideKey || SideKeyFeaturePolicy.available) &&
             (entry.page != FeaturePageMode.Keyboard || KeyboardFeatureVisibility.isSearchEntryVisible(entry.title))
     }
 }
 
-internal fun featureSearchScore(query: String, title: String, description: String): Int {
-    fun normalize(value: String) = Normalizer.normalize(value, Normalizer.Form.NFKC)
-        .lowercase(Locale.ROOT).trim()
-    val needle = normalize(query)
-    if (needle.isEmpty()) return 0
-    val name = normalize(title)
-    val detail = normalize(description)
-    val tokens = needle.split(Regex("\\s+"))
-    if (!tokens.all { it in name || it in detail }) return 0
-    return when {
-        name == needle -> 3
-        needle in name -> 2
-        else -> 1
+private val featureSearchWhitespace = Regex("\\s+")
+
+internal fun normalizeFeatureSearch(value: String): String =
+    Normalizer.normalize(value, Normalizer.Form.NFKC).lowercase(Locale.ROOT).trim()
+
+/** Normalized once per input, instead of once per candidate. */
+internal class FeatureSearchQuery(query: String) {
+    private val needle = normalizeFeatureSearch(query)
+    private val tokens = if (needle.isEmpty()) emptyList() else needle.split(featureSearchWhitespace)
+
+    fun score(document: FeatureSearchDocument<*>): Int {
+        if (needle.isEmpty() || !tokens.all { it in document.name || it in document.detail }) return 0
+        return when {
+            document.name == needle -> 3
+            needle in document.name -> 2
+            else -> 1
+        }
     }
 }
+
+internal class FeatureSearchDocument<T>(val item: T, title: String, description: String) {
+    val name = normalizeFeatureSearch(title)
+    val detail = normalizeFeatureSearch(description)
+}
+
+/** Three stable buckets preserve the existing exact / title / description ordering. */
+internal fun <T> searchFeatureDocuments(query: String, documents: List<FeatureSearchDocument<T>>): List<T> {
+    val matcher = FeatureSearchQuery(query)
+    val exact = ArrayList<T>()
+    val title = ArrayList<T>()
+    val description = ArrayList<T>()
+    documents.forEach { document ->
+        when (matcher.score(document)) {
+            3 -> exact.add(document.item)
+            2 -> title.add(document.item)
+            1 -> description.add(document.item)
+        }
+    }
+    return exact + title + description
+}
+
+internal fun featureSearchScore(query: String, title: String, description: String): Int =
+    FeatureSearchQuery(query).score(FeatureSearchDocument(Unit, title, description))

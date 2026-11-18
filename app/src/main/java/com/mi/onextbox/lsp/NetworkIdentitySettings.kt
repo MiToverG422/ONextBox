@@ -2,6 +2,8 @@ package com.mi.onextbox.lsp
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.mi.onextbox.diagnostics.SafeModePolicy
+import com.mi.onextbox.lsp.compat.MODERN_PREFERENCES_READY_KEY
 
 internal object NetworkIdentitySettings {
     const val ENABLED = "network_identity_enabled"
@@ -39,6 +41,10 @@ internal object NetworkIdentitySettings {
         return State(values[ENABLED] as? Boolean ?: false, readSlot(0), readSlot(1))
     }
     fun read(prefs: SharedPreferences): State = fromValues(prefs.all)
+    /** Configuration events only; property callbacks reuse the resulting immutable profiles. */
+    fun activeProfiles(values: Map<String, *>, hooksActive: Boolean): Map<Int, NetworkIdentityRules.Profile> =
+        if (!hooksActive || values[MODERN_PREFERENCES_READY_KEY] != true || values[SafeModePolicy.MANUAL] == true) emptyMap()
+        else fromValues(values).profiles()
     fun state(context: Context) = read(LspPreferenceStore.prefs(context))
     fun save(context: Context, state: State) {
         require(!state.enabled || (0..1).all { !state.slot(it).enabled || state.slot(it).profile() != null })

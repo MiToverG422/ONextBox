@@ -63,11 +63,12 @@ class CameraGalleryRulesTest {
     }
 
     @Test fun cameraHasIndependentScopeCatalogAndResetKeyWithoutAdvertisingC16() {
-        assertEquals(listOf(CameraGallerySettings.PACKAGE_NAME), featureRestartPackages(FeaturePageMode.Camera))
+        assertEquals(listOf(CameraGallerySettings.PACKAGE_NAME, GalleryAiRetouchSettings.PACKAGE_NAME), featureRestartPackages(FeaturePageMode.Camera))
         assertTrue(ModuleHotReloadPolicy.supportedPackages.contains(CameraGallerySettings.PACKAGE_NAME))
         val title = R.string.camera_default_gallery_title
-        assertEquals(FeaturePageMode.Camera, FeatureSearchIndex.entries.single { it.title == title }.page)
-        assertEquals(FeaturePageMode.Camera, EnabledFeatureCatalog.entries.single { it.title == title }.page)
+        assertEquals(FeaturePageMode.CameraGeneral, FeatureSearchIndex.entries.single { it.title == title }.page)
+        assertEquals(FeaturePageMode.CameraGeneral, EnabledFeatureCatalog.entries.single { it.title == title }.page)
+        assertEquals(listOf(CameraGallerySettings.PACKAGE_NAME), featureRestartPackages(FeaturePageMode.CameraGeneral))
         assertTrue(EnabledFeatureActions().supports(title))
         assertFalse(ColorOs16FeaturePolicy.isPageAvailable(FeaturePageMode.Camera))
         assertFalse(featureSearchEntries(SystemAdaptationVersion.ColorOs16).any { it.page == FeaturePageMode.Camera })

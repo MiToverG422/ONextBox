@@ -93,6 +93,7 @@ internal fun SystemUiFeaturesPage(
                     hasDividerAbove = true,
                 )
             }
+            AospChargingSettingsGroup()
         }
         FeaturePageMode.SystemUiVolume -> {
             SettingsSection(title = stringResource(R.string.custom_volume_steps))

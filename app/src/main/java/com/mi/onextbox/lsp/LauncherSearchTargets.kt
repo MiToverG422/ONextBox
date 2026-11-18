@@ -31,7 +31,7 @@ internal data class LauncherSearchTargets(
         else candidates.singleOrNull()
     }
 
-    fun isAvailable(loader: ClassLoader): Boolean = isAvailable { Class.forName(it, false, loader) }
+    fun isAvailable(loader: ClassLoader): Boolean = isAvailable { HostClassLookup.load(it, false, loader) }
 
     internal fun isAvailable(findClass: (String) -> Class<*>): Boolean = runCatching {
         val managerType = findClass(manager)

@@ -62,6 +62,7 @@ internal fun <T : Any> RootNavDisplay(
     animate: Boolean = true,
     handleBack: Boolean = true,
     transitionEffects: NavDisplayTransitionEffects = NavDisplayTransitionEffects.Default,
+    onTransitionRunningChanged: (Boolean) -> Unit = {},
     onBack: () -> Unit,
 ) {
     val strategies = remember { listOf(SinglePaneSceneStrategy<T>()) }
@@ -83,6 +84,17 @@ internal fun <T : Any> RootNavDisplay(
     val layers = remember { mutableStateListOf(RootPageLayer(scene, 0f, entries.lastIndex)) }
     val stackKeys = sceneState.entries.map { it.contentKey }
     val previousKeys = remember { mutableListOf<Any>().apply { addAll(stackKeys) } }
+    val transitionRunning by remember(layers, scene.key, dragging) {
+        derivedStateOf {
+            dragging || layers.any {
+                it.scene.key != scene.key || it.offset.isRunning || abs(it.offset.value - it.target) >= 0.001f
+            }
+        }
+    }
+    // Observe here, in composition: a SideEffect-only read is not subscribed to
+    // the final layer removal / isRunning change from the BoxWithConstraints scope.
+    val reportedTransitionRunning = transitionRunning
+    SideEffect { onTransitionRunningChanged(reportedTransitionRunning) }
 
     fun ensureLayer(page: Scene<T>, start: Float): RootPageLayer<T> =
         layers.firstOrNull { it.scene.key == page.key } ?: RootPageLayer(

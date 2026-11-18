@@ -22,7 +22,7 @@ internal object C16StackedSignalHooker {
 
     fun hook(loader: ClassLoader) {
         runCatching {
-            val method = Class.forName(PREFIX + "OplusStackedMobileIconLayoutStrategy", false, loader)
+            val method = HostClassLookup.load(PREFIX + "OplusStackedMobileIconLayoutStrategy", false, loader)
                 .declaredMethods.single { it.name.startsWith("SignalIcon-") && it.parameterCount == 7 }
             var adapter: Adapter? = null
             var unavailable = false
@@ -74,7 +74,7 @@ internal object C16StackedSignalHooker {
             listOf("DefaultStackedMobileIconLayoutStrategy", "BigTypeStackedMobileIconLayoutStrategy",
                 "TigoFiveGStackedMobileIconLayoutStrategy", "OplusStackedMobileIconLayoutStrategy\$ComposeDefaultImpls")
                 .forEach { name ->
-                    Class.forName(PREFIX + name, false, loader).declaredMethods
+                    HostClassLookup.load(PREFIX + name, false, loader).declaredMethods
                         .filter { it.name.contains("SignalIcon") }.forEach {
                             ModernHookRuntime.requireModule().deoptimize(it)
                         }
@@ -88,7 +88,7 @@ internal object C16StackedSignalHooker {
     }
 
     private class Adapter(private val loader: ClassLoader) {
-        private fun type(name: String) = Class.forName(name, false, loader)
+        private fun type(name: String) = HostClassLookup.load(name, false, loader)
         private val composerType = type("androidx.compose.runtime.Composer")
         val start = composerType.getMethod("startRestartGroup", Int::class.javaPrimitiveType)
         val end = composerType.getMethod("endRestartGroup")
@@ -131,12 +131,12 @@ internal object C16StackedSignalHooker {
     }
 
     private class Drawing(private val loader: ClassLoader) {
-        private fun type(name: String) = Class.forName(name, false, loader)
-        private val context = Class.forName("android.app.ActivityThread").getMethod("currentApplication")
+        private fun type(name: String) = HostClassLookup.load(name, false, loader)
+        private val context = HostClassLookup.load("android.app.ActivityThread").getMethod("currentApplication")
             .invoke(null) as Context
         private val donor = InMemoryDexClassLoader(ByteBuffer.wrap(
             context.createPackageContext("com.mi.onextbox", 0).assets.open("c16-stacked-signal.dex").use { it.readBytes() }), loader)
-        private fun port(name: String) = Class.forName("com.mi.onextbox.port.c16.$name", true, donor)
+        private fun port(name: String) = HostClassLookup.load("com.mi.onextbox.port.c16.$name", true, donor)
         private val four = port("FourBarsDimensions").getField("INSTANCE").get(null)
         private val five = port("FiveBarsDimensions").getField("INSTANCE").get(null)
         private val dimensions = port("StackedMobileIconDimensions")

@@ -10,6 +10,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LargeNetworkTypeSettings
 import com.mi.onextbox.ui.settings.SettingsToggleRow
+import com.mi.onextbox.ui.settings.SettingsWindowDropdownPreference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -25,6 +26,7 @@ internal fun LargeNetworkTypeSettingsRow() {
     var bold by remember { mutableStateOf(LargeNetworkTypeSettings.usesBold(context)) }
     var artwork by remember { mutableStateOf(LargeNetworkTypeSettings.usesArtwork(context)) }
     var lte by remember { mutableStateOf(LargeNetworkTypeSettings.usesLte(context)) }
+    var position by remember { mutableIntStateOf(LargeNetworkTypeSettings.position(context)) }
     var saving by remember { mutableStateOf(false) }
     DisposableEffect(context, owner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -34,6 +36,7 @@ internal fun LargeNetworkTypeSettingsRow() {
                 bold = LargeNetworkTypeSettings.usesBold(context)
                 artwork = LargeNetworkTypeSettings.usesArtwork(context)
                 lte = LargeNetworkTypeSettings.usesLte(context)
+                position = LargeNetworkTypeSettings.position(context)
             }
         }
         owner.lifecycle.addObserver(observer)
@@ -41,15 +44,19 @@ internal fun LargeNetworkTypeSettingsRow() {
     }
     val rows = largeNetworkRows(enabled, artwork, followFont)
     FeatureAnimatedRows {
-        rows.forEachIndexed { index, row ->
-            row(row) { _, _ ->
+        // Register hidden rows too: their stable transition state must survive
+        // until the shrink animation finishes, and start hidden before entry.
+        LargeNetworkRow.entries.forEach { row ->
+            row(row, visible = row in rows) { above, below ->
                 val content: @Composable () -> Unit = {
                     when (row) {
                         LargeNetworkRow.Main -> SettingsToggleRow(
                             title = stringResource(R.string.feature_large_network_type_title),
                             summary = stringResource(R.string.feature_large_network_type_summary),
                             checked = enabled,
-                            hasDividerBelow = index < rows.lastIndex,
+                            interactionEnabled = !saving,
+                            hasDividerAbove = above,
+                            hasDividerBelow = below,
                             onCheckedChange = { checked ->
                                 if (!saving) {
                                     saving = true
@@ -63,12 +70,32 @@ internal fun LargeNetworkTypeSettingsRow() {
                                 }
                             },
                         )
+                        LargeNetworkRow.Position -> SettingsWindowDropdownPreference(
+                            title = stringResource(R.string.feature_large_network_position_title),
+                            items = listOf(stringResource(R.string.feature_large_network_position_left),
+                                stringResource(R.string.feature_large_network_position_right)),
+                            selectedIndex = position,
+                            interactionEnabled = !saving && enabled,
+                            onSelectedIndexChange = { selected ->
+                                if (!saving && selected != position) {
+                                    saving = true
+                                    position = selected
+                                    scope.launch {
+                                        try { withContext(Dispatchers.IO) { LargeNetworkTypeSettings.setPosition(context, selected) } }
+                                        catch (cancel: CancellationException) { throw cancel }
+                                        catch (_: Exception) { Toast.makeText(context, R.string.feature_large_network_type_save_failed, Toast.LENGTH_LONG).show() }
+                                        finally { position = LargeNetworkTypeSettings.position(context); saving = false }
+                                    }
+                                }
+                            },
+                        )
                         LargeNetworkRow.Artwork -> SettingsToggleRow(
                             title = stringResource(R.string.feature_large_network_artwork_title),
                             summary = stringResource(R.string.feature_large_network_artwork_summary),
                             checked = artwork,
-                            hasDividerAbove = index > 0,
-                            hasDividerBelow = index < rows.lastIndex,
+                            interactionEnabled = !saving && enabled,
+                            hasDividerAbove = above,
+                            hasDividerBelow = below,
                             onCheckedChange = { checked ->
                                 if (!saving) {
                                     saving = true
@@ -86,8 +113,9 @@ internal fun LargeNetworkTypeSettingsRow() {
                             title = stringResource(R.string.feature_large_network_lte_title),
                             summary = stringResource(R.string.feature_large_network_lte_summary),
                             checked = lte,
-                            hasDividerAbove = index > 0,
-                            hasDividerBelow = index < rows.lastIndex,
+                            interactionEnabled = !saving && enabled && artwork,
+                            hasDividerAbove = above,
+                            hasDividerBelow = below,
                             onCheckedChange = { checked ->
                                 if (!saving) {
                                     saving = true
@@ -105,8 +133,9 @@ internal fun LargeNetworkTypeSettingsRow() {
                             title = stringResource(R.string.feature_large_network_font_title),
                             summary = stringResource(R.string.feature_large_network_font_summary),
                             checked = followFont,
-                            hasDividerAbove = index > 0,
-                            hasDividerBelow = index < rows.lastIndex,
+                            interactionEnabled = !saving && enabled && !artwork,
+                            hasDividerAbove = above,
+                            hasDividerBelow = below,
                             onCheckedChange = { checked ->
                                 if (!saving) {
                                     saving = true
@@ -124,8 +153,9 @@ internal fun LargeNetworkTypeSettingsRow() {
                             title = stringResource(R.string.feature_large_network_bold_title),
                             summary = stringResource(R.string.feature_large_network_bold_summary),
                             checked = bold,
-                            hasDividerAbove = index > 0,
-                            hasDividerBelow = index < rows.lastIndex,
+                            interactionEnabled = !saving && enabled && !artwork && followFont,
+                            hasDividerAbove = above,
+                            hasDividerBelow = below,
                             onCheckedChange = { checked ->
                                 if (!saving) {
                                     saving = true
@@ -147,11 +177,12 @@ internal fun LargeNetworkTypeSettingsRow() {
     }
 }
 
-internal enum class LargeNetworkRow { Main, Artwork, Lte, Font, Bold }
+internal enum class LargeNetworkRow { Main, Position, Artwork, Lte, Font, Bold }
 
 internal fun largeNetworkRows(enabled: Boolean, artwork: Boolean, followFont: Boolean) = buildList {
     add(LargeNetworkRow.Main)
     if (enabled) {
+        add(LargeNetworkRow.Position)
         add(LargeNetworkRow.Artwork)
         if (artwork) add(LargeNetworkRow.Lte)
         else {

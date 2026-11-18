@@ -18,7 +18,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun GalleryFeaturesPage() {
+internal fun GalleryAiRetouchRow(hasDividerBelow: Boolean = false) {
     val app = LocalContext.current.applicationContext
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -38,24 +38,31 @@ internal fun GalleryFeaturesPage() {
             owner.lifecycle.removeObserver(observer)
         }
     }
-    SettingsGroup {
-        SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.GalleryDeleteCountdown,
-            hasDividerBelow = true)
-        SettingsToggleRow(title = stringResource(R.string.gallery_ai_retouch_title),
-            summary = stringResource(R.string.gallery_ai_retouch_summary), checked = enabled, interactionEnabled = !saving,
-            hasDividerAbove = true,
-            onCheckedChange = { next ->
-                if (!saving) {
-                    saving = true
-                    enabled = next
-                    val pending = FeatureSettingWriteQueue.application.enqueue { GalleryAiRetouchSettings.set(app, next) }
-                    scope.launch {
-                        try { pending.await() }
-                        catch (cancel: CancellationException) { throw cancel }
-                        catch (_: Exception) { Toast.makeText(app, R.string.gallery_save_failed, Toast.LENGTH_LONG).show() }
-                        finally { enabled = GalleryAiRetouchSettings.enabled(app); saving = false }
-                    }
+    SettingsToggleRow(title = stringResource(R.string.gallery_ai_retouch_title),
+        summary = "", checked = enabled, interactionEnabled = !saving,
+        hasDividerBelow = hasDividerBelow,
+        onCheckedChange = { next ->
+            if (!saving) {
+                saving = true
+                enabled = next
+                val pending = FeatureSettingWriteQueue.application.enqueue { GalleryAiRetouchSettings.set(app, next) }
+                scope.launch {
+                    try { pending.await() }
+                    catch (cancel: CancellationException) { throw cancel }
+                    catch (_: Exception) { Toast.makeText(app, R.string.gallery_save_failed, Toast.LENGTH_LONG).show() }
+                    finally { enabled = GalleryAiRetouchSettings.enabled(app); saving = false }
                 }
-            })
+            }
+        })
+}
+
+@Composable
+internal fun GalleryGeneralPage() {
+    SettingsGroup {
+        SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.GalleryDeleteCountdown, showSummary = false)
     }
 }
+
+@Composable
+internal fun GalleryFeaturesPage(onOpen: (FeaturePageMode) -> Unit) =
+    MediaCategoriesPage(com.mi.onextbox.lsp.MediaUnlockCatalog.App.Gallery, onOpen)

@@ -42,15 +42,19 @@ internal fun FeatureBackgroundEffect(
     surface: Color,
     accent: Color,
     modifier: Modifier = Modifier,
+    animationEnabled: Boolean = true,
 ) {
     if (style == 0) return
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val lifecycleState by lifecycle.currentStateFlow.collectAsState()
+    val animate = animationEnabled && lifecycleState.isAtLeast(Lifecycle.State.STARTED)
     if (style == 1) {
-        FeaturePageAuroraBackground(dark, surface, modifier)
+        FeaturePageAuroraBackground(dark, surface, modifier, animationEnabled = animate)
         return
     }
     val time = remember { mutableFloatStateOf(0f) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(style, lifecycle) {
+    LaunchedEffect(style, lifecycle, animate) {
+        if (!animate) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             var previous = System.nanoTime()
             while (isActive) {

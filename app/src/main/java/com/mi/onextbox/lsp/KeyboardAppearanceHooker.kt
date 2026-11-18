@@ -26,7 +26,7 @@ internal object KeyboardAppearanceHooker {
     private val blurOwners = WeakHashMap<Any, Boolean>()
     private val hits = ConcurrentHashMap.newKeySet<String>()
     private data class Frame(val marks: Set<String>, val left: Float, val right: Float, val type: String)
-    private val application by lazy { Class.forName("android.app.ActivityThread").getDeclaredMethod("currentApplication") }
+    private val application by lazy { HostClassLookup.load("android.app.ActivityThread").getDeclaredMethod("currentApplication") }
     private fun context() = application.invoke(null) as? Context
     private fun hit(name: String) { if (hits.add(name)) HookLog.i(TAG, "Applied $name") }
     private fun enabled(key: String) = KeyboardPictorialSettings.active("keyboard_$key")

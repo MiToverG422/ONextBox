@@ -5,7 +5,6 @@ import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import io.github.libxposed.api.XposedInterface
-import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
@@ -19,7 +18,10 @@ internal object KeyboardMaterialHooker {
         if (!LspConfig.isKeyboardMaterialUnlockedXposed() && saved == null) return
         val hookKey = "$TAG@${System.identityHashCode(loader)}:material-allowlist"
         runCatching {
-            val targets = saved ?: resolve(loader, apkPath)
+            val targets = saved ?: HostDexMetadata.members(loader, apkPath, "keyboard-material", "v2",
+                accepts = { it["targets"]?.isNotEmpty() == true }) { _ ->
+                mapOf("targets" to resolve(loader, apkPath).map { it as java.lang.reflect.Member })
+            }.getValue("targets").toTypedArray()
             val gate = targets[0] as? Method
             if (gate != null) {
                 targets.drop(1).forEach { ModernHookRuntime.requireModule().deoptimize(it as Method) }
@@ -54,8 +56,8 @@ internal object KeyboardMaterialHooker {
     }
 
     private fun resolve(loader: ClassLoader, apkPath: String): Array<Any> {
-        System.loadLibrary("dexkit")
-        return DexKitBridge.create(apkPath).use { dex ->
+        return ApkDexSession.withSession(apkPath) { open ->
+            val dex = open()
             val apply = dex.findMethod {
                 matcher {
                     usingStrings("applyBlurEnable pkg=")
@@ -72,7 +74,7 @@ internal object KeyboardMaterialHooker {
                 val gate = gates.single()
                 val callers = (gate.callers + gate.callers.flatMap { it.callers })
                     .filter { it.isMethod }.distinctBy { it.descriptor }
-                return@use arrayOf(gate.getMethodInstance(loader),
+                return@withSession arrayOf(gate.getMethodInstance(loader),
                     *callers.map { it.getMethodInstance(loader) }.toTypedArray())
             }
             val field = apply.usingFields.map { it.field }.distinctBy { it.descriptor }.single { data ->

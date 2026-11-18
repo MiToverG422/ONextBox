@@ -28,7 +28,7 @@ internal object SideKeySystemUiHooker {
         if (!SideKeyFeaturePolicy.available) return
         runCatching {
             val owner = Owner(loader)
-            val method = Class.forName("com.android.systemui.SystemUIApplication", false, loader)
+            val method = HostClassLookup.load("com.android.systemui.SystemUIApplication", false, loader)
                 .getDeclaredMethod("onCreate")
             ModernHookRegistry.installCompat("$TAG:application", method, object : ModernMethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
@@ -41,7 +41,7 @@ internal object SideKeySystemUiHooker {
             HotReloadLifecycle.register("$TAG:receiver", capture = { owner.context }, detach = owner::detach,
                 restore = { state -> (state as? Context)?.let(owner::attach) })
             if (saved == null) {
-                val app = Class.forName("android.app.ActivityThread", false, loader)
+                val app = HostClassLookup.load("android.app.ActivityThread", false, loader)
                     .getMethod("currentApplication").invoke(null) as? Context
                 if (app?.packageName == "com.android.systemui") HotReloadLifecycle.afterCommit { owner.attach(app) }
             }
@@ -151,7 +151,7 @@ internal object SideKeySystemUiHooker {
                     if (ctx.getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
                         message(ctx, "side_key_unlock_required"); return
                     }
-                    val type = Class.forName("com.oplus.screenshot.OplusScreenshotManager", false, loader)
+                    val type = HostClassLookup.load("com.oplus.screenshot.OplusScreenshotManager", false, loader)
                     val manager = type.getMethod("getInstance").invoke(null)
                     type.getMethod("takeScreenshot", Bundle::class.java).invoke(manager,
                         Bundle().apply { putString("screenshot_source", "ONextBox_side_key") })
@@ -170,8 +170,8 @@ internal object SideKeySystemUiHooker {
                 activity?.enabled == true && activity.exported && activity.packageName == candidate.`package`
             } ?: run { message(ctx, "side_key_app_unavailable"); return }
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            val starterType = Class.forName("com.android.systemui.plugins.ActivityStarter", false, loader)
-            val dependency = Class.forName("com.android.systemui.Dependency", false, loader)
+            val starterType = HostClassLookup.load("com.android.systemui.plugins.ActivityStarter", false, loader)
+            val dependency = HostClassLookup.load("com.android.systemui.Dependency", false, loader)
             val starter = runCatching {
                 dependency.getMethod("get", Class::class.java).invoke(null, starterType)
             }.getOrElse {

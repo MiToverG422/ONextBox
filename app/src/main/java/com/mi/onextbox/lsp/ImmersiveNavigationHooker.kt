@@ -41,7 +41,7 @@ internal object ImmersiveNavigationHooker {
             "com.android.systemui.navigationbar.gestural.NavigationHandle",
         )) {
             runCatching {
-                val handleClass = Class.forName(className, false, classLoader)
+                val handleClass = HostClassLookup.load(className, false, classLoader)
                 val paintField = handleClass.getDeclaredField("mPaint").apply { isAccessible = true }
                 val drawMethod = handleClass.getDeclaredMethod("onDraw", Canvas::class.java)
                 ModernHookRegistry.installFast(

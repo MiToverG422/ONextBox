@@ -14,9 +14,9 @@ internal object ColorOs16AospVolumeHooker {
     private val bypass = ThreadLocal.withInitial { false }
 
     fun hook(loader: ClassLoader) = runCatching {
-        val host = Class.forName("com.oplus.systemui.dagger.DaggerOplusReferenceGlobalRootComponent\$OplusReferenceSysUIComponentImpl", false, loader)
-        val factory = Class.forName("com.oplus.systemui.volume.dagger.OplusVolumeModule_ProvideVolumeDialogFactory", false, loader)
-        val module = Class.forName("com.oplus.systemui.volume.dagger.OplusVolumeModule", false, loader)
+        val host = HostClassLookup.load("com.oplus.systemui.dagger.DaggerOplusReferenceGlobalRootComponent\$OplusReferenceSysUIComponentImpl", false, loader)
+        val factory = HostClassLookup.load("com.oplus.systemui.volume.dagger.OplusVolumeModule_ProvideVolumeDialogFactory", false, loader)
+        val module = HostClassLookup.load("com.oplus.systemui.volume.dagger.OplusVolumeModule", false, loader)
         val provide = module.declaredMethods.single { it.name == "provideVolumeDialog" && it.parameterCount == 11 }
         ColorOs16AospVolumeOptions.hook(loader)
         AospVolumeCallbackBridge.registerHotReload(loader, CALLBACK)

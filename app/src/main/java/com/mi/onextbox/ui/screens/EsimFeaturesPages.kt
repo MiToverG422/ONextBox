@@ -1,5 +1,8 @@
 package com.mi.onextbox.ui.screens
 
+import com.mi.onextbox.ui.common.AnimatedDataContent
+import com.mi.onextbox.ui.settings.SettingsDataRow
+
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
@@ -211,24 +214,33 @@ internal fun EsimDiagnosticsPage() {
     }
     var diagnosticsRefreshNonce by rememberSaveable { mutableStateOf(0) }
 
-    LaunchedEffect(diagnosticsRefreshNonce) {
-        EsimDiagnosticsStore.requestRefresh(context)
-        repeat(16) { attempt ->
-            delay(if (attempt == 0) 300L else 750L)
-            EsimDiagnosticsStore.read(context)?.let { snapshot ->
-                diagnosticsSnapshot = snapshot
+    var diagnosticsRefreshing by remember { mutableStateOf(true) }
+    LaunchedEffect(context, diagnosticsRefreshNonce) {
+        diagnosticsRefreshing = true
+        val requestedAt = System.currentTimeMillis()
+        try {
+            EsimDiagnosticsStore.requestRefresh(context)
+            repeat(16) { attempt ->
+                delay(if (attempt == 0) 300L else 750L)
+                EsimDiagnosticsStore.read(context)?.let { snapshot ->
+                    diagnosticsSnapshot = snapshot
+                    if (snapshot.capturedAtMillis >= requestedAt) return@LaunchedEffect
+                }
             }
-        }
+        } finally { diagnosticsRefreshing = false }
     }
 
     SettingsGroup {
-        EsimDiagnosticsContent(
-            snapshot = diagnosticsSnapshot,
-            regionRestrictionBypassEnabled = LspConfig.isEsimRegionRestrictionBypassEnabled(context),
-            profileLimitBypassEnabled = LspConfig.isEsimProfileLimitBypassEnabled(context),
-            confirmationCodePromptEnabled = LspConfig.isEsimConfirmationCodePromptEnabled(context),
-            onRefresh = { diagnosticsRefreshNonce += 1 },
-        )
+        AnimatedDataContent(diagnosticsSnapshot) { displayed ->
+            EsimDiagnosticsContent(
+                snapshot = displayed,
+                refreshing = diagnosticsRefreshing,
+                regionRestrictionBypassEnabled = LspConfig.isEsimRegionRestrictionBypassEnabled(context),
+                profileLimitBypassEnabled = LspConfig.isEsimProfileLimitBypassEnabled(context),
+                confirmationCodePromptEnabled = LspConfig.isEsimConfirmationCodePromptEnabled(context),
+                onRefresh = { if (!diagnosticsRefreshing) diagnosticsRefreshNonce += 1 },
+            )
+        }
     }
 }
 
@@ -238,6 +250,7 @@ internal fun EsimDiagnosticsContent(
     regionRestrictionBypassEnabled: Boolean,
     profileLimitBypassEnabled: Boolean,
     confirmationCodePromptEnabled: Boolean,
+    refreshing: Boolean = false,
     onRefresh: () -> Unit,
 ) {
     val googleEsim = com.mi.onextbox.lsp.RegionalAppPackages.googleEsim(LocalContext.current)
@@ -390,7 +403,8 @@ internal fun EsimDiagnosticsContent(
             ?.let { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM).format(Date(it)) }
             ?: unknown
         FeatureSegmentPosition(index = segmentCount - 1, count = segmentCount) {
-        SettingsCardRow(
+        SettingsDataRow(
+            refreshing = refreshing,
             title = stringResource(R.string.feature_esim_diagnostics_refresh_title),
             summary = stringResource(R.string.feature_esim_diagnostics_last_update, updatedAt),
             onClick = onRefresh,

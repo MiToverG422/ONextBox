@@ -18,7 +18,7 @@ internal class SoftwareUpdateAuthenticationUnavailable : Exception()
 
 internal class SoftwareUpdateDownloadAuth(private val context: Context, private val attestation: Method?) {
     private val propertyGetter by lazy {
-        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java, String::class.java)
+        HostClassLookup.load("android.os.SystemProperties").getMethod("get", String::class.java, String::class.java)
     }
     private fun property(key: String): String = propertyGetter.invoke(null, key, "") as String
 

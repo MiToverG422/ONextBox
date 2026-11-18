@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Canvas
 import android.view.View
 import com.mi.onextbox.lsp.compat.ModernReflect
-import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.AccessibleObject
 import java.lang.reflect.Constructor
 import java.lang.reflect.Executable
@@ -61,9 +60,8 @@ internal class LauncherGridTargets(val values: Array<*>) {
 
         fun resolve(loader: ClassLoader, apkPath: String): LauncherGridTargets {
             if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16) return resolveColorOs16(loader)
-            System.loadLibrary("dexkit")
-            return DexKitBridge.create(apkPath).use { dex ->
-                dex.setThreadNum(1)
+            return ApkDexSession.withSession(apkPath, threadCount = 1) { open ->
+                val dex = open()
                 val adapter = ModernReflect.findClass(ADAPTER, loader)
                 val item = ModernReflect.findClass(ITEM, loader)
                 val init = dex.findMethod {

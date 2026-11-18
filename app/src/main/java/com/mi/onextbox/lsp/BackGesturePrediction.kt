@@ -36,7 +36,8 @@ internal object BackGesturePrediction {
         runCatching { ModernHookRuntime.requireModule().deoptimize(target) }
     }
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader, enabled: Boolean = BackGestureSettings.xposed().predictiveHooks) {
+        if (!enabled) return
         val ext = loader.loadClass(PACKAGE + "CrossBackAnimationExt")
         val backEvent = loader.loadClass("android.window.BackEvent")
         val motion = loader.loadClass("android.window.BackMotionEvent")

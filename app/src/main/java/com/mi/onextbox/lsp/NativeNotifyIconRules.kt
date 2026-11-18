@@ -116,7 +116,7 @@ object NativeNotifyIconRules {
 
     private fun resolveXposedContext(): Context? {
         return runCatching {
-            val activityThread = Class.forName("android.app.ActivityThread")
+            val activityThread = HostClassLookup.load("android.app.ActivityThread")
             val currentApplication = activityThread.getDeclaredMethod("currentApplication")
             currentApplication.invoke(null) as? Context
         }.getOrNull()

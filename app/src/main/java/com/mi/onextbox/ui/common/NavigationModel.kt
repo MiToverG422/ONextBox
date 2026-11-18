@@ -12,7 +12,7 @@ data class BottomTab(
 )
 
 val bottomTabs = listOf(
-    BottomTab(R.string.tab_home, AppIcons.HomeFilled, AppIcons.HomeOutline, screenIndex = 0),
     BottomTab(R.string.tab_features, AppIcons.Widgets, AppIcons.WidgetsOutline, screenIndex = 1),
+    BottomTab(R.string.tab_home, AppIcons.HomeFilled, AppIcons.HomeOutline, screenIndex = 0),
     BottomTab(R.string.section_about, AppIcons.InfoFilled, AppIcons.InfoOutline, screenIndex = 3)
 )

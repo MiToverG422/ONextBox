@@ -7,10 +7,15 @@ import org.junit.Test
 
 class AospBackPanelHookContractTest {
     @Test fun disabledFreshScopeDoesNotResolveOrInstallHooks() {
-        val text = source("lsp/AospBackPanelHooker.kt")
-        val guard = text.indexOf("if (!LspConfig.isAospBackPanelEnabledXposed() && saved == null) return")
-        assertTrue(guard >= 0 && guard < text.indexOf("resolve(loader)"))
-        assertTrue(guard < text.indexOf("ModernHookRegistry.installFast("))
+        val requested = arrayListOf<String>()
+        val loader = object : ClassLoader(null) {
+            override fun loadClass(name: String): Class<*> {
+                requested += name
+                throw ClassNotFoundException(name)
+            }
+        }
+        AospBackPanelHooker.hook(loader, enabled = false)
+        assertTrue(requested.isEmpty())
     }
 
     @Test fun nativeDrawingDoesNotReplaceStockGestureRecognitionOrBackCallbacks() {

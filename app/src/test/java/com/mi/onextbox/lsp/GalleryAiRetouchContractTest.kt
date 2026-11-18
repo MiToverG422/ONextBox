@@ -24,16 +24,19 @@ class GalleryAiRetouchContractTest {
 
     @Test fun galleryPageSearchInventoryAndQuickSwitchShareTheSameDestination() {
         assertFalse(FeaturePageMode.Gallery.isNestedPage)
-        assertEquals(listOf(GalleryAiRetouchSettings.PACKAGE_NAME), featureRestartPackages(FeaturePageMode.Gallery))
+        assertEquals(listOf(CameraGallerySettings.PACKAGE_NAME, GalleryAiRetouchSettings.PACKAGE_NAME), featureRestartPackages(FeaturePageMode.Gallery))
         assertEquals(FeaturePageMode.Gallery, FeatureSearchIndex.entries.single { it.title == R.string.gallery_page_title }.page)
-        assertEquals(FeaturePageMode.Gallery, FeatureSearchIndex.entries.single { it.title == R.string.gallery_ai_retouch_title }.page)
-        assertEquals(FeaturePageMode.Gallery, EnabledFeatureCatalog.entries.single { it.title == R.string.gallery_ai_retouch_title }.page)
+        assertEquals(FeaturePageMode.GalleryAI, FeatureSearchIndex.entries.single { it.title == R.string.gallery_ai_retouch_title }.page)
+        assertEquals(FeaturePageMode.GalleryAI, EnabledFeatureCatalog.entries.single { it.title == R.string.gallery_ai_retouch_title }.page)
+        assertEquals(listOf(GalleryAiRetouchSettings.PACKAGE_NAME), featureRestartPackages(FeaturePageMode.GalleryAI))
         assertTrue(EnabledFeatureActions().supports(R.string.gallery_ai_retouch_title))
         val routes = source("main/java/com/mi/onextbox/ui/Root.kt")
         assertTrue(routes.contains("subclass(RootRoute.FeatureGallery::class)"))
         assertTrue(routes.contains("entry<RootRoute.FeatureGallery>"))
         assertTrue(source("main/java/com/mi/onextbox/ui/screens/FeaturesScreen.kt")
-            .contains("FeaturePageMode.Gallery -> GalleryFeaturesPage()"))
+            .contains("FeaturePageMode.Gallery -> GalleryFeaturesPage(onOpenSubPage)"))
+        assertTrue(routes.contains("subclass(RootRoute.FeatureGalleryAI::class)"))
+        assertTrue(routes.contains("entry<RootRoute.FeatureGalleryAI>"))
     }
 
     @Test fun noPartialHooksRemainOnFailureAndOnlyExactConfigRequestsAreChanged() {

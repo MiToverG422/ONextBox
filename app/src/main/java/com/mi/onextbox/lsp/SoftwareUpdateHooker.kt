@@ -14,7 +14,6 @@ import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import io.github.libxposed.api.XposedInterface
 import org.json.JSONObject
-import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.net.URI
@@ -28,8 +27,9 @@ internal object SoftwareUpdateHooker {
         val saved = DexTargetCache.restoredState("$prefix:targets") as? Map<String, Array<Method>>
         val targets = if (saved?.containsKey(SoftwareUpdateTargets.CACHE_SCHEMA) == true) saved else {
             val refreshed = runCatching {
-                System.loadLibrary("dexkit")
-                DexKitBridge.create(apkPath).use { SoftwareUpdateTargets(it).resolve(loader) }
+                HostDexMetadata.methods(loader, apkPath, "software-update", SoftwareUpdateTargets.CACHE_SCHEMA) {
+                    SoftwareUpdateTargets(it).resolve(loader)
+                }
             }.onFailure { HookLog.w(TAG, "Updater target resolution unavailable", it) }
             if (saved != null) check(refreshed.isSuccess) { "Updater target cache upgrade failed, restart the scope" }
             saved.orEmpty() + refreshed.getOrDefault(emptyMap())

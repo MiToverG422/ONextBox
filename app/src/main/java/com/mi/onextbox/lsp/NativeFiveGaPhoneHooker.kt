@@ -13,6 +13,7 @@ import android.os.PersistableBundle
 import android.os.Process
 import android.provider.Settings
 import android.telephony.TelephonyDisplayInfo
+import com.mi.onextbox.diagnostics.SafeModePolicy
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernHotReloadSession
@@ -36,6 +37,17 @@ internal object NativeFiveGaPhoneHooker {
     fun hook(loader: ClassLoader) {
         if (Process.myUid() != NativeFiveGaProtocol.PHONE_UID || Application.getProcessName() != "com.android.phone") return
         if (discovery != null) return
+        val previous = NativeFiveGaPhoneResources.inactiveTargets(ModernHotReloadSession.current?.previousTargets.orEmpty())
+        val previousLoader = previous.firstOrNull { it.declaringClass.name == SST_CLASS }?.declaringClass?.classLoader
+            ?: HotReloadLifecycle.restoredState("phone:native-five-ga-loader") as? ClassLoader
+        NativeFiveGaPhoneResources.registerInactive(HotReloadLifecycle, previousLoader)
+        if (!NativeFiveGaSettings.getEnabled() || SafeModeRuntime.blocked) {
+            // Covers a switch turned off AFTER the old generation's successful preflight.
+            // Pass-through handles preserve coverage without a Session, loader observers, IPC,
+            // native state changes or polling. Retain only the host loader for a later replay.
+            previous.forEach { target -> ModernHotReloadSession.install(target) { chain -> chain.proceed() } }
+            return
+        }
         Discovery(loader).also { discovery = it }.start()
     }
 
@@ -70,9 +82,9 @@ internal object NativeFiveGaPhoneHooker {
         }
 
         private fun existingLoader(): ClassLoader? {
-            runCatching { Class.forName(SST_CLASS, false, entryLoader) }.getOrNull()?.classLoader?.let { return it }
+            runCatching { HostClassLookup.load(SST_CLASS, false, entryLoader) }.getOrNull()?.classLoader?.let { return it }
             val factory = runCatching {
-                Class.forName("com.android.internal.telephony.PhoneFactory", false, entryLoader)
+                HostClassLookup.load("com.android.internal.telephony.PhoneFactory", false, entryLoader)
             }.getOrNull() ?: return null
             val phones = runCatching { factory.getMethod("getPhones").invoke(null) as? Array<*> }.getOrNull() ?: return null
             for (phone in phones.filterNotNull()) {
@@ -90,7 +102,7 @@ internal object NativeFiveGaPhoneHooker {
             methods += ClassLoader::class.java.declaredMethods.filter {
                 it.name == "loadClass" && it.returnType == Class::class.java && it.parameterTypes.firstOrNull() == String::class.java
             }
-            val dexLoader = Class.forName("dalvik.system.BaseDexClassLoader")
+            val dexLoader = HostClassLookup.load("dalvik.system.BaseDexClassLoader")
             methods += dexLoader.declaredMethods.filter {
                 it.name == "findClass" && it.returnType == Class::class.java && it.parameterTypes.firstOrNull() == String::class.java
             }
@@ -119,6 +131,12 @@ internal object NativeFiveGaPhoneHooker {
             main.post {
                 scheduled.set(false)
                 if (retired || finished) return@post
+                if (!NativeFiveGaSettings.getEnabled() || SafeModeRuntime.blocked) {
+                    finished = true
+                    stopObservers()
+                    main.removeCallbacks(poll)
+                    return@post
+                }
                 HotReloadLifecycle.withInfrastructureHook({}) {
                     runCatching {
                         attempts++
@@ -136,6 +154,12 @@ internal object NativeFiveGaPhoneHooker {
 
         private fun attach(actual: ClassLoader) {
             if (retired || attached) return
+            if (!NativeFiveGaSettings.getEnabled() || SafeModeRuntime.blocked) {
+                finished = true
+                stopObservers()
+                main.removeCallbacks(poll)
+                return
+            }
             installing = true
             try {
                 Session(actual).install()
@@ -190,7 +214,7 @@ internal object NativeFiveGaPhoneHooker {
         private val validNrca = method(util, "isVaildNrcaInfo", nrcaType)
         private val countNrca = method(util, "getTotalDLCellCountFromNrcaInfo", nrcaType)
         private val bandwidthNrca = method(util, "getTotalDLBandwidthKHzFromNrcaInfo", nrcaType)
-        private val propsGet = Class.forName("android.os.SystemProperties").getMethod("get", String::class.java, String::class.java)
+        private val propsGet = HostClassLookup.load("android.os.SystemProperties").getMethod("get", String::class.java, String::class.java)
         private val source = UUID.randomUUID().toString()
         private val main = Handler(Looper.getMainLooper())
         private val records = ConcurrentHashMap<Int, Record>()
@@ -239,7 +263,10 @@ internal object NativeFiveGaPhoneHooker {
         }
         private data class TimerOwner(val record: Record, val epoch: Long, val timer: Any?, val moduleOwned: Boolean)
 
-        private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> schedule() }
+        private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key == NativeFiveGaSettings.ENABLED || key == SafeModePolicy.MANUAL || key == SafeModePolicy.AUTOMATIC ||
+                key == com.mi.onextbox.lsp.compat.MODERN_PREFERENCES_READY_KEY) schedule()
+        }
         private val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 invalidateAll()
@@ -403,9 +430,11 @@ internal object NativeFiveGaPhoneHooker {
                 }
                 complete = true
                 HotReloadLifecycle.register("phone:native-five-ga", canPrepare = {
-                    records.values.none { record -> synchronized(record.lock) { record.owned } }
+                    NativeFiveGaPhoneResources.canReplaceInstalledSession(enabled(),
+                        records.values.any { record -> synchronized(record.lock) { record.owned } })
                 }, canReload = {
-                    records.values.none { record -> synchronized(record.lock) { record.owned } }
+                    NativeFiveGaPhoneResources.canReplaceInstalledSession(enabled(),
+                        records.values.any { record -> synchronized(record.lock) { record.owned } })
                 },
                     detach = {
                         retired = true; complete = false; invalidateAll(); NativeFiveGaBridge.retirePublisher()
@@ -434,7 +463,7 @@ internal object NativeFiveGaPhoneHooker {
             observePreferences()
             bootstrapAttempts++
             if (context == null) context = runCatching {
-                Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as? Context
+                HostClassLookup.load("android.app.ActivityThread").getMethod("currentApplication").invoke(null) as? Context
             }.getOrNull()
             if (!registeredReceiver) context?.let {
                 val filter = IntentFilter().apply {
@@ -630,6 +659,7 @@ internal object NativeFiveGaPhoneHooker {
         }
 
         private fun publish() {
+            if (!enabled()) { pausePublication(); return }
             if (publicationPending.compareAndSet(false, true)) main.post {
                 publicationPending.set(false)
                 runCatching { publishNow() }.onFailure {
@@ -638,7 +668,13 @@ internal object NativeFiveGaPhoneHooker {
             }
         }
 
+        private fun pausePublication() {
+            synchronized(publicationLock) { lastSlots = null; lastStatus = "" }
+            NativeFiveGaBridge.pausePublisher()
+        }
+
         private fun publishNow() {
+            if (!enabled()) { pausePublication(); return }
             val app = context ?: return
             val slots = records.values.sortedBy { it.phoneId }.map { record -> synchronized(record.lock) {
                 val id = record.identity
@@ -657,7 +693,7 @@ internal object NativeFiveGaPhoneHooker {
             synchronized(publicationLock) {
                 if (lastSlots == slots && lastStatus == status) return
                 lastSlots = slots; lastStatus = status
-                NativeFiveGaBridge.publish(app, NativeFiveGaSnapshot(source, ++sequence, slots, status))
+                NativeFiveGaBridge.publish(app, NativeFiveGaSnapshot(source, ++sequence, slots, status), ::enabled)
             }
         }
     }

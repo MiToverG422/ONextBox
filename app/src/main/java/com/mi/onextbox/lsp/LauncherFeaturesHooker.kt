@@ -23,6 +23,7 @@ internal object LauncherFeaturesHooker {
 
     fun hook(classLoader: ClassLoader, apkPath: String) {
         LauncherCustomizationHooker.hook(classLoader)
+        LauncherIosMotionHooker.hook(classLoader)
         LauncherGridHooker.hook(classLoader, apkPath)
         LauncherRecentInteractionHooker.hook(classLoader)
         LauncherBlurHooker.hook(classLoader, apkPath)

@@ -143,6 +143,7 @@ internal fun BootregMatteVideoSandwich(
     layersVisible: Boolean = true,
     fadeInDurationMillis: Int = 0,
     layerModifier: Modifier = Modifier.fillMaxSize(),
+    @RawRes hapticResId: Int? = null,
     onFirstFrame: () -> Unit = {},
     onCompleted: () -> Unit = {},
     onError: (Throwable) -> Unit = {},
@@ -157,14 +158,16 @@ internal fun BootregMatteVideoSandwich(
     val currentCompleted by rememberUpdatedState(onCompleted)
     val currentError by rememberUpdatedState(onError)
     val currentAutoPlay by rememberUpdatedState(autoPlay)
+    val currentLayersVisible by rememberUpdatedState(layersVisible)
     var layersReady by remember(context, videoResId, playCount, lifecycleOwner) {
         mutableStateOf(false)
     }
-    val controller = remember(context, videoResId, playCount, lifecycleOwner) {
+    val controller = remember(context, videoResId, playCount, lifecycleOwner, hapticResId) {
         BootregMatteSceneController(
             context = context,
             videoResId = videoResId,
             playCount = playCount,
+            hapticResId = hapticResId,
         )
     }
     val layerAlpha by animateFloatAsState(
@@ -186,10 +189,15 @@ internal fun BootregMatteVideoSandwich(
             when (event) {
                 Lifecycle.Event.ON_START -> controller.setPlaybackAllowed(currentAutoPlay)
                 Lifecycle.Event.ON_STOP -> controller.setPlaybackAllowed(false)
+                Lifecycle.Event.ON_RESUME -> controller.setHapticsAllowed(currentAutoPlay && currentLayersVisible)
+                Lifecycle.Event.ON_PAUSE -> controller.setHapticsAllowed(false)
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
+        controller.setHapticsAllowed(
+            autoPlay && layersVisible && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED),
+        )
         controller.setPlaybackAllowed(
             autoPlay && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED),
         )
@@ -199,6 +207,9 @@ internal fun BootregMatteVideoSandwich(
         }
     }
     SideEffect {
+        controller.setHapticsAllowed(
+            autoPlay && layersVisible && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED),
+        )
         controller.updateCallbacks(
             onFirstFrame = {
                 layersReady = true
@@ -237,6 +248,7 @@ private class BootregMatteOutputView(
     opaque: Boolean,
     private val onAvailable: (SurfaceTexture) -> Unit,
     private val onDestroyed: (SurfaceTexture) -> Unit,
+    private val onUpdated: () -> Unit = {},
 ) : TextureView(context), TextureView.SurfaceTextureListener, View.OnLayoutChangeListener {
     private var sourceWidth = 0
     private var sourceHeight = 0
@@ -298,7 +310,7 @@ private class BootregMatteOutputView(
         return true
     }
 
-    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
+    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = onUpdated()
 
     override fun onLayoutChange(
         view: View,
@@ -324,8 +336,12 @@ private class BootregMatteSceneController(
     context: Context,
     @RawRes private val videoResId: Int,
     private val playCount: Int,
+    @RawRes hapticResId: Int?,
 ) {
     private val appContext = context.applicationContext
+    private val haptics = hapticResId?.let { OnboardingAnimationHaptics(appContext, it) }
+    private var seeking = false
+    private var hapticFailed = false
     private var normalSurfaceTexture: SurfaceTexture? = null
     private var foregroundSurfaceTexture: SurfaceTexture? = null
     private var renderer: BootregMatteRenderer? = null
@@ -353,6 +369,7 @@ private class BootregMatteSceneController(
             if (normalSurfaceTexture === it) normalSurfaceTexture = null
             releasePipeline()
         },
+        onUpdated = ::onHapticFrame,
     )
     val foregroundView = BootregMatteOutputView(
         context = context,
@@ -386,12 +403,25 @@ private class BootregMatteSceneController(
     fun setPlaybackAllowed(allowed: Boolean) {
         if (playbackAllowed == allowed) return
         playbackAllowed = allowed
+        if (!allowed) haptics?.reset()
         val currentPlayer = player ?: return
         if (!prepared || completed) return
         runCatching {
             if (allowed) currentPlayer.start()
             else if (currentPlayer.isPlaying) currentPlayer.pause()
         }.onFailure(::reportError)
+    }
+
+    fun setHapticsAllowed(allowed: Boolean) {
+        haptics?.setAllowed(allowed && !hapticFailed)
+    }
+
+    private fun onHapticFrame() {
+        val track = haptics ?: return
+        val currentPlayer = player ?: return
+        if (prepared && playbackAllowed && !completed && !seeking && normalView.alpha > 0f) {
+            track.onFrame { currentPlayer.currentPosition.toLong() }
+        }
     }
 
     private fun maybeStartPipeline() {
@@ -450,8 +480,10 @@ private class BootregMatteSceneController(
                 foregroundView.setVideoGeometry(layerWidth, height)
             }
             newPlayer.setOnCompletionListener {
+                haptics?.reset()
                 completedPlayCount++
                 if (completedPlayCount < playCount) {
+                    seeking = true
                     it.seekTo(0, MediaPlayer.SEEK_CLOSEST)
                     if (playbackAllowed) it.start()
                 } else {
@@ -459,6 +491,7 @@ private class BootregMatteSceneController(
                     onCompleted()
                 }
             }
+            newPlayer.setOnSeekCompleteListener { seeking = false }
             newPlayer.setOnErrorListener { _, what, extra ->
                 reportError(IllegalStateException("MediaPlayer error what=$what extra=$extra"))
                 true
@@ -471,6 +504,8 @@ private class BootregMatteSceneController(
     }
 
     private fun reportError(throwable: Throwable) {
+        hapticFailed = true
+        haptics?.setAllowed(false)
         if (!released) onError(throwable)
     }
 
@@ -490,6 +525,8 @@ private class BootregMatteSceneController(
     }
 
     private fun releasePlayer() {
+        haptics?.reset()
+        seeking = false
         prepared = false
         player?.runCatching {
             setSurface(null)
@@ -504,6 +541,7 @@ private class BootregMatteSceneController(
     fun release() {
         if (released) return
         released = true
+        haptics?.release()
         normalView.releaseListener()
         foregroundView.releaseListener()
         releasePipeline()

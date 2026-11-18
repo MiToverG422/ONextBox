@@ -1,5 +1,6 @@
 package com.mi.onextbox.ui
 
+import com.mi.onextbox.R
 import androidx.compose.runtime.setValue
 
 import android.os.Build
@@ -92,6 +93,10 @@ import com.mi.onextbox.ui.layout.LiquidGlassBottomNavigationBar
 import com.mi.onextbox.ui.layout.Page
 import com.mi.onextbox.ui.layout.rememberChromeBlurBackdrop
 import com.mi.onextbox.ui.layout.rememberBottomBarStartupProgress
+import com.mi.onextbox.ui.layout.rememberBottomBarCollapseState
+import com.mi.onextbox.ui.layout.BottomBarHostHeight
+import com.mi.onextbox.ui.layout.BottomBarRouteHiddenOffset
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.mi.onextbox.ui.platform.findActivity
 import com.mi.onextbox.ui.screens.FeatureMainRoute
 import com.mi.onextbox.ui.common.ScrollResetEffect
@@ -225,11 +230,12 @@ private fun MainScreenBackHandler(
     navigator: RootNavigator,
     onTabChange: (Int) -> Unit,
 ) {
-    val isPagerBackHandlerEnabled by remember {
+    val homePageIndex = bottomTabs.indexOfFirst { it.screenIndex == 0 }.coerceAtLeast(0)
+    val isPagerBackHandlerEnabled by remember(homePageIndex) {
         derivedStateOf {
             navigator.current() is RootRoute.Main &&
                     navigator.backStackSize() == 1 &&
-                    mainPagerState.selectedPage != 0
+                    mainPagerState.selectedPage != homePageIndex
         }
     }
     val mainBackEventState = rememberNavigationEventState(NavigationEventInfo.None)
@@ -237,7 +243,7 @@ private fun MainScreenBackHandler(
         state = mainBackEventState,
         isBackEnabled = isPagerBackHandlerEnabled,
         onBackCompleted = {
-            mainPagerState.animateToPage(0)
+            mainPagerState.animateToPage(homePageIndex)
             onTabChange(0)
         },
     )
@@ -292,6 +298,9 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureDesktopPages : RootRoute
+
+    @Serializable
+    data object FeatureDesktopIosMotion : RootRoute
 
     @Serializable
     data object FeatureSystemUi : RootRoute
@@ -507,6 +516,42 @@ private sealed interface RootRoute : NavKey {
     data object FeatureScreenRecording : RootRoute
 
     @Serializable
+    data object FeatureCameraGeneral : RootRoute
+
+    @Serializable
+    data object FeatureCameraModes : RootRoute
+
+    @Serializable
+    data object FeatureCameraControls : RootRoute
+
+    @Serializable
+    data object FeatureCameraFilters : RootRoute
+
+    @Serializable
+    data object FeatureCameraWatermarks : RootRoute
+
+    @Serializable
+    data object FeatureCameraLive : RootRoute
+
+    @Serializable
+    data object FeatureGalleryGeneral : RootRoute
+
+    @Serializable
+    data object FeatureGalleryFilters : RootRoute
+
+    @Serializable
+    data object FeatureGalleryWatermarks : RootRoute
+
+    @Serializable
+    data object FeatureGalleryEditing : RootRoute
+
+    @Serializable
+    data object FeatureGalleryLive : RootRoute
+
+    @Serializable
+    data object FeatureGalleryAI : RootRoute
+
+    @Serializable
     data object FeatureCamera : RootRoute
 
     @Serializable
@@ -551,6 +596,9 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object References : RootRoute
+
+    @Serializable
+    data object Donation : RootRoute
 }
 
 private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
@@ -570,6 +618,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.DesktopRecent -> RootRoute.FeatureDesktopRecent
     FeaturePageMode.DesktopHiddenApps -> RootRoute.FeatureDesktopHiddenApps
     FeaturePageMode.DesktopPages -> RootRoute.FeatureDesktopPages
+    FeaturePageMode.DesktopIosMotion -> RootRoute.FeatureDesktopIosMotion
     FeaturePageMode.SystemUi -> RootRoute.FeatureSystemUi
     FeaturePageMode.SystemUiNative -> RootRoute.FeatureSystemUiNative
     FeaturePageMode.SystemUiBackGesture -> RootRoute.FeatureSystemUiBackGesture
@@ -640,6 +689,18 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Aod -> RootRoute.FeatureAod
     FeaturePageMode.Screenshot -> RootRoute.FeatureScreenshot
     FeaturePageMode.ScreenRecording -> RootRoute.FeatureScreenRecording
+    FeaturePageMode.CameraGeneral -> RootRoute.FeatureCameraGeneral
+    FeaturePageMode.CameraModes -> RootRoute.FeatureCameraModes
+    FeaturePageMode.CameraControls -> RootRoute.FeatureCameraControls
+    FeaturePageMode.CameraFilters -> RootRoute.FeatureCameraFilters
+    FeaturePageMode.CameraWatermarks -> RootRoute.FeatureCameraWatermarks
+    FeaturePageMode.CameraLive -> RootRoute.FeatureCameraLive
+    FeaturePageMode.GalleryGeneral -> RootRoute.FeatureGalleryGeneral
+    FeaturePageMode.GalleryFilters -> RootRoute.FeatureGalleryFilters
+    FeaturePageMode.GalleryWatermarks -> RootRoute.FeatureGalleryWatermarks
+    FeaturePageMode.GalleryEditing -> RootRoute.FeatureGalleryEditing
+    FeaturePageMode.GalleryLive -> RootRoute.FeatureGalleryLive
+    FeaturePageMode.GalleryAI -> RootRoute.FeatureGalleryAI
     FeaturePageMode.Camera -> RootRoute.FeatureCamera
     FeaturePageMode.Translation -> RootRoute.FeatureTranslation
     FeaturePageMode.SmartSidebar -> RootRoute.FeatureSmartSidebar
@@ -658,124 +719,8 @@ private fun AboutPageMode.toRootRoute(): RootRoute? = when (this) {
     AboutPageMode.UpdateReleaseNotes -> RootRoute.SoftwareUpdateReleaseNotes
     AboutPageMode.Contributors -> RootRoute.Contributors
     AboutPageMode.References -> RootRoute.References
+    AboutPageMode.Donation -> RootRoute.Donation
 }
-
-@Stable
-private data class RootUiState(
-    val currentTab: Int,
-    val rootGranted: Boolean,
-    val blurEffectEnabled: Boolean,
-    val featurePageNewStyleEnabled: Boolean,
-    val featurePageDynamicBackgroundActive: Boolean,
-    val bottomBarStartupProgress: () -> Float,
-    val hiddenFeatureSourceModes: Set<FeaturePageMode>,
-    val featureExternalIconScales: Map<FeaturePageMode, () -> Float>,
-    val popDirectionFollowsSwipeEdge: Boolean,
-    val showFpsMonitor: Boolean,
-    val liquidGlassBottomBarEnabled: Boolean,
-    val bottomBarHideLabels: Boolean,
-    val mainPageSwipeEnabled: Boolean,
-    val subPageSwipeEnabled: Boolean,
-    val appLanguageTag: String,
-    val appThemeMode: AppThemeMode,
-    val appUiStyle: AppUiStyle,
-    val appThemeKeyColor: Long?,
-    val appThemePaletteStyle: Int,
-    val appThemeColorSpec: Int,
-    val permissionMonitorVisible: Boolean,
-    val nativeNotifyIconEnabled: Boolean,
-    val nativeNotificationBubblesEnabled: Boolean,
-    val systemUiInternationalNetworkDisplayEnabled: Boolean,
-    val systemUiHideMobileRoamingIndicatorEnabled: Boolean,
-    val systemUiInternationalNotificationStyleEnabled: Boolean,
-    val systemUiHideQsEditEnabled: Boolean,
-    val systemUiHideQsSettingsEnabled: Boolean,
-    val systemUiHideQsTopCarrierEnabled: Boolean,
-    val systemUiHideQsMoreEnabled: Boolean,
-    val systemUiForceNativeClipboardOverlayEnabled: Boolean,
-    val settingsForceGoogleEntryEnabled: Boolean,
-    val gmsRegionRestrictionBypassEnabled: Boolean,
-    val extremeRefresh165Enabled: Boolean,
-    val launcherLayoutUnlocked: Boolean,
-    val assistantScreenOption: AssistantScreenOption,
-    val recentTaskRadiusEnabled: Boolean,
-    val recentTaskRadiusDp: Int,
-    val aodEnhanceEnabled: Boolean,
-    val aodInitDarkBrightness: Int,
-    val aodInitBrightBrightness: Int,
-    val aodRunningBrightnessMultiplier: Float,
-    val aodAllDayUnlockEnabled: Boolean,
-    val aodSingleClickBlockEnabled: Boolean,
-    val assistantPowerMode: Int,
-    val assistantGestureCircleEnabled: Boolean,
-    val assistantGestureCircleC17Enabled: Boolean,
-    val assistantNativePowerEnabled: Boolean,
-    val assistantNativeCircleEnabled: Boolean,
-    val visibleTabs: List<BottomTab>,
-    val selectedIndex: Int,
-    val bottomNavigationHeight: Dp,
-    val blurBackdrop: LayerBackdrop?,
-    val liquidBackdrop: LiquidLayerBackdrop?,
-    val softwareUpdateState: SoftwareUpdateUiState,
-)
-
-@Stable
-private data class RootActions(
-    val onTabChange: (Int) -> Unit,
-    val onBlurEffectEnabledChange: (Boolean) -> Unit,
-    val onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
-    val onPopDirectionFollowsSwipeEdgeChange: (Boolean) -> Unit,
-    val onShowFpsMonitorChange: (Boolean) -> Unit,
-    val onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
-    val onBottomBarHideLabelsChange: (Boolean) -> Unit,
-    val onMainPageSwipeEnabledChange: (Boolean) -> Unit,
-    val onSubPageSwipeEnabledChange: (Boolean) -> Unit,
-    val onAppLanguageChange: (String) -> Unit,
-    val onAppThemeModeChange: (AppThemeMode) -> Unit,
-    val onAppUiStyleChange: (AppUiStyle) -> Unit,
-    val onAppThemeKeyColorChange: (Long?) -> Unit,
-    val onAppThemePaletteStyleChange: (Int) -> Unit,
-    val onAppThemeColorSpecChange: (Int) -> Unit,
-    val onPermissionMonitorVisibleChange: (Boolean) -> Unit,
-    val onNativeNotifyIconEnabledChange: (Boolean) -> Unit,
-    val onNativeNotificationBubblesEnabledChange: (Boolean) -> Unit,
-    val onSystemUiInternationalNetworkDisplayEnabledChange: (Boolean) -> Unit,
-    val onSystemUiHideMobileRoamingIndicatorEnabledChange: (Boolean) -> Unit,
-    val onSystemUiInternationalNotificationStyleEnabledChange: (Boolean) -> Unit,
-    val onSystemUiHideQsEditEnabledChange: (Boolean) -> Unit,
-    val onSystemUiHideQsSettingsEnabledChange: (Boolean) -> Unit,
-    val onSystemUiHideQsTopCarrierEnabledChange: (Boolean) -> Unit,
-    val onSystemUiHideQsMoreEnabledChange: (Boolean) -> Unit,
-    val onSystemUiForceNativeClipboardOverlayEnabledChange: (Boolean) -> Unit,
-    val onSettingsForceGoogleEntryEnabledChange: (Boolean) -> Unit,
-    val onGmsRegionRestrictionBypassEnabledChange: (Boolean) -> Unit,
-    val onExtremeRefresh165EnabledChange: (Boolean) -> Unit,
-    val onLauncherLayoutUnlockedChange: (Boolean) -> Unit,
-    val onAssistantScreenOptionChange: (AssistantScreenOption) -> Unit,
-    val onRecentTaskRadiusEnabledChange: (Boolean) -> Unit,
-    val onRecentTaskRadiusDpChange: (Int) -> Unit,
-    val onAodEnhanceEnabledChange: (Boolean) -> Unit,
-    val onAodInitDarkBrightnessChange: (Int) -> Unit,
-    val onAodInitBrightBrightnessChange: (Int) -> Unit,
-    val onAodRunningBrightnessMultiplierChange: (Float) -> Unit,
-    val onAodAllDayUnlockEnabledChange: (Boolean) -> Unit,
-    val onAodSingleClickBlockEnabledChange: (Boolean) -> Unit,
-    val onAssistantPowerModeChange: (Int) -> Unit,
-    val onAssistantGestureCircleEnabledChange: (Boolean) -> Unit,
-    val onAssistantGestureCircleC17EnabledChange: (Boolean) -> Unit,
-    val onAssistantNativePowerEnabledChange: (Boolean) -> Unit,
-    val onAssistantNativeCircleEnabledChange: (Boolean) -> Unit,
-    val onBottomNavigationHeightChange: (Int) -> Unit,
-    val onBottomChromeBoundsChange: (Boolean, Rect) -> Unit,
-    val onHapticClick: () -> Unit,
-    val popRootRoute: () -> Unit,
-    val popToMainRoute: () -> Unit,
-    val openFeatureSubPage: (FeaturePageMode) -> Unit,
-    val openAppErrorDetail: (Long) -> Unit,
-    val openFeatureSubPageFromMain: (FeaturePageMode, FeatureLaunchOrigin?) -> Unit,
-    val openAboutSubPage: (AboutPageMode) -> Unit,
-    val requestAboutAutoCheckUpdate: () -> Unit,
-)
 
 private val LocalRootUiState = compositionLocalOf<RootUiState> {
     error("No RootUiState provided")
@@ -901,6 +846,7 @@ private fun RootBottomChrome(visible: Boolean, liquidOnly: Boolean) {
             LiquidGlassBottomNavigationBar(
                 hideLabels = ui.bottomBarHideLabels,
                 startupRevealProgress = ui.bottomBarStartupProgress,
+                collapseState = ui.bottomBarCollapse,
                 tabs = ui.visibleTabs,
                 selectedIndex = ui.selectedIndex,
                 pagerState = mainPagerState.pagerState,
@@ -939,6 +885,8 @@ private fun RootBottomChrome(visible: Boolean, liquidOnly: Boolean) {
                 BottomNavigationBar(
                     hideLabels = ui.bottomBarHideLabels,
                     startupRevealProgress = ui.bottomBarStartupProgress,
+                    collapseState = ui.bottomBarCollapse,
+                    onCapsuleBoundsChanged = { actions.onBottomChromeBoundsChange(false, it) },
                     items = ui.visibleTabs.mapIndexed { index, tab ->
                         NavigationItem(
                             label = stringResource(tab.titleRes),
@@ -960,7 +908,6 @@ private fun RootBottomChrome(visible: Boolean, liquidOnly: Boolean) {
                     modifier = Modifier
                         .onGloballyPositioned { coordinates ->
                             actions.onBottomNavigationHeightChange(coordinates.size.height)
-                            actions.onBottomChromeBoundsChange(false, coordinates.boundsInWindow())
                         },
                 )
             }
@@ -1115,6 +1062,7 @@ fun Root(
         ready = bottomBarStartupReady,
         animate = animateBottomBarStartup,
     )
+    val bottomBarCollapse = rememberBottomBarCollapseState()
     val systemInDarkTheme = isSystemInDarkTheme()
     val resolvedKeyColor = com.mi.onextbox.ui.common.rememberMonetSeedColor(
         enabled = appThemeMode.isMonet,
@@ -1218,6 +1166,7 @@ fun Root(
                     subclass(RootRoute.FeatureDesktopRecent::class)
                     subclass(RootRoute.FeatureDesktopHiddenApps::class)
                     subclass(RootRoute.FeatureDesktopPages::class)
+                    subclass(RootRoute.FeatureDesktopIosMotion::class)
                     subclass(RootRoute.FeatureSystemUi::class)
                     subclass(RootRoute.FeatureSystemUiNative::class)
                     subclass(RootRoute.FeatureSystemUiBackGesture::class)
@@ -1289,6 +1238,18 @@ fun Root(
                     subclass(RootRoute.FeatureAod::class)
                     subclass(RootRoute.FeatureScreenshot::class)
                     subclass(RootRoute.FeatureScreenRecording::class)
+                    subclass(RootRoute.FeatureCameraGeneral::class)
+                    subclass(RootRoute.FeatureCameraModes::class)
+                    subclass(RootRoute.FeatureCameraControls::class)
+                    subclass(RootRoute.FeatureCameraFilters::class)
+                    subclass(RootRoute.FeatureCameraWatermarks::class)
+                    subclass(RootRoute.FeatureCameraLive::class)
+                    subclass(RootRoute.FeatureGalleryGeneral::class)
+                    subclass(RootRoute.FeatureGalleryFilters::class)
+                    subclass(RootRoute.FeatureGalleryWatermarks::class)
+                    subclass(RootRoute.FeatureGalleryEditing::class)
+                    subclass(RootRoute.FeatureGalleryLive::class)
+                    subclass(RootRoute.FeatureGalleryAI::class)
                     subclass(RootRoute.FeatureCamera::class)
                     subclass(RootRoute.FeatureTranslation::class)
                     subclass(RootRoute.FeatureSmartSidebar::class)
@@ -1304,6 +1265,7 @@ fun Root(
                     subclass(RootRoute.SoftwareUpdateReleaseNotes::class)
                     subclass(RootRoute.Contributors::class)
                     subclass(RootRoute.References::class)
+                    subclass(RootRoute.Donation::class)
                     // A removed settings page can survive in a saved task after
                     // an app update. Restore the main page instead of failing.
                     defaultDeserializer { RootRoute.Main.serializer() }
@@ -1385,16 +1347,20 @@ fun Root(
         }
         val pagerLayoutDirection = LocalLayoutDirection.current
         val featurePageIsDark = colors.surface.luminance() < .5f
+        var rootNavigationInMotion by remember { mutableStateOf(false) }
         val featurePageDynamicBackgroundVisible = backgroundStyle != 0 && featurePageDynamicBackgroundActive
+        val featureBackgroundAnimating = featurePageDynamicBackgroundActive && (
+            currentRootRoute == RootRoute.Main || rootNavigationInMotion ||
+                featureLaunchSession != null || featureLaunchAnimation != null || featurePredictiveBackMotion != null ||
+                outgoingFeatureAnimations.isNotEmpty()
+            )
         var bottomNavigationHeightPx by remember { mutableIntStateOf(0) }
         val density = LocalDensity.current
         val bottomNavigationHeight = with(density) {
             if (bottomNavigationHeightPx > 0) {
                 bottomNavigationHeightPx.toDp()
-            } else if (liquidGlassBottomBarEnabled && liquidBackdrop != null) {
-                80.dp
             } else {
-                88.dp
+                BottomBarHostHeight
             }
         }
 
@@ -2145,6 +2111,7 @@ fun Root(
             featurePageNewStyleEnabled = featurePageNewStyleEnabled,
             featurePageDynamicBackgroundActive = featurePageDynamicBackgroundVisible,
             bottomBarStartupProgress = bottomBarStartupProgress,
+            bottomBarCollapse = bottomBarCollapse,
             hiddenFeatureSourceModes = buildSet {
                 featureLaunchSession?.mode?.let(::add)
                 outgoingFeatureAnimations.forEach { add(it.session.mode) }
@@ -2330,7 +2297,7 @@ fun Root(
                                     state = mainPagerState.pagerState,
                                     userScrollEnabled = ui.mainPageSwipeEnabled,
                                     verticalAlignment = Alignment.Top,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().nestedScroll(ui.bottomBarCollapse.nestedScrollConnection),
                                 ) { pageIndex ->
                                     val targetTab = ui.visibleTabs.getOrNull(pageIndex)?.screenIndex ?: ui.currentTab
                                     when (targetTab) {
@@ -2395,9 +2362,9 @@ fun Root(
                                             externalTopAppBarState = aboutPageScroll.appBar,
                                             onOpenAppSettings = { actions.openAboutSubPage(AboutPageMode.AppSettings) },
                                             onOpenSoftwareUpdate = { actions.openAboutSubPage(AboutPageMode.Update) },
-                                            onOpenLogs = { actions.openAboutSubPage(AboutPageMode.Logs) },
                                             onOpenContributors = { actions.openAboutSubPage(AboutPageMode.Contributors) },
                                             onOpenReferences = { actions.openAboutSubPage(AboutPageMode.References) },
+                                            onOpenDonation = { actions.openAboutSubPage(AboutPageMode.Donation) },
                                         )
                                         else -> Page(
                                             modifier = Modifier.fillMaxSize(),
@@ -2467,6 +2434,9 @@ fun Root(
             }
             entry<RootRoute.FeatureDesktopPages> {
                 featureEntryContent(FeaturePageMode.DesktopPages)
+            }
+            entry<RootRoute.FeatureDesktopIosMotion> {
+                featureEntryContent(FeaturePageMode.DesktopIosMotion)
             }
             entry<RootRoute.FeatureSystemUi> {
                 featureEntryContent(FeaturePageMode.SystemUi)
@@ -2679,6 +2649,42 @@ fun Root(
             entry<RootRoute.FeatureScreenRecording> {
                 featureEntryContent(FeaturePageMode.ScreenRecording)
             }
+            entry<RootRoute.FeatureCameraGeneral> {
+                featureEntryContent(FeaturePageMode.CameraGeneral)
+            }
+            entry<RootRoute.FeatureCameraModes> {
+                featureEntryContent(FeaturePageMode.CameraModes)
+            }
+            entry<RootRoute.FeatureCameraControls> {
+                featureEntryContent(FeaturePageMode.CameraControls)
+            }
+            entry<RootRoute.FeatureCameraFilters> {
+                featureEntryContent(FeaturePageMode.CameraFilters)
+            }
+            entry<RootRoute.FeatureCameraWatermarks> {
+                featureEntryContent(FeaturePageMode.CameraWatermarks)
+            }
+            entry<RootRoute.FeatureCameraLive> {
+                featureEntryContent(FeaturePageMode.CameraLive)
+            }
+            entry<RootRoute.FeatureGalleryGeneral> {
+                featureEntryContent(FeaturePageMode.GalleryGeneral)
+            }
+            entry<RootRoute.FeatureGalleryFilters> {
+                featureEntryContent(FeaturePageMode.GalleryFilters)
+            }
+            entry<RootRoute.FeatureGalleryWatermarks> {
+                featureEntryContent(FeaturePageMode.GalleryWatermarks)
+            }
+            entry<RootRoute.FeatureGalleryEditing> {
+                featureEntryContent(FeaturePageMode.GalleryEditing)
+            }
+            entry<RootRoute.FeatureGalleryLive> {
+                featureEntryContent(FeaturePageMode.GalleryLive)
+            }
+            entry<RootRoute.FeatureGalleryAI> {
+                featureEntryContent(FeaturePageMode.GalleryAI)
+            }
             entry<RootRoute.FeatureCamera> {
                 featureEntryContent(FeaturePageMode.Camera)
             }
@@ -2704,7 +2710,7 @@ fun Root(
                 val ui = LocalRootUiState.current
                 val actions = LocalRootActions.current
                 com.mi.onextbox.ui.settings.SettingsPageSurface(
-                    title = "设备详细信息", modifier = Modifier.fillMaxSize(),
+                    title = stringResource(R.string.feature_updates_device), modifier = Modifier.fillMaxSize(),
                     showBack = true, onBack = actions.popRootRoute,
                     blurBackdrop = rememberChromeBlurBackdrop(ui.blurEffectEnabled),
                 ) {
@@ -2718,6 +2724,7 @@ fun Root(
             }
             entry<RootRoute.Contributors> { RootAboutEntry(AboutPageMode.Contributors) }
             entry<RootRoute.References> { RootAboutEntry(AboutPageMode.References) }
+            entry<RootRoute.Donation> { RootAboutEntry(AboutPageMode.Donation) }
             }
         }
 
@@ -2763,31 +2770,33 @@ fun Root(
                 val activeAnimation = featureLaunchAnimation
                 val activeSession = featureLaunchSession
                 val handFollowMotion = featurePredictiveBackMotion
-                val handFollowWorkspaceProgress = handFollowMotion?.c17WindowScale()
-                val launchWorkspaceScaleProgress = handFollowWorkspaceProgress
-                    ?: featureWorkspaceScaleProgress.value
-                val launchWorkspaceAlphaProgress = handFollowWorkspaceProgress
-                    ?: featureWorkspaceAlphaProgress.value
-                val launchWorkspaceBlurProgress = handFollowWorkspaceProgress
-                    ?: featureWorkspaceBlurProgress.value
-                val workspaceVisualScale = lerpFloat(
-                    1f,
-                    C17_SOURCE_SCALE,
-                    launchWorkspaceScaleProgress.coerceIn(0f, 1f),
-                )
+                // Read animated values only in their layer/layout consumers.
+                val launchWorkspaceScaleProgress = {
+                    handFollowMotion?.c17WindowScale() ?: featureWorkspaceScaleProgress.value
+                }
+                val launchWorkspaceAlphaProgress = {
+                    handFollowMotion?.c17WindowScale() ?: featureWorkspaceAlphaProgress.value
+                }
+                val launchWorkspaceBlurProgress = {
+                    handFollowMotion?.c17WindowScale() ?: featureWorkspaceBlurProgress.value
+                }
+                val workspaceVisualScale = {
+                    lerpFloat(1f, C17_SOURCE_SCALE, launchWorkspaceScaleProgress().coerceIn(0f, 1f))
+                }
                 val baseScene: @Composable () -> Unit = {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(colors.surface),
                     ) {
-                        if (featurePageDynamicBackgroundVisible) {
+                        if (backgroundStyle != 0) {
                             Box(Modifier.matchParentSize().clipToBounds()) {
                                 com.mi.onextbox.ui.screens.FeatureBackgroundEffect(
                                     style = backgroundStyle,
                                     dark = featurePageIsDark,
                                     surface = colors.surface,
                                     accent = colors.primary,
+                                    animationEnabled = featureBackgroundAnimating,
                                     modifier = Modifier.fillMaxSize().graphicsLayer {
                                         val pageExtent = pagerState.layoutInfo.let { it.pageSize + it.pageSpacing }
                                         val pageOffset = featurePagerIndex - pagerState.currentPage -
@@ -2821,6 +2830,7 @@ fun Root(
                                     (featureLaunchSession ?: parkedFeatureLaunchSession)?.mode?.toRootRoute()
                                         ?.let { it == navigator.current() } == true),
                             transitionEffects = rootTransitionEffects,
+                            onTransitionRunningChanged = { rootNavigationInMotion = it },
                         )
                     }
                 }
@@ -2835,12 +2845,13 @@ fun Root(
                 }
 
                 val closingWindows = outgoingFeatureAnimations.toList()
-                val activeReturnOrigin = activeAnimation?.returnOrigin
-                    ?.atGridPosition(featureLauncherGridPosition)
-                    ?.toReturnOrigin(
-                        workspaceScale = workspaceVisualScale,
-                        viewportBounds = rootViewportBounds,
-                    )
+                val activeReturnOrigin = {
+                    activeAnimation?.returnOrigin?.atGridPosition(featureLauncherGridPosition)
+                        ?.toReturnOrigin(
+                            workspaceScale = workspaceVisualScale(),
+                            viewportBounds = rootViewportBounds,
+                        )
+                }
                 closingWindows.forEach { outgoingAnimation ->
                     key("icon", outgoingAnimation) {
                         C17ClosingFeatureWindowLayer(
@@ -2864,30 +2875,19 @@ fun Root(
                         surface = FeatureWindowSurface.Icon,
                     ) {}
                 }
-                val retainFeatureChrome = activeSession != null ||
-                    parkedFeatureLaunchSession != null || closingWindows.isNotEmpty() || handFollowMotion != null
-                val chromeRouteVisibility by animateFloatAsState(
-                    targetValue = if (currentRootRoute == RootRoute.Main || retainFeatureChrome) 1f else 0f,
-                    animationSpec = tween(220),
-                    label = "Bottom chrome route visibility",
-                )
+                val chromeRouteVisibility by rememberBottomChromeRouteVisibility(currentRootRoute == RootRoute.Main)
                 val bottomChromeHideDistancePx = with(density) {
-                    (rootUiState.bottomNavigationHeight + 48.dp).toPx()
+                    BottomBarRouteHiddenOffset.toPx()
                 }
                 C17StableChromeSceneLayer(
                     transformActive = activeAnimation != null || handFollowMotion != null,
                     workspaceScaleProgress = launchWorkspaceScaleProgress,
                     workspaceAlphaProgress = launchWorkspaceAlphaProgress,
-                    hidden = currentRootRoute != RootRoute.Main &&
-                        (retainFeatureChrome || chromeRouteVisibility == 0f),
+                    hidden = currentRootRoute != RootRoute.Main && chromeRouteVisibility == 0f,
                     routeVisibility = chromeRouteVisibility,
                 ) {
                     Box(
-                        modifier = Modifier.fillMaxSize().then(
-                            if (rootUiState.liquidGlassBottomBarEnabled && rootUiState.liquidBackdrop != null) {
-                                Modifier
-                            } else Modifier.imePadding(),
-                        ).graphicsLayer {
+                        modifier = Modifier.fillMaxSize().imePadding().graphicsLayer {
                             alpha = 1f
                             translationY = (1f - chromeRouteVisibility) * bottomChromeHideDistancePx
                             compositingStrategy = CompositingStrategy.ModulateAlpha
@@ -2981,7 +2981,7 @@ fun Root(
                                 mode,
                                 origin?.toLiveVisualOrigin(
                                     pressScale = featureQueuePressScales.getValue(mode).value,
-                                    workspaceScale = workspaceVisualScale,
+                                    workspaceScale = workspaceVisualScale(),
                                     viewportBounds = rootViewportBounds,
                                 ),
                                 pressToken = pressToken,

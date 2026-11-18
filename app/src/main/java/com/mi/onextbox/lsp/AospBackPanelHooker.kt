@@ -19,11 +19,11 @@ import java.util.WeakHashMap
 internal object AospBackPanelHooker {
     private const val TAG = "ONextBox-AospBackPanel"
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader, enabled: Boolean = LspConfig.isAospBackPanelEnabledXposed()) {
+        if (!enabled) return
         val key = "$TAG@${System.identityHashCode(loader)}"
         val stateKey = "$key:state"
         val saved = HotReloadLifecycle.restoredState(stateKey) as? Array<*>
-        if (!LspConfig.isAospBackPanelEnabledXposed() && saved == null) return
         var owner: NativeVisuals? = null
         runCatching {
             val targets = saved?.getOrNull(0) as? Array<*> ?: resolve(loader)

@@ -716,6 +716,9 @@ internal object LauncherCategoryPageHooker {
         private val workspace = ModernReflect.callMethod(activity, "getWorkspace") as ViewGroup
         private val drawer = ModernReflect.callMethod(activity, "getAppsView") as ViewGroup
         private val drawerController = requireNotNull(ModernReflect.callMethod(activity, "getAllAppsController"))
+        private val desktopTouchSetter = runCatching {
+            ModernReflect.findMethodExact(activity.javaClass, "setTouchInProgress", arrayOf(Boolean::class.javaPrimitiveType!!))
+        }.getOrNull()
         private var panel: LauncherCategoryPanel? = null
         private val apps: ViewGroup get() = panel?.takeIf { it.active }?.apps ?: drawer
         private val controller: Any get() = panel?.takeIf { it.active }?.controller ?: drawerController
@@ -1322,7 +1325,7 @@ internal object LauncherCategoryPageHooker {
         private fun releaseDesktopTouch() {
             ModernReflect.callMethod(workspace, "resetTouchState")
             workspace.requestDisallowInterceptTouchEvent(false)
-            ModernReflect.callMethod(activity, "setTouchInProgress", false)
+            desktopTouchSetter?.invoke(activity, false)
         }
 
         private fun isSearching(): Boolean = ModernReflect.callMethod(apps, "hasEnterSearchMode") == true

@@ -33,7 +33,7 @@ internal object HideRecentAppsHooker {
                 runCatching {
                     LauncherDexResolver.type(loader, "recent-task-list") { dex ->
                         dex.findMethod { matcher { paramTypes("java.util.ArrayList"); returnType = "java.util.ArrayList" } }
-                            .filter { Class.forName(it.className, false, loader).superclass == base }
+                            .filter { HostClassLookup.load(it.className, false, loader).superclass == base }
                             .map { it.className }.distinct().single()
                     }.let(replay::discover)
                 }.onFailure { HookLog.w(TAG, "Recent-task subclass discovery deferred to construction", it) }

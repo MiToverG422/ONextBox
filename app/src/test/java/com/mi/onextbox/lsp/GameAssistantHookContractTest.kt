@@ -8,10 +8,19 @@ import org.junit.Test
 class GameAssistantHookContractTest {
     private fun source(path: String) = listOf(File("src/$path"), File("app/src/$path")).first { it.isFile }.readText()
     @Test fun everyToggleIsDiscoverableAndEditable() {
-        val resources = listOf("promotions", "realme_startup", "unlimited", "music", "temperature", "toolbar_temperature", "root", "developer", "skins")
-        for (name in listOf("FeatureSearchIndex.kt", "EnabledFeatureCatalog.kt", "EnabledFeatureActions.kt")) {
-            val content = source("main/java/com/mi/onextbox/ui/screens/$name")
-            resources.forEach { assertTrue("$name/$it", content.contains("R.string.game_assistant_${it}_title")) }
+        val definitions = com.mi.onextbox.ui.screens.AdditionalFeatureDefinitions.all.filter {
+            it.page == com.mi.onextbox.ui.screens.FeaturePageMode.GameAssistant
+        }
+        assertEquals(GameAssistantSettings.toggles, definitions.mapNotNull { it.preferenceKey }.toSet())
+        val actions = com.mi.onextbox.ui.screens.EnabledFeatureActions()
+        for (definition in definitions) {
+            val catalog = com.mi.onextbox.ui.screens.EnabledFeatureCatalog.entries.single { it.title == definition.title }
+            val search = com.mi.onextbox.ui.screens.FeatureSearchIndex.entries.single { it.title == definition.title }
+            assertEquals(definition.page, catalog.page)
+            assertEquals(definition.page, search.page)
+            assertSame(definition.read, catalog.read)
+            assertEquals(definition.summary, search.description)
+            assertTrue(actions.supports(definition.title))
         }
         val routes = source("main/java/com/mi/onextbox/ui/Root.kt")
         assertTrue(routes.contains("subclass(RootRoute.FeatureGameAssistant::class)"))

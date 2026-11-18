@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.ui.common.AppUiTokens
+import com.mi.onextbox.ui.common.TwemojiFlagText
 import com.mi.onextbox.ui.common.LocalColorOsDialogContent
 import com.mi.onextbox.ui.common.ColorOsDialogChoice
 import io.github.suqi8.coui.kmp.basic.Card
@@ -445,7 +446,7 @@ internal fun SettingsRowTextContent(
         },
     )
     if (summary != null) {
-        Text(
+        TwemojiFlagText(
             text = summary,
             modifier = Modifier.padding(top = 2.dp),
             fontSize = COUITheme.textStyles.body2.fontSize,

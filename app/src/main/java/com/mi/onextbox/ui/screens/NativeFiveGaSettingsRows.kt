@@ -39,11 +39,17 @@ internal fun NativeFiveGaSettingsRows(hasDividerAbove: Boolean = true) {
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
-        val subscription = NativeFiveGaBridge.subscribe(app) { state -> scope.launch { snapshot = state } }
         onDispose {
-            subscription.close()
             prefs.unregisterOnSharedPreferenceChangeListener(listener)
         }
+    }
+    DisposableEffect(app, enabled, saving) {
+        var disposed = false
+        snapshot = null
+        val subscription = if (enabled && !saving) NativeFiveGaBridge.subscribe(app, { NativeFiveGaSettings.enabled(app) }) { state ->
+            scope.launch { if (!disposed) snapshot = state }
+        } else null
+        onDispose { disposed = true; subscription?.close() }
     }
     FeatureAnimatedRows(hasDividerAbove = hasDividerAbove) {
     row(NativeFiveGaSettings.ENABLED) { above, below -> SettingsToggleRow(

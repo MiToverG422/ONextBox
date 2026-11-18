@@ -1,5 +1,7 @@
 package com.mi.onextbox.ui.home
 
+import com.mi.onextbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxWidth
 
@@ -69,7 +71,7 @@ fun HomePage(
         modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
         cornerRadius = com.mi.onextbox.ui.common.AppUiTokens.CardCornerRadius,
     ) {
-        com.mi.onextbox.ui.settings.SettingsCardRow("设备详细信息", "运行内存、闪存与屏幕", showArrow = true,
+        com.mi.onextbox.ui.settings.SettingsCardRow(stringResource(R.string.feature_updates_device), stringResource(R.string.device_details_summary), showArrow = true,
             onClick = onOpenDeviceDetails)
     }
 }

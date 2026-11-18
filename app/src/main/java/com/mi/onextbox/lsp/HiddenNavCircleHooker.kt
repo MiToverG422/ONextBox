@@ -69,7 +69,7 @@ internal object HiddenNavCircleHooker {
         }
     }
 
-    private fun target(loader: ClassLoader, name: String): Class<*> = Class.forName(name, false, loader)
+    private fun target(loader: ClassLoader, name: String): Class<*> = HostClassLookup.load(name, false, loader)
 
     private fun staticBoolean(type: Class<*>, name: String): Method = type.getDeclaredMethod(name).also {
         check(it.returnType == Boolean::class.javaPrimitiveType && Modifier.isStatic(it.modifiers)) {

@@ -24,7 +24,10 @@ internal object BackGestureSettings {
         val leftHeight: Int = 100, val leftPosition: Int = 50, val rightHeight: Int = 100, val rightPosition: Int = 50) {
         val selectedStyle: Int get() = if (aosp) 0 else 1
         val selectedHaptics: Int get() = if (haptics in 0..1) haptics else if (aosp) 0 else 1
-        val active: Boolean get() = aosp || haptics in 0..1 || release || predictive == 1 || area
+        val hapticHooks: Boolean get() = selectedHaptics == 0
+        val gestureHooks: Boolean get() = release || area
+        val predictiveHooks: Boolean get() = predictive == 1
+        val active: Boolean get() = aosp || hapticHooks || gestureHooks || predictiveHooks
     }
 
     fun state(context: Context): State {

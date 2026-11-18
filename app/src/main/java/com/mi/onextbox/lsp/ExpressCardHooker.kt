@@ -51,7 +51,7 @@ internal object ExpressCardHooker {
             })
         HotReloadLifecycle.afterCommit {
             if (host.context == null) host.context = runCatching {
-                ModernReflect.callStaticMethod(Class.forName("android.app.ActivityThread"), "currentApplication") as? Application
+                ModernReflect.callStaticMethod(HostClassLookup.load("android.app.ActivityThread"), "currentApplication") as? Application
             }.getOrNull()?.takeIf { it.packageName == packageName }
         }
         installMethods(classLoader, Application::class.java.name, prefix,

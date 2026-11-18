@@ -1,7 +1,10 @@
 package com.mi.onextbox.diagnostics
 
+import com.mi.onextbox.ui.common.AnimatedDataText
 import android.content.Context
 import android.widget.Toast
+import com.mi.onextbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
@@ -9,6 +12,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -29,27 +33,29 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal val developerToolPages = setOf("bundle", "hookdetails", "sync", "snapshots", "snapshot", "performance", "trace")
-internal fun developerToolTitle(page: String) = when (page) {
-    "bundle" -> "诊断包导出"
-    "hookdetails" -> "单项 Hook 状态"
-    "sync" -> "配置同步状态"
-    "snapshots", "snapshot" -> "功能配置快照"
-    "performance" -> "性能诊断"
-    else -> "临时详细日志"
+internal fun developerToolTitle(context: Context, page: String) = when (page) {
+    "bundle" -> context.getString(R.string.diag_tool_bundle)
+    "hookdetails" -> context.getString(R.string.diag_tool_hook_details)
+    "sync" -> context.getString(R.string.diag_tool_sync)
+    "snapshots", "snapshot" -> context.getString(R.string.diag_tool_snapshots)
+    "performance" -> context.getString(R.string.diag_tool_performance)
+    else -> context.getString(R.string.diag_tool_trace)
 }
 
 @Composable private fun DiagnosticText(text: String) {
-    SelectionContainer { Text(text, modifier = Modifier.padding(16.dp), fontSize = 13.sp,
+    SelectionContainer { AnimatedDataText(text, modifier = Modifier.padding(16.dp), fontSize = 13.sp,
         lineHeight = 19.sp, color = COUITheme.colorScheme.onSurface) }
 }
 
 @Composable internal fun DeveloperToolsContent(page: String, detail: String?, navigate: (String) -> Unit) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     var revision by remember { mutableIntStateOf(0) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var events by remember { mutableStateOf<List<DiagnosticEvent>>(emptyList()) }
+    var featureRows by remember { mutableStateOf<List<FeatureDiagnosticRow>>(emptyList()) }
     var files by remember { mutableStateOf<List<java.io.File>>(emptyList()) }
     var expanded by remember { mutableStateOf<String?>(null) }
     var process by remember { mutableStateOf<String?>(null) }
@@ -77,14 +83,15 @@ internal fun developerToolTitle(page: String) = when (page) {
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) runWork {
             checkNotNull(context.contentResolver.openOutputStream(uri)).use { DiagnosticRepository.bundle(context, it) }
-            message = "诊断包已导出"
+            message = resources.getString(R.string.diag_bundle_exported)
         }
     }
-    LaunchedEffect(page, detail, revision) {
+    LaunchedEffect(context, page, detail, revision) {
         busy = true
         try {
             withContext(Dispatchers.IO) {
                 if (page in setOf("hookdetails", "performance", "sync", "trace")) events = DiagnosticRepository.events(context)
+                if (page == "hookdetails") featureRows = featureDiagnosticRows(context, events)
                 when (page) {
                     "snapshots" -> files = DiagnosticRepository.list(context)
                     "snapshot" -> message = DiagnosticRepository.diff(context, detail.orEmpty())
@@ -93,14 +100,25 @@ internal fun developerToolTitle(page: String) = when (page) {
                         val hash = DiagnosticRules.fingerprint(local)
                         val remoteHash = remote?.let(DiagnosticRules::fingerprint)
                         val ready = remote?.get("__onextbox_api102_snapshot_ready") == true
-                        message = "本地持久配置：$hash\n框架回读：${remoteHash ?: "不可用"}\n" +
-                            "同步状态：${if (!ready) "框架未就绪" else if (hash == remoteHash) "一致" else "不一致"}\n" +
-                            "最近完整同步：${ModernXposedPreferenceSync.lastDiagnosticWrite.takeIf { it > 0 }?.let(::diagnosticTime) ?: "本次运行暂无记录"}\n" +
-                            "最近错误：${ModernXposedPreferenceSync.lastDiagnosticError ?: "无已记录错误"}\n\n目标进程最近回执（历史记录，不代表进程仍存活）：\n" +
+                        message = listOf(
+                            resources.getString(R.string.diag_sync_local, hash),
+                            resources.getString(R.string.diag_sync_remote, remoteHash ?: resources.getString(R.string.diag_unavailable)),
+                            resources.getString(R.string.diag_sync_status, resources.getString(when {
+                                !ready -> R.string.diag_sync_not_ready
+                                hash == remoteHash -> R.string.diag_sync_match
+                                else -> R.string.diag_sync_mismatch
+                            })),
+                            resources.getString(R.string.diag_sync_last_confirmed, ModernXposedPreferenceSync.lastDiagnosticWrite
+                                .takeIf { it > 0 }?.let(::diagnosticTime) ?: resources.getString(R.string.diag_no_session_record)),
+                            resources.getString(R.string.diag_last_error, ModernXposedPreferenceSync.lastDiagnosticError
+                                ?: resources.getString(R.string.diag_no_error)),
+                            "",
+                            resources.getString(R.string.diag_receipts_header),
                             DiagnosticRepository.currentEvents(events).filter { it.kind == "config" }.groupBy { it.process }
                                 .values.joinToString("\n\n") { rows -> rows.last().let {
-                                    "${it.process} · PID ${it.pid}\n${diagnosticTime(it.time)}\n${if (it.detail == hash) "与本地一致" else "与本地不同"} · ${it.detail}"
-                                } }.ifEmpty { "暂无回执，不能判定目标进程已读取" }
+                                    "${it.process} · PID ${it.pid}\n${diagnosticTime(it.time)}\n${resources.getString(if (it.detail == hash) R.string.diag_receipt_match else R.string.diag_receipt_mismatch)} · ${it.detail}"
+                                } }.ifEmpty { resources.getString(R.string.diag_no_receipts) },
+                        ).joinToString("\n")
                     }
                     "trace" -> {
                         val prefs = LspPreferenceStore.prefs(context)
@@ -108,7 +126,8 @@ internal fun developerToolTitle(page: String) = when (page) {
                     }
                 }
             }
-        } catch (error: Exception) { message = error.cause?.message ?: error.toString() }
+        } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+        catch (error: Exception) { message = error.cause?.message ?: error.toString() }
         finally { busy = false }
     }
     LaunchedEffect(page) {
@@ -117,107 +136,132 @@ internal fun developerToolTitle(page: String) = when (page) {
     }
     LaunchedEffect(page) { if (page == "trace") while (true) { now = System.currentTimeMillis(); delay(1000) } }
     if (page != "bundle") SettingsGroup {
-        SettingsCardRow(if (busy) "正在读取…" else "刷新", "", onClick = { if (!busy) revision++ })
+        SettingsDataRow(resources.getString(R.string.diagnostics_refresh), "", refreshing = busy, onClick = { revision++ })
     }
     when (page) {
         "bundle" -> {
-            SettingsGroup { DiagnosticText("包含设备环境、框架与作用域、功能配置、应用日志、Hook 诊断记录和崩溃报告。\n\n过滤常见账号、令牌、手机号、邮件、地址和私人路径；配置文本值不导出。不包含快照原文件。\n\n记录可能包含未识别的个人内容，分享前请检查；不会自动上传。") }
-            SettingsGroup { SettingsCardRow(if (busy) "正在导出…" else "导出 ZIP 诊断包", message,
-                showArrow = true, onClick = { if (!busy) export.launch("ONextBox-diagnostics-${System.currentTimeMillis()}.zip") }) }
+            SettingsGroup { DiagnosticText(resources.getString(R.string.diag_bundle_notice)) }
+            SettingsGroup { SettingsDataRow(if (busy) resources.getString(R.string.diag_exporting) else resources.getString(R.string.diag_export_zip), message,
+                refreshing = busy, onClick = { if (!busy) export.launch("ONextBox-diagnostics-${System.currentTimeMillis()}.zip") }) }
         }
         "sync" -> {
             SettingsGroup { DiagnosticText(message) }
-            SettingsGroup { SettingsCardRow("重新同步", "同步当前本地配置到框架", onClick = {
+            SettingsGroup { SettingsCardRow(resources.getString(R.string.diag_resync), resources.getString(R.string.diag_resync_summary), onClick = {
                 if (!busy) { ModernXposedPreferenceSync.syncNow(context); revision++ }
             }) }
         }
         "snapshots" -> {
-            SettingsGroup { SettingsCardRow("保存当前配置", "仅保存功能配置，本地最多保留 10 份", onClick = {
+            SettingsGroup { SettingsCardRow(resources.getString(R.string.diag_save_snapshot), resources.getString(R.string.diag_save_snapshot_summary), onClick = {
                 runWork { DiagnosticRepository.saveSnapshot(context) }
             }) }
-            if (files.isEmpty()) SettingsGroup { DiagnosticText("暂无配置快照") }
+            if (files.isEmpty()) SettingsGroup { DiagnosticText(resources.getString(R.string.diag_no_snapshots)) }
             files.forEach { file -> SettingsGroup {
                 SettingsCardRow(diagnosticTime(file.nameWithoutExtension.toLongOrNull() ?: file.lastModified()),
-                    "查看差异、恢复或删除", showArrow = true, onClick = { navigate("snapshot:${file.name}") })
+                    resources.getString(R.string.diag_snapshot_actions), showArrow = true, onClick = { navigate("snapshot:${file.name}") })
             } }
         }
         "snapshot" -> {
-            SettingsSection("配置差异")
+            SettingsSection(resources.getString(R.string.diag_diff_title))
             SettingsGroup { DiagnosticText(message) }
             SettingsGroup {
-                SettingsCardRow("恢复此快照", "先备份当前配置，再恢复并同步到框架；应用界面重新打开后读取", onClick = { if (!busy) confirm = "restore" })
+                SettingsCardRow(resources.getString(R.string.diag_restore_this_snapshot), resources.getString(R.string.diag_restore_summary), onClick = { if (!busy) confirm = "restore" })
                 SettingsDivider()
-                SettingsCardRow("与上一份快照比较", "", onClick = { runWork(refresh = false) {
+                SettingsCardRow(resources.getString(R.string.diag_compare_previous), "", onClick = { runWork(refresh = false) {
                     val list = DiagnosticRepository.list(context)
                     val index = list.indexOfFirst { it.name == detail }
-                    val other = list.getOrNull(index + 1) ?: error("没有更早的快照")
+                    val other = list.getOrNull(index + 1) ?: error(resources.getString(R.string.diag_no_previous))
                     val a = DiagnosticRepository.load(context, detail.orEmpty())
                     val b = DiagnosticRepository.load(context, other.name)
-                    message = "对比：${diagnosticTime(other.nameWithoutExtension.toLong())}\n\n" +
-                        (a.keys + b.keys).sorted().filter { a[it] != b[it] }.joinToString("\n\n") { "$it\n本份：${a[it]}\n上一份：${b[it]}" }.ifEmpty { "没有配置差异" }
+                    message = resources.getString(R.string.diag_comparing, diagnosticTime(other.nameWithoutExtension.toLong())) + "\n\n" +
+                        (a.keys + b.keys).sorted().filter { a[it] != b[it] }.joinToString("\n\n") { resources.getString(R.string.diag_diff_snapshot_values, it, a[it] ?: resources.getString(R.string.diag_default), b[it] ?: resources.getString(R.string.diag_default)) }.ifEmpty { resources.getString(R.string.diag_no_differences) }
                 } })
                 SettingsDivider()
-                SettingsCardRow("删除此快照", "", onClick = { if (!busy) confirm = "delete" })
+                SettingsCardRow(resources.getString(R.string.diag_delete_this_snapshot), "", onClick = { if (!busy) confirm = "delete" })
             }
         }
         "trace" -> {
             SettingsGroup {
-                SettingsCardRow("记录状态", if (until > now) "剩余 ${(until - now) / 1000} 秒；到期自动停止" else "已停止")
+                SettingsDataRow(resources.getString(R.string.diag_trace_status), if (until > now) resources.getString(R.string.diag_trace_remaining, (until - now) / 1000) else resources.getString(R.string.diag_trace_stopped))
                 SettingsDivider()
-                SettingsCardRow("记录时长", "$minutes 分钟", onClick = { minutes = when (minutes) { 5 -> 10; 10 -> 15; else -> 5 } })
+                SettingsCardRow(resources.getString(R.string.diag_trace_duration), resources.getString(R.string.diag_minutes, minutes), onClick = { minutes = when (minutes) { 5 -> 10; 10 -> 15; else -> 5 } })
                 SettingsDivider()
-                SettingsCardRow("开始记录", "仅开启所选日志标签。全局调试模式开启时仍会记录其他标签。", onClick = { runWork {
-                    check(tags.isNotEmpty()) { "请至少选择一个标签" }
+                SettingsCardRow(resources.getString(R.string.diag_trace_start), resources.getString(R.string.diag_trace_notice), onClick = { runWork {
+                    check(tags.isNotEmpty()) { resources.getString(R.string.diag_select_tag_required) }
                     ModernXposedPreferenceSync.replaceDiagnosticValues(context, mapOf(RuntimeDiagnostics.UNTIL to System.currentTimeMillis() + minutes * 60_000L,
                         RuntimeDiagnostics.TAGS to tags), featuresOnly = false)
                 } })
                 SettingsDivider()
-                SettingsCardRow("立即停止", "", onClick = { runWork {
+                SettingsCardRow(resources.getString(R.string.diag_trace_stop), "", onClick = { runWork {
                     ModernXposedPreferenceSync.replaceDiagnosticValues(context, mapOf(RuntimeDiagnostics.UNTIL to 0L), featuresOnly = false)
                 } })
             }
-            SettingsSection("日志标签")
+            SettingsSection(resources.getString(R.string.diag_log_tags))
             val choices = (listOf("*", "App") + diagnosticLogTags + events.filter { it.kind == "log" || it.kind == "hook_log" }.map { it.name }).distinct()
-            SettingsGroup { SettingsCardRow("选择日志标签", if ("*" in tags) "全部标签" else "已选择 ${tags.size} 个标签",
+            SettingsGroup { SettingsCardRow(resources.getString(R.string.diag_select_tags), if ("*" in tags) resources.getString(R.string.diag_all_tags) else resources.getString(R.string.diag_selected_tags, tags.size),
                 showExpandArrow = true, expandArrowExpanded = showTags, onClick = { showTags = !showTags }) }
             FeatureExpandableVisibility(visible = showTags) {
                 SettingsGroup { choices.forEachIndexed { i, tag ->
                     if (i > 0) SettingsDivider()
-                    SettingsToggleRow(title = if (tag == "*") "全部标签" else tag, summary = "", checked = tag in tags,
+                    SettingsToggleRow(title = if (tag == "*") resources.getString(R.string.diag_all_tags) else tag, summary = "", checked = tag in tags,
                         onCheckedChange = { enabled -> tags = if (enabled) (if (tag == "*") emptySet() else tags - "*") + tag else tags - tag })
                 } }
             }
         }
         else -> {
-            SettingsGroup { DiagnosticText("以下为已记录的诊断事件。重启或日志缓冲区轮转后可能缺失；未记录不等于失败。" +
-                if (readCachedRootAccessInfo(context)?.state != RootAccessState.Granted) "\n当前无已授权 Root，仅显示本 App 记录。" else "\n按进程最近记录的模块代次显示；历史记录不保证进程仍存活。") }
+            if (page == "hookdetails" && featureRows.isNotEmpty()) {
+                SettingsSection(stringResource(R.string.feature_state_section))
+                SettingsGroup { DiagnosticText(stringResource(R.string.feature_state_notice)) }
+                SettingsGroup {
+                    featureRows.forEachIndexed { index, row ->
+                        if (index > 0) SettingsDivider()
+                        val label = when (row.state) {
+                            FeatureLoadState.Disabled -> R.string.feature_state_disabled
+                            FeatureLoadState.Unsupported -> R.string.feature_state_unsupported
+                            FeatureLoadState.Saved -> R.string.feature_state_saved
+                            FeatureLoadState.WaitingReload -> R.string.feature_state_waiting_reload
+                            FeatureLoadState.Loaded -> R.string.feature_state_loaded
+                            FeatureLoadState.Unmatched -> R.string.feature_state_unmatched
+                            FeatureLoadState.Failed -> R.string.feature_state_failed
+                        }
+                        SettingsCardRow(stringResource(row.title), stringResource(label) +
+                            (row.time?.let { "\n${diagnosticTime(it)} · ${row.process.orEmpty()}" } ?: ""))
+                    }
+                }
+            }
+            SettingsGroup { DiagnosticText(resources.getString(R.string.diag_events_notice) +
+                if (readCachedRootAccessInfo(context)?.state != RootAccessState.Granted) "\n" + resources.getString(R.string.diag_events_no_root) else "\n" + resources.getString(R.string.diag_events_current_generation)) }
             val current = DiagnosticRepository.currentEvents(events)
             val processes = current.map { it.process }.distinct()
-            SettingsGroup { SettingsCardRow("进程", process ?: "全部", onClick = {
+            SettingsGroup { SettingsCardRow(resources.getString(R.string.diag_process), process ?: resources.getString(R.string.logs_level_all), onClick = {
                 val options = listOf<String?>(null) + processes
                 process = options[(options.indexOf(process) + 1) % options.size]
             }) }
             val rows = current.filter { process == null || it.process == process }.filter {
-                if (page == "performance") it.kind in setOf("startup", "dex", "initialization")
+                if (page == "performance") it.kind in setOf("startup", "dex", "initialization", "config_sync", "catalog")
                 else it.kind in setOf("initialization", "installed", "staged", "failure", "callback_failure", "hook_log", "committed")
             }
             val groups = rows.groupBy { it.process + "\n" + it.name }.entries
                 .sortedByDescending { if (page == "performance") it.value.maxOf { r -> r.ms } else it.value.maxOf { r -> r.time } }.take(100)
-            if (groups.isEmpty()) SettingsGroup { DiagnosticText(message.ifBlank { "暂无记录；需要目标作用域加载新模块后才会产生记录。" }) }
+            if (groups.isEmpty()) SettingsGroup { DiagnosticText(message.ifBlank { resources.getString(R.string.diag_no_events) }) }
             groups.forEach { (key, records) -> SettingsGroup {
                 val recent = records.last()
-                SettingsCardRow(recent.name, recent.process + "\n" + if (page == "performance") "最近 ${recent.ms} ms · 峰值 ${records.maxOf { it.ms }} ms" else
-                    "${diagnosticTime(recent.time)} · ${when (recent.kind) { "installed" -> "目标已安装"; "staged" -> "目标已暂存，等待热加载提交"; "failure", "callback_failure" -> "发生异常"; "initialization" -> "初始化结束（零目标可能为功能关闭或未命中）"; "committed" -> "热加载已提交"; else -> "诊断日志" }}",
+                SettingsCardRow(recent.name, recent.process + "\n" + if (page == "performance") resources.getString(R.string.diag_timing, recent.ms, records.maxOf { it.ms }) else
+                    "${diagnosticTime(recent.time)} · ${when (recent.kind) { "installed" -> resources.getString(R.string.diag_event_installed); "staged" -> resources.getString(R.string.diag_event_staged); "failure", "callback_failure" -> resources.getString(R.string.diag_event_failed); "initialization" -> resources.getString(R.string.diag_event_initialized); "committed" -> resources.getString(R.string.diag_event_committed); else -> resources.getString(R.string.diag_event_log) }}",
                     showExpandArrow = true, expandArrowExpanded = expanded == key, onClick = { expanded = if (expanded == key) null else key })
-                if (expanded == key) { SettingsDivider(); DiagnosticText(records.takeLast(10).joinToString("\n\n") {
-                    "${diagnosticTime(it.time)} · ${it.kind} · ${it.ms} ms\n${it.detail}"
-                }) }
+                FeatureExpandableVisibility(visible = expanded == key) {
+                    androidx.compose.foundation.layout.Column {
+                        SettingsDivider()
+                        DiagnosticText(records.takeLast(10).joinToString("\n\n") {
+                            "${diagnosticTime(it.time)} · ${it.kind} · ${it.ms} ms\n${it.detail}"
+                        })
+                    }
+                }
             } }
         }
     }
-    CouiConfirmDialog(show = confirm != null, title = if (confirm == "restore") "恢复配置快照" else "删除配置快照",
-        summary = if (confirm == "restore") "将自动保存当前配置，再覆盖功能开关及参数。框架不可用时不会恢复。" else "此操作无法撤销。",
-        negativeText = "取消", positiveText = "确定", onDismissRequest = { confirm = null }, onPositive = {
+    CouiConfirmDialog(show = confirm != null, title = if (confirm == "restore") resources.getString(R.string.diag_restore_title) else resources.getString(R.string.diag_delete_title),
+        summary = if (confirm == "restore") resources.getString(R.string.diag_restore_confirm) else resources.getString(R.string.diag_delete_confirm),
+        negativeText = resources.getString(android.R.string.cancel), positiveText = resources.getString(android.R.string.ok), onDismissRequest = { confirm = null }, onPositive = {
             val action = confirm; confirm = null
             runWork {
                 if (action == "restore") {

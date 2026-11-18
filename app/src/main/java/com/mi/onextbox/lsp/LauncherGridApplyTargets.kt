@@ -77,7 +77,7 @@ internal class LauncherGridApplyTargets(val values: Array<*>) {
             require(Modifier.isStatic(apply.modifiers) && apply.returnType == Void.TYPE)
             val task = helper.declaredClasses.flatMap { it.declaredConstructors.toList() }
                 .single { it.parameterTypes.contentEquals(signature) }
-            val async = Class.forName("android.os.AsyncTask", false, loader)
+            val async = HostClassLookup.load("android.os.AsyncTask", false, loader)
             require(async.isAssignableFrom(task.declaringClass))
             val completed = completionMethod(task.declaringClass)
             val workspace = launcher.getMethod("getWorkspace")

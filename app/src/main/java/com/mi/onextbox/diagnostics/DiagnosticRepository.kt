@@ -1,5 +1,6 @@
 package com.mi.onextbox.diagnostics
 
+import com.mi.onextbox.R
 import android.content.Context
 import com.mi.onextbox.lsp.LspPreferenceStore
 import com.mi.onextbox.lsp.LspFrameworkService
@@ -21,9 +22,9 @@ internal object DiagnosticRepository {
     fun events(context: Context): List<DiagnosticEvent> {
         val lines = if (readCachedRootAccessInfo(context)?.state == RootAccessState.Granted) {
             val result = Shell.cmd("logcat -d -v raw -t 3000 -s ONextBox-Diag:I '*:S'").exec()
-            check(result.isSuccess) { "无法读取诊断记录" }
+            check(result.isSuccess) { context.getString(R.string.diag_read_failed) }
             result.out
-        } else RuntimeDiagnostics.localEvents.toList()
+        } else RuntimeDiagnostics.localEvents.snapshot()
         val rows = lines.mapNotNull { line -> runCatching {
             val j = JSONObject(line)
             DiagnosticEvent(j.getLong("time"), j.getLong("generation"), j.getString("process"), j.getInt("pid"),
@@ -65,7 +66,7 @@ internal object DiagnosticRepository {
         return file
     }
     fun load(context: Context, name: String): Map<String, Any> {
-        val file = checkNotNull(list(context).firstOrNull { it.name == name }) { "快照不存在" }
+        val file = checkNotNull(list(context).firstOrNull { it.name == name }) { context.getString(R.string.diag_snapshot_missing) }
         val j = JSONObject(file.readText())
         require(j.getInt("schema") == 1)
         return decode(j.getJSONObject("values")).also { values ->
@@ -76,16 +77,16 @@ internal object DiagnosticRepository {
         val saved = load(context, name)
         val current = DiagnosticRules.featureValues(LspPreferenceStore.prefs(context).all)
         return (saved.keys + current.keys).sorted().filter { saved[it] != current[it] }.joinToString("\n\n") {
-            "$it\n当前：${current[it] ?: "默认"}\n快照：${saved[it] ?: "默认"}"
-        }.ifEmpty { "没有配置差异" }
+            context.getString(R.string.diag_diff_current_saved, it, current[it] ?: context.getString(R.string.diag_default), saved[it] ?: context.getString(R.string.diag_default))
+        }.ifEmpty { context.getString(R.string.diag_no_differences) }
     }
     fun bundle(context: Context, output: OutputStream) {
         ZipOutputStream(output.buffered()).use { zip ->
             fun entry(name: String, value: String) {
                 zip.putNextEntry(ZipEntry(name)); zip.write(DiagnosticRules.redact(value).toByteArray(Charsets.UTF_8)); zip.closeEntry()
             }
-            entry("README.txt", "ONextBox diagnostics\n${java.time.Instant.now()}\n常见敏感字段已过滤；请检查内容后再分享。进程记录来自有容量限制的系统日志，缺少记录不代表 Hook 失败。")
-            entry("environment.txt", runCatching { File(context.filesDir, "diagnostic-environment.txt").readText() }.getOrDefault("环境快照暂不可用"))
+            entry("README.txt", context.getString(R.string.diag_bundle_readme, java.time.Instant.now().toString()))
+            entry("environment.txt", runCatching { File(context.filesDir, "diagnostic-environment.txt").readText() }.getOrDefault(context.getString(R.string.diag_environment_missing)))
             entry("framework.txt", LspFrameworkService.readSnapshot().toString())
             entry("app-log.txt", AppLogStore.entries.value.joinToString("\n") { it.toLine() })
             val safeConfig = DiagnosticRules.featureValues(LspPreferenceStore.prefs(context).all).mapValues { (_, value) ->
@@ -94,7 +95,7 @@ internal object DiagnosticRepository {
             entry("configuration.json", encode(safeConfig).toString(2))
             entry("hook-events.txt", runCatching { events(context).joinToString("\n") }.getOrElse { it.toString() })
             DeveloperDiagnostics.reports(context).forEachIndexed { index, file ->
-                entry("crashes/report-$index.txt", runCatching { DeveloperDiagnostics.details(file) }.getOrDefault("报告读取失败"))
+                entry("crashes/report-$index.txt", runCatching { DeveloperDiagnostics.details(file) }.getOrDefault(context.getString(R.string.diag_report_read_failed)))
             }
         }
     }

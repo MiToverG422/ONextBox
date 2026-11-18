@@ -28,7 +28,7 @@ internal object InstallerPromotionCards {
     }
 
     fun refreshOwnedActivities(): Int {
-        val type = Class.forName("android.app.ActivityThread")
+        val type = HostClassLookup.load("android.app.ActivityThread")
         val thread = HiddenApiBypass.invoke(type, null, "currentActivityThread") ?: return 0
         val field = HiddenApiBypass.getInstanceFields(type).filterIsInstance<Field>()
             .single { it.name == "mActivities" }.apply { isAccessible = true }

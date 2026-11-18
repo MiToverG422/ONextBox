@@ -11,6 +11,22 @@ import org.junit.Test
 class ConfirmedPreferenceUpdateTest {
     private val key = "confirmed_boolean_test"
 
+    @Test fun publicationStampIsAtomicAndRollbackReceivesANewStamp() {
+        val local = FakePreferences(mapOf(key to false))
+        val remote = FakePreferences(mapOf(key to false)).apply { onCommit = { it != 1 } }
+        var publications = 0
+        expectFailure {
+            commitConfirmedBooleanPreference(local.preferences, remote.preferences, key, true,
+                prepareRemote = { editor -> editor.putBoolean("publication_stamp", ++publications == 1) }) { true }
+        }
+        assertEquals(2, publications)
+        assertEquals(listOf(true, false), remote.committedValues.map { it["publication_stamp"] })
+        assertEquals(listOf(true, false), remote.committedValues.map { it[key] })
+        assertFalse(local.data.containsKey("publication_stamp"))
+        assertEquals(false, local.data[key])
+        assertEquals(false, remote.data[key])
+    }
+
     @Test
     fun disablingReturnsOnlyAfterBothStoresContainFalse() {
         val local = FakePreferences(mapOf(key to true, "unrelated" to true))

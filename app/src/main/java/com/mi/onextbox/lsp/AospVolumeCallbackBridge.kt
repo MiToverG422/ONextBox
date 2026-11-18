@@ -29,13 +29,13 @@ internal object AospVolumeCallbackBridge {
     @Synchronized
     fun install(loader: ClassLoader, producerName: String = PRODUCER) {
         if (installed) return
-        val callbacks = Class.forName("com.android.systemui.plugins.VolumeDialogController\$Callbacks", false, loader)
-        val state = Class.forName("com.android.systemui.plugins.VolumeDialogController\$State", false, loader)
-        val producer = Class.forName(producerName, false, loader)
+        val callbacks = HostClassLookup.load("com.android.systemui.plugins.VolumeDialogController\$Callbacks", false, loader)
+        val state = HostClassLookup.load("com.android.systemui.plugins.VolumeDialogController\$State", false, loader)
+        val producer = HostClassLookup.load(producerName, false, loader)
         val update = producer.getMethod("onStateChanged", state).apply { isAccessible = true }
         // Do not intercept inherited interface defaults: ART can dispatch to a copied
         // default implementation instead. Hook the concrete OEM dispatcher instead.
-        val dispatcher = Class.forName("com.android.systemui.volume.VolumeDialogControllerImpl\$C", false, loader)
+        val dispatcher = HostClassLookup.load("com.android.systemui.volume.VolumeDialogControllerImpl\$C", false, loader)
         val methods = AospVolumeCallbackMethods.bridgeTargets(callbacks, state, producer, dispatcher)
         if (methods.isEmpty()) {
             installed = true

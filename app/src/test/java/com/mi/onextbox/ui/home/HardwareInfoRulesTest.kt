@@ -35,7 +35,8 @@ class HardwareInfoRulesTest {
         assertEquals("28.8 / 60 / 120", HardwareInfoRules.rates(listOf(120.00001f, 60f, 59.99999f, 28.8f, Float.NaN, -1f)))
     }
     @Test fun colorModesRetainUnknownIdsAndDoNotInventCoverage() {
-        assertEquals("原生模式 / sRGB / Display P3 / 模式 99", HardwareInfoRules.colorModes("supportedColorModes [0, 7, 9, 99]"))
+        assertEquals("Native / sRGB / Display P3 / Mode 99", HardwareInfoRules.colorModes("supportedColorModes [0, 7, 9, 99]"))
+        assertEquals("原生模式 / sRGB / 模式 99", HardwareInfoRules.colorModes("supportedColorModes [0, 7, 99]", "原生模式") { "模式 $it" })
         assertNull(HardwareInfoRules.colorModes("isWideColorGamut=true"))
     }
 }

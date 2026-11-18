@@ -18,25 +18,25 @@ internal val LocalBottomBarContentOpacity = staticCompositionLocalOf<() -> Float
 @Composable
 internal fun C17StableChromeSceneLayer(
     transformActive: Boolean,
-    workspaceScaleProgress: Float,
-    workspaceAlphaProgress: Float,
+    workspaceScaleProgress: () -> Float,
+    workspaceAlphaProgress: () -> Float,
     modifier: Modifier = Modifier,
     hidden: Boolean = false,
     routeVisibility: Float = 1f,
     content: @Composable () -> Unit,
 ) {
-    val latestContentOpacity by rememberUpdatedState(
-        (if (transformActive) 1f - workspaceAlphaProgress.coerceIn(0f, 1f) else 1f) *
-            routeVisibility.coerceIn(0f, 1f),
-    )
-    val contentOpacity = remember { { latestContentOpacity } }
+    val latestContentOpacity by rememberUpdatedState<() -> Float> {
+        (if (transformActive) 1f - workspaceAlphaProgress().coerceIn(0f, 1f) else 1f) *
+            routeVisibility.coerceIn(0f, 1f)
+    }
+    val contentOpacity = remember { { latestContentOpacity() } }
     CompositionLocalProvider(LocalBottomBarContentOpacity provides contentOpacity) {
         Box(
             modifier = modifier
                 .fillMaxSize()
                 .graphicsLayer {
                     val scale = if (transformActive) {
-                        lerpFloat(1f, C17_SOURCE_SCALE, workspaceScaleProgress.coerceIn(0f, 1f))
+                        lerpFloat(1f, C17_SOURCE_SCALE, workspaceScaleProgress().coerceIn(0f, 1f))
                     } else 1f
                     scaleX = scale
                     scaleY = scale

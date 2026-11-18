@@ -15,10 +15,14 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -40,6 +44,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.constrainWidth
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.ui.layout.LocalChromeNativeBlurEnabled
 import com.mi.onextbox.ui.layout.Page
@@ -328,19 +334,17 @@ internal fun c17TaskSurfaceAlpha(
 }
 
 internal fun Modifier.c17LauncherSourceTransform(
-    scaleProgress: Float,
-    alphaProgress: Float,
-    blurProgress: Float,
+    scaleProgress: () -> Float,
+    alphaProgress: () -> Float,
+    blurProgress: () -> Float,
 ): Modifier {
-    val boundedScaleProgress = scaleProgress.coerceIn(0f, 1f)
-    val boundedAlphaProgress = alphaProgress.coerceIn(0f, 1f)
-    val boundedBlurProgress = blurProgress.coerceIn(0f, 1f)
+    val boundedBlurProgress = blurProgress().coerceIn(0f, 1f)
     return this
         .graphicsLayer {
-            val scale = lerpFloat(1f, C17_SOURCE_SCALE, boundedScaleProgress)
+            val scale = lerpFloat(1f, C17_SOURCE_SCALE, scaleProgress().coerceIn(0f, 1f))
             scaleX = scale
             scaleY = scale
-            alpha = 1f - boundedAlphaProgress
+            alpha = 1f - alphaProgress().coerceIn(0f, 1f)
             transformOrigin = TransformOrigin.Center
         }
         .blur((C17_SOURCE_BLUR_DP * boundedBlurProgress).dp)
@@ -349,9 +353,9 @@ internal fun Modifier.c17LauncherSourceTransform(
 @Composable
 internal fun C17StableBaseSceneLayer(
     transformActive: Boolean,
-    workspaceScaleProgress: Float,
-    workspaceAlphaProgress: Float,
-    workspaceBlurProgress: Float,
+    workspaceScaleProgress: () -> Float,
+    workspaceAlphaProgress: () -> Float,
+    workspaceBlurProgress: () -> Float,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -373,13 +377,69 @@ internal fun C17StableBaseSceneLayer(
     }
 }
 
+internal data class C17FeatureWindowFrame(
+    val left: Float,
+    val top: Float,
+    val width: Float,
+    val height: Float,
+    val cornerDp: Float,
+    val taskAlpha: Float,
+)
+
+/** Identical geometry/alpha math; callers choose the layout or draw phase in which to read it. */
+internal fun c17FeatureWindowFrame(
+    sourceOrigin: FeatureLaunchOrigin,
+    viewportBounds: Rect,
+    geometryProgress: Float,
+    radiusProgress: Float,
+    direction: FeatureLaunchDirection,
+    alphaDirection: FeatureLaunchDirection = direction,
+): C17FeatureWindowFrame {
+    val physicalProgress = if (direction == FeatureLaunchDirection.Closing)
+        geometryProgress.coerceAtLeast(C17_CLOSE_MIN_RENDER_PROGRESS) else geometryProgress
+    val sourceLeft = sourceOrigin.left - viewportBounds.left
+    val sourceTop = sourceOrigin.top - viewportBounds.top
+    val sourceWidth = sourceOrigin.width.coerceIn(1f, viewportBounds.width)
+    val sourceHeight = sourceOrigin.height.coerceIn(1f, viewportBounds.height)
+    val animatedCenterX = lerpFloat(sourceLeft + sourceWidth / 2f, viewportBounds.width / 2f, physicalProgress)
+    val animatedTop = lerpFloat(sourceTop, 0f, physicalProgress)
+    val animatedWidth = lerpFloat(sourceWidth, viewportBounds.width, physicalProgress).coerceAtLeast(1f)
+    val animatedAspectRatio = lerpFloat(sourceHeight / sourceWidth,
+        viewportBounds.height / viewportBounds.width, physicalProgress).coerceAtLeast(0.01f)
+    return C17FeatureWindowFrame(
+        left = animatedCenterX - animatedWidth / 2f,
+        top = animatedTop,
+        width = animatedWidth,
+        height = (animatedWidth * animatedAspectRatio).coerceAtLeast(1f),
+        cornerDp = lerpFloat(C17_ICON_CORNER_DP, C17_WINDOW_CORNER_DP, radiusProgress.coerceIn(0f, 1f)),
+        taskAlpha = c17TaskSurfaceAlpha(alphaDirection, geometryProgress),
+    )
+}
+
+@Composable
+private fun C17FeatureWindowIcon(session: FeatureLaunchSession, frame: State<C17FeatureWindowFrame>) {
+    val rect = frame.value
+    val density = LocalDensity.current
+    val size = with(density) { rect.width.toDp() }
+    val height = with(density) { max(rect.height, rect.width).toDp() }
+    // Keep the original extended icon painter, fixed halo and top-aligned plate.
+    FeatureLaunchIcon(
+        pageMode = session.mode, visualSize = size, surfaceHeight = height,
+        modifier = Modifier.offset { IntOffset(rect.left.roundToInt(), rect.top.roundToInt()) }
+            .size(size, height).graphicsLayer {
+                alpha = if (rect.taskAlpha < 1f) 1f else 0f
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+            },
+    )
+}
+
 @Composable
 internal fun C17FeatureWindowLayer(
     session: FeatureLaunchSession,
     direction: FeatureLaunchDirection,
     motion: FeatureLaunchMotion?,
     predictiveBackMotion: FeaturePredictiveBackMotion? = null,
-    returnOrigin: FeatureLaunchOrigin? = null,
+    returnOrigin: (() -> FeatureLaunchOrigin?)? = null,
     viewportBounds: Rect,
     surface: FeatureWindowSurface = FeatureWindowSurface.Both,
     modifier: Modifier = Modifier,
@@ -387,180 +447,78 @@ internal fun C17FeatureWindowLayer(
 ) {
     if (viewportBounds.width <= 0f || viewportBounds.height <= 0f) return
     val density = LocalDensity.current
-    val predictiveTransform = predictiveBackMotion?.toC17Transform(
-        viewportBounds = viewportBounds,
-        density = density.density,
-    )
-    val geometryProgress = motion?.geometry?.value ?: 1f
-    // Keep the scalar path used by the original feature-page animation. This
-    // is also the normalized width progress used by C17's normal-app alpha.
-    // Keep C17's under-damped icon-end rebound. The endpoint itself is now the
-    // canonical 1x source rect, so this is a continuous spring rebound rather
-    // than the old 0.85x -> 1x handoff reset. Only extreme inherited velocity
-    // from rapid interruption is bounded.
-    val physicalProgress = if (direction == FeatureLaunchDirection.Closing) {
-        geometryProgress.coerceAtLeast(C17_CLOSE_MIN_RENDER_PROGRESS)
-    } else {
-        geometryProgress
+    val frame = remember(session, direction, motion, returnOrigin, viewportBounds) {
+        derivedStateOf {
+            val origin = returnOrigin?.invoke() ?: if (motion?.useReturnOrigin == true) {
+                session.origin.toReturnOrigin(workspaceScale = 1f, viewportBounds = viewportBounds)
+            } else session.origin
+            c17FeatureWindowFrame(origin, viewportBounds, motion?.geometry?.value ?: 1f,
+                motion?.radius?.value ?: 1f, direction, motion?.alphaDirection ?: direction)
+        }
     }
-    val radiusProgress = (motion?.radius?.value ?: 1f).coerceIn(0f, 1f)
-    val sourceOrigin = if (returnOrigin != null) {
-        returnOrigin
-    } else if (motion?.useReturnOrigin == true) {
-        session.origin.toReturnOrigin(
-            workspaceScale = 1f,
-            viewportBounds = viewportBounds,
-        )
-    } else {
-        session.origin
-    }
-    val sourceLeft = sourceOrigin.left - viewportBounds.left
-    val sourceTop = sourceOrigin.top - viewportBounds.top
-    val sourceWidth = sourceOrigin.width.coerceIn(1f, viewportBounds.width)
-    val sourceHeight = sourceOrigin.height.coerceIn(1f, viewportBounds.height)
-    val sourceCenterX = sourceLeft + sourceWidth / 2f
-    val targetCenterX = viewportBounds.width / 2f
-    val animatedCenterX = lerpFloat(sourceCenterX, targetCenterX, physicalProgress)
-    val animatedTop = lerpFloat(sourceTop, 0f, physicalProgress)
-    val animatedWidth = lerpFloat(
-        sourceWidth,
-        viewportBounds.width,
-        physicalProgress,
-    ).coerceAtLeast(1f)
-    val sourceAspectRatio = sourceHeight / sourceWidth
-    val targetAspectRatio = viewportBounds.height / viewportBounds.width
-    val animatedAspectRatio = lerpFloat(
-        sourceAspectRatio,
-        targetAspectRatio,
-        physicalProgress,
-    ).coerceAtLeast(0.01f)
-    val animatedHeight = (animatedWidth * animatedAspectRatio).coerceAtLeast(1f)
-    val animatedLeft = animatedCenterX - animatedWidth / 2f
-    val cornerRadius = lerpFloat(
-        C17_ICON_CORNER_DP,
-        C17_WINDOW_CORNER_DP,
-        radiusProgress,
-    ).dp
-    val boundedTaskSurfaceAlpha = c17TaskSurfaceAlpha(
-        direction = motion?.alphaDirection ?: direction,
-        geometryProgress = geometryProgress,
-    )
-    val iconSurfaceVisible = boundedTaskSurfaceAlpha < 1f
-    val animatedIconSize = animatedWidth
-    // IconDrawableView's extended surface keeps the square icon at the top of
-    // curRect; the remaining surface height is edge-filled, not centre-aligned.
-    val animatedIconTop = animatedTop
-
-    val predictiveModifier = if (predictiveTransform != null) {
+    val predictiveModifier = if (predictiveBackMotion != null) {
         Modifier.graphicsLayer {
-            scaleX = predictiveTransform.scale
-            scaleY = predictiveTransform.scale
-            translationX = predictiveTransform.translationX
-            translationY = predictiveTransform.translationY
+            val transform = predictiveBackMotion.toC17Transform(viewportBounds, density.density)
+            scaleX = transform.scale
+            scaleY = transform.scale
+            translationX = transform.translationX
+            translationY = transform.translationY
             transformOrigin = TransformOrigin(0f, 0f)
             shape = RoundedCornerShape(C17_WINDOW_CORNER_DP.dp)
             clip = true
         }
-    } else {
-        Modifier
-    }
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .then(predictiveModifier),
-    ) {
-        // The extended icon surface is a launcher child surface below the task
-        // leash. The task alpha therefore reveals the page over the icon
-        // continuously; drawing this after the task causes the icon to cover
-        // the fade and then disappear in one visibly flashing frame.
-        val animatedIconSizeDp = with(density) { animatedIconSize.toDp() }
-        // The native extended-icon buffer never becomes shorter than its square
-        // icon, which avoids a late-frame squash near the endpoint.
-        val animatedIconSurfaceHeightDp = with(density) {
-            max(animatedHeight, animatedIconSize).toDp()
-        }
-        // C17 keeps one IconSurface alive for the complete transition and only
-        // changes its alpha while the opaque task is on top. Keeping this node
-        // mounted prevents close from having to recreate the icon layer on the
-        // first reveal frame, which otherwise looks like a sudden reset.
-        if (surface != FeatureWindowSurface.Task) FeatureLaunchIcon(
-            pageMode = session.mode,
-            visualSize = animatedIconSizeDp,
-            surfaceHeight = animatedIconSurfaceHeightDp,
-            modifier = Modifier
-                .offset {
-                    IntOffset(
-                        animatedLeft.roundToInt(),
-                        animatedIconTop.roundToInt(),
-                    )
-                }
-                .size(
-                    width = animatedIconSizeDp,
-                    height = animatedIconSurfaceHeightDp,
-                )
-                .graphicsLayer {
-                    alpha = if (iconSurfaceVisible) 1f else 0f
-                    compositingStrategy = CompositingStrategy.ModulateAlpha
-                },
-        )
+    } else Modifier
+    Box(modifier.fillMaxSize().then(predictiveModifier)) {
+        if (surface != FeatureWindowSurface.Task) C17FeatureWindowIcon(session, frame)
         if (surface != FeatureWindowSurface.Icon) Box(
             modifier = Modifier
-                .offset {
-                    IntOffset(animatedLeft.roundToInt(), animatedTop.roundToInt())
+                .layout { measurable, constraints ->
+                    val rect = frame.value
+                    // Use the same Dp round-trip / parent constraint rules as offset + size.
+                    val width = constraints.constrainWidth(with(density) { rect.width.toDp().roundToPx() })
+                    val height = constraints.constrainHeight(with(density) { rect.height.toDp().roundToPx() })
+                    val child = measurable.measure(Constraints.fixed(width, height))
+                    layout(width, height) {
+                        child.placeRelativeWithLayer(rect.left.roundToInt(), rect.top.roundToInt())
+                    }
                 }
-                .size(
-                    width = with(density) { animatedWidth.toDp() },
-                    height = with(density) { animatedHeight.toDp() },
-                )
                 .graphicsLayer {
-                    alpha = boundedTaskSurfaceAlpha
+                    val rect = frame.value
+                    alpha = rect.taskAlpha
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                 }
                 .then(
                     if (direction == FeatureLaunchDirection.Closing) {
                         Modifier.pointerInput(Unit) {
                             awaitPointerEventScope {
-                                while (true) {
-                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
-                                }
+                                while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
                             }
                         }
                     } else Modifier,
                 )
-                .clip(RoundedCornerShape(cornerRadius))
+                .graphicsLayer {
+                    shape = RoundedCornerShape(frame.value.cornerDp.dp)
+                    clip = true
+                }
                 .background(COUITheme.colorScheme.surface),
         ) {
             Layout(
                 content = {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        // The OPlus background RenderEffect samples the physical window. During
-                        // the launcher task transform it would escape this layer's alpha/crop,
-                        // leaving an opaque header over the shrinking page. Draw the toolbar
-                        // blur into the movable task surface for both open and close instead.
-                        CompositionLocalProvider(LocalChromeNativeBlurEnabled provides false) {
-                            content()
-                        }
+                    Box(Modifier.fillMaxSize()) {
+                        CompositionLocalProvider(LocalChromeNativeBlurEnabled provides false) { content() }
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
             ) { measurables, constraints ->
-                val viewportWidth = viewportBounds.width.roundToInt().coerceAtLeast(1)
-                val viewportHeight = viewportBounds.height.roundToInt().coerceAtLeast(1)
-                // C17 never independently scales the task buffer's X/Y axes.
-                // Its RectTransformHelper applies one uniform scale selected
-                // from the active clip axis, then changes the Surface crop as
-                // the spring rect morphs from icon to window. This feature
-                // transition is the portrait/vertical-clip path, so width is
-                // the driving axis and excess height is clipped from the
-                // bottom while the page remains top-aligned.
-                val taskSurfaceScale = animatedWidth / viewportBounds.width
-                val placeable = measurables.single().measure(
-                    Constraints.fixed(viewportWidth, viewportHeight),
-                )
+                val child = measurables.single().measure(Constraints.fixed(
+                    viewportBounds.width.roundToInt().coerceAtLeast(1),
+                    viewportBounds.height.roundToInt().coerceAtLeast(1),
+                ))
                 layout(constraints.maxWidth, constraints.maxHeight) {
-                    placeable.placeWithLayer(0, 0) {
-                        scaleX = taskSurfaceScale
-                        scaleY = taskSurfaceScale
+                    child.placeWithLayer(0, 0) {
+                        val scale = frame.value.width / viewportBounds.width
+                        scaleX = scale
+                        scaleY = scale
                         transformOrigin = TransformOrigin(0f, 0f)
                     }
                 }
@@ -608,7 +566,7 @@ internal suspend fun animateFeatureLaunchMotion(
 internal fun C17ClosingFeatureWindowLayer(
     animation: FeatureLaunchAnimation,
     viewportBounds: Rect,
-    workspaceScale: Float,
+    workspaceScale: () -> Float,
     gridPosition: Offset?,
     onFinished: suspend (FeatureLaunchAnimation) -> Unit,
     surface: FeatureWindowSurface = FeatureWindowSurface.Both,
@@ -636,10 +594,12 @@ internal fun C17ClosingFeatureWindowLayer(
         motion = animation.motion,
         predictiveBackMotion = animation.predictiveBackMotion,
         // Keep the return target aligned with the moving grid.
-        returnOrigin = animation.returnOrigin?.atGridPosition(gridPosition)?.toReturnOrigin(
-            workspaceScale = workspaceScale,
-            viewportBounds = viewportBounds,
-        ),
+        returnOrigin = {
+            animation.returnOrigin?.atGridPosition(gridPosition)?.toReturnOrigin(
+                workspaceScale = workspaceScale(),
+                viewportBounds = viewportBounds,
+            )
+        },
         viewportBounds = viewportBounds,
         surface = surface,
         content = content,

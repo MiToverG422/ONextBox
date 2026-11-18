@@ -15,7 +15,7 @@ internal object AospVolumeHooker {
         AospVolumePanelHooker.hook(loader)
         runCatching {
             AospVolumeCallbackBridge.registerHotReload(loader)
-            val type = Class.forName("com.oplus.systemui.dagger.DaggerOplusReferenceGlobalRootComponent\$OplusReferenceSysUIComponentImpl", false, loader)
+            val type = HostClassLookup.load("com.oplus.systemui.dagger.DaggerOplusReferenceGlobalRootComponent\$OplusReferenceSysUIComponentImpl", false, loader)
             val method = type.getDeclaredMethod("volumeDialog")
             ModernHookRegistry.installFast("aosp-volume:factory", method, XposedInterface.Hooker { chain ->
                 if (bypass.get() == true || !AospVolumeSettings.enabledXposed()) return@Hooker chain.proceed()
@@ -41,7 +41,7 @@ internal object AospVolumeHooker {
 
     private class Session(private val native: Any, private val isolateScope: Boolean = true, private val stockFactory: () -> Any) {
         private val loader = native.javaClass.classLoader!!
-        private val dialogType = Class.forName("com.android.systemui.plugins.VolumeDialog", false, loader)
+        private val dialogType = HostClassLookup.load("com.android.systemui.plugins.VolumeDialog", false, loader)
         private val main = Handler(Looper.getMainLooper())
         private var stock: Any? = null
         private var failed = false
@@ -97,7 +97,7 @@ internal object AospVolumeHooker {
         }
 
         private fun installIsolatedScope() {
-            fun type(name: String) = Class.forName(name, false, loader)
+            fun type(name: String) = HostClassLookup.load(name, false, loader)
             val scopeType = type("kotlinx.coroutines.CoroutineScope")
             val contextType = type("kotlin.coroutines.CoroutineContext")
             val functionType = type("kotlin.jvm.functions.Function2")
@@ -129,8 +129,8 @@ internal object AospVolumeHooker {
         private fun cancelScope() {
             ownedScope?.let { scope ->
                 runCatching {
-                    Class.forName("kotlinx.coroutines.CoroutineScopeKt", false, loader)
-                        .getMethod("cancel", Class.forName("kotlinx.coroutines.CoroutineScope", false, loader),
+                    HostClassLookup.load("kotlinx.coroutines.CoroutineScopeKt", false, loader)
+                        .getMethod("cancel", HostClassLookup.load("kotlinx.coroutines.CoroutineScope", false, loader),
                             java.util.concurrent.CancellationException::class.java)
                         .invoke(null, scope, null)
                 }

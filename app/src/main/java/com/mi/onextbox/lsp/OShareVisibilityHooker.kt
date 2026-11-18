@@ -20,7 +20,7 @@ internal object OShareVisibilityHooker {
         val key = "$TAG:visibility-timeout@${System.identityHashCode(loader)}"
         val keys = mutableListOf<String>()
         runCatching {
-            val receiver = Class.forName("com.oplus.oshare.device.TimeoutReceiver", false, loader)
+            val receiver = HostClassLookup.load("com.oplus.oshare.device.TimeoutReceiver", false, loader)
             require(BroadcastReceiver::class.java.isAssignableFrom(receiver))
             val method = receiver.getDeclaredMethod("onReceive", Context::class.java, Intent::class.java)
             require(method.returnType == Void.TYPE && !Modifier.isStatic(method.modifiers))
@@ -67,8 +67,8 @@ internal object OShareVisibilityHooker {
     )
 
     private fun resolveCountdown(loader: ClassLoader, ownerName: String, suffix: String, vararg clearNames: String): Countdown {
-        val owner = Class.forName(ownerName, false, loader)
-        val timer = Class.forName("$ownerName\$$suffix", false, loader)
+        val owner = HostClassLookup.load(ownerName, false, loader)
+        val timer = HostClassLookup.load("$ownerName\$$suffix", false, loader)
         require(Runnable::class.java.isAssignableFrom(timer))
         val ownerField = timer.declaredFields.single { it.type == owner && !Modifier.isStatic(it.modifiers) }
             .apply { isAccessible = true }
@@ -84,7 +84,7 @@ internal object OShareVisibilityHooker {
     private fun installLabelHook(loader: ClassLoader, key: String, colorOs16: Boolean) {
         val labelKeys = mutableListOf<String>()
         runCatching {
-            val strings = Class.forName(if (colorOs16) "com.oplus.oshare.f0" else "com.oplus.oshare.x", false, loader)
+            val strings = HostClassLookup.load(if (colorOs16) "com.oplus.oshare.f0" else "com.oplus.oshare.x", false, loader)
             val allId = strings.getDeclaredField("reception_range_all").getInt(null)
             labelKeys += "$key:label"
             ModernHookRegistry.installFast("$key:label", Resources::class.java.getDeclaredMethod("getText", Int::class.javaPrimitiveType),

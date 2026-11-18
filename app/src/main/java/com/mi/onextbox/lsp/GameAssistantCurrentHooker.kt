@@ -25,8 +25,8 @@ internal object GameAssistantCurrentHooker {
             .onFailure { HookLog.w(TAG, "$name unavailable; stock behavior retained", it) }
         adapter("Developer options") { GameAssistantDeveloperController.hook(loader) }
         adapter("Current semantic adapters") {
-            System.loadLibrary("dexkit")
-            DexKitBridge.create(apkPath).use { dex ->
+            ApkDexSession.withSession(apkPath) { open ->
+                val dex = open()
                 adapter("Temperature display") { GameAssistantTemperatureHooker.hook(loader, dex) }
                 adapter("Skins") {
                     val skin = dex.findMethod { matcher {

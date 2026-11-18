@@ -1,5 +1,7 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.foundation.layout.Box
+import com.mi.onextbox.ui.settings.SettingsDataRow
 import androidx.compose.runtime.setValue
 
 import androidx.compose.runtime.getValue
@@ -55,6 +57,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.collectAsState
 
 @Composable
 internal fun FluidCloudMediaBlacklistPage(modifier: Modifier, backdrop: LayerBackdrop?, onBack: () -> Unit) =
@@ -80,6 +83,7 @@ internal fun PackageSelectionPage(
     val search = rememberTextFieldState()
     val query = search.text.toString().trim()
     val locale = LocalConfiguration.current.locales[0]
+    val catalogRevision by ManageableAppCatalog.revision.collectAsState()
     val listed = remember(apps, selected, query, locale) {
         mediaBlacklistApps(apps, selected, query, locale)
     }
@@ -121,16 +125,12 @@ internal fun PackageSelectionPage(
         prefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
-    LaunchedEffect(context, locale) {
+    LaunchedEffect(context, locale, catalogRevision) {
         loading = true
         loadFailed = false
         try {
             apps = withContext(Dispatchers.IO) {
-                val pm = context.packageManager
-                manageableApplications(pm).asSequence()
-                    .map { info -> MediaBlacklistApp(info.packageName,
-                        runCatching { pm.getApplicationLabel(info).toString() }.getOrDefault(info.packageName)) }
-                    .toList()
+                ManageableAppCatalog.load(context, locale).map { MediaBlacklistApp(it.packageName, it.label) }
             }
         } catch (cancel: CancellationException) { throw cancel }
         catch (_: Exception) { loadFailed = true }
@@ -146,12 +146,14 @@ internal fun PackageSelectionPage(
             item("count") { SettingsSection(title = stringResource(R.string.fluid_media_selected_count, selected.size)) }
             if (loading || loadFailed || (listed.isEmpty() && manualPackage == null)) {
                 item("status") {
+                    Box(Modifier.animateItem(placementSpec = null)) {
                     SettingsGroup {
-                        SettingsCardRow(title = stringResource(when {
+                        SettingsDataRow(refreshing = loading, title = stringResource(when {
                             loading -> R.string.fluid_media_loading
                             loadFailed -> R.string.fluid_media_load_failed
                             else -> R.string.fluid_media_no_results
                         }), summary = "")
+                    }
                     }
                 }
             }

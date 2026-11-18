@@ -1,5 +1,7 @@
 package com.mi.onextbox.diagnostics
 
+import com.mi.onextbox.ui.settings.SettingsDataRow
+import com.mi.onextbox.ui.common.AnimatedDataText
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -140,7 +142,6 @@ class CrashReportActivity : DiagnosticActivity()
     }
     LaunchedEffect(page, reportName, revision, configuration) {
         busy = true
-        content = ""
         try {
             withContext(Dispatchers.IO) {
                 when (page) {
@@ -178,7 +179,7 @@ class CrashReportActivity : DiagnosticActivity()
         } catch (error: Exception) { content = error.toString() }
         finally { busy = false }
     }
-    val title = if (page in developerToolPages) developerToolTitle(page) else stringResource(when (page) {
+    val title = if (page in developerToolPages) developerToolTitle(context, page) else stringResource(when (page) {
         "permissions" -> R.string.diagnostics_permissions
         "cache" -> R.string.diagnostics_cache
         "hooks" -> R.string.diagnostics_hooks
@@ -204,11 +205,12 @@ class CrashReportActivity : DiagnosticActivity()
             }
         } else if (page == "reports") {
             SettingsGroup {
-                SettingsCardRow(stringResource(R.string.diagnostics_refresh), "", onClick = { revision++ })
+                SettingsDataRow(stringResource(R.string.diagnostics_refresh), "", refreshing = busy, onClick = { revision++ })
                 SettingsDivider()
                 SettingsCardRow(stringResource(R.string.diagnostics_delete_reports), "", onClick = { confirmClear = true })
             }
-            if (files.isEmpty()) SettingsGroup { SettingsCardRow(stringResource(R.string.diagnostics_no_report), "") }
+            if (files.isEmpty()) SettingsGroup { SettingsDataRow(stringResource(R.string.diagnostics_reports),
+                stringResource(if (busy) R.string.diagnostics_loading else R.string.diagnostics_no_report)) }
             files.forEach { file -> SettingsGroup {
                 SettingsCardRow(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(file.name.substringBefore('-').toLongOrNull() ?: file.lastModified())), file.name.substringAfter('-').removeSuffix(".json"), showArrow = true,
                     onClick = { onReport(file.name) })
@@ -221,7 +223,7 @@ class CrashReportActivity : DiagnosticActivity()
                 SettingsDivider()
                 SettingsCardRow(stringResource(R.string.diagnostics_export), "", onClick = { export.launch("ONextBox-diagnostics.txt") })
                 SettingsDivider()
-                if (page == "hooks") SettingsCardRow(stringResource(R.string.diagnostics_refresh), "", onClick = { revision++ })
+                if (page == "hooks") SettingsDataRow(stringResource(R.string.diagnostics_refresh), "", refreshing = busy, onClick = { revision++ })
                 if (page == "report") SettingsCardRow(stringResource(R.string.diagnostics_restart), "", onClick = {
                     context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
                     activity?.finish()
@@ -245,7 +247,7 @@ class CrashReportActivity : DiagnosticActivity()
                 }
             }
             SettingsGroup {
-                SelectionContainer { Text(if (busy) stringResource(R.string.diagnostics_loading) else if (page == "hooks") content.lineSequence().take(2).joinToString("\n") else content,
+                SelectionContainer { AnimatedDataText(if (content.isEmpty() && busy) stringResource(R.string.diagnostics_loading) else if (page == "hooks") content.lineSequence().take(2).joinToString("\n") else content,
                     modifier = Modifier.padding(16.dp), fontSize = 13.sp, lineHeight = 19.sp,
                     color = COUITheme.colorScheme.onSurface) }
             }

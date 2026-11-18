@@ -19,7 +19,9 @@ internal object CameraGalleryHooker {
             val saved = DexTargetCache.restoredState(stateKey) as? Map<*, *>
             val groups = saved?.takeIf { it.containsKey(CameraGalleryTargets.SCHEMA) }?.mapNotNull { (name, value) ->
                 (name as? String)?.let { it to ((value as? Array<*>)?.filterIsInstance<Method>()?.toTypedArray() ?: emptyArray()) }
-            }?.toMap() ?: ApkDexSession.withSession(apkPath) { open -> CameraGalleryTargets.resolveAll(open(), loader) }
+            }?.toMap() ?: HostDexMetadata.methods(loader, apkPath, "camera-gallery", CameraGalleryTargets.SCHEMA) {
+                CameraGalleryTargets.resolveAll(it, loader)
+            }
             val targets = groups.getValue("ordinary")
             require(targets.size >= 6)
             val preview = targets[0]

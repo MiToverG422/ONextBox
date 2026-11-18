@@ -27,16 +27,14 @@ internal object LauncherBlurTargets {
 
     data class Menu(val builder: Method, val tier: Method, val materialTier: Method, val callers: List<Executable>)
 
-    fun open(apkPath: String): DexKitBridge {
-        System.loadLibrary("dexkit")
-        return DexKitBridge.create(apkPath).also { it.setThreadNum(1) }
-    }
+    fun <T> withDex(apkPath: String, action: (DexKitBridge) -> T): T =
+        ApkDexSession.withSession(apkPath, threadCount = 1) { open -> action(open()) }
 
     fun platform(dex: DexKitBridge, loader: ClassLoader): Platform {
         // Resolve, but do not initialize or invoke, the vendor rendering API.
         // A tier override cannot supply an engine removed from the firmware.
-        val blurParam = Class.forName("com.oplus.graphics.OplusBlurParam", false, loader)
-        Class.forName("com.oplus.graphics.OplusBlurManager", false, loader).getDeclaredMethod(
+        val blurParam = HostClassLookup.load("com.oplus.graphics.OplusBlurParam", false, loader)
+        HostClassLookup.load("com.oplus.graphics.OplusBlurManager", false, loader).getDeclaredMethod(
             "setBackgroundBlurRadius", SurfaceControl.Transaction::class.java, SurfaceControl::class.java,
             Int::class.javaPrimitiveType, blurParam,
         )

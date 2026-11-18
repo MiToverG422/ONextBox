@@ -44,6 +44,20 @@ val prepareBrowserLicenses by tasks.registering(Sync::class) {
 }
 tasks.named("preBuild").configure { dependsOn(prepareBrowserLicenses) }
 
+val twemojiLicenseAssets = layout.buildDirectory.dir("generated/twemojiLicenses/assets")
+val prepareTwemojiLicenses by tasks.registering(Sync::class) {
+    from(rootProject.file("third_party/discord-twemoji")) { include("LICENSE-GRAPHICS", "NOTICE", "sources.json") }
+    into(twemojiLicenseAssets.map { it.dir("third_party/discord-twemoji") })
+}
+tasks.named("preBuild").configure { dependsOn(prepareTwemojiLicenses) }
+
+val androidLogoLicenseAssets = layout.buildDirectory.dir("generated/androidLogoLicenses/assets")
+val prepareAndroidLogoLicenses by tasks.registering(Sync::class) {
+    from(rootProject.file("third_party/aosp-version-logos")) { include("LICENSE", "NOTICE", "sources.json") }
+    into(androidLogoLicenseAssets.map { it.dir("third_party/aosp-version-logos") })
+}
+tasks.named("preBuild").configure { dependsOn(prepareAndroidLogoLicenses) }
+
 val ciVersionName = (project.findProperty("ONEXTBOX_VERSION_NAME") as String?)
     ?.takeIf { it.isNotBlank() }
     ?: "17.0"
@@ -57,7 +71,15 @@ val ciSignReleaseWithDebug = (project.findProperty("ONEXTBOX_CI_SIGN_RELEASE_WIT
     ?: false
 
 val isGithubCi = System.getenv("GITHUB_ACTIONS") == "true"
-val oNextBoxBuildTimestamp = System.currentTimeMillis()
+// Compilation/lint/tests must not invalidate BuildConfig merely because Gradle was configured.
+// Packaging receives a real timestamp, or an explicit reproducible timestamp from CI/callers.
+val packagingRequested = gradle.startParameter.taskNames.any { task ->
+    val name = task.substringAfterLast(':').lowercase()
+    name == "build" || listOf("assemble", "bundle", "package", "install").any(name::startsWith)
+}
+val explicitBuildTimestamp = providers.gradleProperty("ONEXTBOX_BUILD_TIMESTAMP").orNull
+    ?.let { value -> value.toLongOrNull()?.also { require(it > 0) } ?: error("ONEXTBOX_BUILD_TIMESTAMP must be epoch milliseconds") }
+val oNextBoxBuildTimestamp = explicitBuildTimestamp ?: if (packagingRequested) System.currentTimeMillis() else 0L
 val oNextBoxBuildTime = DateTimeFormatter
     .ofPattern("yyyy-MM-dd HH:mm:ss 'UTC+8'")
     .withZone(ZoneId.of("Asia/Shanghai"))
@@ -89,6 +111,8 @@ android {
     sourceSets.getByName("main").assets.srcDir(c16Assets.get().asFile)
     sourceSets.getByName("main").assets.srcDir(couiLicenseAssets.get().asFile)
     sourceSets.getByName("main").assets.srcDir(browserLicenseAssets.get().asFile)
+    sourceSets.getByName("main").assets.srcDir(twemojiLicenseAssets.get().asFile)
+    sourceSets.getByName("main").assets.srcDir(androidLogoLicenseAssets.get().asFile)
     namespace = "com.mi.onextbox"
     compileSdk {
         version = release(37)

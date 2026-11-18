@@ -15,7 +15,7 @@ internal object LspPreferenceStore {
     private val settingsGlobalReadCache = ConcurrentHashMap<String, TimedStringValue>()
     private val systemPropertiesGetMethod: Method? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         runCatching {
-            Class.forName("android.os.SystemProperties")
+            HostClassLookup.load("android.os.SystemProperties")
                 .getMethod("get", String::class.java, String::class.java)
         }.getOrNull()
     }
@@ -71,7 +71,7 @@ internal object LspPreferenceStore {
 
     private fun readSettingsGlobalViaFramework(settingsKey: String): String? {
         return runCatching {
-            val activityThreadClass = Class.forName("android.app.ActivityThread")
+            val activityThreadClass = HostClassLookup.load("android.app.ActivityThread")
             val currentThread = activityThreadClass
                 .getMethod("currentActivityThread")
                 .invoke(null)
@@ -86,10 +86,10 @@ internal object LspPreferenceStore {
                 .invoke(systemContext)
                 ?: return@runCatching null
 
-            val settingsGlobalClass = Class.forName("android.provider.Settings\$Global")
+            val settingsGlobalClass = HostClassLookup.load("android.provider.Settings\$Global")
             val getStringMethod = settingsGlobalClass.getMethod(
                 "getString",
-                Class.forName("android.content.ContentResolver"),
+                HostClassLookup.load("android.content.ContentResolver"),
                 String::class.java
             )
             getStringMethod.invoke(null, contentResolver, settingsKey) as? String

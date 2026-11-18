@@ -11,7 +11,6 @@ import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernReflect
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import io.github.libxposed.api.XposedInterface
-import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
@@ -27,8 +26,9 @@ internal object TrafficManagementHooker {
             @Suppress("UNCHECKED_CAST")
             val saved = DexTargetCache.restoredState(stateKey) as? Map<String, Array<Method>>
             val targets = saved ?: run {
-                System.loadLibrary("dexkit")
-                DexKitBridge.create(apkPath).use { TrafficManagementTargets(it, colorOs16).resolve(loader) }
+                HostDexMetadata.methods(loader, apkPath, "traffic-management", "v1-$colorOs16") {
+                    TrafficManagementTargets(it, colorOs16).resolve(loader)
+                }
             }
             HotReloadLifecycle.register(stateKey, capture = { targets })
             Installer(loader, targets).install()

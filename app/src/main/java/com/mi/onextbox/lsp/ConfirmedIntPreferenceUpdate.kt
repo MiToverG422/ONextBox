@@ -2,18 +2,22 @@ package com.mi.onextbox.lsp
 
 import android.content.SharedPreferences
 
-internal fun commitConfirmedIntPreference(local: SharedPreferences, remote: SharedPreferences, key: String, value: Int, isCurrent: () -> Boolean) {
+internal fun commitConfirmedIntPreference(local: SharedPreferences, remote: SharedPreferences, key: String, value: Int,
+    prepareRemote: (SharedPreferences.Editor) -> Unit = {}, isCurrent: () -> Boolean) {
     check(isCurrent()) { "Xposed service changed before saving" }
     val previous = if (local.contains(key)) local.getInt(key, 0) else null
     try {
         check(local.edit().putInt(key, value).commit()) { "Local preference commit failed" }
         check(isCurrent()) { "Xposed service disconnected before syncing" }
-        check(remote.edit().putInt(key, value).commit()) { "Framework preference commit failed" }
+        val publication = remote.edit().putInt(key, value)
+        prepareRemote(publication)
+        check(publication.commit()) { "Framework preference commit failed" }
         check(isCurrent() && remote.contains(key) && remote.getInt(key, 0) == value) { "Framework did not confirm the preference" }
     } catch (error: Throwable) {
         fun restore(preferences: SharedPreferences) {
             val editor = preferences.edit()
             if (previous == null) editor.remove(key) else editor.putInt(key, previous)
+            if (preferences === remote) prepareRemote(editor)
             check(editor.commit()) { "Could not restore the previous preference" }
         }
         runCatching { restore(local) }.onFailure(error::addSuppressed)

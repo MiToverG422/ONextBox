@@ -24,6 +24,8 @@
 -keep class com.mi.onextbox.lsp.OosLspModuleEntry { *; }
 -keepnames class kotlin.Pair
 
+-keep class com.mi.onextbox.lsp.HostClassLookup { *; }
+
 # KavaRef references this Java 8 reflection API on newer runtimes; Android's R8
 # classpath does not provide it for the configured minSdk.
 -dontwarn java.lang.reflect.AnnotatedType

@@ -43,5 +43,5 @@ internal object GoogleLensAiHooker {
         }
     }
 
-    private fun target(loader: ClassLoader, name: String): Class<*> = Class.forName(name, false, loader)
+    private fun target(loader: ClassLoader, name: String): Class<*> = HostClassLookup.load(name, false, loader)
 }

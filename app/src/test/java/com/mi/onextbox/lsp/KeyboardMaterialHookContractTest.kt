@@ -25,7 +25,8 @@ class KeyboardMaterialHookContractTest {
         val source = source("lsp/KeyboardMaterialHooker.kt")
         assertTrue(source.contains("DexTargetCache.restoredState(stateKey)"))
         assertTrue(source.contains("HotReloadLifecycle.register(stateKey, capture = { targets })"))
-        assertTrue(source.contains("DexKitBridge.create(apkPath).use"))
+        assertTrue(source.contains("ApkDexSession.withSession(apkPath)"))
+        assertTrue(source.contains("HostDexMetadata.members(loader, apkPath"))
         assertTrue(source.contains("deoptimize(it as Method)"))
         assertTrue(ModuleHotReloadPolicy.supportedPackages.contains(KeyboardMaterialRules.PACKAGE_NAME))
     }

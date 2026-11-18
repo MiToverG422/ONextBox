@@ -21,7 +21,9 @@ internal class HotReloadCallbackGate {
         }
         depth.set(1)
         return try { action() } finally {
-            depth.remove()
+            // Keep the bootstrap Integer zero, not a module-owned object. Removing the entry
+            // would allocate a new ThreadLocalMap.Entry on every top-level Hook invocation.
+            depth.set(0)
             state.decrementAndGet()
         }
     }

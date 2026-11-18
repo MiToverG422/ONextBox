@@ -9,7 +9,6 @@ import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernMethodHook
 import com.mi.onextbox.lsp.compat.ModernReflect
 import io.github.libxposed.api.XposedInterface
-import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicBoolean
@@ -29,8 +28,8 @@ internal object SecurePayHooker {
             ?: return
         // Resolve by meaning, not the obfuscated "I" name. Do not intercept the shared risk
         // dispatcher: it also notifies the independent high-risk dialog and scan observers.
-        System.loadLibrary("dexkit")
-        DexKitBridge.create(apkPath).use { dex ->
+        ApkDexSession.withSession(apkPath) { open ->
+            val dex = open()
             val target = dex.findMethod {
                 matcher {
                     declaredClass = SecurePayReminderRules.CLOUD_OWNER

@@ -10,6 +10,16 @@ internal object LargeNetworkTypeSettings {
     const val ARTWORK_KEY = "systemui_large_network_type_artwork"
     // New key: do not resurrect the old, ineffective LTE text preference.
     const val LTE_KEY = "systemui_large_network_type_artwork_lte"
+    const val POSITION_KEY = "systemui_large_network_type_position"
+    fun position(context: Context) = LargeNetworkPositionRules.normalize(
+        LspPreferenceStore.prefs(context).getInt(POSITION_KEY, LargeNetworkPositionRules.RIGHT))
+    fun positionXposed() = LargeNetworkPositionRules.normalize(
+        HookConfigSnapshot.int(POSITION_KEY, LargeNetworkPositionRules.RIGHT) ?: LargeNetworkPositionRules.RIGHT)
+    fun setPosition(context: Context, position: Int) {
+        check(LspPreferenceStore.prefs(context).edit().putInt(POSITION_KEY,
+            LargeNetworkPositionRules.normalize(position)).commit())
+        LspConfig.syncReadableState(context)
+    }
     fun usesArtwork(context: Context) = LspPreferenceStore.prefs(context).getBoolean(ARTWORK_KEY, false)
     fun usesArtworkXposed() = enabledXposed() && HookConfigSnapshot.boolean(ARTWORK_KEY, false) == true
     fun usesLte(context: Context) = LspPreferenceStore.prefs(context).getBoolean(LTE_KEY, false)

@@ -32,7 +32,8 @@ internal open class AdaptationProfileGate(
     fun isActive(profile: SystemAdaptationVersion): Boolean =
         enabled() && AdaptationRuntimePolicy.allowsHook(profile, selectedVersion())
 
-    fun isBoundProfileActive(): Boolean = enabled() && (owner?.let(::isActive) ?: true)
+    fun isBoundProfileActive(): Boolean = enabled() &&
+        (owner?.let { AdaptationRuntimePolicy.allowsHook(it, selectedVersion()) } ?: true)
 }
 
 internal object AdaptationHookGate : AdaptationProfileGate({ !SafeModeRuntime.blocked }, HookConfigSnapshot::adaptationVersion)

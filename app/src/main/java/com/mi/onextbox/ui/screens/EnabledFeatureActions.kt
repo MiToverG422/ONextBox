@@ -98,10 +98,11 @@ internal class EnabledFeatureActions {
         SharedFeatureDefinitions.hideScreenshotFloating.action(),
         SharedFeatureDefinitions.galleryAiRetouch.action(),
         *com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.entries.map { systemCustomizationDefinition(it).action() }.toTypedArray(),
-        R.string.keyboard_material_unlock_title to { context, enabled -> LspConfig.setKeyboardMaterialUnlocked(context, enabled) },
-        R.string.keyboard_bottom_lift_fix_title to { context, enabled -> LspConfig.setKeyboardBottomLiftFixEnabled(context, enabled) },
-        R.string.keyboard_hide_dismiss_title to { context, enabled -> LspConfig.setKeyboardDismissHidden(context, enabled) },
-        R.string.keyboard_flag_emoji_title to { context, enabled -> LspConfig.setKeyboardFlagEmojiEnabled(context, enabled) },
+        AdditionalFeatureDefinitions.launcherIosMotion.action(),
+        AdditionalFeatureDefinitions.keyboardMaterial.action(),
+        AdditionalFeatureDefinitions.keyboardBottomLift.action(),
+        AdditionalFeatureDefinitions.keyboardHideDismiss.action(),
+        AdditionalFeatureDefinitions.keyboardFlagEmoji.action(),
         R.string.keyguard_face_tap_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceTapUnlock, enabled) },
         R.string.keyguard_face_capsule_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceAuthCapsule, enabled) },
         R.string.keyguard_face_tap_animation_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceTapAnimation, enabled) },
@@ -130,15 +131,15 @@ internal class EnabledFeatureActions {
         R.string.theme_store_vip_title to { context, enabled -> ThemeStoreSettings.set(context, enabled) },
         R.string.theme_store_ads_title to { context, enabled -> ThemeStoreSettings.setAds(context, enabled) },
         R.string.secure_pay_hide_risk_cloud_title to { context, enabled -> SecurePaySettings.setEnabled(context, enabled) },
-        R.string.game_assistant_promotions_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.PROMOTIONS, enabled) },
-        R.string.game_assistant_realme_startup_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.REALME_STARTUP_ANIMATION, enabled) },
-        R.string.game_assistant_unlimited_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.UNLIMITED, enabled) },
-        R.string.game_assistant_music_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.MUSIC, enabled) },
-        R.string.game_assistant_temperature_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.TEMPERATURE, enabled) },
-        R.string.game_assistant_toolbar_temperature_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.TOOLBAR_TEMPERATURE, enabled) },
-        R.string.game_assistant_root_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.BLOCK_ROOT, enabled) },
-        R.string.game_assistant_developer_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.DEVELOPER, enabled) },
-        R.string.game_assistant_skins_title to { context, enabled -> GameAssistantSettings.set(context, GameAssistantSettings.SKINS, enabled) },
+        AdditionalFeatureDefinitions.gamePromotions.action(),
+        AdditionalFeatureDefinitions.gameStartup.action(),
+        AdditionalFeatureDefinitions.gameUnlimited.action(),
+        AdditionalFeatureDefinitions.gameMusic.action(),
+        AdditionalFeatureDefinitions.gameTemperature.action(),
+        AdditionalFeatureDefinitions.gameToolbarTemperature.action(),
+        AdditionalFeatureDefinitions.gameRoot.action(),
+        AdditionalFeatureDefinitions.gameDeveloper.action(),
+        AdditionalFeatureDefinitions.gameSkins.action(),
         R.string.feature_settings_title_collapsed_title to { context, enabled -> LspConfig.setSettingsTitleCollapsedEnabled(context, enabled) },
         R.string.coui_hide_dividers_title to { context, enabled -> CouiDividerSettings.setEnabled(context, enabled) },
         R.string.soft_light_glass_title to { context, enabled -> SoftLightGlassSettings.setEnabled(context, enabled) },
@@ -249,7 +250,7 @@ internal class EnabledFeatureActions {
         R.string.keyguard_aod_screenshot_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.AodScreenshot, enabled) },
         R.string.keyguard_screen_off_recording_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.ScreenOffRecording, enabled) },
         R.string.feature_recent_task_radius_title to { context, enabled -> LspConfig.setRecentTaskRadiusEnabled(context, enabled) },
-        R.string.feature_aosp_volume_title to { context, enabled -> AospVolumeSettings.set(context, enabled) },
+        AdditionalFeatureDefinitions.aospVolume.action(),
         SharedFeatureDefinitions.stackedSignal.action(),
         R.string.app_errors_enable to { context, enabled -> AppErrorTrackingSettings.setEnabled(context, enabled) },
         R.string.feature_assistant_native_combined_title to { context, enabled ->
@@ -285,7 +286,7 @@ internal class EnabledFeatureActions {
             val next = modes.next(R.string.feature_monet_color_spec_title, LspConfig.getSystemUiMonetColorSpecMode(context), enabled, LspConfig.SYSTEMUI_MONET_COLOR_SPEC_2025)
             LspConfig.setSystemUiMonetColorSpecMode(context, next)
         },
-    ) + KeyboardPictorialSettings.options.associate { option ->
+    ) + AospFeatureDefinitions.all.associate { it.action() } + MediaUnlockFeatureDefinitions.all.associate { it.action() } + KeyboardPictorialSettings.options.associate { option ->
         val write: suspend (Context, Boolean) -> Unit = { context, enabled -> KeyboardPictorialSettings.set(context, option.key, enabled) }
         option.title to write
     } + BrowserSettings.options.associate { option ->

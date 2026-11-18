@@ -23,22 +23,22 @@ internal object BackGestureHooker {
         var side = 0
     }
     private data class Frame(val detector: Any, val event: MotionEvent, val session: Session)
-    private data class Feedback(val view: View, val scheme: Int, val aosp: Boolean)
     private val frames = ThreadLocal<Frame>()
-    private val feedback = ThreadLocal<Feedback>()
+    private val feedback = ThreadLocal<View>()
     private val emitting = ThreadLocal<Boolean>()
     private var pointState: Method? = null
     private var pointSide: Method? = null
 
-    fun hook(loader: ClassLoader) {
-        val stateKey = "$TAG:installed"
-        if (!BackGestureSettings.xposed().active && HotReloadLifecycle.restoredState(stateKey) != true) return
-        HotReloadLifecycle.register(stateKey, capture = { true })
+    fun hook(loader: ClassLoader, state: BackGestureSettings.State = BackGestureSettings.xposed()) {
+        if (!state.gestureHooks && !state.hapticHooks && !state.predictiveHooks) return
         fun adapter(name: String, block: () -> Unit) = runCatching(block)
             .onFailure { HookLog.w(TAG, "$name unavailable; native behavior retained", it) }
-        adapter("Gesture routing") { gestures(loader) }
-        adapter("Haptic schemes") { haptics(loader) }
-        adapter("Predictive animation") { BackGesturePrediction.hook(loader) }
+        if (state.release) adapter("Release feedback") {
+            nativeHelper = loader.loadClass("com.oplus.systemui.navigationbar.gesture.VibrationHelper")
+        }
+        if (state.gestureHooks) adapter("Gesture routing") { gestures(loader, state) }
+        if (state.hapticHooks) adapter("AOSP haptics") { haptics(loader) }
+        if (state.predictiveHooks) adapter("Predictive animation") { BackGesturePrediction.hook(loader) }
     }
 
     private fun install(method: Method, hook: (XposedInterface.Chain) -> Any?) {
@@ -48,7 +48,7 @@ internal object BackGestureHooker {
 
     private fun field(type: Class<*>, name: String): Field = type.getDeclaredField(name).apply { isAccessible = true }
 
-    private fun gestures(loader: ClassLoader) {
+    private fun gestures(loader: ClassLoader, state: BackGestureSettings.State) {
         val detector = loader.loadClass("com.oplus.systemui.navigationbar.gesture.sidegesture.SideGestureDetector")
         val manager = loader.loadClass("com.oplus.systemui.navigationbar.gesture.sidegesture.view.SideGestureViewManager")
         val config = loader.loadClass("com.oplus.systemui.navigationbar.gesture.sidegesture.SideGestureConfiguration")
@@ -64,7 +64,7 @@ internal object BackGestureHooker {
         val sessions = WeakHashMap<Any, Session>()
         val lock = Any()
         var lastInput = 0L
-        for ((name, left) in listOf("getSideGestureAreaWidthLeft" to true, "getSideGestureAreaWidthRight" to false)) {
+        if (state.area) for ((name, left) in listOf("getSideGestureAreaWidthLeft" to true, "getSideGestureAreaWidthRight" to false)) {
             val getter = config.getDeclaredMethod(name)
             require(getter.returnType == Int::class.javaPrimitiveType)
             install(getter) { chain ->
@@ -78,7 +78,7 @@ internal object BackGestureHooker {
                     if (left) state.leftPosition else state.rightPosition)) chain.proceed() else -1
             }
         }
-        install(finished) { chain ->
+        if (state.release) install(finished) { chain ->
             recordFinished(chain.thisObject, chain.args.firstOrNull())
             chain.proceed()
         }
@@ -131,11 +131,11 @@ internal object BackGestureHooker {
         }.onFailure { frame.session.accepted = false }
     }
 
-    private fun withFeedback(view: View, nativeAosp: Boolean, action: () -> Any?): Any? {
-        val previous = feedback.get()
+    private fun withFeedback(view: View, action: () -> Any?): Any? {
         val state = frames.get()?.session?.settings ?: BackGestureSettings.xposed()
-        val scheme = BackGestureRules.haptics(state.haptics, nativeAosp)
-        feedback.set(Feedback(view, scheme, nativeAosp))
+        if (!state.hapticHooks) return action()
+        val previous = feedback.get()
+        feedback.set(view)
         return try { action() } finally { if (previous == null) feedback.remove() else feedback.set(previous) }
     }
 
@@ -143,36 +143,20 @@ internal object BackGestureHooker {
 
     private fun haptics(loader: ClassLoader) {
         val helper = loader.loadClass("com.oplus.systemui.navigationbar.gesture.VibrationHelper")
-        nativeHelper = helper
         val side = loader.loadClass("com.oplus.systemui.navigationbar.gesture.sidegesture.view.SideGestureNavView")
         val point = loader.loadClass("com.android.systemui.navigationbar.GesturePointContainerEx")
         install(side.getDeclaredMethod("onUpdateGestureView", point)) { chain ->
-            withFeedback(chain.thisObject as View, false) { chain.proceed() }
-        }
-        val panel = loader.loadClass("com.android.systemui.navigationbar.gestural.BackPanelController")
-        val panelView = panel.declaredMethods.single { it.name.startsWith("getBackPanelView\$") && it.parameterCount == 0 }
-            .apply { isAccessible = true }
-        val state = field(panel, "currentState").type
-        install(panel.getDeclaredMethod("updateArrowState", state, Boolean::class.javaPrimitiveType)) { chain ->
-            withFeedback(panelView.invoke(chain.thisObject) as View, true) { chain.proceed() }
-        }
-        val perform = View::class.java.getDeclaredMethod("performHapticFeedback", Int::class.javaPrimitiveType)
-        install(perform) { chain ->
-            val current = feedback.get()
-            val effect = chain.args[0] as Int
-            if (emitting.get() == true || current == null || current.view !== chain.thisObject ||
-                !current.aosp || current.scheme != 1 || effect !in 23..24) return@install chain.proceed()
-            if (effect == 24 || emit(current.view, 1, false)) true else chain.proceed()
+            withFeedback(chain.thisObject as View) { chain.proceed() }
         }
         for (method in listOf(helper.getDeclaredMethod("doVibrateCustomized", Context::class.java,
             Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType), helper.getDeclaredMethod("performKeyboardTouchFeedback"))) {
             install(method) { chain ->
                 val current = feedback.get()
-                if (emitting.get() == true || current == null || current.aosp || current.scheme != 0) chain.proceed()
-                else if (emit(current.view, 0, false)) null else chain.proceed()
+                if (emitting.get() == true || current == null) chain.proceed()
+                else if (emit(current, 0, false)) null else chain.proceed()
             }
         }
-        HookLog.i(TAG, "Native AOSP and ColorOS haptic adapters installed")
+        HookLog.i(TAG, "AOSP haptic adapter installed")
     }
 
     private fun emit(view: View, scheme: Int, release: Boolean): Boolean {

@@ -25,10 +25,10 @@ internal object DataSimSignalHooker {
 
     fun hook(loader: ClassLoader) {
         runCatching {
-            val controller = Class.forName("com.android.systemui.statusbar.phone.ui.StatusBarIconControllerImpl", false, loader)
+            val controller = HostClassLookup.load("com.android.systemui.statusbar.phone.ui.StatusBarIconControllerImpl", false, loader)
             val update = controller.getDeclaredMethod("setNewMobileIconSubIds", List::class.java)
             val contextField = controller.getDeclaredField("mContext").apply { isAccessible = true }
-            val stack = Class.forName("com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel.MobileIconsViewModel\$isStackable\$1", false, loader)
+            val stack = HostClassLookup.load("com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel.MobileIconsViewModel\$isStackable\$1", false, loader)
             val calculateStack = stack.getDeclaredMethod("invokeSuspend", Any::class.java)
             val owner = Owner(update)
             ModernHookRegistry.installCompat("$TAG:icons", update, object : ModernMethodHook() {

@@ -2,20 +2,27 @@ package com.mi.onextbox.ui.home
 
 import android.content.Context
 import android.os.Build
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppUiTokens
+import com.mi.onextbox.ui.common.TwemojiFlagIcon
+import com.mi.onextbox.ui.common.countryFlagRanges
+import com.mi.onextbox.ui.common.rememberCountryFlagGlyph
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsRowTextContent
-import com.mi.onextbox.ui.settings.SettingsTokens
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.Card
 import java.util.Locale
@@ -40,19 +47,12 @@ fun HomeInfoCard() {
         cornerRadius = AppUiTokens.CardCornerRadius,
     ) {
         Column {
-            HomeInfoBasicRow(
+            HomeRegionRow(
                 label = stringResource(R.string.home_info_region),
                 value = regionText,
             )
             SettingsDivider()
-            HomeInfoBasicRow(
-                label = stringResource(R.string.home_info_android_api),
-                value = stringResource(
-                    R.string.home_dash_android_api_format,
-                    Build.VERSION.RELEASE,
-                    Build.VERSION.SDK_INT,
-                ),
-            )
+            HomeAndroidApiRow(Build.VERSION.RELEASE, Build.VERSION.SDK_INT)
             SettingsDivider()
             HomeInfoBasicRow(
                 label = stringResource(R.string.info_device_model),
@@ -83,9 +83,69 @@ fun HomeInfoCard() {
     }
 }
 
+@Composable
+internal fun HomeRegionRow(label: String, value: String) {
+    val range = remember(value) { countryFlagRanges(value).lastOrNull() }
+    if (range == null) {
+        HomeInfoBasicRow(label, value)
+        return
+    }
+    val flag = value.substring(range.start, range.end)
+    val summary = value.removeRange(range.start, range.end).trimEnd()
+    val glyph = rememberCountryFlagGlyph(flag)
+    HomeInfoTrailingArtworkRow(label, summary, glyph.aspectRatio) { TwemojiFlagIcon(glyph) }
+}
+
+@Composable
+internal fun HomeAndroidApiRow(release: String, sdkInt: Int) {
+    val label = stringResource(R.string.home_info_android_api)
+    val value = stringResource(R.string.home_dash_android_api_format, release, sdkInt)
+    val artwork = androidEasterEggArtwork(sdkInt)
+    if (artwork == null) {
+        HomeInfoBasicRow(label, value)
+    } else {
+        HomeInfoTrailingArtworkRow(label, value, 1f) {
+            Image(painterResource(artwork), stringResource(R.string.home_android_easter_egg, sdkInt - 20),
+                modifier = Modifier.testTag("homeAndroidEasterLogo"))
+        }
+    }
+}
+
+@Composable
+private fun HomeInfoTrailingArtworkRow(
+    label: String,
+    summary: String,
+    aspectRatio: Float,
+    artwork: @Composable () -> Unit,
+) {
+    BasicComponent(modifier = Modifier.semantics(mergeDescendants = true) {}) {
+        Layout(
+            modifier = Modifier.fillMaxWidth(),
+            content = {
+                Column { SettingsRowTextContent(title = label, summary = summary) }
+                artwork()
+            },
+        ) { measurables, constraints ->
+            val gap = 16.dp.roundToPx().coerceAtMost(constraints.maxWidth)
+            val maxArtworkEdge = (constraints.maxWidth - gap) / 3
+            val text = measurables[0].measure(
+                constraints.copy(minWidth = 0, minHeight = 0, maxWidth = constraints.maxWidth - maxArtworkEdge - gap),
+            )
+            val artworkEdge = minOf(text.height, maxArtworkEdge)
+            val artworkWidth = minOf(artworkEdge, (artworkEdge * aspectRatio).toInt())
+            val artworkHeight = minOf(artworkEdge, (artworkEdge / aspectRatio).toInt())
+            val icon = measurables[1].measure(Constraints.fixed(artworkWidth, artworkHeight))
+            layout(constraints.maxWidth, text.height) {
+                text.placeRelative(0, 0)
+                icon.placeRelative(constraints.maxWidth - icon.width, (text.height - icon.height) / 2)
+            }
+        }
+    }
+}
+
 internal fun detectHomeRegionText(context: Context): String {
     val nvid = readHomeSystemProperty("ro.build.oplus_nv_id")?.trim()
-    val nvidRegion = nvid?.let(::mapOplusNvidRegion)
+    val nvidRegion = nvid?.let { mapOplusNvidRegion(context, it) }
     if (nvidRegion != null) return nvidRegion
 
     val propertyRegion = listOf(
@@ -101,7 +161,7 @@ internal fun detectHomeRegionText(context: Context): String {
         ?.let(::normalizeHomeRegionCode)
 
     if (propertyRegion != null) {
-        return formatHomeRegion(propertyRegion)
+        return formatHomeRegion(context, propertyRegion)
     }
 
     if (!nvid.isNullOrBlank() && !nvid.equals("null", ignoreCase = true)) {
@@ -111,24 +171,24 @@ internal fun detectHomeRegionText(context: Context): String {
     val localeRegion = context.resources.configuration.locales[0].country
         .ifBlank { "XX" }
         .uppercase(Locale.ROOT)
-    return formatHomeRegion(localeRegion)
+    return formatHomeRegion(context, localeRegion)
 }
 
-private fun mapOplusNvidRegion(nvid: String): String? = when (nvid) {
-    "10010111" -> formatHomeRegion("CN")
-    "00011010" -> formatHomeRegion("TW")
-    "00110111" -> formatHomeRegion("RU")
-    "01000100" -> formatHomeRegion("GDPR_EU")
-    "10001101" -> formatHomeRegion("GDPR_EUROPE")
-    "00011011" -> formatHomeRegion("IN")
-    "00110011" -> formatHomeRegion("ID")
-    "00111000" -> formatHomeRegion("MY")
-    "00111001" -> formatHomeRegion("TH")
-    "00111110" -> formatHomeRegion("PH")
-    "10000011" -> formatHomeRegion("SA")
-    "10011010" -> formatHomeRegion("LATAM")
-    "10011110" -> formatHomeRegion("BR")
-    "10100110" -> formatHomeRegion("MEA")
+private fun mapOplusNvidRegion(context: Context, nvid: String): String? = when (nvid) {
+    "10010111" -> formatHomeRegion(context, "CN")
+    "00011010" -> formatHomeRegion(context, "TW")
+    "00110111" -> formatHomeRegion(context, "RU")
+    "01000100" -> formatHomeRegion(context, "GDPR_EU")
+    "10001101" -> formatHomeRegion(context, "GDPR_EUROPE")
+    "00011011" -> formatHomeRegion(context, "IN")
+    "00110011" -> formatHomeRegion(context, "ID")
+    "00111000" -> formatHomeRegion(context, "MY")
+    "00111001" -> formatHomeRegion(context, "TH")
+    "00111110" -> formatHomeRegion(context, "PH")
+    "10000011" -> formatHomeRegion(context, "SA")
+    "10011010" -> formatHomeRegion(context, "LATAM")
+    "10011110" -> formatHomeRegion(context, "BR")
+    "10100110" -> formatHomeRegion(context, "MEA")
     else -> null
 }
 
@@ -150,28 +210,22 @@ private fun normalizeHomeRegionCode(raw: String): String? {
     }
 }
 
-private fun formatHomeRegion(code: String): String {
+private fun formatHomeRegion(context: Context, code: String): String {
     val normalized = code.uppercase(Locale.ROOT)
+    val locale = context.resources.configuration.locales[0].let {
+        if (it.language == "ja" && it.country == "CN") Locale.TRADITIONAL_CHINESE else it
+    }
     return when (normalized) {
-        "CN" -> "CN China 🇨🇳"
-        "TW" -> "TW Taiwan 🇹🇼"
-        "HK" -> "HK Hong Kong 🇭🇰"
-        "RU" -> "RU Russia 🇷🇺"
-        "EU", "GDPR_EU" -> "GDPR EU 🇪🇺"
-        "GDPR_EUROPE" -> "GDPR Europe 🇪🇺"
-        "IN" -> "IN India 🇮🇳"
-        "ID" -> "ID Indonesia 🇮🇩"
-        "MY" -> "MY Malaysia 🇲🇾"
-        "TH" -> "TH Thailand 🇹🇭"
-        "PH" -> "PH Philippines 🇵🇭"
-        "SA" -> "SA Saudi Arabia 🇸🇦"
-        "LATAM" -> "LATAM Latin America"
-        "BR" -> "BR Brazil 🇧🇷"
-        "MEA", "ME" -> "MEA The Middle East and Africa"
-        "GLO", "GLOBAL" -> "GLO Global 🌐"
+        "GDPR_EU", "EU" -> "GDPR ${Locale.Builder().setRegion("EU").build().getDisplayCountry(locale)} 🇪🇺"
+        "GDPR_EUROPE" -> "GDPR ${context.getString(R.string.home_region_europe)} 🇪🇺"
+        "LATAM" -> "LATAM ${context.getString(R.string.home_region_latam)}"
+        "MEA", "ME" -> "MEA ${context.getString(R.string.home_region_mea)}"
+        "GLO", "GLOBAL" -> "GLO ${context.getString(R.string.home_region_global)} 🌐"
         else -> {
             val flag = regionalFlag(normalized)
-            flag?.let { "$normalized $it" } ?: normalized
+            val country = if (normalized in Locale.getISOCountries())
+                Locale.Builder().setRegion(normalized).build().getDisplayCountry(locale) else ""
+            listOf(normalized, country, flag.orEmpty()).filter(String::isNotBlank).joinToString(" ")
         }
     }
 }

@@ -96,7 +96,7 @@ internal object SettingsRealmeFeatures {
             main.post(refresh)
         }
         private fun type(name: String) = Reflect.findClass("com.oplus.settings.$name", loader)
-        private fun primaryUser() = Reflect.callStaticMethod(Class.forName("android.app.ActivityManager"), "getCurrentUser") == 0
+        private fun primaryUser() = Reflect.callStaticMethod(HostClassLookup.load("android.app.ActivityManager"), "getCurrentUser") == 0
         private fun rawBrightness(): Boolean {
             rawBrightnessCheck.set(true)
             return try {

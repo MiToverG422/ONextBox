@@ -31,6 +31,7 @@ import java.text.Collator
 internal fun NotificationBatchPage(modifier: Modifier, backdrop: LayerBackdrop?, onBack: () -> Unit) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
+    val catalogRevision by ManageableAppCatalog.revision.collectAsState()
     val operation by NotificationBatchOperations.state.collectAsState()
     var apps by remember { mutableStateOf(emptyList<NotificationBatchApp>()) }
     var states by remember { mutableStateOf(emptyList<NotificationAppState>()) }
@@ -54,17 +55,16 @@ internal fun NotificationBatchPage(modifier: Modifier, backdrop: LayerBackdrop?,
     val busy = loading || operation.busy
     val plan = NotificationBatchEngine.plan(states, selected.toSet(), types, confirmation == 1)
 
-    LaunchedEffect(context, locale, reload, operation.revision) {
+    LaunchedEffect(context, locale, catalogRevision, reload, operation.revision) {
         if (operation.busy) return@LaunchedEffect
         loading = true
         readFailed = false
         try {
             val catalog = withContext(Dispatchers.IO) {
-                val pm = context.packageManager
                 val collator = Collator.getInstance(locale)
-                manageableApplications(pm)
+                ManageableAppCatalog.load(context, locale)
                     .map { NotificationBatchApp(NotificationAppTarget(it.packageName, it.uid),
-                        runCatching { pm.getApplicationLabel(it).toString() }.getOrDefault(it.packageName)) }
+                        it.label) }
                     .sortedWith { a, b -> collator.compare(a.label, b.label) }
             }
             apps = catalog
@@ -79,7 +79,7 @@ internal fun NotificationBatchPage(modifier: Modifier, backdrop: LayerBackdrop?,
     NotificationBatchLayout(
         modifier = modifier, backdrop = backdrop, onBack = onBack,
         ui = NotificationBatchUiState(apps, states, selected.toSet(), types, operation, loading, readFailed),
-        onRefresh = { reload++ }, onAction = { confirmation = it },
+        onRefresh = { ManageableAppCatalog.invalidate(); reload++ }, onAction = { confirmation = it },
         onSelectionChange = { selected = it.toList() },
         onTypesChange = {
             notifications = NotificationPermissionKind.Notifications in it

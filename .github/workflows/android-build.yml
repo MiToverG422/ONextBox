@@ -188,6 +188,7 @@ jobs:
 
           GRADLE_ARGS=(
             "-PONEXTBOX_VERSION_NAME=${{ steps.version.outputs.version_name }}"
+            "-PONEXTBOX_BUILD_TIMESTAMP=$(date +%s000)"
             "-PONEXTBOX_CI_SIGN_RELEASE_WITH_DEBUG=${SIGN_RELEASE_WITH_DEBUG}"
           )
 

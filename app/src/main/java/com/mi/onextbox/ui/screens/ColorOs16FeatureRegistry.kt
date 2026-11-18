@@ -329,7 +329,7 @@ internal object ColorOs16FeatureRegistry {
             setOf(FeaturePageMode.SystemUiNavigationBar), setOf("com.android.systemui")),
         Entry("systemui:hide_disconnected_bluetooth", setOf(R.string.feature_hide_disconnected_bluetooth_title),
             setOf(FeaturePageMode.SystemUiStatusBarNetwork), setOf("com.android.systemui")),
-        Entry("systemui:large_network_type", setOf(R.string.feature_large_network_type_title),
+        Entry("systemui:large_network_type", setOf(R.string.feature_large_network_type_title, R.string.feature_large_network_position_title),
             setOf(FeaturePageMode.SystemUiStatusBarNetwork), setOf("com.android.systemui")),
         Entry("systemui:large_network_artwork", setOf(R.string.feature_large_network_artwork_title, R.string.feature_large_network_lte_title),
             setOf(FeaturePageMode.SystemUiStatusBarNetwork), setOf("com.android.systemui")),

@@ -10,6 +10,28 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 object AppIcons {
+    val FolderOutline: ImageVector by lazy {
+        ImageVector.Builder("FolderOutline", 24.dp, 24.dp, 24f, 24f).apply {
+            path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f,
+                strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(3f, 7.5f)
+                verticalLineTo(6.5f)
+                curveTo(3f, 5.67f, 3.67f, 5f, 4.5f, 5f)
+                horizontalLineTo(9f)
+                lineTo(11f, 7f)
+                horizontalLineTo(19.5f)
+                curveTo(20.33f, 7f, 21f, 7.67f, 21f, 8.5f)
+                verticalLineTo(17.5f)
+                curveTo(21f, 18.33f, 20.33f, 19f, 19.5f, 19f)
+                horizontalLineTo(4.5f)
+                curveTo(3.67f, 19f, 3f, 18.33f, 3f, 17.5f)
+                close()
+                moveTo(3f, 9f)
+                horizontalLineTo(21f)
+            }
+        }.build()
+    }
+
     val ToolsFilled: ImageVector by lazy {
         ImageVector.Builder(
             name = "ToolsFilled",

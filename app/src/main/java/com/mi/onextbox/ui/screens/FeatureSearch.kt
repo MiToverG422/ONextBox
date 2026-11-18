@@ -217,20 +217,29 @@ internal fun FeatureSearchBar(
 }
 
 @Composable
-internal fun FeatureSearchResults(query: String, onOpen: (FeaturePageMode) -> Unit) {
+internal fun rememberFeatureSearchResults(query: String): List<FeatureSearchIndex.Entry> {
     val resources = LocalResources.current
     val configuration = LocalConfiguration.current
+    val version = rememberSystemAdaptationVersion()
+    val documents = remember(configuration, resources, version) {
+        lazy(LazyThreadSafetyMode.NONE) {
+            visibleFeatureSearchEntries(version).map { entry ->
+                FeatureSearchDocument(entry, resources.getString(entry.title),
+                    if (entry.description == 0) "" else resources.getString(entry.description))
+            }
+        }
+    }
+    return remember(query, documents) {
+        if (query.isBlank()) emptyList() else searchFeatureDocuments(query, documents.value)
+    }
+}
+
+@Composable
+internal fun FeatureSearchResults(query: String, onOpen: (FeaturePageMode) -> Unit) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val version = rememberSystemAdaptationVersion()
-    val results = remember(query, configuration, resources, version) {
-        visibleFeatureSearchEntries(version).map { entry ->
-            entry to featureSearchScore(
-                query, resources.getString(entry.title),
-                if (entry.description == 0) "" else resources.getString(entry.description),
-            )
-        }.filter { it.second > 0 }.sortedByDescending { it.second }.map { it.first }
-    }
+    val results = rememberFeatureSearchResults(query)
     SettingsSection(stringResource(R.string.feature_search_results, results.size))
     if (results.isEmpty()) {
         SettingsGroup {

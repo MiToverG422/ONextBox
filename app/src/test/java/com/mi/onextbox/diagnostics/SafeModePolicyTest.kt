@@ -27,6 +27,8 @@ class SafeModePolicyTest {
         assertEquals("system", SafeModePolicy.scope("system_server", true))
         assertEquals("com.android.systemui", SafeModePolicy.scope("com.android.systemui", false))
         assertEquals("com.android.launcher", SafeModePolicy.scope("com.android.launcher", false))
+        assertEquals("com.android.phone", SafeModePolicy.scope("com.android.phone", false))
+        assertNull(SafeModePolicy.scope("com.android.phone:remote", false))
         assertNull(SafeModePolicy.scope("com.android.settings", false))
         assertNull(SafeModePolicy.scope("com.android.systemui:screenshot", false))
     }
@@ -38,5 +40,15 @@ class SafeModePolicyTest {
         assertTrue(system.blocked)
         assertFalse(original.blocked)
         assertTrue(original.crashes.isEmpty())
+    }
+
+    @Test fun phoneCrashProtectionIsIsolatedAndClearedByANewBoot() {
+        var phone = SafeModePolicy.forBoot(null, "boot-a")
+        val ui = SafeModePolicy.forBoot(null, "boot-a")
+        repeat(3) { phone = SafeModePolicy.crash(phone, it * 1000L) }
+        assertTrue(phone.blocked)
+        assertFalse(ui.blocked)
+        assertTrue(SafeModePolicy.forBoot(phone, "boot-a").blocked)
+        assertFalse(SafeModePolicy.forBoot(phone, "boot-b").blocked)
     }
 }

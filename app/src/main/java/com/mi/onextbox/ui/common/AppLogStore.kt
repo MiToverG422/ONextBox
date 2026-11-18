@@ -60,6 +60,10 @@ object AppLogStore {
     private var appContext: Context? = null
     @Volatile
     private var initialized = false
+    // Protected by lock. Persistence starts after the initial history has been merged.
+    private var historyLoading = false
+    private var historyCleared = false
+    private val historyRemovedPrefixes = mutableSetOf<String>()
 
     internal val timeFormatter: DateTimeFormatter =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
@@ -82,15 +86,23 @@ object AppLogStore {
             if (initialized) return
             initialized = true
 
-            val loaded = loadPersistentEntries(applicationContext)
-            if (loaded.isNotEmpty()) {
-                val retained = loaded
-                    .filterNot { it.tag.startsWith(LEGACY_HOOK_TAG_PREFIX) }
-                    .takeLast(MAX_ENTRIES)
-                entriesSnapshot = retained
-                mutableEntries.value = retained
-                nextId.set((retained.maxOfOrNull { it.id } ?: 0L) + 1L)
-                if (retained.size != loaded.size) enqueueRewrite()
+            historyLoading = true
+            persistenceExecutor.execute {
+                val start = System.nanoTime()
+                val loaded = loadPersistentEntries(applicationContext)
+                synchronized(lock) {
+                    entriesSnapshot = mergeAppLogHistory(
+                        loaded, entriesSnapshot, historyCleared, historyRemovedPrefixes, MAX_ENTRIES,
+                    )
+                    mutableEntries.value = entriesSnapshot
+                    historyLoading = false
+                    historyRemovedPrefixes.clear()
+                    enqueueRewrite()
+                }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.event(
+                    "startup", "Log history loaded", "${loaded.size} historical entries; background worker",
+                    (System.nanoTime() - start) / 1_000_000,
+                )
             }
         }
     }
@@ -104,6 +116,7 @@ object AppLogStore {
 
     fun removeByTagPrefix(prefix: String) {
         synchronized(lock) {
+            if (historyLoading) historyRemovedPrefixes += prefix
             entriesSnapshot = entriesSnapshot.filterNot { entry -> entry.tag.startsWith(prefix) }
             mutableEntries.value = entriesSnapshot
             enqueueRewrite()
@@ -112,6 +125,7 @@ object AppLogStore {
 
     fun clear() {
         synchronized(lock) {
+            if (historyLoading) historyCleared = true
             entriesSnapshot = emptyList()
             mutableEntries.value = emptyList()
             enqueueRewrite()
@@ -195,7 +209,7 @@ object AppLogStore {
         replacePending: Boolean = false,
         immediate: Boolean = false,
     ) {
-        if (appContext == null) return
+        if (appContext == null || historyLoading) return
         var scheduleDelayedFlush = false
         synchronized(persistenceLock) {
             if (replacePending) pendingPersistenceCommands.clear()
@@ -313,7 +327,7 @@ object AppLogStore {
     }
 
     private fun trimPersistentFile(file: File) {
-        val lines = file.readLines(StandardCharsets.UTF_8).takeLast(MAX_ENTRIES)
+        val lines = lastLines(file)
         file.writeText(lines.joinToString(separator = "\n"), StandardCharsets.UTF_8)
         file.appendText("\n", StandardCharsets.UTF_8)
     }
@@ -327,8 +341,7 @@ object AppLogStore {
             val file = runtimeLogFile(context)
             if (!file.exists()) return@synchronized emptyList()
             runCatching {
-                file.readLines(StandardCharsets.UTF_8)
-                    .takeLast(MAX_ENTRIES)
+                lastLines(file)
                     .mapIndexedNotNull { index, line -> parseLine(line, index + 1L) }
             }.getOrDefault(emptyList())
         }
@@ -357,5 +370,12 @@ object AppLogStore {
     private val logLineRegex =
         Regex("""^\[(.+)] \[(DEBUG|INFO|WARN|ERROR)] \[(.+)] (.*)$""")
 
-    private const val LEGACY_HOOK_TAG_PREFIX = "Hook/"
+    private fun lastLines(file: File): List<String> = file.bufferedReader(StandardCharsets.UTF_8).use { reader ->
+        val lines = ArrayDeque<String>(MAX_ENTRIES)
+        reader.forEachLine { line ->
+            if (lines.size == MAX_ENTRIES) lines.removeFirst()
+            lines.addLast(line)
+        }
+        lines.toList()
+    }
 }

@@ -44,11 +44,11 @@ import kotlinx.coroutines.withContext
         SettingsDivider()
         SettingsCardRow(stringResource(R.string.diagnostics_permissions), "", onClick = { open("permissions") }, showArrow = true)
     }
-    SettingsSection(title = "诊断工具")
+    SettingsSection(title = stringResource(R.string.diagnostic_tools_section))
     SettingsGroup {
         listOf("bundle", "hookdetails", "sync", "snapshots", "performance", "trace").forEachIndexed { index, page ->
             if (index > 0) SettingsDivider()
-            SettingsCardRow(com.mi.onextbox.diagnostics.developerToolTitle(page), "",
+            SettingsCardRow(com.mi.onextbox.diagnostics.developerToolTitle(context, page), "",
                 onClick = { open(page) }, showArrow = true)
         }
     }

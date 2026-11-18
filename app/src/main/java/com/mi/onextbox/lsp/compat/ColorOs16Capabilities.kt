@@ -256,6 +256,7 @@ internal object ColorOs16Capabilities {
         "systemui_international_network_display",
         "systemui_international_notification_style",
         "systemui_large_network_type",
+        "systemui_large_network_type_position",
         "systemui_large_network_type_artwork",
         "systemui_large_network_type_artwork_lte",
         "systemui_native_power_menu",

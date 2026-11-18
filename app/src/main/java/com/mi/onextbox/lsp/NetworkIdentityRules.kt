@@ -6,13 +6,14 @@ internal object NetworkIdentityRules {
     val regions = listOf("tw", "hk", "cn", "us")
     val properties = listOf("gsm.sim.operator.numeric", "gsm.sim.operator.alpha", "gsm.sim.operator.iso-country",
         "gsm.operator.numeric", "gsm.operator.alpha", "gsm.operator.iso-country")
+    private val numericPattern = Regex("[0-9]{5,6}")
 
     fun valid(profile: Profile): Boolean = profile.region in regions &&
-        profile.numeric.matches(Regex("[0-9]{5,6}")) && when (profile.region) {
+        numericPattern.matches(profile.numeric) && when (profile.region) {
             "tw" -> profile.numeric.startsWith("466")
             "hk" -> profile.numeric.startsWith("454")
             "cn" -> profile.numeric.startsWith("460")
-            "us" -> profile.numeric.length == 6 && profile.numeric.take(3) in (310..316).map(Int::toString)
+            "us" -> profile.numeric.length == 6 && profile.numeric.take(3).toInt() in 310..316
             else -> false
         } && profile.name.isNotBlank() && profile.name.toByteArray().size <= 40 &&
         profile.name.none { it.isISOControl() }
@@ -56,7 +57,7 @@ internal object NetworkIdentityRules {
                     key.endsWith("alpha") -> profile.name
                     else -> profile.region
                 }
-                if (real.matches(Regex("[0-9]{5,6}")) && real.any { it != '0' }) {
+                if (numericPattern.matches(real) && real.any { it != '0' }) {
                     while (values.size <= slot) values += ""
                     values[slot] = replacement
                 }
@@ -76,6 +77,7 @@ internal class NetworkIdentityProperties(
 ) {
     data class Record(val original: String, val applied: String, val previous: String? = null)
     private val records = initial.filterKeys { it in NetworkIdentityRules.properties }.toMutableMap()
+    val hasOverrides: Boolean get() = records.isNotEmpty()
     fun actual(key: String, observed: String): String = records[key]?.let {
         if (observed == it.applied || observed == it.previous) it.original else observed
     } ?: observed
@@ -89,8 +91,22 @@ internal class NetworkIdentityProperties(
         records.clear(); records.putAll(next)
     }
 
-    fun refresh(profile: NetworkIdentityRules.Profile?) = refreshWith { NetworkIdentityRules.transform(it, profile) }
-    fun refreshSlots(profiles: Map<Int, NetworkIdentityRules.Profile>) = refreshWith { NetworkIdentityRules.transformSlots(it, profiles) }
+    /** One WAL transaction instead of persisting a native update and then another publication. */
+    fun refreshAfterNativeWrite(key: String, value: String, profiles: Map<Int, NetworkIdentityRules.Profile>) {
+        // Native set() has succeeded. Keep its genuine value even if transformation or storage
+        // fails, so the caller's recovery path never restores an obsolete native value.
+        records[key]?.let { records[key] = it.copy(original = value) }
+        refreshSlots(profiles)
+    }
+
+    fun refresh(profile: NetworkIdentityRules.Profile?) {
+        if (profile == null && !hasOverrides) return
+        refreshWith { NetworkIdentityRules.transform(it, profile) }
+    }
+    fun refreshSlots(profiles: Map<Int, NetworkIdentityRules.Profile>) {
+        if (profiles.isEmpty() && !hasOverrides) return
+        refreshWith { NetworkIdentityRules.transformSlots(it, profiles) }
+    }
 
     private fun refreshWith(transform: (Map<String, String>) -> Map<String, String>) {
         val current = NetworkIdentityRules.properties.associateWith(read)
