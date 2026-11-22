@@ -8,5 +8,10 @@
     "name": "@AcardiaX",
     "amountCny": 30,
     "date": "2026-11-18"
+  },
+  {
+    "name": "@Joy",
+    "amountCny": 50,
+    "date": "2026-11-22"
   }
 ]
