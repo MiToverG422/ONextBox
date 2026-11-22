@@ -22,13 +22,15 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/** Floating bottom-bar material with vendor blur and shadows, using Canvas as a fallback. */
+/** ColorOS bottom-bar backdrop, with a capsule outline and shadows for the floating bar. */
 // High-API effects are guarded at creation and have a plain fallback.
 @SuppressLint("NewApi")
 internal class ColorOsBottomBarMaterialView(
     context: Context,
     darkTheme: Boolean,
     fallbackColor: Int,
+    private val effects: AppVisualEffects,
+    private val floating: Boolean = true,
 ) : View(context) {
     private val density = resources.displayMetrics.density
     private val fallbackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -41,7 +43,7 @@ internal class ColorOsBottomBarMaterialView(
             if (android.os.Build.VERSION.SDK_INT >= 29) blendMode = BlendMode.SRC_OVER
         }
     }
-    private val colorOsEdgeShader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    private val colorOsEdgeShader = if (floating && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         runCatching { RuntimeShader(ColorOs17ShadowEdgeShader) }.getOrNull()
     } else {
         null
@@ -56,8 +58,8 @@ internal class ColorOsBottomBarMaterialView(
 
     init {
         setWillNotDraw(false)
-        clipToOutline = true
-        outlineProvider = object : ViewOutlineProvider() {
+        clipToOutline = floating
+        if (floating) outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
                 outline.setRoundRect(
                     0,
@@ -82,7 +84,7 @@ internal class ColorOsBottomBarMaterialView(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         post {
-            applyShadowClipExpansion()
+            if (floating) applyShadowClipExpansion()
             applyColorOsMaterial()
         }
     }
@@ -111,8 +113,9 @@ internal class ColorOsBottomBarMaterialView(
         if (width <= 0 || height <= 0) return
 
         if (!nativeBackgroundApplied) {
-            drawFallbackMaterial(canvas)
+            if (floating) drawFallbackMaterial(canvas) else canvas.drawColor(fallbackColor)
         }
+        if (!floating || !effects.outline) return
         val edgeShader = colorOsEdgeShader
         if (!nativeStrokeApplied && canvas.isHardwareAccelerated && edgeShader != null) {
             colorOsEdgePaint.shader = edgeShader
@@ -129,20 +132,22 @@ internal class ColorOsBottomBarMaterialView(
         // ColorOS installs the transparent state background before setting the background
         // RenderEffect. Replacing it afterwards can discard the vendor RenderNode state.
         background = ColorDrawable(Color.TRANSPARENT)
-        nativeBackgroundApplied = applyBackgroundRenderEffect()
+        nativeBackgroundApplied = effects.backgroundBlur && applyBackgroundRenderEffect()
         // ColorOS's RenderNode stroke is substantially dimmer than drawing its source alpha
         // directly into a Canvas shader. Prefer the same native path used by MMS; the custom
         // shader remains only as a fallback for non-ColorOS builds.
-        nativeStrokeApplied = applyMaterialStrokeAndCorner()
-        clipToOutline = !nativeStrokeApplied
-        applyBottomBarShadow()
+        if (floating) {
+            nativeStrokeApplied = effects.outline && applyMaterialStrokeAndCorner()
+            clipToOutline = !nativeStrokeApplied
+            applyBottomBarShadow()
+        }
         materialInitialized = true
         invalidateOutline()
         invalidate()
     }
 
     private fun applyBackgroundRenderEffect(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
+        val setter = nativeBlurSetter ?: return false
         return runCatching {
             // Original bottom-bar preset, now also shared by search and toolbar buttons.
             val colorLayer1 = ColorOsToolbarGlass.firstTint(darkTheme)
@@ -160,12 +165,7 @@ internal class ColorOsBottomBarMaterialView(
                 BlendModeColorFilter(colorLayer2, blendModeLayer2),
                 firstLayer,
             )
-            val effectClass = Class.forName("com.oplus.view.OplusViewBackgroundRenderEffect")
-            effectClass.getMethod(
-                "setBackgroundRenderEffect",
-                RenderEffect::class.java,
-                View::class.java,
-            ).invoke(null, material, this)
+            setter.invoke(null, material, this)
             true
         }.getOrDefault(false)
     }
@@ -449,16 +449,21 @@ internal class ColorOsBottomBarMaterialView(
     }
 
     private fun clearBackgroundRenderEffect() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !nativeBackgroundApplied) return
-        runCatching {
-            val effectClass = Class.forName("com.oplus.view.OplusViewBackgroundRenderEffect")
-            effectClass.getMethod(
-                "setBackgroundRenderEffect",
-                RenderEffect::class.java,
-                View::class.java,
-            ).invoke(null, null, this)
-        }
+        if (!nativeBackgroundApplied) return
+        runCatching { nativeBlurSetter?.invoke(null, null, this) }
         nativeBackgroundApplied = false
+    }
+
+    companion object {
+        private val nativeBlurSetter by lazy {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) null else runCatching {
+                Class.forName("com.oplus.view.OplusViewBackgroundRenderEffect").getMethod(
+                    "setBackgroundRenderEffect", RenderEffect::class.java, View::class.java,
+                )
+            }.getOrNull()
+        }
+
+        fun supportsNativeBlur(): Boolean = nativeBlurSetter != null
     }
 
     private fun drawFallbackMaterial(canvas: Canvas) {

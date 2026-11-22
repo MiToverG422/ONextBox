@@ -332,7 +332,7 @@ suspend fun restartScopePackages(
                     // LSPosed never gets a chance to inject the updated module state. Killing
                     // the exact persistent process lets system_server immediately recreate it.
                     "com.android.phone" -> restartPhoneScope()
-                    else -> ShellLogger.exec("ScopeRestart", "am force-stop $packageName")
+                    else -> ShellLogger.exec("ScopeRestart", "cmd activity force-stop $packageName")
                 }
                 if (result.isSuccess) {
                     null
@@ -363,7 +363,7 @@ private fun restartSystemUiScope(): Shell.Result {
     return if (killResult.isSuccess) {
         killResult
     } else {
-        ShellLogger.exec("ScopeRestart", "am force-stop com.android.systemui")
+        ShellLogger.exec("ScopeRestart", "cmd activity force-stop com.android.systemui")
     }
 }
 

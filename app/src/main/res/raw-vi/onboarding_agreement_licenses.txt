@@ -36,7 +36,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Twemoji country and region flag graphics are copyright Twitter, Inc. and other contributors, licensed under Creative Commons Attribution 4.0 International.
+Bản quyền hình lá cờ của các quốc gia và vùng lãnh thổ trong Twemoji thuộc về Twitter, Inc. và các cộng tác viên khác. Các hình này được cấp phép theo giấy phép Creative Commons Ghi công 4.0 Quốc tế (CC BY 4.0).
 https://github.com/discord/twemoji
 https://creativecommons.org/licenses/by/4.0/
-ONextBox converts the 259 country and region flag SVGs into a flags-only color font; the original flag artwork is retained.
+ONextBox chuyển 259 ảnh SVG lá cờ của các quốc gia và vùng lãnh thổ thành một phông chữ màu chỉ chứa cờ, giữ nguyên hình vẽ gốc.

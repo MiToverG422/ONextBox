@@ -10,8 +10,13 @@ internal object ImmersiveNavigationRules {
 
     data class Dimension(val value: Float, val inPixels: Boolean = false)
 
-    fun isHandleOptionActive(customHandleEnabled: Boolean, optionEnabled: Boolean): Boolean =
-        customHandleEnabled && optionEnabled
+    enum class Geometry(val key: String, val resource: String, val range: IntRange) {
+        Height("navigation_handle_thickness", "navigation_handle_height", 1..12),
+        Bottom("navigation_handle_bottom_margin", "navigation_handle_bottom", 0..16),
+        Radius("navigation_handle_corner_radius", "navigation_handle_radius", 0..12);
+
+        fun normalize(value: Int) = if (value == SYSTEM_DEFAULT) value else value.coerceIn(range)
+    }
 
     fun isFadedHandleColor(resourcePackage: String, name: String): Boolean =
         resourcePackage == "com.android.systemui" && (name == "navigation_bar_home_handle_dark_color_faded" ||
@@ -77,11 +82,19 @@ internal object ImmersiveNavigationRules {
         immersiveEnabled: Boolean = true,
         customLengthEnabled: Boolean = false,
         lengthDp: Int = SYSTEM_DEFAULT,
+        geometryDp: (Geometry) -> Int = { SYSTEM_DEFAULT },
     ): Dimension? {
         if (!gestureNavigation) return null
         if (customLengthEnabled && isHandleLength(resourcePackage, name)) {
             if (lengthDp == SYSTEM_DEFAULT) return null
             return Dimension(normalizeLength(lengthDp).toFloat())
+        }
+        if (customLengthEnabled && resourcePackage == "com.android.systemui") {
+            val field = Geometry.entries.firstOrNull { it.resource == name }
+            if (field != null) {
+                val dp = field.normalize(geometryDp(field))
+                return if (dp == SYSTEM_DEFAULT) null else Dimension(dp.toFloat())
+            }
         }
         if (!immersiveEnabled) return null
         return when (resourcePackage) {

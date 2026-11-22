@@ -35,6 +35,8 @@ internal object LauncherNotificationDotShadowHooker {
 
     fun hook(loader: ClassLoader) {
         launcherClassLoader = loader
+        runCatching { LauncherBadgeRefresh(loader).install() }
+            .onFailure { HookLog.w(TAG, "Live badge refresh unavailable", it) }
         runCatching { installDotShadow(loader) }.onSuccess {
             HookLog.i(TAG, "Dot shadow gate installed")
         }.onFailure {
@@ -50,6 +52,12 @@ internal object LauncherNotificationDotShadowHooker {
     private fun installDotShadow(loader: ClassLoader) {
         val renderer = ModernReflect.findClass(OPLUS_DOT_RENDERER, loader)
         val draw = renderer.declaredMethods.single { it.name == "draw" && it.parameterTypes.size == 3 }
+        val nativePosition = ModernReflect.findClassIfExists("com.android.common.util.IconUtils", loader)
+            ?.declaredMethods?.singleOrNull { it.name == "getPositionForDot" && it.parameterTypes.contentEquals(
+                arrayOf(Rect::class.java, Rect::class.java, Int::class.javaPrimitiveType,
+                    Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)) }?.apply { isAccessible = true }
+        val fallen = renderer.declaredMethods.singleOrNull { it.name == "adjustDotOffestForFallen" && it.parameterCount == 2 }
+            ?.apply { isAccessible = true }
         runCatching { ModernHookRuntime.requireModule().deoptimize(draw) }
         ModernHookRegistry.installCompat("$TAG:dot-shadow", draw, object : ModernMethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
@@ -57,7 +65,7 @@ internal object LauncherNotificationDotShadowHooker {
                 val canvas = param.args[0] as? Canvas ?: return
                 val drawParams = param.args[1] ?: return
                 val centeredScale = param.args[2] as? Boolean ?: false
-                drawDotShadow(canvas, param.thisObject ?: return, drawParams, centeredScale)
+                drawDotShadow(canvas, param.thisObject ?: return, drawParams, centeredScale, nativePosition, fallen)
             }
         })
     }
@@ -77,23 +85,24 @@ internal object LauncherNotificationDotShadowHooker {
         })
     }
 
-    private fun drawDotShadow(canvas: Canvas, renderer: Any, drawParams: Any, centeredScale: Boolean) {
+    private fun drawDotShadow(canvas: Canvas, renderer: Any, drawParams: Any, centeredScale: Boolean,
+        nativePosition: java.lang.reflect.Method?, fallen: java.lang.reflect.Method?) {
         val bounds = ModernReflect.getObjectField(drawParams, "iconBounds") as? Rect ?: return
         val leftAlign = ModernReflect.getObjectField(drawParams, "leftAlign") as? Boolean ?: false
         val dotSize = (ModernReflect.getObjectField(renderer, "mDotSize") as? Number)?.toInt() ?: return
         if (dotSize <= 0) return
         val offset = (ModernReflect.getObjectField(renderer, "mNumBadgeBGOffsetByDesign") as? Number)?.toInt() ?: 0
-        if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16) {
-            val loader = launcherClassLoader ?: return
-            val iconUtils = ModernReflect.findClass("com.android.common.util.IconUtils", loader)
-            // C16 uses fixed dp offsets for round/oval icons. Reuse its own center calculation.
-            val position = ModernReflect.callStaticMethod(iconUtils, "getPositionForDot", bounds,
-                canvas.clipBounds, dotSize / 2, offset, !leftAlign) as? Rect ?: return
+        if (nativePosition != null) {
+            val position = nativePosition.invoke(null, bounds, canvas.clipBounds, dotSize / 2, offset, !leftAlign) as? Rect ?: return
             val host = ModernReflect.getObjectField(renderer, "drawDotView")
-            val fallenX = (ModernReflect.callMethod(renderer, "adjustDotOffestForFallen", true, host) as? Number)?.toFloat() ?: 0f
-            val fallenY = (ModernReflect.callMethod(renderer, "adjustDotOffestForFallen", false, host) as? Number)?.toFloat() ?: 0f
+            fun shift(horizontal: Boolean): Float {
+                if (fallen == null) return 0f
+                val value = if (fallen.parameterTypes[0] == Boolean::class.javaPrimitiveType)
+                    fallen.invoke(renderer, horizontal, host) else fallen.invoke(renderer, host, horizontal)
+                return (value as? Number)?.toFloat() ?: 0f
+            }
             val scale = (ModernReflect.getObjectField(drawParams, "scale") as? Number)?.toFloat() ?: 1f
-            paintShadow(canvas, position.exactCenterX() + fallenX, position.exactCenterY() + fallenY, dotSize, scale, centeredScale)
+            paintShadow(canvas, position.exactCenterX() + shift(true), position.exactCenterY() + shift(false), dotSize, scale, centeredScale)
             return
         }
 
@@ -171,7 +180,7 @@ internal object LauncherNotificationDotShadowHooker {
                 if (centeredScale) scale(scale, scale, radius, radius) else scale(scale, scale)
             }
             val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-            paint.color = Color.TRANSPARENT
+            paint.color = Color.BLACK
             paint.setShadowLayer(blur, 0f, keyDistance, Color.argb(KEY_SHADOW_ALPHA, 0, 0, 0))
             drawCircle(radius, radius, radius, paint)
             paint.setShadowLayer(blur, 0f, 0f, Color.argb(AMBIENT_SHADOW_ALPHA, 0, 0, 0))

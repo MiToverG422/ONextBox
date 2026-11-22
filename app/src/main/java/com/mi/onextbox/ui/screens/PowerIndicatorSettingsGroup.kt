@@ -68,10 +68,14 @@ internal fun PowerIndicatorSettingsGroup() {
                 onValueChange = { save(state.copy(scale = it)) }, interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below)
         }
         row("power-source", visible = state.enabled) { above, below ->
-            val options = listOf(0 to stringResource(R.string.power_indicator_source_api),
-                1 to stringResource(R.string.power_indicator_source_ma), 2 to stringResource(R.string.power_indicator_source_ua))
+            val options = listOf(
+                PowerIndicatorSettings.SOURCE_ANDROID_UA to stringResource(R.string.power_indicator_source_api),
+                PowerIndicatorSettings.SOURCE_ANDROID_MA to stringResource(R.string.power_indicator_source_api_ma),
+                PowerIndicatorSettings.SOURCE_SYSFS_MA to stringResource(R.string.power_indicator_source_ma),
+                PowerIndicatorSettings.SOURCE_SYSFS_UA to stringResource(R.string.power_indicator_source_ua),
+            )
             OptionDropdownRow(title = stringResource(R.string.power_indicator_source), summary = stringResource(R.string.power_indicator_source_notice),
-                selectedLabel = options[state.source].second, options = options, selectedValue = state.source,
+                selectedLabel = options.first { it.first == state.source }.second, options = options, selectedValue = state.source,
                 onValueChange = { save(state.copy(source = it)) }, interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below)
         }
         row("power-charging", visible = state.enabled) { above, below ->

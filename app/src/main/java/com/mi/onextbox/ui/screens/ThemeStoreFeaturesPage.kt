@@ -25,15 +25,17 @@ internal fun ThemeStoreFeaturesPage() {
     val scope = rememberCoroutineScope()
     var enabled by remember(context) { mutableStateOf(ThemeStoreSettings.enabled(context)) }
     var adsEnabled by remember(context) { mutableStateOf(ThemeStoreSettings.adsEnabled(context)) }
+    var nightResources by remember(context) { mutableStateOf(ThemeStoreSettings.nightResources(context)) }
     var savingKey by remember { mutableStateOf<String?>(null) }
     fun refresh() {
         enabled = ThemeStoreSettings.enabled(context)
         adsEnabled = ThemeStoreSettings.adsEnabled(context)
+        nightResources = ThemeStoreSettings.nightResources(context)
     }
     DisposableEffect(context, owner) {
         val prefs = LspPreferenceStore.prefs(context)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (savingKey == null && (key == null || key in setOf(ThemeStoreSettings.ENABLED, ThemeStoreSettings.ADS))) refresh()
+            if (savingKey == null && (key == null || key in setOf(ThemeStoreSettings.ENABLED, ThemeStoreSettings.ADS, ThemeStoreSettings.NIGHT_RESOURCES))) refresh()
         }
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME && savingKey == null) refresh()
@@ -47,10 +49,18 @@ internal fun ThemeStoreFeaturesPage() {
     }
     fun save(key: String, next: Boolean) {
         if (savingKey != null) return
-        if (key == ThemeStoreSettings.ADS) adsEnabled = next else enabled = next
+        when (key) {
+            ThemeStoreSettings.ADS -> adsEnabled = next
+            ThemeStoreSettings.NIGHT_RESOURCES -> nightResources = next
+            else -> enabled = next
+        }
         savingKey = key
         val write = FeatureSettingWriteQueue.application.enqueue {
-            if (key == ThemeStoreSettings.ADS) ThemeStoreSettings.setAds(context, next) else ThemeStoreSettings.set(context, next)
+            when (key) {
+                ThemeStoreSettings.ADS -> ThemeStoreSettings.setAds(context, next)
+                ThemeStoreSettings.NIGHT_RESOURCES -> ThemeStoreSettings.setNightResources(context, next)
+                else -> ThemeStoreSettings.set(context, next)
+            }
         }
         scope.launch {
             try { write.await() }
@@ -79,7 +89,17 @@ internal fun ThemeStoreFeaturesPage() {
             checked = adsEnabled,
             interactionEnabled = savingKey != ThemeStoreSettings.ADS,
             hasDividerAbove = true,
+            hasDividerBelow = true,
             onCheckedChange = { save(ThemeStoreSettings.ADS, it) },
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = stringResource(R.string.theme_store_night_title),
+            summary = stringResource(R.string.theme_store_night_summary),
+            checked = nightResources,
+            interactionEnabled = savingKey == null,
+            hasDividerAbove = true,
+            onCheckedChange = { save(ThemeStoreSettings.NIGHT_RESOURCES, it) },
         )
     }
 }

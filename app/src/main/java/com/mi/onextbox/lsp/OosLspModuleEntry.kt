@@ -14,6 +14,8 @@ import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 
 /** Single modern API 102 entry for all ONextBox scopes. */
@@ -28,6 +30,8 @@ class OosLspModuleEntry : XposedModule() {
         fun export(): Array<Any> = arrayOf(packageName, classLoader, sourceDir, system)
     }
     private val reloadTargets = CopyOnWriteArrayList<ReloadTarget>()
+    private val installingTargets = AtomicInteger()
+    private val preparingReload = AtomicBoolean()
     private var reloadMailbox = HotReloadDispatchMailbox.create()
     private val lifecycleReceiver = Consumer<Array<Any>> { row ->
         HotReloadLifecycle.withInfrastructureHook(
@@ -187,8 +191,16 @@ class OosLspModuleEntry : XposedModule() {
         com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("module", "Attached", processName)
         val dispatchKey = "${target.packageName}@${System.identityHashCode(target.classLoader)}"
         if (!dispatchedPackages.add(dispatchKey)) return
-        reloadTargets += target
-        if (target.system) dispatchSystemServer(target.classLoader) else dispatchPackage(target)
+        installingTargets.incrementAndGet()
+        try {
+            reloadTargets += target
+            if (target.system) dispatchSystemServer(target.classLoader) else dispatchPackage(target)
+        } catch (failure: Throwable) {
+            ModernHotReloadSession.current?.markFailed()
+            throw failure
+        } finally {
+            installingTargets.decrementAndGet()
+        }
     }
 
     private fun dispatchPackage(target: ReloadTarget) {
@@ -238,6 +250,7 @@ class OosLspModuleEntry : XposedModule() {
             return
         }
 
+        ThemeNightResourcesHook.install(classLoader)
         com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("InstallerRedirectHooker.hookApp") { InstallerRedirectHooker.hookApp() }
 
         when (packageName) {
@@ -248,6 +261,7 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LargeNetworkTypeHooker.hook") { LargeNetworkTypeHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("DataSimSignalHooker.hook") { DataSimSignalHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("StatusBarLayoutHooker.hook") { StatusBarLayoutHooker.hook(classLoader) }
+                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SystemUiAppearanceHooker.install") { SystemUiAppearanceHooker(classLoader).install() }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PowerIndicatorHooker.hook") { PowerIndicatorHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("RotationSuggestionHooker.hook") { RotationSuggestionHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CarrierNameHooker.hook") { CarrierNameHooker.hook(classLoader) }
@@ -286,6 +300,7 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NetworkSpeedHooker.hook") { NetworkSpeedHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FaceTapUnlockHooker.hook") { FaceTapUnlockHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FaceAuthCapsuleHooker.hook") { FaceAuthCapsuleHooker.hook(classLoader) }
+                KeyguardGestureHandle.hook(classLoader)
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyguardCaptureHooker.hookSystemUi") { KeyguardCaptureHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PasswordDialHighlightHooker.hook") { PasswordDialHighlightHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PinSwipeInputHooker.hook") { PinSwipeInputHooker.hook(classLoader) }
@@ -356,6 +371,7 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("MobileNetworkHooker.hook") { MobileNetworkHooker.hook(classLoader) }
             }
 
+            WalletOptions.PACKAGE -> WalletHooker.hook(classLoader)
             PACKAGE_APP_MARKET -> com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AppMarketHooker.hook") { AppMarketHooker.hook(classLoader) }
             TrafficManagementRules.PACKAGE_NAME ->
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("TrafficManagementHooker.hook") { TrafficManagementHooker.hook(classLoader, target.sourceDir) }
@@ -378,6 +394,7 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyboardDismissButtonHooker.hook") { KeyboardDismissButtonHooker.hook(classLoader) }
             }
             "com.oplus.battery" -> {
+                LowBatteryAutoSwitch.hook(classLoader)
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BatteryAiAssistantHooker.hook") { BatteryAiAssistantHooker.hook(classLoader, target.sourceDir) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BatteryCycleCountHooker.hook") { BatteryCycleCountHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("BatteryOptimizationHooker.hookBattery") { BatteryOptimizationHooker.hookBattery(classLoader, target.sourceDir) }
@@ -468,12 +485,17 @@ class OosLspModuleEntry : XposedModule() {
     }
 
     override fun onHotReloading(param: XposedModuleInterface.HotReloadingParam): Boolean {
+        if (!preparingReload.compareAndSet(false, true)) return false
+        return try { prepareHotReload(param) } finally { preparingReload.set(false) }
+    }
+
+    private fun prepareHotReload(param: XposedModuleInterface.HotReloadingParam): Boolean {
         if (com.mi.onextbox.lsp.compat.SafeModeRuntime.blocked) return false
         val session = ModernHotReloadSession.current
         val currentTargets = reloadTargets.toList()
         if (!ModuleHotReloadPolicy.canReload(
                 processName, systemServer, currentTargets.map { it.packageName }.toSet(),
-                session?.healthy == true && currentTargets.isNotEmpty() &&
+                session?.healthy == true && currentTargets.isNotEmpty() && installingTargets.get() == 0 &&
                     !HotReloadLifecycle.isRetiring && HookConfigSnapshot.isListening && HookConfigSnapshot.isAvailable,
             )) {
             reloadStatus("Hot reload deferred for $processName; restart this scope. " +
@@ -544,6 +566,7 @@ class OosLspModuleEntry : XposedModule() {
                 dispatchedPackages.add(dispatchKey)
                 reloadTargets += target
             }
+            DexTargetCache.restorePreviousGeneration()
             HotReloadLifecycle.replaySavedState()
             session.commit(param.oldHookHandles)
             HotReloadLifecycle.complete()

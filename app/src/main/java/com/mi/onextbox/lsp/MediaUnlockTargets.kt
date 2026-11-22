@@ -6,7 +6,7 @@ import java.lang.reflect.Modifier
 
 internal object MediaUnlockTargets {
     const val CAMERA_CONFIG = "com.oplus.camera.configure.CameraConfig"
-    const val SCHEMA = "media-eligibility-v4"
+    const val SCHEMA = "media-eligibility-v5"
     private const val GALLERY_FUNCTIONS = "com.oplus.gallery.basebiz.helper.function.FunctionSwitchManager"
 
     /** Only boolean readers; never existence checks, numeric values or native configuration writes. */
@@ -21,12 +21,22 @@ internal object MediaUnlockTargets {
 
     fun camera(dex: DexKitBridge, loader: ClassLoader): Map<String, Array<Method>> {
         val type = loader.loadClass(CAMERA_CONFIG)
-        val readers = type.declaredMethods.filter(::cameraReader)
+        val data = checkNotNull(dex.getClassData(CAMERA_CONFIG))
+        val valueReaders = data.methods.filter { method ->
+            method.isMethod && method.returnTypeName == "boolean" &&
+                method.paramTypeNames == listOf(String::class.java.name, "boolean", "boolean") &&
+                method.invokes.any { it.className == "java.lang.Boolean" && it.name == "parseBoolean" }
+        }
+        val delegates = valueReaders.flatMap { it.callers }.filter { method ->
+            method.isMethod && method.className == CAMERA_CONFIG && method.returnTypeName == "boolean" &&
+                method.paramTypeNames == listOf(String::class.java.name, "boolean")
+        }
+        val readers = (type.declaredMethods.filter { it.name == "getConfigBooleanValue" && cameraReader(it) } +
+            (valueReaders + delegates).mapNotNull { runCatching { it.getMethodInstance(loader) }.getOrNull() }
+                .filter { Modifier.isStatic(it.modifiers) && !Modifier.isNative(it.modifiers) }).distinct()
         check(readers.any { it.name == "getConfigBooleanValue" }) { "No supported CameraConfig reader" }
         // New GR/Vibe/filter gates call the default-value reader directly.
-        check(readers.any { it.name == "d" }) { "No supported default-value reader" }
         val keys = MediaUnlockCatalog.gatesByApp.getValue(MediaUnlockCatalog.App.Camera).keys
-        val data = checkNotNull(dex.getClassData(CAMERA_CONFIG))
         val callers = data.methods.filter { it.isMethod && it.name in readers.map(Method::getName) }
             .flatMap { it.callers }.distinctBy { it.toString() }
             .filter { it.isMethod && it.usingStrings.any(keys::contains) }

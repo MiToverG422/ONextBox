@@ -35,7 +35,7 @@ fun AppUiStyleAppTheme(
             onSurfaceVariant = coui.onSurfaceVariantSummary,
         ),
     ) {
-        CompositionLocalProvider(LocalIndication provides couiIndication) {
+        CompositionLocalProvider(LocalIndication provides couiIndication, LocalAppUiStyle provides style) {
             content()
         }
     }

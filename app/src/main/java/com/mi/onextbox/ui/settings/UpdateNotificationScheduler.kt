@@ -26,8 +26,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -41,7 +44,10 @@ object UpdateNotificationScheduler {
     private const val KEY_LAST_NOTIFIED_VERSION = "last_notified_version"
     private const val CHECK_INTERVAL_MS = 2 * 60 * 60 * 1000L
     private const val CHECK_FLEX_MS = 30 * 60 * 1000L
-    private val checking = AtomicBoolean(false)
+    private val checkMutex = Mutex()
+    private val launchCheckStarted = AtomicBoolean(false)
+    private val detectedLaunchUpdate = MutableStateFlow<AvailableUpdate?>(null)
+    internal val launchUpdate = detectedLaunchUpdate.asStateFlow()
     private val immediateExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "ONextBox-UpdateCheck").apply { isDaemon = true }
     }
@@ -90,7 +96,7 @@ object UpdateNotificationScheduler {
     fun cancel(context: Context) {
         val appContext = context.applicationContext
         appContext.getSystemService(JobScheduler::class.java).cancel(JOB_ID)
-        appContext.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
+        cancelAvailableUpdateNotification(appContext)
     }
 
     fun checkNow(context: Context) {
@@ -99,27 +105,36 @@ object UpdateNotificationScheduler {
             cancel(appContext)
             return
         }
+        enqueueCheck(appContext, fromLaunch = false)
+    }
+
+    internal fun checkOnLaunch(context: Context) {
+        val appContext = context.applicationContext
+        if (!ActivationGate.isActivated(appContext) || !launchCheckStarted.compareAndSet(false, true)) return
+        enqueueCheck(appContext, fromLaunch = true)
+    }
+
+    private fun enqueueCheck(context: Context, fromLaunch: Boolean) {
         immediateExecutor.execute {
-            runBlocking {
-                checkAndNotify(appContext)
-            }
+            runBlocking { checkAndNotify(context, fromLaunch) }
         }
     }
 
-    suspend fun checkAndNotify(context: Context) {
+    suspend fun checkAndNotify(context: Context, fromLaunch: Boolean = false) {
         val appContext = context.applicationContext
-        if (!ActivationGate.mayRunBackgroundNetwork(appContext)) {
-            cancel(appContext)
-            return
-        }
-        if (!AppUpdatePreferences.getUpdateNotificationsEnabled(appContext)) return
-        if (!checking.compareAndSet(false, true)) return
+        // Let the one launch check wait if a scheduled job was already checking for updates.
+        if (fromLaunch) checkMutex.lock() else if (!checkMutex.tryLock()) return
         try {
+            val shouldNotify = mayPostUpdateNotification(appContext)
+            val shouldPrompt = fromLaunch && mayShowLaunchUpdatePrompt(appContext)
+            if (!shouldNotify && !shouldPrompt) return
             val includeBeta = AppUpdatePreferences.getBetaPlanEnabled(appContext)
             val update = AppUpdater.checkForUpdate(
                 includeBeta = includeBeta,
-            ) ?: return
+            )
             if (includeBeta != AppUpdatePreferences.getBetaPlanEnabled(appContext)) return
+            if (shouldPrompt && mayShowLaunchUpdatePrompt(appContext)) detectedLaunchUpdate.value = update
+            if (update == null || !shouldNotify || !mayPostUpdateNotification(appContext)) return
             val prefs = appContext.getSharedPreferences(RUNTIME_PREFS, Context.MODE_PRIVATE)
             if (prefs.getString(KEY_LAST_NOTIFIED_VERSION, null) == update.versionName) return
             if (!canPostNotifications(appContext)) return
@@ -130,8 +145,18 @@ object UpdateNotificationScheduler {
             if (error is CancellationException) throw error
             AppLogStore.w("Updater", "Update notification check failed: ${error.javaClass.simpleName}")
         } finally {
-            checking.set(false)
+            checkMutex.unlock()
         }
+    }
+
+    private fun mayPostUpdateNotification(context: Context): Boolean =
+        ActivationGate.mayRunBackgroundNetwork(context) && AppUpdatePreferences.getUpdateNotificationsEnabled(context)
+
+    private fun mayShowLaunchUpdatePrompt(context: Context): Boolean =
+        ActivationGate.isActivated(context) && AppUpdatePreferences.getLaunchUpdatePromptEnabled(context)
+
+    internal fun dismissLaunchUpdatePrompt() {
+        detectedLaunchUpdate.value = null
     }
 
     fun cancelAvailableUpdateNotification(context: Context) {

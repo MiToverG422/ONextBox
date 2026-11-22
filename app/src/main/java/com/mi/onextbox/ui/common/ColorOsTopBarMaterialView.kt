@@ -32,6 +32,7 @@ internal class ColorOsTopBarMaterialView(
     fallbackColor: Int,
     private val searchCapsule: Boolean = false,
     nativeBlurEnabled: Boolean = true,
+    private val outlineEnabled: Boolean = true,
 ) : View(context) {
     private val density = resources.displayMetrics.density
     private val fallbackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -140,6 +141,7 @@ internal class ColorOsTopBarMaterialView(
         if (!nativeBackgroundApplied) {
             drawFallbackMaterial(canvas)
         }
+        if (!outlineEnabled) return
         if (nativeStrokeApplied && nativeInnerShadowApplied) return
         val edgeShader = colorOsEdgeShader
         if (canvas.isHardwareAccelerated && edgeShader != null) {
@@ -165,7 +167,7 @@ internal class ColorOsTopBarMaterialView(
             clearBackgroundRenderEffect()
         }
         applyMaterialCornerAndShadow()
-        nativeCausticApplied = applyCausticShadow()
+        nativeCausticApplied = if (outlineEnabled) applyCausticShadow() else false
         clipToOutline = !searchCapsule || !nativeStrokeApplied
         materialInitialized = true
         invalidateOutline()
@@ -211,7 +213,7 @@ internal class ColorOsTopBarMaterialView(
 
     private fun applyMaterialCornerAndShadow() {
         val edgeType = if (searchCapsule) 1 else 2
-        val useNativeMaterial = nativeBackgroundApplied
+        val useNativeMaterial = nativeBackgroundApplied && outlineEnabled
         val applied = runCatching {
             val materialUtilClass = Class.forName("com.oplus.view.material.OplusMaterialUtil")
             val edgeParamsClass = Class.forName("com.oplus.view.material.OplusMaterialEdgeParams")
@@ -362,37 +364,6 @@ internal class ColorOsTopBarMaterialView(
             ),
         )
         invalidate()
-    }
-
-    private fun mapColorOsEdgeFade(
-        start: Float,
-        extent: Float,
-        normalizedWidth: Float,
-        normalizedHeight: Float,
-        styleWidth: Float = 160f,
-        styleHeight: Float = 160f,
-    ): Pair<Float, Float> {
-        val stylePerimeter = (styleWidth + styleHeight) * 2f
-        val actualPerimeter = (normalizedWidth + normalizedHeight) * 2f
-        val total = start + extent
-        val stylePosition = total * stylePerimeter
-        val mappedStart: Float
-        val mappedExtent: Float
-        if (stylePosition > styleWidth) {
-            val styleExtent = extent * stylePerimeter
-            mappedStart = ((stylePosition - styleWidth) + normalizedWidth - styleExtent) /
-                actualPerimeter
-            mappedExtent = styleExtent / actualPerimeter
-        } else if (total <= 0f) {
-            mappedStart = start
-            mappedExtent = extent
-        } else {
-            val remaining = styleWidth - stylePosition
-            val mappedTotal = (normalizedWidth - remaining) / actualPerimeter
-            mappedStart = start * mappedTotal / total
-            mappedExtent = extent * mappedTotal / total
-        }
-        return mappedStart to (mappedStart + mappedExtent)
     }
 
     private fun applyShadowClipExpansion() {
@@ -643,4 +614,35 @@ internal class ColorOsTopBarSpotlightView(
         spotlight.cancel()
         super.onDetachedFromWindow()
     }
+}
+
+internal fun mapColorOsEdgeFade(
+    start: Float,
+    extent: Float,
+    normalizedWidth: Float,
+    normalizedHeight: Float,
+    styleWidth: Float = 160f,
+    styleHeight: Float = 160f,
+): Pair<Float, Float> {
+    val stylePerimeter = (styleWidth + styleHeight) * 2f
+    val actualPerimeter = (normalizedWidth + normalizedHeight) * 2f
+    val total = start + extent
+    val stylePosition = total * stylePerimeter
+    val mappedStart: Float
+    val mappedExtent: Float
+    if (stylePosition > styleWidth) {
+        val styleExtent = extent * stylePerimeter
+        mappedStart = ((stylePosition - styleWidth) + normalizedWidth - styleExtent) /
+            actualPerimeter
+        mappedExtent = styleExtent / actualPerimeter
+    } else if (total <= 0f) {
+        mappedStart = start
+        mappedExtent = extent
+    } else {
+        val remaining = styleWidth - stylePosition
+        val mappedTotal = (normalizedWidth - remaining) / actualPerimeter
+        mappedStart = start * mappedTotal / total
+        mappedExtent = extent * mappedTotal / total
+    }
+    return mappedStart to (mappedStart + mappedExtent)
 }

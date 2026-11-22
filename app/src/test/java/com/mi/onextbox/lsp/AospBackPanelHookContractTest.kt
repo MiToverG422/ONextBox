@@ -27,6 +27,7 @@ class AospBackPanelHookContractTest {
         assertTrue(text.contains("if (callback.get(panel) === binding.visual) callback.set(panel, binding.stock)"))
         assertTrue(text.contains("check(callback.get(panel) === binding.visual)"))
         assertTrue(text.contains("releaseIdlePanels(enabled && !broken)"))
+        assertTrue(text.contains("!native.ownsFeedback(view)"))
         for (mutation in listOf("allowed.set", "sendKeyEvent",
             "setTriggerBack(true)", "addView(", "removeView(", "SurfaceControl")) {
             assertFalse("Unexpected mutation: $mutation", text.contains(mutation))
@@ -48,7 +49,8 @@ class AospBackPanelHookContractTest {
         val text = source("lsp/AospBackPanelHooker.kt")
         assertTrue(text.contains("canReload = { native.canReload() }"))
         assertTrue(text.contains("panels.keys.all { state.get(it) === gone }"))
-        assertTrue(text.contains("arrayOf<Any>(it.key, it.value.stock, it.value.lastEvent, it.value.destroyed)"))
+        assertTrue(text.contains("capture = { arrayOf(targets) }"))
+        assertFalse(text.contains("restoreSnapshot("))
         assertFalse(text.contains("arrayOf<Any>(it.key, it.value.visual"))
         assertTrue(text.contains("removed.down.recycle()"))
         assertTrue(text.contains("if (previous == null) frame.remove() else frame.set(previous)"))

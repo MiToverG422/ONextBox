@@ -7,11 +7,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
 import android.provider.Settings
+import android.telecom.TelecomManager
 import android.telephony.ServiceState
 import android.telephony.SubscriptionInfo
 import android.util.Log
@@ -36,7 +38,8 @@ internal object NetworkIdentityHooker {
     private val main by lazy { Handler(Looper.getMainLooper()) }
     private var installed = false
     @Volatile private var engine: NetworkIdentityProperties? = null
-    @Volatile private var publishedProfiles: Map<Int, NetworkIdentityRules.Profile> = emptyMap()
+    private val inactive = NetworkIdentityRules.Publication()
+    @Volatile private var published = inactive
     private var application: Context? = null
     private var preferences: SharedPreferences? = null
     private var registered = false
@@ -44,14 +47,16 @@ internal object NetworkIdentityHooker {
     private lateinit var propertyGet: Method
     private lateinit var propertySet: Method
     private val configurationDirty = AtomicBoolean(true)
-    private var configuredProfiles: Map<Int, NetworkIdentityRules.Profile> = emptyMap()
+    private var configured = inactive
     private val update = Runnable { HotReloadLifecycle.withInfrastructureHook({}, { refreshSafely() }) }
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == null || key in NetworkIdentitySettings.keys || key == MODERN_PREFERENCES_READY_KEY ||
             key == SafeModePolicy.MANUAL || key == SafeModePolicy.AUTOMATIC) schedule(configurationChanged = true)
     }
     private val receiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) { schedule() }
+        override fun onReceive(context: Context?, intent: Intent?) {
+            schedule(configurationChanged = intent?.action == TelecomManager.ACTION_DEFAULT_DIALER_CHANGED)
+        }
     }
 
     fun hook(loader: ClassLoader, processName: String) {
@@ -68,11 +73,12 @@ internal object NetworkIdentityHooker {
                 // Native telephony updates still run; only published identity is overridden afterwards.
                 val result = chain.proceed()
                 val current = engine
-                val selected = selectedProfiles()
-                if (current != null && (current.hasOverrides || selected.isNotEmpty())) {
+                val selected = selectedIdentity()
+                if (current != null && (current.hasOverrides || selected.profiles.isNotEmpty())) {
                     runCatching {
-                        raw { current.refreshAfterNativeWrite(key!!, (chain.args[1] as? String).orEmpty(), selected) }
-                        publishedProfiles = selected
+                        raw { current.refreshAfterNativeWrite(key!!, (chain.args[1] as? String).orEmpty(),
+                            selected.profiles, selected.preserveCallRegion) }
+                        published = selected
                     }.onFailure(::restoreAfterFailure)
                 }
                 result
@@ -110,7 +116,7 @@ internal object NetworkIdentityHooker {
         if (current != null) startAfterCommit(current)
         HotReloadLifecycle.register("network-identity", detach = {
             unregister()
-            synchronized(lock) { raw { engine?.refresh(null) }; publishedProfiles = emptyMap() }
+            synchronized(lock) { raw { engine?.refresh(null) }; published = inactive }
         }, restore = { register(); configurationDirty.set(true); refreshSafely() },
             resumeAfterRejection = { register(); schedule(configurationChanged = true) })
     }
@@ -123,11 +129,10 @@ internal object NetworkIdentityHooker {
         Bridge.hookAllMethods(owner, "getNetworkCountryIsoForPhone", object : Hook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 // Keep framework/phone decisions genuine and preserve all original access checks.
-                if (param.throwable != null || Binder.getCallingUid() % 100000 < Process.FIRST_APPLICATION_UID) return
+                if (param.throwable != null) return
                 val slot = param.args.firstOrNull() as? Int ?: return
                 synchronized(lock) {
-                    if (engine == null) return
-                    val profile = publishedProfiles[slot] ?: return
+                    val profile = callerProfiles()[slot] ?: return
                     val numeric = raw { readProperty("gsm.operator.numeric") }
                     if (NetworkIdentityRules.decode(numeric).getOrNull(slot).isNullOrEmpty()) return
                     if (param.result is String) param.result = profile.region
@@ -138,7 +143,9 @@ internal object NetworkIdentityHooker {
             it.returnType == ServiceState::class.java }.forEach { method ->
             Bridge.hookMethod(method, object : Hook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    if (!externalSuccessful(param)) return
+                    if (param.throwable != null) return
+                    val profiles = callerProfiles()
+                    if (profiles.isEmpty()) return
                     val original = param.result as? ServiceState ?: return
                     try {
                         if (original.operatorNumeric.isNullOrEmpty()) return
@@ -147,7 +154,7 @@ internal object NetworkIdentityHooker {
                             ModernReflect.callStaticMethod(ModernReflect.findClass("android.telephony.SubscriptionManager", loader),
                                 "getSlotIndex", argument) as Int
                         }.getOrDefault(-1)
-                        val selected = publishedProfiles[slot] ?: return
+                        val selected = profiles[slot] ?: return
                         val copy = ServiceState(original)
                         copy.setOperatorName(selected.name, selected.name, selected.numeric)
                         param.result = copy
@@ -159,8 +166,10 @@ internal object NetworkIdentityHooker {
         }
     }
 
-    private fun externalSuccessful(param: Hook.MethodHookParam) = param.throwable == null && engine != null &&
-        Binder.getCallingUid() % 100000 >= Process.FIRST_APPLICATION_UID
+    private fun callerProfiles(): Map<Int, NetworkIdentityRules.Profile> {
+        val appId = Binder.getCallingUid() % 100000
+        return if (appId < Process.FIRST_APPLICATION_UID) emptyMap() else published.profilesForApp(appId)
+    }
 
     private fun installSubscriptionService(loader: ClassLoader) {
         val owner = ModernReflect.findClassIfExists(
@@ -171,8 +180,9 @@ internal object NetworkIdentityHooker {
             "getActiveSubscriptionInfoList", "getAllSubInfoList", "getAvailableSubscriptionInfoList") }.forEach { method ->
             Bridge.hookMethod(method, object : Hook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    if (!externalSuccessful(param)) return
-                    val selectedProfiles = publishedProfiles
+                    if (param.throwable != null) return
+                    val selectedProfiles = callerProfiles()
+                    if (selectedProfiles.isEmpty()) return
                     fun copy(value: SubscriptionInfo): SubscriptionInfo {
                         if (value.simSlotIndex < 0 || value.mccString.isNullOrEmpty()) return value
                         val selected = selectedProfiles[value.simSlotIndex] ?: return value
@@ -226,8 +236,17 @@ internal object NetworkIdentityHooker {
         }.onFailure { log("Initialization failed; no new overrides will be applied", it) }
     }
 
-    private fun selectedProfiles(): Map<Int, NetworkIdentityRules.Profile> =
-        if (identityHooksActive()) configuredProfiles else emptyMap()
+    private fun selectedIdentity() = if (identityHooksActive()) configured else inactive
+
+    private fun attributionAppIds(context: Context): Set<Int> {
+        val packages = listOfNotNull("com.android.contacts", "com.android.providers.contacts", "com.android.incallui",
+            "com.android.server.telecom", "com.oplus.phonenoareainquire", "com.ted.number",
+            context.getSystemService(TelecomManager::class.java)?.defaultDialerPackage)
+        return packages.mapNotNull { name ->
+            try { context.packageManager.getPackageUid(name, 0) % 100000 }
+            catch (_: PackageManager.NameNotFoundException) { null }
+        }.toSet()
+    }
     private fun identityHooksActive() = AdaptationHookGate.isBoundProfileActive() &&
         AdaptationRuntimePolicy.allowsFeatureValue(HookConfigSnapshot.adaptationVersion(), NetworkIdentitySettings.ENABLED)
     private fun register() {
@@ -242,6 +261,7 @@ internal object NetworkIdentityHooker {
         if (active) context.registerReceiver(receiver, IntentFilter().apply {
             addAction("android.intent.action.SIM_STATE_CHANGED")
             addAction("android.intent.action.SERVICE_STATE")
+            addAction(TelecomManager.ACTION_DEFAULT_DIALER_CHANGED)
         }, Context.RECEIVER_EXPORTED) else context.unregisterReceiver(receiver)
         receiverRegistered = active
     }
@@ -256,26 +276,33 @@ internal object NetworkIdentityHooker {
         if (configurationChanged) configurationDirty.set(true)
         main.removeCallbacks(update); main.postDelayed(update, 100)
     }
-    private fun refreshSafely() {
+    @Synchronized private fun refreshSafely() {
+        if (bypass.get() == true || engine == null) return
+        // Resolve packages outside the property lock. A package or Telecom service lookup
+        // can itself call back into telephony.
+        val configuration = if (configurationDirty.getAndSet(false)) runCatching {
+            val values = preferences?.all.orEmpty()
+            val profiles = NetworkIdentitySettings.activeProfiles(values, identityHooksActive())
+            if (profiles.isEmpty()) inactive else NetworkIdentityRules.Publication(profiles,
+                if (values[NetworkIdentitySettings.PRESERVE_CALL_REGION] == true) attributionAppIds(checkNotNull(application)) else null)
+        }.getOrElse {
+            configurationDirty.set(true)
+            log("Cannot read network identity configuration", it)
+            inactive
+        } else null
         synchronized(lock) {
-            if (bypass.get() == true || engine == null) return
             runCatching {
-                if (configurationDirty.getAndSet(false)) {
-                    // A failed remote read must not leave an old active profile cached.
-                    configuredProfiles = emptyMap()
-                    configuredProfiles = NetworkIdentitySettings.activeProfiles(
-                        preferences?.all.orEmpty(), identityHooksActive())
-                }
-                val selected = selectedProfiles()
-                raw { engine?.refreshSlots(selected) }
-                publishedProfiles = selected
+                if (configuration != null) configured = configuration
+                val selected = selectedIdentity()
+                raw { engine?.refreshSlots(selected.profiles, selected.preserveCallRegion) }
+                published = selected
             }.onFailure(::restoreAfterFailure)
-            runCatching { updateReceiver(selectedProfiles().isNotEmpty() || engine?.hasOverrides == true) }
+            runCatching { updateReceiver(selectedIdentity().profiles.isNotEmpty() || engine?.hasOverrides == true) }
                 .onFailure { log("Cannot update identity broadcast subscription", it) }
         }
     }
     private fun restoreAfterFailure(error: Throwable) {
-        publishedProfiles = emptyMap()
+        published = inactive
         log("Property refresh failed; attempting restoration", error)
         runCatching { raw { engine?.refresh(null) } }
             .onFailure { failure -> log("Restoration failed; recovery journal retained", failure) }

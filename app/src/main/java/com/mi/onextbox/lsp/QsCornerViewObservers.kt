@@ -11,7 +11,7 @@ internal class QsCornerViewObservers(
     key: String,
     private val onLayout: ((View) -> Boolean)? = null,
     private val content: (View) -> List<Any?>? = { emptyList() },
-    private val configurationToken: () -> Int? = QsTileCornerSettings::configurationTokenXposed,
+    private val configurationToken: (View) -> Int? = { QsTileCornerSettings.configurationTokenXposed() },
     private val update: (View) -> Boolean,
 ) {
     private val guards = WeakHashMap<View, Guard>()
@@ -37,11 +37,16 @@ internal class QsCornerViewObservers(
         private var listening = false
         private val gate = QsCornerRefreshGate()
         private val schedule = QsCornerProbeSchedule()
-        fun markDirty() {
+        private var restoredWhileDisabled = false
+        private fun resetProbe() {
+            restoredWhileDisabled = false
             schedule.invalidate()
             gate.invalidate()
             retryAt = 0L
             retries = 0
+        }
+        fun markDirty() {
+            resetProbe()
             target.get()?.invalidate()
         }
         private var layoutPending = true
@@ -65,11 +70,8 @@ internal class QsCornerViewObservers(
             val view = target.get() ?: return
             if (!listening) {
                 listening = true
-                gate.invalidate()
-                schedule.invalidate()
+                resetProbe()
                 layoutPending = true
-                retryAt = 0L
-                retries = 0
                 view.addOnAttachStateChangeListener(this)
                 view.addOnLayoutChangeListener(this)
                 if (view.isAttachedToWindow) arm(view)
@@ -98,16 +100,25 @@ internal class QsCornerViewObservers(
             target.get()?.removeOnLayoutChangeListener(this)
             listening = false
         }
-        override fun onViewAttachedToWindow(view: View) { gate.invalidate(); schedule.invalidate(); layoutPending = true; retryAt = 0L; retries = 0; arm(view) }
+        override fun onViewAttachedToWindow(view: View) {
+            resetProbe()
+            layoutPending = true
+            arm(view)
+        }
         override fun onViewDetachedFromWindow(view: View) { view.removeCallbacks(retry); disarm() }
         override fun onLayoutChange(view: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
-            if (r - l != or - ol || b - t != ob - ot) { layoutPending = true; retryAt = 0L; retries = 0; gate.invalidate(); schedule.invalidate() }
+            if (r - l != or - ol || b - t != ob - ot) {
+                resetProbe()
+                layoutPending = true
+            }
         }
         override fun onPreDraw(): Boolean = HotReloadLifecycle.withHook(fallback = { true }) {
             if (!HotReloadLifecycle.isRetiring) target.get()?.let { view ->
+                val dp = configurationToken(view)
+                if (dp == null && restoredWhileDisabled) return@let
+                if (dp != null) restoredWhileDisabled = false
                 val now = android.os.SystemClock.uptimeMillis()
                 if (now < retryAt) return@let
-                val dp = configurationToken()
                 if (!schedule.shouldProbe(now, view.isShown, dp, view.width, view.height,
                         System.identityHashCode(view.background), System.identityHashCode(view.parent),
                         view.resources.displayMetrics.density, view.layoutDirection)) return@let
@@ -130,6 +141,7 @@ internal class QsCornerViewObservers(
                         val after = runCatching { if (enabled) content(view) else emptyList() }.getOrNull()
                         if (after != null) {
                             gate.applied(state.copy(content = after))
+                            restoredWhileDisabled = !enabled
                             layoutPending = false
                             retries = 0
                             view.removeCallbacks(retry)

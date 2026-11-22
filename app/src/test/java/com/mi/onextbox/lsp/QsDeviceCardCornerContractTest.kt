@@ -13,9 +13,9 @@ class QsDeviceCardCornerContractTest {
         assertTrue(source("QsTileCornerHooker").contains("QsDeviceCardCorners.hook(loader)"))
         assertTrue(hook.contains("com.oplus.deviceplugin.sdk.ui.view.separatecardview."))
         for (card in listOf("SquareDeviceCardView", "SquareEntranceCardView", "RectangleDeviceCardView", "RectangleEntranceCardView", "NoDeviceEntranceCardView")) {
-            assertTrue(card, hook.contains(card))
+            assertTrue(card, source("QsTileCornerSettings").contains(card))
         }
-        assertTrue(hook.contains("\"RectangleDeviceCardView\" to \"rectangleCoLayout\""))
+        assertEquals("rectangleCoLayout", QsTileCornerSettings.DeviceCard.RectangleDevice.innerId)
         assertTrue(hook.contains("view.javaClass.name !in classNames"))
         assertFalse(hook.contains("View::class.java"))
         assertFalse(hook.contains("getStatic"))
@@ -26,7 +26,7 @@ class QsDeviceCardCornerContractTest {
         assertTrue(hook.contains("\"setCornerRadius\", radius, weight"))
         assertTrue(hook.contains("\"getCornerWeight\", drawable"))
         assertTrue(hook.contains("clip(view, drawable, radius, weight)"))
-        assertTrue(hook.contains("view.findViewById<View>(id)?.let { clip(it, drawable, radius, weight) }"))
+        assertTrue(hook.contains("clip(inner, drawable, radius, weight)"))
         assertFalse(hook.contains("view.clipToOutline = true"))
         assertTrue(hook.contains("if (!view.clipToOutline) return"))
         assertTrue(hook.contains("if (current != radius || currentWeight != weight)"))
@@ -56,11 +56,14 @@ class QsDeviceCardCornerContractTest {
     }
     @Test fun runtimeDiscoveryUsesOnlyTheQsRootAndActualNativeViewInstances() {
         val hook = source("QsDeviceCardCorners")
-        assertTrue(hook.contains("com.oplus.systemui.plugins.qs.OplusQSRootView"))
+        val tiles = source("QsTileCornerHooker")
+        assertTrue(tiles.contains("com.oplus.systemui.plugins.qs.OplusQSRootView"))
         assertTrue(hook.contains("if (view.javaClass.name in classNames)"))
         assertTrue(hook.contains("observers.watch(view)"))
-        assertTrue(source("QsTileCornerHooker").contains("QsDeviceCardCorners.discover(view)"))
+        assertTrue(tiles.contains("QsDeviceCardCorners.discover(view)"))
+        assertFalse(hook.contains("QsCornerHierarchyObservers("))
         val discovery = source("QsCornerHierarchyObservers")
+        assertTrue(discovery.contains("QsTileCornerSettings.enabledXposed()) target.get()?.let(::scan)"))
         assertTrue(discovery.contains("ViewTreeObserver.OnGlobalLayoutListener"))
         assertFalse(discovery.contains("OnPreDrawListener"))
         assertTrue(discovery.contains("removeOnGlobalLayoutListener(this)"))

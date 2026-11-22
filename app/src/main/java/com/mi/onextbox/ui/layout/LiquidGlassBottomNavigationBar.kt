@@ -1,5 +1,8 @@
 package com.mi.onextbox.ui.layout
 
+import com.mi.onextbox.ui.common.LocalPreviewTextPlaceholders
+import com.mi.onextbox.ui.common.PreviewTextLine
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
@@ -78,8 +81,10 @@ import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
 import com.mi.onextbox.ui.common.BottomTab
 import com.mi.onextbox.ui.LocalBottomBarContentOpacity
+import com.mi.onextbox.ui.common.ColorOsDialogButtonMotion
 import com.mi.onextbox.ui.common.DampedDragAnimation
 import com.mi.onextbox.ui.common.InteractiveHighlight
+import com.mi.onextbox.ui.common.LocalAppVisualEffects
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
@@ -103,10 +108,11 @@ fun LiquidGlassBottomNavigationBar(
     collapseState: BottomBarCollapseState? = null,
 ) {
     if (tabs.isEmpty()) return
+    val effects = LocalAppVisualEffects.current
     val contentOpacity = LocalBottomBarContentOpacity.current
     val latestOnCapsuleBoundsChanged by rememberUpdatedState(onCapsuleBoundsChanged)
     val latestStartupRevealProgress by rememberUpdatedState(startupRevealProgress)
-    val startupInteractionReady by remember {
+    val startupInteractionReady by remember(collapseState) {
         derivedStateOf { latestStartupRevealProgress() >= 1f && collapseState?.interactionReady != false }
     }
     DisposableEffect(Unit) {
@@ -117,7 +123,8 @@ fun LiquidGlassBottomNavigationBar(
     val isLightTheme = colors.background.red + colors.background.green + colors.background.blue > 1.5f
     val contentColor = if (isLightTheme) Color.Black else Color.White
     val accentColor = if (isLightTheme) Color(0xFF0088FF) else Color(0xFF0091FF)
-    val containerColor = if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f) else Color(0xFF121212).copy(0.4f)
+    val containerColor = (if (isLightTheme) Color(0xFFFAFAFA) else Color(0xFF121212))
+        .copy(alpha = if (effects.backgroundBlur) .4f else 1f)
     val iconColorFilter = ColorFilter.tint(contentColor)
     val tabsBackdrop = rememberLayerBackdrop()
     val capsuleShape = remember { Capsule() }
@@ -130,6 +137,10 @@ fun LiquidGlassBottomNavigationBar(
         contentAlignment = Alignment.Center,
     ) {
         val density = LocalDensity.current
+        val expandedHoldMotion = remember(density.density) { ColorOsDialogButtonMotion(density.density) }
+        DisposableEffect(expandedHoldMotion) {
+            onDispose { expandedHoldMotion.dispose() }
+        }
         val exactTitleSize = with(density) { 10.dp.toSp() }
         val expandedWidth = floatingBottomBarWidth(maxWidth, tabs.size)
         Box(
@@ -149,7 +160,13 @@ fun LiquidGlassBottomNavigationBar(
                         } while (event.changes.any { it.pressed })
                     }
                 }
-                .bottomBarCollapseGestures(collapseState, startupRevealProgress),
+                .bottomBarCollapseGestures(collapseState, startupRevealProgress, expandedHoldMotion)
+                .graphicsLayer {
+                    translationX = expandedHoldMotion.translationX
+                    translationY = expandedHoldMotion.translationY
+                    scaleX = expandedHoldMotion.scaleX
+                    scaleY = expandedHoldMotion.scaleY
+                },
             contentAlignment = Alignment.CenterStart,
         ) {
         val barWidthPx = with(density) { expandedWidth.toPx() }
@@ -267,7 +284,9 @@ fun LiquidGlassBottomNavigationBar(
                         colorFilter = iconColorFilter,
                     )
                     if (!hideLabels) {
-                        BasicText(
+                        if (LocalPreviewTextPlaceholders.current) {
+                            PreviewTextLine(20.dp, 4.dp, contentColor.copy(alpha = .7f))
+                        } else BasicText(
                             text = stringResource(tab.titleRes),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -301,10 +320,13 @@ fun LiquidGlassBottomNavigationBar(
                 .drawBackdrop(
                     backdrop = backdrop,
                     shape = { capsuleShape },
+                    highlight = if (effects.outline) { { Highlight.Default } } else null,
                     effects = {
-                        vibrancy()
-                        blur(8.dp.toPx())
-                        lens(24.dp.toPx(), 24.dp.toPx())
+                        if (effects.backgroundBlur) {
+                            vibrancy()
+                            blur(8.dp.toPx())
+                            lens(24.dp.toPx(), 24.dp.toPx())
+                        }
                     },
                     layerBlock = {
                         val progress = dampedDragAnimation.pressProgress
@@ -334,7 +356,7 @@ fun LiquidGlassBottomNavigationBar(
                     clip = collapseState != null
                     compositingStrategy = CompositingStrategy.ModulateAlpha
                 }
-                .then(if (collapseState?.collapsed == true) Modifier.clearAndSetSemantics {} else Modifier),
+                .then(if (collapseState?.folderCollapsed == true) Modifier.clearAndSetSemantics {} else Modifier),
             contentAlignment = Alignment.Center,
         ) {
         Row(
@@ -373,13 +395,15 @@ fun LiquidGlassBottomNavigationBar(
                             backdrop = backdrop,
                             shape = { capsuleShape },
                             highlight = {
-                                Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
+                                if (effects.outline) Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress) else null
                             },
                             effects = {
                                 val progress = dampedDragAnimation.pressProgress
-                                vibrancy()
-                                blur(8.dp.toPx())
-                                lens(24.dp.toPx() * progress, 24.dp.toPx() * progress)
+                                if (effects.backgroundBlur) {
+                                    vibrancy()
+                                    blur(8.dp.toPx())
+                                    lens(24.dp.toPx() * progress, 24.dp.toPx() * progress)
+                                }
                             },
                             onDrawSurface = { drawRect(containerColor) },
                         )
@@ -429,22 +453,24 @@ fun LiquidGlassBottomNavigationBar(
                     backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
                     shape = { capsuleShape },
                     highlight = {
-                        Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
+                        if (effects.outline) Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress) else null
                     },
                     shadow = {
                         Shadow(alpha = dampedDragAnimation.pressProgress)
                     },
                     innerShadow = {
                         val progress = dampedDragAnimation.pressProgress
-                        InnerShadow(radius = 8.dp * progress, alpha = progress)
+                        if (effects.outline) InnerShadow(radius = 8.dp * progress, alpha = progress) else null
                     },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
-                        lens(
-                            10.dp.toPx() * progress,
-                            14.dp.toPx() * progress,
-                            chromaticAberration = true,
-                        )
+                        if (effects.backgroundBlur) {
+                            lens(
+                                10.dp.toPx() * progress,
+                                14.dp.toPx() * progress,
+                                chromaticAberration = true,
+                            )
+                        }
                     },
                     layerBlock = {
                         scaleX = dampedDragAnimation.scaleX

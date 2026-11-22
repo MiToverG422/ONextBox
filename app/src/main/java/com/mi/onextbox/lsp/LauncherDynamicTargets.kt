@@ -27,9 +27,19 @@ internal object LauncherDynamicTargets {
         }.single()
     }
 
-    fun autoFocus(loader: ClassLoader) = LauncherDexResolver.method(loader, "recent-auto-focus") { dex ->
-        requireNotNull(dex.getMethodData(focusPage(loader))).invokes.single {
-            it.returnTypeName == "boolean" && it.paramTypeNames == listOf("boolean") && Modifier.isStatic(it.modifiers)
+    fun autoFocusGates(loader: ClassLoader): List<java.lang.reflect.Method> {
+        val featureUtils = ModernReflect.findClassIfExists("com.android.common.util.AppFeatureUtils", loader)
+        val named = featureUtils?.declaredMethods.orEmpty().filter {
+            it.name == "isSupportAutoFocusToNextPageInOverviewState" && Modifier.isStatic(it.modifiers) &&
+                it.returnType == Boolean::class.javaPrimitiveType &&
+                (it.parameterCount == 0 || it.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType)))
+        }
+        return named.ifEmpty {
+            listOf(LauncherDexResolver.method(loader, "recent-auto-focus") { dex ->
+                requireNotNull(dex.getMethodData(focusPage(loader))).invokes.single {
+                    it.returnTypeName == "boolean" && it.paramTypeNames == listOf("boolean") && Modifier.isStatic(it.modifiers)
+                }
+            })
         }
     }
 
@@ -54,14 +64,21 @@ internal object LauncherDynamicTargets {
         }.single { !Modifier.isStatic(it.modifiers) }
     }
 
-    fun executor(loader: ClassLoader): java.lang.reflect.Field = LauncherDexResolver.field(loader, "category-executor") { dex ->
-        val owner = dex.findMethod {
-            matcher { usingStrings("THREAD_POOL_EXECUTOR"); name = "<clinit>" }
-        }.single { it.className.indexOf('.') < 0 }.className
-        val type = HostClassLookup.load(owner, false, loader)
-        val field = type.declaredFields.single {
-            Modifier.isStatic(it.modifiers) && java.util.concurrent.ExecutorService::class.java.isAssignableFrom(it.type)
+    fun executor(loader: ClassLoader): java.lang.reflect.Field {
+        val legacy = ModernReflect.findClassIfExists("ej.a", loader)?.declaredFields?.singleOrNull {
+            it.name == "a" && Modifier.isStatic(it.modifiers) &&
+                java.util.concurrent.ExecutorService::class.java.isAssignableFrom(it.type)
         }
-        requireNotNull(dex.getFieldData(field))
+        if (legacy != null) return legacy.apply { isAccessible = true }
+        return LauncherDexResolver.field(loader, "category-executor-v2") { dex ->
+            val initializer = dex.findMethod {
+                matcher { usingStrings("THREAD_POOL_EXECUTOR"); name = "<clinit>" }
+            }.single { it.className.indexOf('.') < 0 }
+            val executors = initializer.usingFields.map { it.field }.distinctBy { it.descriptor }.filter {
+                it.className == initializer.className && Modifier.isStatic(it.modifiers) &&
+                    java.util.concurrent.ExecutorService::class.java.isAssignableFrom(it.getFieldInstance(loader).type)
+            }
+            executors.singleOrNull { it.typeName == "com.oplus.dispatch.OCDExecutorService" } ?: executors.single()
+        }
     }
 }

@@ -52,7 +52,7 @@ internal class LauncherGridApplySession(private val loader: ClassLoader, private
             }
             if (native != null) return@runCatching
             val resolved = applyValues?.takeIf { it.size == LauncherGridApplyTargets.SCHEMA_SIZE }
-                ?.let(::LauncherGridApplyTargets) ?: LauncherGridApplyTargets.resolve(loader)
+                ?.let(::LauncherGridApplyTargets) ?: LauncherGridApplyTargets.resolve(loader, apkPath)
             ModernHookRegistry.installFast(prefix + "task", resolved.taskConstructor, XposedInterface.Hooker { chain ->
                 val result = chain.proceed()
                 if (starting && queue.running != null) task = chain.thisObject
@@ -169,7 +169,7 @@ internal class LauncherGridApplySession(private val loader: ClassLoader, private
             check(task != null) { "Native layout migration task was not captured" }
             HookLog.i(TAG, "Applying custom grid using native migration: ${applying.grid}")
         } catch (error: Throwable) {
-            if (!target.started(task) && menu.busy.none { it.invoke(null) == true }) {
+            if (!target.started(task) && menu.idle()) {
                 runCatching { target.restorePreview(host, original) }
                     .onFailure { HookLog.w(TAG, "Unable to restore native workspace preview", it) }
                 finish()

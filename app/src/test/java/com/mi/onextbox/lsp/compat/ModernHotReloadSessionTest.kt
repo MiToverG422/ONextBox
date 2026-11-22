@@ -123,6 +123,32 @@ class ModernHotReloadSessionTest {
     }
 
     @Test
+    fun explicitlyRetiredLegacySlotIsRemovedOnlyAfterAllOtherHooksAreCovered() {
+        val keep = FakeHandle(target("first"), id(0))
+        val retired = FakeHandle(target("second"), id(0))
+        val installer = RecordingInstaller()
+        val session = ModernHotReloadSession.Session(true, installer::install, listOf(keep.executable, retired.executable))
+        session.install(keep.executable, hooker("replacement"))
+        session.retireLegacyFirstSlot(retired.executable)
+        session.commit(listOf(keep, retired))
+        assertEquals(1, keep.replaceCalls.size)
+        assertEquals(1, retired.unhookCalls)
+        assertTrue(installer.calls.isEmpty())
+    }
+
+    @Test
+    fun aSharedLegacyTargetCannotBeDropped() {
+        val handles = listOf(FakeHandle(target("first"), id(0)), FakeHandle(target("first"), id(1)))
+        val installer = RecordingInstaller()
+        val session = ModernHotReloadSession.Session(true, installer::install, handles.map { it.executable })
+        session.retireLegacyFirstSlot(target("first"))
+        session.install(target("second"), hooker("new"))
+        assertThrows(IllegalStateException::class.java) { session.commit(handles) }
+        assertUntouched(*handles.toTypedArray())
+        assertTrue(installer.calls.isEmpty())
+    }
+
+    @Test
     fun missingPreviousTargetAbortsBeforeChangingAnyHook() {
         val installer = RecordingInstaller()
         val session = ModernHotReloadSession.Session(true, installer::install)

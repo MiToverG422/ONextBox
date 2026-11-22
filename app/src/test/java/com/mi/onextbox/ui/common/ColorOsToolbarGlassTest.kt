@@ -73,7 +73,7 @@ class ColorOsToolbarGlassTest {
         assertFalse(native.contains("ColorDrawable(fallbackColor)"))
         val liquid = File(ui, "layout/LiquidGlassBottomNavigationBar.kt").readText()
         assertFalse(liquid.contains("ColorOsToolbarGlass"))
-        assertTrue(liquid.contains("copy(0.4f)"))
+        assertTrue(liquid.contains("copy(alpha = if (effects.backgroundBlur) .4f else 1f)"))
         assertTrue(liquid.contains("lens(24.dp.toPx(), 24.dp.toPx())"))
     }
 
@@ -120,13 +120,16 @@ class ColorOsToolbarGlassTest {
                 "it.updateAppearance(dark, fallbackColor.toArgb(), nativeBlurEnabled)",
         )) {
             val source = uiSource(relativePath)
-            assertTrue(relativePath, source.contains("val nativeBlurEnabled = LocalChromeNativeBlurEnabled.current"))
+            assertTrue(relativePath, source.contains("val effects = LocalAppVisualEffects.current"))
+            assertTrue(relativePath, source.contains(
+                "val nativeBlurEnabled = effects.backgroundBlur && LocalChromeNativeBlurEnabled.current",
+            ))
             assertTrue(relativePath, source.contains("nativeBlurEnabled = nativeBlurEnabled,"))
             assertTrue(relativePath, source.contains(updateCall))
         }
-        assertTrue(uiSource("FeatureWindowMotion.kt").contains(
-            "CompositionLocalProvider(LocalChromeNativeBlurEnabled provides false)",
-        ))
+        assertTrue(Regex(
+            """CompositionLocalProvider\([^)]*\bLocalChromeNativeBlurEnabled provides false\b[^)]*\)\s*\{\s*content\(\)\s*}""",
+        ).containsMatchIn(uiSource("FeatureWindowMotion.kt")))
     }
 
     @Test fun toolbarAndSearchPrecomposeTheSameFallbackForCreationAndUpdates() {

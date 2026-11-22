@@ -408,15 +408,12 @@ object LspConfig {
         )
     }
 
-    fun isImmersiveNavigationEnabledXposed(): Boolean = ImmersiveNavigationRules.isHandleOptionActive(
-        customHandleEnabled = isNavigationHandleCustomLengthEnabledXposed(),
-        optionEnabled = readXposedBoolean(
-            persistPropertyKey = PERSIST_PROP_IMMERSIVE_NAVIGATION,
-            propertyKey = PROP_IMMERSIVE_NAVIGATION,
-            settingsKey = SETTINGS_IMMERSIVE_NAVIGATION,
-            prefsKey = KEY_IMMERSIVE_NAVIGATION,
-            defaultValue = false,
-        ),
+    fun isImmersiveNavigationEnabledXposed(): Boolean = readXposedBoolean(
+        persistPropertyKey = PERSIST_PROP_IMMERSIVE_NAVIGATION,
+        propertyKey = PROP_IMMERSIVE_NAVIGATION,
+        settingsKey = SETTINGS_IMMERSIVE_NAVIGATION,
+        prefsKey = KEY_IMMERSIVE_NAVIGATION,
+        defaultValue = false,
     )
 
     private const val KEY_NAVIGATION_HANDLE_CUSTOM_LENGTH = "navigation_handle_custom_length"
@@ -449,15 +446,12 @@ object LspConfig {
         )
     }
 
-    fun isNavigationHandleAutoHideEnabledXposed(): Boolean = ImmersiveNavigationRules.isHandleOptionActive(
-        customHandleEnabled = isNavigationHandleCustomLengthEnabledXposed(),
-        optionEnabled = readXposedBoolean(
-            persistPropertyKey = PERSIST_PROP_NAVIGATION_HANDLE_AUTO_HIDE,
-            propertyKey = PROP_NAVIGATION_HANDLE_AUTO_HIDE,
-            settingsKey = SETTINGS_NAVIGATION_HANDLE_AUTO_HIDE,
-            prefsKey = KEY_NAVIGATION_HANDLE_AUTO_HIDE,
-            defaultValue = false,
-        ),
+    fun isNavigationHandleAutoHideEnabledXposed(): Boolean = readXposedBoolean(
+        persistPropertyKey = PERSIST_PROP_NAVIGATION_HANDLE_AUTO_HIDE,
+        propertyKey = PROP_NAVIGATION_HANDLE_AUTO_HIDE,
+        settingsKey = SETTINGS_NAVIGATION_HANDLE_AUTO_HIDE,
+        prefsKey = KEY_NAVIGATION_HANDLE_AUTO_HIDE,
+        defaultValue = false,
     )
 
     fun isNavigationHandleCustomLengthEnabled(context: Context): Boolean =
@@ -650,6 +644,9 @@ object LspConfig {
         ColorfulNotificationDot("launcher_colorful_notification_dot"),
         NotificationDotShadow("launcher_notification_dot_shadow"),
         UnlimitedFolderInput("launcher_unlimited_folder_input"),
+        FolderReturnHome("launcher_folder_return_home"),
+        HideFolderBackground("launcher_hide_folder_background"),
+        HideFolderIndicator("launcher_hide_folder_indicator"),
         ForceBlur("launcher_force_blur"),
         Dock("launcher_dock"),
         DockBlur("launcher_dock_blur");
@@ -680,6 +677,7 @@ object LspConfig {
     }
 
     enum class KeyguardFeature(val key: String) {
+        GestureHandle("keyguard_gesture_handle"),
         FaceAuthCapsule("keyguard_face_auth_capsule"),
         FaceTapUnlock("keyguard_face_tap_unlock"),
         FaceTapAnimation("keyguard_face_tap_animation"),
@@ -2752,6 +2750,7 @@ object LspConfig {
     }
 
     fun resetToDefaults(context: Context): Boolean {
+        com.mi.onextbox.boot.DisplayDensity.restore(context)
         require(prefs(context).edit().clear().commit()) {
             "Failed to clear $PREFS_NAME"
         }

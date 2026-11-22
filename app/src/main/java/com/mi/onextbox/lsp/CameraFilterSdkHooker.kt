@@ -27,9 +27,9 @@ internal object CameraFilterSdkHooker {
     }.also { check(it.any { method -> method.declaringClass.name == OWNER }) }
 
     fun hook(loader: ClassLoader, appPath: String) {
-        if (options.none { MediaUnlockSettings.enabledXposed(it.key) }) return
         val tag = "ONextBox-CameraFilters"
         val prefix = "$tag@${System.identityHashCode(loader)}:sdk:"
+        if (options.none { MediaUnlockSettings.enabledXposed(it.key) } && HotReloadLifecycle.restoredState("${prefix}targets") == null) return
         runCatching {
             val methods = targets(loader)
             val reached = ConcurrentHashMap.newKeySet<String>()

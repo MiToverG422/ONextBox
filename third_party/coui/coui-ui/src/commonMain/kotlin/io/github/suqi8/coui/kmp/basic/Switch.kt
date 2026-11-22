@@ -82,6 +82,7 @@ fun Switch(
     colors: SwitchColors = SwitchDefaults.switchColors(),
     enabled: Boolean = true,
     isLoading: Boolean = false,
+    hapticFeedbackEnabled: Boolean = true,
 ) {
     val currentOnCheckedChange by rememberUpdatedState(onCheckedChange)
     val interactionSource = remember { MutableInteractionSource() }
@@ -170,12 +171,12 @@ fun Switch(
     val interactive = enabled && !isLoading
     val hasCallback = onCheckedChange != null
     val toggleableModifier = if (hasCallback) {
-        remember(checked, interactive, interactionSource) {
+        remember(checked, interactive, interactionSource, hapticFeedbackEnabled) {
             Modifier.toggleable(
                 value = checked,
                 onValueChange = { v ->
                     currentOnCheckedChange?.invoke(v)
-                    currentCouiHaptic(CouiHapticEffect.Switch)
+                    if (hapticFeedbackEnabled) currentCouiHaptic(CouiHapticEffect.Switch)
                 },
                 enabled = interactive,
                 role = Role.Switch,

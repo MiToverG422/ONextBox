@@ -47,11 +47,9 @@ import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import io.github.suqi8.coui.kmp.basic.Switch
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import io.github.suqi8.coui.kmp.utils.CouiHapticEffect
-import io.github.suqi8.coui.kmp.utils.rememberCouiHaptic
 
-/** ColorOS 17 switch geometry: 44x24dp track, 18dp thumb, and 3dp edge inset. */
 @Composable
 fun ColorOsSwitch(
     checked: Boolean,
@@ -60,11 +58,14 @@ fun ColorOsSwitch(
     enabled: Boolean = true,
     onPressStateChange: (Boolean) -> Unit = {},
 ) {
+    if (LocalAppUiStyle.current == AppUiStyle.ColorOs16) {
+        Switch(checked = checked, onCheckedChange = onCheckedChange, modifier = modifier, enabled = enabled, hapticFeedbackEnabled = false)
+        return
+    }
     val currentOnCheckedChange by rememberUpdatedState(onCheckedChange)
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val isHovered by interactionSource.collectIsHoveredAsState()
-    val haptic = rememberCouiHaptic()
     val easing = remember { CubicBezierEasing(0.3f, 0f, 0.1f, 1f) }
     val colorScheme = COUITheme.colorScheme
     val darkTheme = colorScheme.surface.luminance() < .5f
@@ -76,7 +77,6 @@ fun ColorOsSwitch(
     val startPx = with(density) { ThumbStartOffset.toPx() }
     val endPx = with(density) { ThumbEndOffset.toPx() }
     val currentChecked by rememberUpdatedState(checked)
-    val currentHaptic by rememberUpdatedState(haptic)
     val dragModifier = if (enabled && onCheckedChange != null) {
         Modifier.pointerInput(enabled, startPx, endPx, direction) {
             try {
@@ -89,7 +89,6 @@ fun ColorOsSwitch(
                         dragOffset = null
                         if (next != currentChecked) {
                             currentOnCheckedChange?.invoke(next)
-                            currentHaptic(CouiHapticEffect.Switch)
                         }
                     },
                     onHorizontalDrag = { change, amount ->
@@ -165,7 +164,6 @@ fun ColorOsSwitch(
             indication = null,
             onValueChange = { value ->
                 currentOnCheckedChange?.invoke(value)
-                haptic(CouiHapticEffect.Switch)
             },
         )
     } else {

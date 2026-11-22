@@ -31,6 +31,7 @@ internal class EnabledFeatureModeMemory {
 internal class EnabledFeatureActions {
     private val modes = EnabledFeatureModeMemory()
     private val writers: Map<Int, suspend (Context, Boolean) -> Unit> = mapOf<Int, suspend (Context, Boolean) -> Unit>(
+        *systemUiAppearanceFeatures.map { it.action() }.toTypedArray(),
         SharedFeatureDefinitions.networkIdentity.action(),
         R.string.statusbar_order_title to { context, enabled -> StatusBarLayoutSettings.setOrderEnabled(context, enabled) },
         R.string.network_speed_refresh_second to { context, enabled -> LspConfig.setNetworkSpeedFeatureEnabled(context, LspConfig.NetworkSpeedFeature.CustomRefreshInterval, enabled) },
@@ -75,6 +76,7 @@ internal class EnabledFeatureActions {
         SharedFeatureDefinitions.volumeSafetyWarning.action(),
         SharedFeatureDefinitions.nativeLiveUpdate.action(),
         SharedFeatureDefinitions.cameraDefaultGallery.action(),
+        *SharedFeatureDefinitions.wallet.map { it.action() }.toTypedArray(),
         SharedFeatureDefinitions.translationFloating.action(),
         SharedFeatureDefinitions.translationBlacklist.action(),
         SharedFeatureDefinitions.translationPages.action(),
@@ -105,6 +107,7 @@ internal class EnabledFeatureActions {
         AdditionalFeatureDefinitions.keyboardFlagEmoji.action(),
         R.string.keyguard_face_tap_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceTapUnlock, enabled) },
         R.string.keyguard_face_capsule_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceAuthCapsule, enabled) },
+        R.string.keyguard_gesture_handle_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.GestureHandle, enabled) },
         R.string.keyguard_face_tap_animation_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceTapAnimation, enabled) },
         R.string.keyguard_block_password_highlight_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.BlockPasswordHighlight, enabled) },
         R.string.keyguard_swipe_pin_title to { context, enabled -> LspConfig.setKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.SwipePinInput, enabled) },
@@ -130,6 +133,7 @@ internal class EnabledFeatureActions {
         R.string.wallpaper_motion_title to { context, enabled -> WallpaperMotionSettings.save(context, enabled, WallpaperMotionSettings.amount(context)) },
         R.string.theme_store_vip_title to { context, enabled -> ThemeStoreSettings.set(context, enabled) },
         R.string.theme_store_ads_title to { context, enabled -> ThemeStoreSettings.setAds(context, enabled) },
+        R.string.theme_store_night_title to { context, enabled -> ThemeStoreSettings.setNightResources(context, enabled) },
         R.string.secure_pay_hide_risk_cloud_title to { context, enabled -> SecurePaySettings.setEnabled(context, enabled) },
         AdditionalFeatureDefinitions.gamePromotions.action(),
         AdditionalFeatureDefinitions.gameStartup.action(),
@@ -142,12 +146,19 @@ internal class EnabledFeatureActions {
         AdditionalFeatureDefinitions.gameSkins.action(),
         R.string.feature_settings_title_collapsed_title to { context, enabled -> LspConfig.setSettingsTitleCollapsedEnabled(context, enabled) },
         R.string.coui_hide_dividers_title to { context, enabled -> CouiDividerSettings.setEnabled(context, enabled) },
+        R.string.display_density_title to { context, enabled ->
+            if (enabled) com.mi.onextbox.boot.DisplayDensity.enable(context) else com.mi.onextbox.boot.DisplayDensity.restore(context)
+        },
+        R.string.block_low_power_auto_super to { context, enabled ->
+            com.mi.onextbox.lsp.ModernXposedPreferenceSync.setBooleanAndSync(context, com.mi.onextbox.lsp.LowBatteryAutoSwitch.KEY, enabled)
+        },
         R.string.soft_light_glass_title to { context, enabled -> SoftLightGlassSettings.setEnabled(context, enabled) },
         R.string.settings_title_lock_title to { context, enabled -> com.mi.onextbox.lsp.SettingsAppearanceSettings.setEnabled(
             context, com.mi.onextbox.lsp.SettingsAppearanceSettings.TITLE_LOCK, enabled) },
         R.string.settings_account_size_title to { context, enabled -> com.mi.onextbox.lsp.SettingsAppearanceSettings.setEnabled(
             context, com.mi.onextbox.lsp.SettingsAppearanceSettings.ACCOUNT_SIZE, enabled) },
         R.string.settings_home_hide_account_title to { context, enabled -> SettingsHomeCleanupSettings.set(context, SettingsHomeCleanupSettings.ACCOUNT, enabled) },
+        R.string.settings_home_hide_guide_title to { context, enabled -> SettingsHomeCleanupSettings.set(context, SettingsHomeCleanupSettings.GUIDE, enabled) },
         R.string.settings_show_process_manager_title to { context, enabled -> com.mi.onextbox.lsp.SettingsProcessManager.set(context, enabled) },
         R.string.settings_realme_app_volume to { context, enabled -> com.mi.onextbox.lsp.SettingsRealmeFeatures.set(context, com.mi.onextbox.lsp.SettingsRealmeFeature.AppVolume, enabled) },
         R.string.settings_realme_directional_sound to { context, enabled -> com.mi.onextbox.lsp.SettingsRealmeFeatures.set(context, com.mi.onextbox.lsp.SettingsRealmeFeature.DirectionalSound, enabled) },
@@ -164,6 +175,7 @@ internal class EnabledFeatureActions {
         R.string.feature_settings_restore_app_open_button_title to { context, enabled -> LspConfig.setSettingsRestoreAppOpenButtonEnabled(context, enabled) },
         R.string.feature_settings_skip_special_permission_risk_confirm_title to { context, enabled -> LspConfig.setSettingsSkipSpecialPermissionRiskConfirmEnabled(context, enabled) },
         R.string.feature_settings_c15_about_layout_title to { context, enabled -> LspConfig.setSettingsC15AboutLayoutEnabled(context, enabled) },
+        R.string.ota_art_hide to { context, enabled -> ModernXposedPreferenceSync.setBooleanAndSync(context, OtaArtwork.HIDE, enabled) },
         R.string.feature_settings_unlock_refresh_rate_title to { context, enabled -> LspConfig.setSettingsRefreshRateUnlocked(context, enabled) },
         R.string.feature_settings_force_global_extreme_refresh_rate_title to { context, enabled -> LspConfig.setSettingsForceGlobalExtremeRefreshRateEnabled(context, enabled) },
         R.string.feature_settings_disable_adaptive_refresh_rate_title to { context, enabled -> LspConfig.setSettingsDisableAdaptiveRefreshRateEnabled(context, enabled) },

@@ -33,6 +33,7 @@ import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import com.mi.onextbox.ui.RootNavDisplay
 import com.mi.onextbox.ui.layout.rememberChromeBlurBackdrop
+import com.mi.onextbox.ui.common.AppVisualEffectsHost
 import com.mi.onextbox.ui.screens.FeatureIcon
 import com.mi.onextbox.lsp.LspLoadedTarget
 import androidx.core.view.WindowCompat
@@ -61,6 +62,7 @@ open class DiagnosticActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             val mode = remember { AppThemeMode.get(this) }
+            val uiStyle = remember { AppUiStyle.get(this) }
             val keyColor = remember { AppThemeKeyColor.get(this) }
             val seed = rememberMonetSeedColor(mode.isMonet, keyColor)
             val palette = remember { AppThemePaletteStyle.get(this) }
@@ -88,8 +90,10 @@ open class DiagnosticActivity : ComponentActivity() {
                         isAppearanceLightNavigationBars = light
                     }
                 }
-                AppUiStyleAppTheme(AppUiStyle.ColorOs, mode, keyColor, palette, spec) {
-                DiagnosticHost(intent.getStringExtra("page") ?: "reports", intent.getStringExtra("report"))
+                AppUiStyleAppTheme(uiStyle, mode, keyColor, palette, spec) {
+                AppVisualEffectsHost {
+                    DiagnosticHost(intent.getStringExtra("page") ?: "reports", intent.getStringExtra("report"))
+                }
                 }
               }
             }
@@ -186,9 +190,7 @@ class CrashReportActivity : DiagnosticActivity()
         "report" -> R.string.diagnostics_report
         else -> R.string.diagnostics_reports
     })
-    val blurEnabled = remember { context.getSharedPreferences("onextbox_prefs", Context.MODE_PRIVATE)
-        .getBoolean("blur_effect_enabled", true) }
-    val backdrop = rememberChromeBlurBackdrop(blurEnabled)
+    val backdrop = rememberChromeBlurBackdrop()
     SettingsPageSurface(title, modifier = Modifier.fillMaxSize(), showBack = true, onBack = onBack,
         blurBackdrop = backdrop) {
         if (page in developerToolPages) {

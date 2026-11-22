@@ -5,8 +5,9 @@ import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 
 internal object SettingsHomeCleanupSettings {
     const val ACCOUNT = "settings_home_hide_account"
+    const val GUIDE = "settings_home_hide_account_safety_guide"
     const val UPDATE = "settings_home_hide_update_reminder"
-    val keys = setOf(ACCOUNT, UPDATE)
+    val keys = setOf(ACCOUNT, GUIDE, UPDATE)
 
     fun enabled(context: Context, key: String): Boolean {
         require(key in keys)

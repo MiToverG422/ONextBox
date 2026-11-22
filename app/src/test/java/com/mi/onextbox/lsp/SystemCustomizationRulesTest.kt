@@ -14,9 +14,13 @@ class SystemCustomizationRulesTest {
     }
 
     @Test fun importedFolderAndSizeValuesCannotCreateAnEmptyOrUnboundedGrid() {
-        assertEquals(2 to 6, SystemCustomizationRules.folderGrid(-1, 100))
+        assertEquals(2 to 9, SystemCustomizationRules.folderGrid(-1, 100))
+        assertEquals(5 to 9, SystemCustomizationRules.folderGrid(5, 9))
         assertEquals(6 to 2, SystemCustomizationRules.folderGrid(99, 0))
-        assertEquals(50, SystemCustomizationSettings.iconPercent.normalize(-50))
+        assertEquals(0.2f, SystemCustomizationRules.iconScale(-400), 0f)
+        assertEquals(5f, SystemCustomizationRules.iconScale(400), 0f)
+        for (percent in 50..150) assertEquals(percent / 100f,
+            SystemCustomizationRules.iconScale(SystemCustomizationRules.iconAdjustmentFromPercent(percent)), 0.005f)
         assertEquals(150, SystemCustomizationSettings.clearPercent.normalize(1000))
     }
 

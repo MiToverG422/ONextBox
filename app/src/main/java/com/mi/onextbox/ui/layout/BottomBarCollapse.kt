@@ -39,26 +39,34 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppIcons
+import com.mi.onextbox.ui.common.ColorOsDialogButtonMotion
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Stable
-class BottomBarCollapseState internal constructor(private val scrollThresholdPx: Float) {
+class BottomBarCollapseState internal constructor(
+    private val scrollThresholdPx: Float,
+    internal val mode: BottomBarAutoCollapse,
+) {
     var collapsed by mutableStateOf(false)
         private set
     internal val animation = Animatable(0f)
-    val progress: Float get() = animation.value.coerceIn(0f, 1f)
+    val progress: Float get() = if (mode.isSide) animation.value.coerceIn(0f, 1f) else 0f
+    internal val folderCollapsed: Boolean get() = mode.isSide && collapsed
+    internal val hiddenBelowScreen: Boolean get() = mode == BottomBarAutoCollapse.Bottom && collapsed
     val expandedContentAlpha: Float get() = (1f - progress * 2.5f).coerceIn(0f, 1f)
     val interactionReady: Boolean get() = !collapsed && progress == 0f
     private var scrollDistance = 0f
 
-    fun collapse() { scrollDistance = 0f; collapsed = true }
+    fun collapse() { scrollDistance = 0f; collapsed = mode != BottomBarAutoCollapse.Off }
     fun expand() { scrollDistance = 0f; collapsed = false }
 
     val nestedScrollConnection = object : NestedScrollConnection {
         override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-            if (source != NestedScrollSource.UserInput || abs(available.y) <= abs(available.x)) return Offset.Zero
+            if (mode == BottomBarAutoCollapse.Off || source != NestedScrollSource.UserInput ||
+                abs(available.y) <= abs(available.x)
+            ) return Offset.Zero
             val delta = available.y
             if ((delta > 0f) != (scrollDistance > 0f)) scrollDistance = 0f
             scrollDistance += delta
@@ -75,15 +83,19 @@ class BottomBarCollapseState internal constructor(private val scrollThresholdPx:
 }
 
 @Composable
-internal fun rememberBottomBarCollapseState(): BottomBarCollapseState {
+internal fun rememberBottomBarCollapseState(
+    mode: BottomBarAutoCollapse,
+): BottomBarCollapseState {
     val density = LocalDensity.current
     val threshold = with(density) { 24.dp.toPx() }
-    val state = remember(threshold) { BottomBarCollapseState(threshold) }
-    LaunchedEffect(state, state.collapsed) {
-        state.animation.animateTo(
-            if (state.collapsed) 1f else 0f,
-            tween(durationMillis = 420, easing = CubicBezierEasing(.2f, 0f, 0f, 1f)),
-        )
+    val state = remember(threshold, mode) { BottomBarCollapseState(threshold, mode) }
+    if (mode.isSide) {
+        LaunchedEffect(state, state.folderCollapsed) {
+            state.animation.animateTo(
+                if (state.folderCollapsed) 1f else 0f,
+                tween(durationMillis = 420, easing = CubicBezierEasing(.2f, 0f, 0f, 1f)),
+            )
+        }
     }
     return state
 }
@@ -93,12 +105,12 @@ internal fun Modifier.bottomBarCollapseGeometry(
     expandedWidth: Dp,
     diameter: Dp,
     hostWidth: Dp,
-): Modifier = absoluteOffset {
-    val progress = state?.progress ?: 0f
-    val leftInset = minOf(16.dp, ((hostWidth - diameter) / 2).coerceAtLeast(0.dp))
-    IntOffset(((leftInset + diameter / 2 - hostWidth / 2).toPx() * progress).roundToInt(), 0)
+): Modifier = if (state == null || !state.mode.isSide) this else absoluteOffset {
+    val halfTravel = ((hostWidth - diameter) / 2).coerceAtLeast(0.dp)
+    val offset = (halfTravel - minOf(16.dp, halfTravel)) * state.progress
+    IntOffset((if (state.mode == BottomBarAutoCollapse.Right) offset else -offset).roundToPx(), 0)
 }.layout { measurable, constraints ->
-    val progress = state?.progress ?: 0f
+    val progress = state.progress
     val width = (expandedWidth.toPx() + (diameter - expandedWidth).toPx() * progress).roundToInt()
         .coerceIn(1, constraints.maxWidth.coerceAtLeast(1))
     val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
@@ -108,33 +120,54 @@ internal fun Modifier.bottomBarCollapseGeometry(
 internal fun Modifier.bottomBarCollapseGestures(
     state: BottomBarCollapseState?,
     startupRevealProgress: () -> Float = { 1f },
-): Modifier = if (state == null) this else pointerInput(state, startupRevealProgress) {
-        awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            if (startupRevealProgress() < 1f) return@awaitEachGesture
-            var axis = 0
-            var handled = false
+    expandedHoldMotion: ColorOsDialogButtonMotion? = null,
+): Modifier = if (state == null) this else pointerInput(state, startupRevealProgress, expandedHoldMotion) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        if (startupRevealProgress() < 1f) return@awaitEachGesture
+        val touchSlop = viewConfiguration.touchSlop
+        var crossedSlop = false
+        var axis = 0
+        var handled = false
+        var holdMotion: ColorOsDialogButtonMotion? = null
+        try {
             do {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
                 val drag = change.position - down.position
-                if (axis == 0 && drag.getDistance() > viewConfiguration.touchSlop) {
+                if (!crossedSlop && drag.getDistance() > touchSlop) {
+                    crossedSlop = true
+                    if (change.uptimeMillis - down.uptimeMillis >= viewConfiguration.longPressTimeoutMillis) {
+                        // The standard bar and the folder already handle direct touch motion.
+                        holdMotion = expandedHoldMotion?.takeIf { state.interactionReady }
+                            ?: return@awaitEachGesture
+                        holdMotion.begin()
+                    }
+                }
+                if (holdMotion != null) {
+                    change.consume()
+                    if (change.pressed) holdMotion.drag(drag, size)
+                    continue
+                }
+                if (axis == 0 && crossedSlop) {
                     if (abs(drag.y) > abs(drag.x) * 1.1f) axis = 1
                     else if (abs(drag.x) > abs(drag.y) * 1.1f) axis = 2
                 }
-                if (axis == 2 && abs(drag.y) > maxOf(viewConfiguration.touchSlop, abs(drag.x) * 1.4f)) axis = 1
-                if (axis == 1) {
+                if (axis == 2 && abs(drag.y) > maxOf(touchSlop, abs(drag.x) * 1.4f)) axis = 1
+                if (axis == 1 && state.mode != BottomBarAutoCollapse.Off) {
                     change.consume()
-                    val threshold = if (change.pressed) maxOf(viewConfiguration.touchSlop, 12.dp.toPx())
-                        else viewConfiguration.touchSlop
+                    val threshold = if (change.pressed) maxOf(touchSlop, 12.dp.toPx()) else touchSlop
                     if (!handled && abs(drag.y) >= threshold) {
                         if (drag.y > 0f) state.collapse() else state.expand()
                         handled = true
                     }
                 }
             } while (event.changes.any { it.pressed })
+        } finally {
+            holdMotion?.release(size)
         }
     }
+}
 
 @Composable
 internal fun CollapsibleBottomBarSurface(
@@ -143,15 +176,15 @@ internal fun CollapsibleBottomBarSurface(
     contentAlignment: Alignment = Alignment.Center,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    if (state == null) {
+    if (state == null || !state.mode.isSide) {
         Box(Modifier.fillMaxSize(), contentAlignment = contentAlignment) { background(); content() }
     } else ColorOsTopBarButton(
         onClick = state::expand,
-        enabled = state.collapsed,
+        enabled = state.folderCollapsed,
         feedbackProgress = { state.progress },
         background = background,
         contentAlignment = contentAlignment,
-        modifier = Modifier.fillMaxSize().then(if (state.collapsed) Modifier.testTag("bottomBarFolder") else Modifier),
+        modifier = Modifier.fillMaxSize().then(if (state.folderCollapsed) Modifier.testTag("bottomBarFolder") else Modifier),
         content = content,
     )
 }
@@ -164,7 +197,7 @@ internal fun BottomBarFolderIcon(
     contentOpacity: () -> Float,
     modifier: Modifier = Modifier,
 ) {
-    if (state == null) return
+    if (state == null || !state.mode.isSide) return
     val description = stringResource(R.string.bottom_bar_expand)
     Box(
         modifier = modifier.size(diameter)
@@ -174,7 +207,7 @@ internal fun BottomBarFolderIcon(
                 scaleX = .7f + .3f * progress
                 scaleY = scaleX
             }
-            .then(if (state.collapsed) Modifier else Modifier.clearAndSetSemantics {}),
+            .then(if (state.folderCollapsed) Modifier else Modifier.clearAndSetSemantics {}),
         contentAlignment = Alignment.Center,
     ) {
         Image(AppIcons.FolderOutline, description, Modifier.size(28.dp), colorFilter = ColorFilter.tint(tint))

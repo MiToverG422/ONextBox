@@ -55,16 +55,7 @@ internal object LauncherRecentInteractionHooker {
 
     private fun hookAutoFocus(loader: ClassLoader) {
         // Resolve without initializing AppFeatureUtils before LauncherApplication.attachBaseContext.
-        val featureUtils = ModernReflect.findClassIfExists("com.android.common.util.AppFeatureUtils", loader)
-        val gates = featureUtils?.declaredMethods?.filter {
-            it.name == "isSupportAutoFocusToNextPageInOverviewState" &&
-                it.returnType == Boolean::class.javaPrimitiveType &&
-                (it.parameterCount == 0 || it.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType)))
-        }.orEmpty().ifEmpty { listOf(LauncherDynamicTargets.autoFocus(loader).also {
-            require(java.lang.reflect.Modifier.isStatic(it.modifiers) && it.returnType == Boolean::class.javaPrimitiveType)
-        }) }
-        require(gates.isNotEmpty())
-        gates.forEach { method ->
+        LauncherDynamicTargets.autoFocusGates(loader).forEach { method ->
             hook("auto-focus", method) { chain ->
                 if (enabled(LauncherFeature.DisablePreviousTaskAutoFocus)) false else chain.proceed()
             }

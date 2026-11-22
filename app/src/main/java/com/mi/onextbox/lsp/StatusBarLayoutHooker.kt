@@ -2,6 +2,7 @@ package com.mi.onextbox.lsp
 
 import android.content.Context
 import android.graphics.Rect
+import android.view.View
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernMethodHook
@@ -11,16 +12,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal object StatusBarLayoutHooker {
     private const val TAG = "ONextBox-StatusBarLayout"
     fun hook(loader: ClassLoader) {
-        hook(loader, "status_bar_icon_container_height")
+        hook(loader, "status_bar_icon_container_height", true)
     }
 
     fun hookColorOs16(loader: ClassLoader) {
-        hook(loader, "status_bar_system_icons_height")
+        hook(loader, "status_bar_system_icons_height", false)
     }
 
-    private fun hook(loader: ClassLoader, iconHeightResource: String) {
+    private fun hook(loader: ClassLoader, iconHeightResource: String, mergedLayout: Boolean) {
         runCatching { hookOrder(loader) }.onFailure { HookLog.w(TAG, "Icon-order adapter unavailable", it) }
-        runCatching { hookMargins(loader, iconHeightResource) }.onFailure { HookLog.w(TAG, "Margin adapter unavailable", it) }
+        runCatching { hookMargins(loader, iconHeightResource, mergedLayout) }.onFailure { HookLog.w(TAG, "Margin adapter unavailable", it) }
     }
 
     private fun hookOrder(loader: ClassLoader) {
@@ -47,7 +48,7 @@ internal object StatusBarLayoutHooker {
         HookLog.i(TAG, "Native icon-order hook installed")
     }
 
-    private fun hookMargins(loader: ClassLoader, iconHeightResource: String) {
+    private fun hookMargins(loader: ClassLoader, iconHeightResource: String, mergedLayout: Boolean) {
         val type = ModernReflect.findClass("com.oplus.systemui.statusbar.phone.StatusBarPaddingProvider", loader)
         val pair = ModernReflect.findClass("kotlin.Pair", loader)
         val method = type.getDeclaredMethod("getHomeStatusBarLeftRightPadding", String::class.java, pair, pair)
@@ -60,8 +61,10 @@ internal object StatusBarLayoutHooker {
         ModernHookRegistry.installCompat("$TAG:margins", method, object : ModernMethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
                 if (param.throwable != null) return
-                val offsets = StatusBarLayoutSettings.marginsXposed()
-                val vertical = StatusBarLayoutSettings.verticalMarginsXposed()
+                val layout = if (mergedLayout) StatusBarIconLayout.current() else null
+                if (layout != null && !layout.nativeX && !layout.nativeY) return
+                val offsets = StatusBarLayoutSettings.marginsXposed().takeIf { layout?.nativeX != false }
+                val vertical = StatusBarLayoutSettings.verticalMarginsXposed().takeIf { layout?.nativeY != false }
                 if (offsets == null && vertical == null) return
                 val original = param.result as? Rect ?: return
                 val ownerContext = context.get(param.thisObject) as Context
@@ -74,8 +77,10 @@ internal object StatusBarLayoutHooker {
                     if (cutouts != null) {
                         val leftSafe = (first.invoke(cutouts) as Number).toInt()
                         val rightSafe = (second.invoke(cutouts) as Number).toInt()
-                        result.left = StatusBarLayoutRules.padding(original.left, offsets.first, density, leftSafe)
-                        result.right = StatusBarLayoutRules.padding(original.right, offsets.second, density, rightSafe)
+                        val reversed = mergedLayout && SystemUiAppearance.Mirror.current() != 0 &&
+                            ownerContext.resources.configuration.layoutDirection != View.LAYOUT_DIRECTION_RTL
+                        result.left = StatusBarLayoutRules.padding(original.left, if (reversed) offsets.second else offsets.first, density, leftSafe)
+                        result.right = StatusBarLayoutRules.padding(original.right, if (reversed) offsets.first else offsets.second, density, rightSafe)
                         if (reached.compareAndSet(false, true)) HookLog.i(TAG, "Native home status-bar side margins adjusted")
                     }
                 }

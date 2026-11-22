@@ -33,11 +33,13 @@ internal fun SettingsHomeCleanupGroup() {
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     var account by remember(context) { mutableStateOf(SettingsHomeCleanupSettings.enabled(context, SettingsHomeCleanupSettings.ACCOUNT)) }
+    var guide by remember(context) { mutableStateOf(SettingsHomeCleanupSettings.enabled(context, SettingsHomeCleanupSettings.GUIDE)) }
     var update by remember(context) { mutableStateOf(SettingsHomeCleanupSettings.enabled(context, SettingsHomeCleanupSettings.UPDATE)) }
     var saving by remember { mutableStateOf(false) }
     fun refresh() {
         if (saving) return
         account = SettingsHomeCleanupSettings.enabled(context, SettingsHomeCleanupSettings.ACCOUNT)
+        guide = SettingsHomeCleanupSettings.enabled(context, SettingsHomeCleanupSettings.GUIDE)
         update = SettingsHomeCleanupSettings.enabled(context, SettingsHomeCleanupSettings.UPDATE)
     }
     DisposableEffect(context, owner) {
@@ -66,18 +68,26 @@ internal fun SettingsHomeCleanupGroup() {
     }
     SettingsSection(title = stringResource(R.string.settings_home_cleanup_group))
     SettingsGroup {
-        run {SettingsToggleRow(
-                title = stringResource(R.string.settings_home_hide_account_title),
-                summary = stringResource(R.string.settings_home_hide_account_summary),
-                checked = account, interactionEnabled = !saving,
-                onCheckedChange = { save(SettingsHomeCleanupSettings.ACCOUNT, it) }, hasDividerBelow = true,
-            )}
+        SettingsToggleRow(
+            title = stringResource(R.string.settings_home_hide_account_title),
+            summary = stringResource(R.string.settings_home_hide_account_summary),
+            checked = account, interactionEnabled = !saving,
+            onCheckedChange = { save(SettingsHomeCleanupSettings.ACCOUNT, it) }, hasDividerBelow = true,
+        )
         SettingsDivider()
-        run {SettingsToggleRow(
-                title = stringResource(R.string.settings_home_hide_update_title),
-                summary = stringResource(R.string.settings_home_hide_update_summary),
-                checked = update, interactionEnabled = !saving,
-                onCheckedChange = { save(SettingsHomeCleanupSettings.UPDATE, it) }, hasDividerAbove = true,
-            )}
+        SettingsToggleRow(
+            title = stringResource(R.string.settings_home_hide_guide_title),
+            summary = stringResource(R.string.settings_home_hide_guide_summary),
+            checked = guide, interactionEnabled = !saving,
+            onCheckedChange = { save(SettingsHomeCleanupSettings.GUIDE, it) },
+            hasDividerAbove = true, hasDividerBelow = true,
+        )
+        SettingsDivider()
+        SettingsToggleRow(
+            title = stringResource(R.string.settings_home_hide_update_title),
+            summary = stringResource(R.string.settings_home_hide_update_summary),
+            checked = update, interactionEnabled = !saving,
+            onCheckedChange = { save(SettingsHomeCleanupSettings.UPDATE, it) }, hasDividerAbove = true,
+        )
     }
 }

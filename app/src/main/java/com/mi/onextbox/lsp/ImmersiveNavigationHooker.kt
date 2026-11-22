@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.TypedValue
 import android.view.View
+import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernMethodHook
 import io.github.libxposed.api.XposedInterface
@@ -26,7 +27,8 @@ internal object ImmersiveNavigationHooker {
 
     fun hook(classLoader: ClassLoader? = null) {
         if (!LspConfig.isImmersiveNavigationEnabledXposed() &&
-            !LspConfig.isNavigationHandleCustomLengthEnabledXposed()
+            !LspConfig.isNavigationHandleCustomLengthEnabledXposed() &&
+            !LspConfig.isNavigationHandleAutoHideEnabledXposed()
         ) return
         runCatching { installHooks() }
             .onFailure { HookLog.w("ImmersiveNavigation", "Navigation resource hooks unavailable", it) }
@@ -186,6 +188,8 @@ internal object ImmersiveNavigationHooker {
             customLengthEnabled = customLengthEnabled,
             lengthDp = if (customLengthEnabled) LspConfig.getNavigationHandleLengthDpXposed()
                 else ImmersiveNavigationRules.DEFAULT_LENGTH_DP,
+            geometryDp = { HookConfigSnapshot.int(it.key, ImmersiveNavigationRules.SYSTEM_DEFAULT)
+                ?: ImmersiveNavigationRules.SYSTEM_DEFAULT },
         ) ?: return null
         return dimensionResult(method, dimension, resources)
     }
@@ -203,7 +207,7 @@ internal object ImmersiveNavigationHooker {
         return when (method) {
             "getDimension" -> pixels
             "getDimensionPixelOffset" -> pixels.toInt()
-            else -> (pixels + 0.5f).toInt().coerceAtLeast(1)
+            else -> if (pixels == 0f) 0 else (pixels + 0.5f).toInt().coerceAtLeast(1)
         }
     }
 }

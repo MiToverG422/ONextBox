@@ -17,6 +17,13 @@ internal object ModernHotReloadSession {
         private val ids = HotReloadHookIds<Executable>()
         private val failed = AtomicBoolean(false)
         private var precedingTargets = if (staging) previousTargets.toList() else emptyList()
+        private val retiredSlots = mutableSetOf<HotReloadHookKey<Executable>>()
+
+        fun retireLegacyFirstSlot(target: Executable) {
+            if (staging && precedingTargets.count { it == target } == 1) {
+                retiredSlots += HotReloadHookKey(target, "onextbox.reload.v1:0")
+            }
+        }
 
         /** Host methods only: bootstrap dynamic hooks without retaining old callbacks or handles. */
         val previousTargets: List<Executable> get() = precedingTargets.toList()
@@ -46,8 +53,10 @@ internal object ModernHotReloadSession {
                 val oldKeys = oldHandles.map {
                     HotReloadHookKey(it.executable, checkNotNull(it.id) { "Unmanaged old hook" })
                 }
-                check(preservesHookCoverage(oldKeys, live.map { it.key })) {
-                    val missing = oldKeys.toSet() - live.map { it.key }.toSet()
+                val liveKeys = live.map { it.key }
+                val removed = retiredSlots.filter { it in oldKeys && live.none { handle -> handle.executable == it.target } }.toSet()
+                check(oldKeys.distinct().size == oldKeys.size && preservesHookCoverage(oldKeys - removed, liveKeys)) {
+                    val missing = oldKeys.toSet() - liveKeys.toSet() - removed
                     "Replacement hooks do not cover the previous generation; restart the scope. " +
                         "Missing ${missing.size}: ${missing.take(5)}"
                 }
@@ -59,6 +68,8 @@ internal object ModernHotReloadSession {
                         ?: installer(pending.executable, pending.id, pending.hooker)
                     hasCommittedHooks = true
                 }
+                removed.forEach { previous.getValue(it).unhook() }
+                retiredSlots.clear()
                 staging = false
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.event("committed", "Hot reload", "targets=${live.size}")
                 precedingTargets = emptyList()

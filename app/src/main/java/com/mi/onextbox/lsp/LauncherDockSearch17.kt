@@ -15,10 +15,8 @@ internal object LauncherDockSearch17 {
     private const val PACKAGE = "com.android.launcher.bottomsearch."
     private const val TAG = "ONextBox-Launcher"
 
-    fun matches(loader: ClassLoader): Boolean = runCatching {
-        LauncherDockSearchTargets(loader)
-        true
-    }.getOrDefault(false)
+    fun resolve(loader: ClassLoader): LauncherDockSearchTargets? =
+        runCatching { LauncherDockSearchTargets(loader) }.getOrNull()
 
     private fun hook(method: Method, before: Boolean = false, body: (ModernMethodHook.MethodHookParam) -> Unit) {
         ModernHookRegistry.installCompat("dockSearch:" + method.toGenericString(), method, object : ModernMethodHook() {
@@ -32,9 +30,9 @@ internal object LauncherDockSearch17 {
     private fun allocate(type: Class<*>): Any = ModernHookRuntime.requireModule()
         .getInvoker(Any::class.java.getDeclaredConstructor()).newInstanceSpecial(type)
 
-    fun install(loader: ClassLoader, mode: Int) {
+    fun install(targets: LauncherDockSearchTargets, mode: Int) {
+        val loader = targets.loader
         val international = mode == LspConfig.LAUNCHER_SEARCH_BAR_MODE_INTERNATIONAL
-        val targets = LauncherDockSearchTargets(loader)
         val manager = targets.manager
         val proxy = targets.proxy
         val selected = if (international) targets.export else targets.domestic

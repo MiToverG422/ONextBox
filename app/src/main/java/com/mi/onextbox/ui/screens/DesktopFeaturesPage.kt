@@ -153,7 +153,7 @@ internal fun DesktopFeaturesPage(
     }
 
         SettingsSection(title = stringResource(R.string.launcher_group_dock))
-        SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.dock) }
+        SettingsGroup { LauncherDockRows() }
 
         SettingsSection(title = stringResource(R.string.launcher_group_effects))
         SettingsGroup { LauncherFeatureRows(LauncherFeatureItems.effects) }
@@ -193,6 +193,8 @@ internal fun DesktopFeaturesPage(
         SettingsGroup {
             SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.FolderLayout,
                 hasDividerBelow = true)
+            SystemCustomizationRows(com.mi.onextbox.lsp.SystemCustomizationSettings.Feature.FolderIconSize,
+                hasDividerAbove = true, hasDividerBelow = true)
             LauncherFeatureRows(LauncherFeatureItems.folder, hasDividerAbove = true)
         }
 

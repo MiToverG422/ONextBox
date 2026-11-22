@@ -158,8 +158,9 @@ object LauncherHooker {
             runCatching { LauncherSearchWidth.install(classLoader, mode) }
                 .onFailure { HookLog.w(TAG, "Dock search width unavailable", it) }
         }
-        if (classLoader != null && LauncherDockSearch17.matches(classLoader)) {
-            runCatching { LauncherDockSearch17.install(classLoader, mode) }
+        val inlined = classLoader?.let(LauncherDockSearch17::resolve)
+        if (inlined != null) {
+            runCatching { LauncherDockSearch17.install(inlined, mode) }
                 .onFailure { HookLog.w(TAG, "Dock search adapter unavailable", it) }
             return
         }

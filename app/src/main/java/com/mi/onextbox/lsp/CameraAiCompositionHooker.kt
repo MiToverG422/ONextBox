@@ -1,6 +1,7 @@
 package com.mi.onextbox.lsp
 
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
+import com.mi.onextbox.lsp.compat.ModernHotReloadSession
 import io.github.libxposed.api.XposedInterface
 import java.lang.reflect.Method
 
@@ -16,7 +17,10 @@ internal object CameraAiCompositionHooker {
         List::class.java, String::class.java, String::class.java)
 
     fun hook(loader: ClassLoader) {
-        if (!MediaUnlockSettings.enabledXposed(INSPIRATION) && !MediaUnlockSettings.enabledXposed(SCENE)) return
+        if (!MediaUnlockSettings.enabledXposed(INSPIRATION) && !MediaUnlockSettings.enabledXposed(SCENE) &&
+            ModernHotReloadSession.current?.previousTargets.orEmpty().none {
+                it.name == "initCameraTypeFeatureTable" && it.declaringClass.name == BASE + "CameraConfigure"
+            }) return
         val tag = "ONextBox-CameraComposition"
         val prefix = "$tag@${System.identityHashCode(loader)}:"
         runCatching {

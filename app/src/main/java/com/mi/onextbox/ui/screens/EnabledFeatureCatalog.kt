@@ -26,8 +26,13 @@ internal object EnabledFeatureCatalog {
         Entry(option.title, systemExtrasPage(option.pkg)) { context -> SystemExtrasSettings.enabled(context, option.key) }
     } + listOf(
         Entry(R.string.coui_hide_dividers_title, FeaturePageMode.Coui) { CouiDividerSettings.enabled(it) },
+        Entry(R.string.display_density_title, FeaturePageMode.AndroidSystem) { com.mi.onextbox.boot.DisplayDensity.enabled(it) },
+        Entry(R.string.block_low_power_auto_super, FeaturePageMode.Battery) { context ->
+            com.mi.onextbox.lsp.LspPreferenceStore.readBoolean(context, com.mi.onextbox.lsp.LowBatteryAutoSwitch.KEY, false)
+        },
         Entry(R.string.soft_light_glass_title, FeaturePageMode.SoftLightGlass) { SoftLightGlassSettings.enabled(it) },
         Entry(R.string.app_lock_delay_title, FeaturePageMode.SecurityPermission) { AppLockDelaySettings.enabled(it) },
+        *systemUiAppearanceFeatures.map { it.catalogEntry() }.toTypedArray(),
         SharedFeatureDefinitions.networkIdentity.catalogEntry(),
         SharedFeatureDefinitions.qsCorner.catalogEntry(),
         SharedFeatureDefinitions.qsPercentage.catalogEntry(),
@@ -36,6 +41,7 @@ internal object EnabledFeatureCatalog {
         SharedFeatureDefinitions.volumeSafetyWarning.catalogEntry(),
         SharedFeatureDefinitions.nativeLiveUpdate.catalogEntry(),
         SharedFeatureDefinitions.cameraDefaultGallery.catalogEntry(),
+        *SharedFeatureDefinitions.wallet.map { it.catalogEntry() }.toTypedArray(),
         SharedFeatureDefinitions.translationFloating.catalogEntry(),
         SharedFeatureDefinitions.translationBlacklist.catalogEntry(),
         SharedFeatureDefinitions.translationPages.catalogEntry(),
@@ -70,8 +76,6 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.statusbar_sim_order_title, FeaturePageMode.SystemUiIconOrder, parents = setOf(R.string.statusbar_order_title)) {
             StatusBarLayoutSettings.state(it).simEnabled
         },
-        Entry(R.string.statusbar_margins_title, FeaturePageMode.SystemUiStatusBarLayout) { StatusBarLayoutSettings.state(it).marginsEnabled },
-        Entry(R.string.statusbar_vertical_margins_title, FeaturePageMode.SystemUiStatusBarLayout) { StatusBarLayoutSettings.state(it).verticalMarginsEnabled },
         Entry(R.string.carrier_name_title, FeaturePageMode.SystemUiStatusBarNetwork) { CarrierNameSettings.state(it).enabled },
         Entry(R.string.launcher_disable_icon_menu_title, FeaturePageMode.DesktopIcons) { LauncherGestureSettings.menu(it) },
         Entry(R.string.launcher_widgets_menu_title, FeaturePageMode.DesktopIcons) { LauncherGestureSettings.widgets(it) },
@@ -118,6 +122,7 @@ internal object EnabledFeatureCatalog {
         AdditionalFeatureDefinitions.keyboardFlagEmoji.catalogEntry(),
         Entry(R.string.keyguard_face_tap_title, FeaturePageMode.SystemUiLockScreen) { context -> LspConfig.isKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceTapUnlock) },
         Entry(R.string.keyguard_face_capsule_title, FeaturePageMode.SystemUiLockScreen) { context -> LspConfig.isKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceAuthCapsule) },
+        Entry(R.string.keyguard_gesture_handle_title, FeaturePageMode.SystemUiLockScreen) { context -> LspConfig.isKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.GestureHandle) },
         Entry(R.string.keyguard_face_tap_animation_title, FeaturePageMode.SystemUiLockScreen, parents = setOf(R.string.keyguard_face_tap_title)) { context -> LspConfig.isKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.FaceTapAnimation) },
         Entry(R.string.keyguard_block_password_highlight_title, FeaturePageMode.SystemUiLockScreen) { context -> LspConfig.isKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.BlockPasswordHighlight) },
         Entry(R.string.keyguard_swipe_pin_title, FeaturePageMode.SystemUiLockScreen) { context -> LspConfig.isKeyguardFeatureEnabled(context, LspConfig.KeyguardFeature.SwipePinInput) },
@@ -130,8 +135,8 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_large_network_bold_title, FeaturePageMode.SystemUiStatusBarNetwork, parents = setOf(R.string.feature_large_network_font_title)) { context -> LargeNetworkTypeSettings.usesBold(context) },
         Entry(R.string.launcher_custom_grid_title, FeaturePageMode.DesktopLayout) { context -> LauncherGridSettings.state(context).enabled },
         Entry(R.string.feature_navigation_handle_length_title, FeaturePageMode.SystemUiNavigationBar) { context -> LspConfig.isNavigationHandleCustomLengthEnabled(context) },
-        Entry(R.string.feature_immersive_navigation_title, FeaturePageMode.SystemUiNavigationBar, parents = setOf(R.string.feature_navigation_handle_length_title)) { context -> LspConfig.isImmersiveNavigationEnabled(context) },
-        Entry(R.string.feature_navigation_handle_auto_hide_title, FeaturePageMode.SystemUiNavigationBar, parents = setOf(R.string.feature_navigation_handle_length_title)) { context -> LspConfig.isNavigationHandleAutoHideEnabled(context) },
+        Entry(R.string.feature_immersive_navigation_title, FeaturePageMode.SystemUiNavigationBar) { context -> LspConfig.isImmersiveNavigationEnabled(context) },
+        Entry(R.string.feature_navigation_handle_auto_hide_title, FeaturePageMode.SystemUiNavigationBar) { context -> LspConfig.isNavigationHandleAutoHideEnabled(context) },
         Entry(R.string.feature_round_notification_clear_button_title, FeaturePageMode.SystemUiNotificationCenter) { context -> LspConfig.isRoundNotificationClearButtonEnabled(context) },
         Entry(R.string.oshare_unlimited_title, FeaturePageMode.OShare) { context -> OShareSettings.isEnabled(context) },
         Entry(R.string.clock_compact_spacing, FeaturePageMode.SystemUiClock) { ClockPeriodSettings.state(it).compact },
@@ -143,6 +148,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.phone_manager_skip_countdown_title, FeaturePageMode.PhoneManager) { context -> PhoneManagerSettings.isEnabled(context) },
         Entry(R.string.theme_store_vip_title, FeaturePageMode.ThemeStore) { context -> ThemeStoreSettings.enabled(context) },
         Entry(R.string.theme_store_ads_title, FeaturePageMode.ThemeStore) { context -> ThemeStoreSettings.adsEnabled(context) },
+        Entry(R.string.theme_store_night_title, FeaturePageMode.ThemeStore) { context -> ThemeStoreSettings.nightResources(context) },
         Entry(R.string.secure_pay_hide_risk_cloud_title, FeaturePageMode.SecurePay) { context -> SecurePaySettings.enabled(context) },
         AdditionalFeatureDefinitions.gamePromotions.catalogEntry(),
         AdditionalFeatureDefinitions.gameStartup.catalogEntry(),
@@ -167,6 +173,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.settings_account_size_title, FeaturePageMode.SettingsAppearance) { context ->
             com.mi.onextbox.lsp.SettingsAppearanceSettings.state(context).accountSize },
         Entry(R.string.settings_home_hide_account_title, FeaturePageMode.SettingsAppearance) { SettingsHomeCleanupSettings.enabled(it, SettingsHomeCleanupSettings.ACCOUNT) },
+        Entry(R.string.settings_home_hide_guide_title, FeaturePageMode.SettingsAppearance) { SettingsHomeCleanupSettings.enabled(it, SettingsHomeCleanupSettings.GUIDE) },
         Entry(R.string.settings_show_process_manager_title, FeaturePageMode.SettingsRealme) { com.mi.onextbox.lsp.SettingsProcessManager.enabled(it) },
         Entry(R.string.settings_realme_app_volume, FeaturePageMode.SettingsRealme) { com.mi.onextbox.lsp.SettingsRealmeFeatures.enabled(it, com.mi.onextbox.lsp.SettingsRealmeFeature.AppVolume) },
         Entry(R.string.settings_realme_directional_sound, FeaturePageMode.SettingsRealme) { com.mi.onextbox.lsp.SettingsRealmeFeatures.enabled(it, com.mi.onextbox.lsp.SettingsRealmeFeature.DirectionalSound) },
@@ -183,6 +190,7 @@ internal object EnabledFeatureCatalog {
         Entry(R.string.feature_settings_restore_app_open_button_title, FeaturePageMode.SettingsApps) { context -> LspConfig.isSettingsRestoreAppOpenButtonEnabled(context) },
         Entry(R.string.feature_settings_skip_special_permission_risk_confirm_title, FeaturePageMode.SettingsPermissions) { context -> LspConfig.isSettingsSkipSpecialPermissionRiskConfirmEnabled(context) },
         Entry(R.string.feature_settings_c15_about_layout_title, FeaturePageMode.SettingsAboutDevice) { context -> LspConfig.isSettingsC15AboutLayoutEnabled(context) },
+        Entry(R.string.ota_art_hide, FeaturePageMode.SettingsAboutDevice) { LspPreferenceStore.readBoolean(it, OtaArtwork.HIDE, false) },
         Entry(R.string.feature_settings_unlock_refresh_rate_title, FeaturePageMode.SettingsAppearance) { context -> LspConfig.isSettingsRefreshRateUnlocked(context) },
         Entry(R.string.feature_settings_force_global_extreme_refresh_rate_title, FeaturePageMode.SettingsAppearance) { context -> LspConfig.isSettingsForceGlobalExtremeRefreshRateEnabled(context) },
         Entry(R.string.feature_settings_disable_adaptive_refresh_rate_title, FeaturePageMode.SettingsAppearance) { context -> LspConfig.isSettingsDisableAdaptiveRefreshRateEnabled(context) },
@@ -291,7 +299,7 @@ internal object EnabledFeatureCatalog {
 
     suspend fun read(context: Context): List<Entry> {
         val configured = configured(context)
-        return entries.filter { isActive(it.title, configured) }
+        return enabledFeatureEntries(SystemAdaptationDetector.current()).filter { isActive(it.title, configured) }
     }
 
     suspend fun configured(context: Context, requestedTitles: Set<Int>? = null): Set<Int> {

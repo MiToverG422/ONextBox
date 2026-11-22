@@ -102,7 +102,7 @@ internal object AppMarketHooker {
 
     private val hookedLoaders = ConcurrentHashMap.newKeySet<Int>()
 
-    fun hook(classLoader: ClassLoader) {
+    fun hook(classLoader: ClassLoader, colorOs16: Boolean = false) {
         if (!hookedLoaders.add(System.identityHashCode(classLoader))) return
 
         installSplashRecommendationHook(classLoader)
@@ -112,6 +112,11 @@ internal object AppMarketHooker {
         installSearchResultRecommendationHook(classLoader)
         installDetailRecommendationHook(classLoader)
         installMineRecommendationHook(classLoader)
+
+        if (colorOs16) {
+            AppMarketCountrySelector.hook(classLoader)
+            return
+        }
 
         val checkerClass = XposedHelpers.findClassIfExists(REGION_CHECKER_CLASS, classLoader)
         val resultClass = XposedHelpers.findClassIfExists(REGION_RESULT_CLASS, classLoader)

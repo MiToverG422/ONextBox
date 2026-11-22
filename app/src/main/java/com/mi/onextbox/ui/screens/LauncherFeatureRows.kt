@@ -13,6 +13,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig
+import com.mi.onextbox.lsp.LauncherDockCorners
+import com.mi.onextbox.lsp.ModernXposedPreferenceSync
 import com.mi.onextbox.lsp.LspConfig.LauncherFeature
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsToggleRow
@@ -21,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 internal data class LauncherFeatureItem(
     val feature: LauncherFeature,
@@ -48,6 +51,9 @@ internal object LauncherFeatureItems {
         LauncherFeatureItem(LauncherFeature.NotificationDotShadow, R.string.launcher_notification_dot_shadow, R.string.launcher_notification_dot_shadow_summary),
     )
     val folder = listOf(
+        LauncherFeatureItem(LauncherFeature.FolderReturnHome, R.string.launcher_folder_return_home),
+        LauncherFeatureItem(LauncherFeature.HideFolderBackground, R.string.launcher_hide_folder_background),
+        LauncherFeatureItem(LauncherFeature.HideFolderIndicator, R.string.launcher_hide_folder_indicator),
         LauncherFeatureItem(LauncherFeature.UnlimitedFolderInput, R.string.launcher_unlimited_folder_input, R.string.launcher_unlimited_folder_input_summary),
     )
     val dock = listOf(
@@ -62,7 +68,8 @@ internal object LauncherFeatureItems {
 
 @Composable
 internal fun LauncherFeatureRows(items: List<LauncherFeatureItem>, hasDividerBelow: Boolean = false,
-    hasDividerAbove: Boolean = false) {
+    hasDividerAbove: Boolean = false,
+    additionalRows: (FeatureAnimatedGroupScope.(Map<LauncherFeature, Boolean>) -> Unit)? = null) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -81,31 +88,69 @@ internal fun LauncherFeatureRows(items: List<LauncherFeatureItem>, hasDividerBel
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    FeatureAnimatedRows(hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow) {
-    items.forEach { item ->
-        val rowEnabled = item.feature != LauncherFeature.DockBlur || states[LauncherFeature.Dock] == true
-        row(item.feature, visible = rowEnabled) { above, below ->
-        SettingsToggleRow(
-            title = stringResource(item.title),
-            summary = if (item.summary != 0) stringResource(item.summary) else "",
-            checked = states[item.feature] == true,
-            enabled = rowEnabled,
-            onCheckedChange = { enabled ->
-                if (rowEnabled) {
-                    states[item.feature] = enabled
-                    scope.launch {
-                        writeLock.withLock {
-                            withContext(Dispatchers.IO) {
-                                LspConfig.setLauncherFeatureEnabled(context, item.feature, enabled)
+    FeatureAnimatedRows(
+        hasDividerAbove = hasDividerAbove,
+        hasDividerBelow = hasDividerBelow,
+        animateChanges = additionalRows != null || items.any { it.feature == LauncherFeature.DockBlur },
+    ) {
+        items.forEach { item ->
+            val rowEnabled = item.feature != LauncherFeature.DockBlur || states[LauncherFeature.Dock] == true
+            row(item.feature, visible = rowEnabled) { above, below ->
+                SettingsToggleRow(
+                    title = stringResource(item.title),
+                    summary = if (item.summary != 0) stringResource(item.summary) else "",
+                    checked = states[item.feature] == true,
+                    enabled = rowEnabled,
+                    onCheckedChange = { enabled ->
+                        if (rowEnabled) {
+                            states[item.feature] = enabled
+                            scope.launch {
+                                writeLock.withLock {
+                                    withContext(Dispatchers.IO) {
+                                        LspConfig.setLauncherFeatureEnabled(context, item.feature, enabled)
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-            },
-            hasDividerAbove = above,
-            hasDividerBelow = below,
-        )
+                    },
+                    hasDividerAbove = above,
+                    hasDividerBelow = below,
+                )
+            }
         }
+        additionalRows?.invoke(this, states)
     }
+}
+
+@Composable
+internal fun LauncherDockRows() {
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(setOf(LauncherDockCorners.MODE, LauncherDockCorners.RADIUS), LauncherDockCorners::read)
+    val state = editor.state
+    val modes = listOf(
+        LauncherDockCorners.SYSTEM to stringResource(R.string.custom_system_default),
+        LauncherDockCorners.ICON to stringResource(R.string.launcher_dock_follow_icon_radius),
+        LauncherDockCorners.CUSTOM to stringResource(R.string.launcher_dock_custom_radius),
+    )
+    LauncherFeatureRows(LauncherFeatureItems.dock) { states ->
+        val enabled = states[LauncherFeature.Dock] == true
+        row(LauncherDockCorners.MODE, visible = enabled) { above, below ->
+            OptionDropdownRow(title = stringResource(R.string.launcher_dock_corners), summary = "",
+                options = modes, selectedLabel = modes.first { it.first == state.mode }.second, selectedValue = state.mode,
+                onValueChange = { mode -> editor.save(LauncherDockCorners.MODE, state.copy(mode = mode)) {
+                    ModernXposedPreferenceSync.setIntAndSync(context, LauncherDockCorners.MODE, mode)
+                } }, interactionEnabled = editor.savingKey == null, hasDividerAbove = above, hasDividerBelow = below)
+        }
+        row(LauncherDockCorners.RADIUS, visible = enabled && state.mode == LauncherDockCorners.CUSTOM) { above, below ->
+            fun save(radius: Int) = editor.save(LauncherDockCorners.RADIUS, editor.state.copy(radiusDp = radius)) {
+                ModernXposedPreferenceSync.setIntAndSync(context, LauncherDockCorners.RADIUS, radius)
+            }
+            FeatureSliderRow(heading = stringResource(R.string.launcher_dock_custom_radius),
+                currentValue = "${state.radiusDp} dp", value = state.radiusDp.toFloat(),
+                valueRange = 0f..LauncherDockCorners.MAX_DP.toFloat(), steps = LauncherDockCorners.MAX_DP - 1,
+                onValueChange = { editor.state = editor.state.copy(radiusDp = it.roundToInt()) },
+                onValueChangeFinished = { save(editor.state.radiusDp) }, onReset = { save(LauncherDockCorners.DEFAULT_DP) },
+                interactionEnabled = editor.savingKey == null, hasDividerAbove = above, hasDividerBelow = below)
+        }
     }
 }

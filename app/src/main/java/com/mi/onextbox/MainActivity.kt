@@ -8,11 +8,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.content.res.Resources
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import com.mi.onextbox.lsp.ConfigSyncStatus
+import com.mi.onextbox.ui.common.LocalAppVisualEffects
+import com.mi.onextbox.ui.common.LocalVisualEffectSettings
+import com.mi.onextbox.ui.common.rememberVisualEffectSettings
 import com.mi.onextbox.ui.common.rememberConfigState
+import com.mi.onextbox.ui.layout.FloatingBottomBarMode
+import com.mi.onextbox.ui.layout.BottomBarAutoCollapse
 import com.mi.onextbox.lsp.commitOrReport
 import android.os.LocaleList
 import android.view.ContextThemeWrapper
@@ -54,6 +58,7 @@ import com.mi.onextbox.ui.common.AppThemeKeyColor
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppThemePaletteStyle
 import com.mi.onextbox.ui.common.AppUiStyle
+import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.pageDensityScale
 import com.mi.onextbox.ui.common.AssistantScreenOption
 import com.mi.onextbox.ui.common.RootAccessState
@@ -71,7 +76,6 @@ import com.mi.onextbox.ui.onboarding.OnboardingPreferences
 import com.mi.onextbox.ui.onboarding.OnboardingAppearance
 import com.mi.onextbox.ui.onboarding.OnboardingScreen
 import com.mi.onextbox.ui.settings.AppUpdater
-import com.mi.onextbox.ui.settings.AppUpdatePreferences
 import com.mi.onextbox.ui.settings.UpdateNotificationScheduler
 
 private data class StartupRefreshState(
@@ -89,22 +93,13 @@ private fun AppThemeMode.withDynamicColor(): AppThemeMode = when (this) {
     else -> this
 }
 
-private fun AppThemeMode.withStaticColor(): AppThemeMode = when (this) {
-    AppThemeMode.MonetSystem -> AppThemeMode.System
-    AppThemeMode.MonetLight -> AppThemeMode.Light
-    AppThemeMode.MonetDark -> AppThemeMode.Dark
-    else -> this
-}
-
 class MainActivity : ComponentActivity() {
     private var openSoftwareUpdateRequest by mutableIntStateOf(0)
 
     private companion object {
-        const val PREF_BLUR_EFFECT_ENABLED = "blur_effect_enabled"
         const val PREF_FEATURE_PAGE_NEW_STYLE = "feature_page_new_style"
         const val PREF_POP_DIRECTION_FOLLOWS_SWIPE_EDGE = "pop_direction_follows_swipe_edge"
         const val PREF_SHOW_FPS_MONITOR = "show_fps_monitor"
-        const val PREF_LIQUID_GLASS_BOTTOM_BAR = "liquid_glass_bottom_bar"
         const val PREF_BOTTOM_BAR_HIDE_LABELS = "bottom_bar_hide_labels"
 
 
@@ -158,22 +153,7 @@ class MainActivity : ComponentActivity() {
                     readCachedRootAccessInfo(this@MainActivity)?.state == RootAccessState.Granted,
                 )
             }
-            var blurEffectEnabled by rememberConfigState(
-                prefs.getBoolean(PREF_BLUR_EFFECT_ENABLED, true),
-            ) { value ->
-                prefs.edit()
-                    .putBoolean(PREF_BLUR_EFFECT_ENABLED, value)
-                    .commitOrReport()
-                AppLogStore.i("Settings", "Blur effect: $value")
-            }
-            var featurePageNewStyleEnabled by rememberConfigState(
-                prefs.getBoolean(PREF_FEATURE_PAGE_NEW_STYLE, true),
-            ) { value ->
-                prefs.edit()
-                    .putBoolean(PREF_FEATURE_PAGE_NEW_STYLE, value)
-                    .commitOrReport()
-                AppLogStore.i("Settings", "New Features page style: $value")
-            }
+            val featurePageNewStyleEnabled = remember(prefs) { prefs.getBoolean(PREF_FEATURE_PAGE_NEW_STYLE, true) }
             var popDirectionFollowsSwipeEdge by rememberConfigState(
                 prefs.getBoolean(PREF_POP_DIRECTION_FOLLOWS_SWIPE_EDGE, false),
             ) { value ->
@@ -190,14 +170,16 @@ class MainActivity : ComponentActivity() {
                     .commitOrReport()
                 AppLogStore.i("Settings", "Show FPS monitor: $value")
             }
-            var liquidGlassBottomBarEnabled by rememberConfigState(
-                prefs.getBoolean(PREF_LIQUID_GLASS_BOTTOM_BAR, false) &&
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+            var floatingBottomBarMode by rememberConfigState(
+                FloatingBottomBarMode.read(prefs),
             ) { value ->
                 prefs.edit()
-                    .putBoolean(PREF_LIQUID_GLASS_BOTTOM_BAR, value)
+                    .putString(FloatingBottomBarMode.PreferenceKey, value.preferenceValue)
                     .commitOrReport()
-                AppLogStore.i("Settings", "LiquidGlass bottom bar: $value")
+                AppLogStore.i("Settings", "Floating bottom bar: $value")
+            }
+            var bottomBarAutoCollapse by rememberConfigState(BottomBarAutoCollapse.read(prefs)) { value ->
+                prefs.edit().putString(BottomBarAutoCollapse.PreferenceKey, value.preferenceValue).commitOrReport()
             }
             var bottomBarHideLabels by rememberConfigState(
                 prefs.getBoolean(PREF_BOTTOM_BAR_HIDE_LABELS, false),
@@ -545,7 +527,7 @@ class MainActivity : ComponentActivity() {
                     return@LaunchedEffect
                 }
                 UpdateNotificationScheduler.schedule(this@MainActivity)
-                UpdateNotificationScheduler.checkNow(this@MainActivity)
+                UpdateNotificationScheduler.checkOnLaunch(this@MainActivity)
                 val startupState = withContext(Dispatchers.IO) {
                     LsposedScopeRequester.initialize(this@MainActivity)
                     val currentRootAccess = queryRootAccess(this@MainActivity)
@@ -604,6 +586,7 @@ class MainActivity : ComponentActivity() {
             }
 
             val systemDensity = LocalDensity.current
+            val visualEffectSettings = rememberVisualEffectSettings()
             val appDensity = remember(appUiStyle, systemDensity.density, systemDensity.fontScale) {
                 val scale = appUiStyle.pageDensityScale
                 if (scale == 1f) systemDensity
@@ -614,6 +597,8 @@ class MainActivity : ComponentActivity() {
                 LocalConfiguration provides localizedUiContext.resources.configuration,
                 LocalResources provides localizedUiContext.resources,
                 LocalDensity provides appDensity,
+                LocalVisualEffectSettings provides visualEffectSettings,
+                LocalAppVisualEffects provides visualEffectSettings.effects(),
                 // The localized context is a theme wrapper. Keep result launchers attached to the
                 // real activity so migration import survives in-place language changes.
                 LocalActivityResultRegistryOwner provides this@MainActivity,
@@ -627,16 +612,15 @@ class MainActivity : ComponentActivity() {
                 currentTab = currentTab,
                 onTabChange = { currentTab = it },
                 rootGranted = rootGranted,
-                blurEffectEnabled = blurEffectEnabled,
-                onBlurEffectEnabledChange = { blurEffectEnabled = it },
                 featurePageNewStyleEnabled = featurePageNewStyleEnabled,
-                onFeaturePageNewStyleEnabledChange = { featurePageNewStyleEnabled = it },
                 popDirectionFollowsSwipeEdge = popDirectionFollowsSwipeEdge,
                 onPopDirectionFollowsSwipeEdgeChange = { popDirectionFollowsSwipeEdge = it },
                 showFpsMonitor = showFpsMonitor,
                 onShowFpsMonitorChange = { showFpsMonitor = it },
-                liquidGlassBottomBarEnabled = liquidGlassBottomBarEnabled,
-                onLiquidGlassBottomBarEnabledChange = { liquidGlassBottomBarEnabled = it },
+                floatingBottomBarMode = floatingBottomBarMode,
+                onFloatingBottomBarModeChange = { floatingBottomBarMode = it },
+                bottomBarAutoCollapse = bottomBarAutoCollapse,
+                onBottomBarAutoCollapseChange = { bottomBarAutoCollapse = it },
                 bottomBarHideLabels = bottomBarHideLabels,
                 mainPageSwipeEnabled = mainPageSwipeEnabled,
                 subPageSwipeEnabled = subPageSwipeEnabled,
@@ -666,22 +650,6 @@ class MainActivity : ComponentActivity() {
                 appUiStyle = appUiStyle,
                 onAppUiStyleChange = { style ->
                     changeAppAppearance(style != appUiStyle) {
-                        val sourceKey = run {
-                            PREF_COLOROS_THEME_MODE
-                        }
-                        val targetKey = run {
-                            PREF_COLOROS_THEME_MODE
-                        }
-                        val nextMode = prefs.getString(targetKey, null)?.let(AppThemeMode::fromName)
-                            ?: run {
-                                appThemeMode.withStaticColor()
-                            }
-                        prefs.edit()
-                            .putString(sourceKey, appThemeMode.name)
-                            .putString(targetKey, nextMode.name)
-                            .apply()
-                        appThemeMode = nextMode
-                        AppThemeMode.set(this@MainActivity, nextMode)
                         appUiStyle = style
                         AppUiStyle.set(this@MainActivity, style)
                     }
@@ -819,7 +787,7 @@ class MainActivity : ComponentActivity() {
                     if (onboardingVisible) {
                         // Alternative UI styles use a smaller density. Activation always keeps
                         // the same C17 sizing while its choices configure only the destination.
-                        CompositionLocalProvider(LocalDensity provides systemDensity) {
+                        CompositionLocalProvider(LocalDensity provides systemDensity, LocalAppUiStyle provides appUiStyle) {
                         OnboardingScreen(
                         appLanguageTag = appLanguageTag,
                         onAppLanguageChange = { languageTag ->
@@ -853,13 +821,6 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         },
-                        featurePageNewStyleEnabled = featurePageNewStyleEnabled,
-                        onFeaturePageNewStyleEnabledChange = { enabled ->
-                            featurePageNewStyleEnabled = enabled
-                            prefs.edit()
-                                .putBoolean(PREF_FEATURE_PAGE_NEW_STYLE, enabled)
-                                .apply()
-                        },
                         onDestinationPreparationRequested = {
                             onboardingDestinationPrepared = true
                         },
@@ -867,16 +828,6 @@ class MainActivity : ComponentActivity() {
                             rootGranted = granted
                             onboardingCompleted = true
                             resumeRefreshEnabled = false
-                            val allowBackgroundUpdates =
-                                OnboardingPreferences.isBackgroundNetworkAllowed(this@MainActivity)
-                            AppUpdatePreferences.setUpdateNotificationsEnabled(
-                                this@MainActivity,
-                                allowBackgroundUpdates,
-                            )
-                            if (allowBackgroundUpdates) {
-                                UpdateNotificationScheduler.schedule(this@MainActivity)
-                                UpdateNotificationScheduler.checkNow(this@MainActivity)
-                            }
                         },
                         onExitFinished = {
                             onboardingVisible = false

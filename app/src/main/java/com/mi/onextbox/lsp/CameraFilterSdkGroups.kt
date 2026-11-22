@@ -62,29 +62,32 @@ internal object CameraFilterSdkGroups {
             val result = chain.proceed()
             val context = chain.getArg(0) as? Context ?: return@Hooker result
             val candidates = CameraNativeFilterEntries.candidates(MediaUnlockSettings::enabledXposed)
+            if (candidates.isEmpty()) return@Hooker result
             val captureIds = (capture.get(null) as? Map<*, *>)?.keys?.filterIsInstance<String>()?.toSet().orEmpty()
             val resources = context.resources
+            val labels = HashMap<String, Int>()
             val eligible = CameraNativeFilterEntries.eligible(candidates, captureIds, CameraNativeFilterEntries::hasMaterial) {
-                resources.getIdentifier(it, "string", context.packageName) != 0
+                labels.getOrPut(it) { resources.getIdentifier(it, "string", context.packageName) } != 0
             }
-            val counts = fields.associate { field ->
-                val instance = checkNotNull(field.get(null))
-                val list = back.get(instance) as List<*>
-                check(list.size == (names.get(instance) as List<*>).size)
+            val counts = fields.mapNotNull { field ->
+                val instance = field.get(null) ?: return@mapNotNull null
+                val list = back.get(instance) as? List<*> ?: return@mapNotNull null
+                if (!CameraXpanFilterRules.hasValidEntries(list, names.get(instance) as? List<*>)) return@mapNotNull null
                 eligible.forEach { (id, name) ->
                     if (id !in list) {
-                        add.invoke(instance, id, resources.getIdentifier(name, "string", context.packageName))
+                        add.invoke(instance, id, labels.getValue(name))
                         modified.add(id)
                     }
                 }
-                check(list.size == (names.get(instance) as List<*>).size)
                 field.name to list.size
-            }
+            }.toMap()
             if (reported.compareAndSet(false, true)) HookLog.i("ONextBox-CameraFilters",
                 "Native app filter groups completed: eligible=${eligible.size}/${candidates.size}; added=${modified.size}; $counts")
             result
         })
         metadata.getValue("callers").forEach { ModernHookRuntime.requireModule().deoptimize(it) }
-        HotReloadLifecycle.register("${prefix}groups:state", capture = { metadata }, canReload = { modified.isEmpty() })
+        // The lists and their entries belong to the camera SDK. Only the count correction needs ownership.
+        HotReloadLifecycle.register("${prefix}groups:state", capture = { modified.toTypedArray() },
+            restore = { saved -> (saved as? Array<*>)?.filterIsInstanceTo(modified, String::class.java) })
     }
 }

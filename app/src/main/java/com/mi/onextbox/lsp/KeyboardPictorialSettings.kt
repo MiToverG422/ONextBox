@@ -32,10 +32,11 @@ internal object KeyboardPictorialSettings {
         CustomOption("pictorial_keep_clock", R.string.pictorial_keep_clock_title, R.string.pictorial_keep_clock_summary, "轮播壁纸"),
     )
     val keyboard = options.filter { it.key.startsWith("keyboard_") }
+    private val byKey = options.associateBy { it.key }
     val pictorial = options.filter { it.key.startsWith("pictorial_") }
     fun active(key: String) = HookConfigSnapshot.boolean(key, false) == true
     fun number(key: String): Int {
-        val option = options.first { it.key == key }
+        val option = byKey.getValue(key)
         return (HookConfigSnapshot.int("${key}_value", option.default) ?: option.default).coerceIn(option.min, option.max)
     }
     fun enabled(context: Context, key: String) = LspPreferenceStore.prefs(context).getBoolean(key, false)

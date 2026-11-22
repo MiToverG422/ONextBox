@@ -1,5 +1,6 @@
 package com.mi.onextbox.lsp
 
+import android.animation.ValueAnimator
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -7,6 +8,7 @@ import android.graphics.Path
 import android.graphics.RuntimeShader
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.DrawableWrapper
 import android.view.View
 import android.widget.Checkable
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
@@ -18,7 +20,26 @@ import java.util.WeakHashMap
 internal class SoftLightSelection(private val enabled: () -> Boolean) {
     private val drawing = ThreadLocal<Int>()
     private val applied = WeakHashMap<RuntimeShader, Int>()
+    private val controlBackgrounds = WeakHashMap<Drawable, Boolean>()
     private var activeAttr = 0
+
+    fun currentControlState() = drawing.get() ?: 0
+    fun copyState(from: RuntimeShader, to: RuntimeShader) {
+        synchronized(applied) {
+            val value = applied[from] ?: return
+            to.setFloatUniform("onbSelectionState", value.toFloat())
+            applied[to] = value
+        }
+    }
+    private inline fun withControlState(white: Boolean, active: Boolean = white, draw: () -> Any?): Any? {
+        val previous = drawing.get()
+        drawing.set(if (white) 3 else if (active) -1 else 0)
+        return try { draw() } finally { if (previous == null) drawing.remove() else drawing.set(previous) }
+    }
+
+    fun refresh() {
+        synchronized(controlBackgrounds) { controlBackgrounds.keys.toList() }.forEach { it.invalidateSelf() }
+    }
 
     companion object {
         fun white(color: Int) = Color.alpha(color) >= 160 &&
@@ -34,6 +55,71 @@ internal class SoftLightSelection(private val enabled: () -> Boolean) {
             it == android.R.attr.state_activated || (activeAttr != 0 && it == activeAttr)
     }
 
+    private class WhiteRecipes(loader: ClassLoader) {
+        private val provider = ModernReflect.findClassIfExists("com.oplusos.systemui.common.util.QSBlurConfigProvider", loader)
+        private val activeMixes = listOf("QS_ACTIVE_LIGHT_MIX_COLOR", "QS_ACTIVE_NIGHT_MIX_COLOR").mapNotNull { name ->
+            runCatching { provider?.getDeclaredField(name)?.apply { isAccessible = true }?.get(null) }.getOrNull()
+        }
+        private val mix = ModernReflect.findClassIfExists("com.oplusos.systemui.common.blurability.BlurMixConfig\$BlurMixMultiWithShader", loader)
+        private val layers = mix?.methods.orEmpty().filter { it.name in setOf("getForegroundShaderParam", "getBackgroundShaderParam") }
+
+        private class Entry(val recipe: Any?, val active: Boolean)
+        private val entries = WeakHashMap<Drawable, Entry>()
+
+        fun active(owner: Drawable, recipe: Any?): Boolean = synchronized(entries) {
+            val cached = entries[owner]
+            if (cached != null && cached.recipe === recipe) return@synchronized cached.active
+            val active = mix?.isInstance(recipe) == true && layers.any { layer ->
+                layer.invoke(recipe)?.let { it in activeMixes } == true
+            }
+            entries[owner] = Entry(recipe, active)
+            active
+        }
+    }
+
+    fun installDeviceCards(loader: ClassLoader, preserve: () -> Boolean, report: (String) -> Unit) {
+        val plugin = ModernReflect.findClassIfExists("com.oplus.systemui.plugins.drawable.MixColorPluginDrawable", loader) ?: return
+        val recipes = WhiteRecipes(loader)
+        val config = plugin.getDeclaredField("config").apply { isAccessible = true }
+        val recipe = config.type.getMethod("getBlurMixConfig")
+        val outline = plugin.getMethod("getPathProvider")
+        val outlineType = ModernReflect.findClassIfExists("com.oplusos.systemui.common.outline.RoundRectOutlineProvider", loader) ?: return
+        val radius = outlineType.getMethod("getCornerRadius", Drawable::class.java)
+        val weight = outlineType.getMethod("getCornerWeight", Drawable::class.java)
+        val auto = plugin.getDeclaredField("autoBlurDrawable").type
+        val proxy = auto.getMethod("getViewBlurProxy")
+        val amount = proxy.returnType.getMethod("getBlurAmount")
+        var flatColorId: Int? = null
+        val shapes = QsSliderProgressShape()
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        val draw = plugin.getDeclaredMethod("draw", Canvas::class.java)
+        ModernHookRegistry.installFast("soft-light:device-background", draw, XposedInterface.Hooker { chain ->
+            val owner = chain.thisObject as DrawableWrapper
+            if (!recipes.active(owner, recipe.invoke(config.get(owner)))) return@Hooker chain.proceed()
+            val view = owner.callback as? View ?: return@Hooker chain.proceed()
+            val card = generateSequence(view as View?) { it.parent as? View }.take(4)
+                .firstOrNull { QsDeviceCardCorners.isDeviceView(it) } ?: return@Hooker chain.proceed()
+            synchronized(controlBackgrounds) { controlBackgrounds[owner] = true }
+            if (!preserve()) return@Hooker withControlState(true) { chain.proceed() }
+            val drawn = runCatching {
+                val id = flatColorId ?: card.resources.getIdentifier("light_os_low_separate_usable_color", "color", "com.android.systemui").also { flatColorId = it }
+                val color = if (id != 0) card.context.getColor(id) else Color.WHITE
+                if (!white(color)) return@runCatching false
+                val provider = outline.invoke(owner)
+                val shape = shapes.path(owner, radius.invoke(provider, owner) as Float, weight.invoke(provider, owner) as? Float)
+                if (shape.isEmpty) return@runCatching false
+                val opacity = amount.invoke(proxy.invoke(owner.drawable)) as Float
+                paint.color = color
+                paint.alpha = (Color.alpha(color) * opacity.coerceIn(0f, 1f)).toInt()
+                (chain.getArg(0) as Canvas).drawPath(shape, paint)
+                true
+            }.onFailure { report("device selection unavailable: ${it.javaClass.simpleName}") }.getOrDefault(false)
+            if (!drawn) return@Hooker chain.proceed()
+            report("native flat selected device background")
+            null
+        })
+    }
+
     fun installTiles(loader: ClassLoader, preserveControlWhite: () -> Boolean, report: (String) -> Unit) {
         val flag = ModernReflect.findClassIfExists("com.oplus.systemui.qs.base.res.model.TileViewFlag", loader) ?: return
         activeAttr = flag.getMethod("getAttr").invoke(flag.getField("Active").get(null)) as Int
@@ -42,43 +128,33 @@ internal class SoftLightSelection(private val enabled: () -> Boolean) {
         val path = tile.getMethod("getPath")
         val config = tile.getDeclaredField("currentConfig").apply { isAccessible = true }
         val first = config.type.getMethod("getFirst")
-        val provider = ModernReflect.findClassIfExists("com.oplusos.systemui.common.util.QSBlurConfigProvider", loader)
-        val activeMixes = listOf("QS_ACTIVE_LIGHT_MIX_COLOR", "QS_ACTIVE_NIGHT_MIX_COLOR").mapNotNull { name ->
-            runCatching { provider?.getDeclaredField(name)?.apply { isAccessible = true }?.get(null) }.getOrNull()
-        }
-        val mix = ModernReflect.findClassIfExists("com.oplusos.systemui.common.blurability.BlurMixConfig\$BlurMixMultiWithShader", loader)
-        val layers = mix?.methods.orEmpty().filter { it.name in setOf("getForegroundShaderParam", "getBackgroundShaderParam") }
+        val animator = tile.getDeclaredField("animator").apply { isAccessible = true }
+        val deforming = tile.getMethod("isDeforming")
+        val recipes = WhiteRecipes(loader)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         val draw = tile.getDeclaredMethod("draw", Canvas::class.java)
         ModernHookRegistry.installFast("soft-light:tile-selection", draw, XposedInterface.Hooker { chain ->
             if (!enabled()) return@Hooker chain.proceed()
             val owner = chain.thisObject as Drawable
-            val previous = drawing.get()
             val color = mask.getInt(owner)
-            if (preserveControlWhite()) {
-                val recipe = first.invoke(config.get(owner))
-                val activeWhite = Color.alpha(color) < 160 && mix?.isInstance(recipe) == true &&
-                    layers.any { it.invoke(recipe) in activeMixes }
-                if (white(color) || activeWhite) {
-                    val shape = path.invoke(owner) as Path
-                    if (!shape.isEmpty) {
-                        paint.color = if (activeWhite) Color.WHITE else color
-                        paint.alpha = paint.alpha * owner.alpha / 255
-                        (chain.getArg(0) as Canvas).drawPath(shape, paint)
-                        report("solid white control tile")
-                        return@Hooker null
-                    }
+            val whiteRecipe = recipes.active(owner, first.invoke(config.get(owner)))
+            val active = selected(owner.state)
+            val isWhite = whiteRecipe || (active && white(color))
+            if (isWhite) synchronized(controlBackgrounds) { controlBackgrounds[owner] = true }
+            // The native drawable composites the animated mask and deformation. Only replace
+            // a settled, maskless white blur recipe; an opaque native mask already draws itself.
+            if (isWhite && whiteRecipe && Color.alpha(color) == 0 && preserveControlWhite() &&
+                !(animator.get(owner) as ValueAnimator).isRunning && deforming.invoke(owner) != true) {
+                val shape = path.invoke(owner) as Path
+                if (!shape.isEmpty) {
+                    paint.color = Color.WHITE
+                    paint.alpha = owner.alpha
+                    (chain.getArg(0) as Canvas).drawPath(shape, paint)
+                    report("solid white control tile")
+                    return@Hooker null
                 }
             }
-            val state = when {
-                white(color) -> 2
-                selected(owner.state) -> classify(color)
-                // This tile can use a native blur mix instead of an opaque mask on keyguard.
-                Color.alpha(color) < 160 -> 1
-                else -> 0
-            }
-            drawing.set(state)
-            try { chain.proceed() } finally { if (previous == null) drawing.remove() else drawing.set(previous) }
+            withControlState(isWhite, active) { chain.proceed() }
         })
     }
 

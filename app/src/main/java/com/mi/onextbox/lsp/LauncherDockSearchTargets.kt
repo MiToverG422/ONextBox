@@ -57,7 +57,7 @@ internal class LauncherDockSearchTargets(val loader: ClassLoader) {
     }
 
     fun support(type: Class<*>) = type.declaredMethods.single {
-        !Modifier.isStatic(it.modifiers) && it.returnType == java.lang.Boolean.TYPE &&
+        it != domesticProbe && !Modifier.isStatic(it.modifiers) && it.returnType == java.lang.Boolean.TYPE &&
             it.parameterTypes.contentEquals(arrayOf(Context::class.java))
     }.apply { isAccessible = true }
 

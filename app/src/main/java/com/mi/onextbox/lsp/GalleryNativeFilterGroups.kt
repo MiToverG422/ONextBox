@@ -6,7 +6,6 @@ import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import io.github.libxposed.api.XposedInterface
 import java.lang.reflect.Method
-import java.util.concurrent.atomic.AtomicBoolean
 
 internal object GalleryNativeFilterGroups {
     const val OWNER = "com.oplus.ocs.camera.ipusdk.processunit.filter.list.FilterGroupManager"
@@ -29,9 +28,9 @@ internal object GalleryNativeFilterGroups {
         "init", Context::class.java, Boolean::class.javaPrimitiveType, Boolean::class.javaPrimitiveType)
 
     fun hook(loader: ClassLoader) {
-        if (keys.none(MediaUnlockSettings::enabledXposed)) return
         val tag = "ONextBox-GalleryFilters"
         val prefix = "$tag@${System.identityHashCode(loader)}:"
+        if (keys.none(MediaUnlockSettings::enabledXposed) && HotReloadLifecycle.restoredState(prefix + "state") == null) return
         runCatching {
             val method = target(loader)
             val type = loader.loadClass("com.oplus.ocs.camera.ipusdk.processunit.filter.list.FilterGroup")
@@ -39,14 +38,14 @@ internal object GalleryNativeFilterGroups {
             val names = type.getDeclaredField("mBackNameIdList")
             val append = type.getDeclaredMethod("addBack", String::class.java, String::class.java)
             val groups = listOf("sFilterGroup", "sProFilterGroup").map(method.declaringClass::getDeclaredField)
-            val modified = AtomicBoolean()
             ModernHookRegistry.installFast(prefix + "groups", method, XposedInterface.Hooker { chain ->
                 val result = chain.proceed()
                 val context = chain.getArg(0) as? Context ?: return@Hooker result
-                val camera = runCatching { context.createPackageContext(MediaUnlockCatalog.App.Camera.packageName, 0) }.getOrNull()
                 val candidates = CameraNativeFilterEntries.candidates { key ->
                     key in cameraKeys && MediaUnlockSettings.enabledXposed(key.replaceFirst("camera_", "gallery_"))
                 }.filterKeys(CameraNativeFilterEntries::hasMaterial)
+                if (candidates.isEmpty()) return@Hooker result
+                val camera by lazy { runCatching { context.createPackageContext(MediaUnlockCatalog.App.Camera.packageName, 0) }.getOrNull() }
                 var added = 0
                 groups.forEach { group ->
                     val instance = checkNotNull(group.get(null))
@@ -65,12 +64,11 @@ internal object GalleryNativeFilterGroups {
                     check(ids.size == (names.get(instance) as List<*>).size)
                 }
                 if (added > 0) {
-                    modified.set(true)
                     HookLog.i(tag, "Native editor filter groups completed; added=$added")
                 }
                 result
             })
-            HotReloadLifecycle.register(prefix + "state", capture = { method }, canReload = { !modified.get() })
+            HotReloadLifecycle.register(prefix + "state", capture = { method })
         }.onFailure {
             ModernHookRegistry.unhookPrefix(prefix)
             HookLog.w(tag, "Native editor filter completion unavailable", it)

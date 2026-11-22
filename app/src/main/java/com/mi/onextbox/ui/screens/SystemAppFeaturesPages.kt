@@ -29,6 +29,7 @@ internal fun AndroidSystemFeaturesPage(
     gmsRegionRestrictionBypassEnabled: Boolean,
     onGmsRegionRestrictionBypassEnabledChange: (Boolean) -> Unit,
 ) {
+    DisplayDensitySettingsGroup()
     SettingsSection(title = stringResource(R.string.feature_group_google_services))
     SettingsGroup {
         SettingsToggleRow(

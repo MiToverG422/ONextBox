@@ -232,6 +232,7 @@ internal fun SettingsFeaturesPage(
     }
 
     if (mode == FeaturePageMode.SettingsAboutDevice) {
+        OtaArtworkSettings()
         SettingsSection(title = stringResource(R.string.feature_group_about_device))
         SettingsGroup {
             SettingsToggleRow(

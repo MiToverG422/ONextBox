@@ -64,6 +64,7 @@
         <package android:name="com.oplus.aod" />
         <package android:name="com.oplus.euicc" />
         <package android:name="com.heytap.market" />
+        <package android:name="com.finshell.wallet" />
         <package android:name="com.oplus.battery" />
         <package android:name="com.coloros.translate" />
         <package android:name="com.coloros.smartsidebar" />
@@ -135,6 +136,10 @@
             android:process=":diagnostics"
             android:exported="false"
             android:theme="@style/Theme.ONextBox" />
+        <service
+            android:name=".ui.onboarding.GuideHapticService"
+            android:exported="false"
+            android:process=":guide_haptics" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -185,6 +190,17 @@
             android:authorities="${applicationId}.pushmonitor"
             android:directBootAware="true"
             android:exported="true" />
+
+        <provider
+            android:name=".lsp.WalletArtworkProvider"
+            android:authorities="${applicationId}.walletartwork"
+            android:exported="true" />
+
+        <provider
+            android:name=".lsp.OtaArtworkProvider"
+            android:authorities="${applicationId}.otaartwork"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
 
         <provider
             android:name=".lsp.NativeFiveGaProvider"

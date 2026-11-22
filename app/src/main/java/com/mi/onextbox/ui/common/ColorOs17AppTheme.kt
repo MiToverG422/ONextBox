@@ -6,7 +6,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
@@ -22,19 +21,13 @@ internal fun ColorOs17AppTheme(
     content: @Composable () -> Unit,
 ) {
     val base = monetColors ?: COUITheme.colorScheme
-    val colors = if (nativeAccent && base.surface.luminance() > .5f) {
-        base.copy(
-            primary = Color(0xFF0080FF),
-            primaryVariant = Color(0xFF0080FF),
-            primaryContainer = Color(0xFF0080FF),
-            disabledPrimary = Color(0x4D0080FF),
-            disabledPrimaryButton = Color(0x4D0080FF),
-            tertiaryContainer = Color(0x260080FF),
-            tertiaryContainerVariant = Color(0x260080FF),
-            onTertiaryContainer = Color(0xFF0080FF),
-        )
+    val preset = if (nativeAccent) rememberCouiAccentPreset() else CouiAccentPreset.System
+    val colors = if (nativeAccent) {
+        val dark = base.surface.luminance() < .5f
+        val accent = if (preset == CouiAccentPreset.System) rememberSystemCouiAccent(dark) else preset.accent(dark)
+        base.withCouiAccent(accent, dark)
     } else base
-    CompositionLocalProvider(LocalColorOsMonetEnabled provides !nativeAccent) {
+    CompositionLocalProvider(LocalColorOsMonetEnabled provides !nativeAccent, LocalCouiAccentPreset provides preset) {
         COUITheme(colors = colors, content = content)
     }
 }

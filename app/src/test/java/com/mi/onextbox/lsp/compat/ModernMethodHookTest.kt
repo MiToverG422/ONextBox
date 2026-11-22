@@ -49,10 +49,9 @@ class ModernMethodHookTest {
         val param = ModernMethodHook.MethodHookParam(method, Fixture(), arrayOf("input"))
         val originalError = IllegalStateException("original")
         param.beginAfter(null, originalError)
-        val outcome = param.snapshotOutcome()
         param.result = "overridden"
 
-        param.restoreOutcome(outcome)
+        param.beginAfter(null, originalError)
 
         assertSame(originalError, param.throwable)
     }

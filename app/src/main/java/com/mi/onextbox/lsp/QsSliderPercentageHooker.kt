@@ -48,7 +48,7 @@ internal object QsSliderPercentageHooker {
         val observers = QsCornerViewObservers(
             "qs:percentage-views",
             content = { view -> style(view).refresh() },
-            configurationToken = QsSliderPercentageSettings::configurationTokenXposed,
+            configurationToken = { QsSliderPercentageSettings.configurationTokenXposed() },
         ) { view -> view.invalidate(); true }
         type.declaredConstructors.forEach { constructor ->
             ModernHookRegistry.installCompat("$TAG:observe:${constructor.toGenericString()}", constructor,
@@ -63,12 +63,11 @@ internal object QsSliderPercentageHooker {
                 ModernHookRegistry.installCompat("$TAG:draw", method, object : ModernMethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         if (param.throwable != null || HotReloadLifecycle.isRetiring) return
-                        val state = QsSliderPercentageSettings.stateXposed()
-                        if (!state.enabled) return
+                        if (!QsSliderPercentageSettings.enabledXposed()) return
                         val view = param.thisObject as? View ?: return
                         if (!hasSliderOwner(view)) return
                         val canvas = param.args.firstOrNull() as? Canvas ?: return
-                        runCatching { draw(view, canvas, state) }.onFailure(::diagnose)
+                        runCatching { draw(view, canvas, QsSliderPercentageSettings.stateXposed()) }.onFailure(::diagnose)
                     }
                 })
             }
@@ -84,7 +83,7 @@ internal object QsSliderPercentageHooker {
             ModernHookRegistry.installCompat("$TAG:volume-title:${method.toGenericString()}", method,
                 object : ModernMethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        if (QsSliderPercentageSettings.stateXposed().enabled) param.args[0] = 0
+                        if (QsSliderPercentageSettings.enabledXposed()) param.args[0] = 0
                     }
                 })
             runCatching { ModernHookRuntime.requireModule().deoptimize(method) }.onFailure(::diagnose)
@@ -106,7 +105,7 @@ internal object QsSliderPercentageHooker {
                 ModernHookRegistry.installCompat("$TAG:frame:$name:${method.toGenericString()}", method,
                     object : ModernMethodHook() {
                         override fun afterHookedMethod(param: MethodHookParam) {
-                            if (param.throwable != null || !QsSliderPercentageSettings.stateXposed().enabled) return
+                            if (param.throwable != null || !QsSliderPercentageSettings.enabledXposed()) return
                             runCatching {
                                 val detail = when (param.method.name) {
                                     "setDetailSliderScale" -> param.args.firstOrNull() as? View

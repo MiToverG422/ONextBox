@@ -16,15 +16,21 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class KeyboardPictorialTargetsTest {
-    private fun loader(pkg: String): ClassLoader {
+    private fun loader(pkg: String, archive: String? = null): ClassLoader {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val info = context.packageManager.getApplicationInfo(pkg, PackageManager.ApplicationInfoFlags.of(PackageManager.GET_SHARED_LIBRARY_FILES.toLong()))
-        return PathClassLoader((listOf(info.sourceDir) + info.splitSourceDirs.orEmpty() + info.sharedLibraryFiles.orEmpty()).joinToString(File.pathSeparator), ClassLoader.getSystemClassLoader())
+        val packageFiles = if (archive == null) listOf(info.sourceDir) + info.splitSourceDirs.orEmpty() else listOf(archive)
+        return PathClassLoader((packageFiles + info.sharedLibraryFiles.orEmpty()).joinToString(File.pathSeparator), ClassLoader.getSystemClassLoader())
     }
+    private val keyboardPackage = "com.oplus.keyboard"
+    private val keyboardArchive get() = InstrumentationRegistry.getArguments().getString("keyboardApk")
+    private val keyboardApk get() = keyboardArchive ?: InstrumentationRegistry.getInstrumentation().targetContext
+        .packageManager.getApplicationInfo(keyboardPackage, 0).sourceDir
+    private fun keyboardLoader() = loader(keyboardPackage, keyboardArchive)
+
     @Test fun actualKeyboardHasTwoKeyDrawingEntriesAndItsBackingThemeEngine() {
-        val loader = loader("com.oplus.keyboard")
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val apk = context.packageManager.getApplicationInfo("com.oplus.keyboard", 0).sourceDir
+        val loader = keyboardLoader()
+        val apk = keyboardApk
         val background = KeyboardRenderTargets.background(loader, apk)
         val renderer = background.declaringClass
         val key = background.parameterTypes[0]
@@ -36,8 +42,17 @@ class KeyboardPictorialTargetsTest {
         assertEquals(1, effects.count(KeyboardRenderTargets::isEdge))
         assertEquals(1, effects.count { !KeyboardRenderTargets.isEdge(it) })
         assertEquals(String::class.java, key.getDeclaredField("t").type)
-        val theme = loader.loadClass("com.oplus.keyboard.base.theme.a")
-        assertTrue(theme.declaredMethods.count { it.returnType == Integer::class.java && String::class.java in it.parameterTypes } >= 3)
+        val themeBackends = listOf(
+            "com.oplus.keyboard.base.theme.a",
+            "com.oplus.keyboard.base.theme.work.e",
+            "com.oplus.keyboard.base.theme.work.pack.d",
+            "com.oplus.keyboard.base.theme.work.marker.b",
+        )
+        assertTrue(themeBackends.mapNotNull { name -> runCatching { loader.loadClass(name) }.getOrNull() }.any { backend ->
+            backend.declaredMethods.count {
+                it.returnType == Integer::class.java && String::class.java in it.parameterTypes
+            } >= 3
+        })
         val blur = loader.loadClass("com.oplus.keyboard.input.view.blur.b")
         assertEquals(View::class.java, blur.getDeclaredField("a").type)
         val manager = blur.getDeclaredField("b").type
@@ -47,9 +62,8 @@ class KeyboardPictorialTargetsTest {
     }
 
     @Test fun actualKeyboardEmojiResolverAcceptsMergedCollectors() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val apk = context.packageManager.getApplicationInfo("com.oplus.keyboard", 0).sourceDir
-        val loader = loader("com.oplus.keyboard")
+        val apk = keyboardApk
+        val loader = keyboardLoader()
         val resolve = KeyboardFlagEmojiHooker::class.java.getDeclaredMethod("resolve", ClassLoader::class.java, String::class.java)
             .apply { isAccessible = true }
         val targets = resolve.invoke(KeyboardFlagEmojiHooker, loader, apk) as Array<*>
@@ -65,6 +79,19 @@ class KeyboardPictorialTargetsTest {
         )
         val pair = (targets[4] as java.lang.reflect.Constructor<*>).newInstance(emptyList<Any>(), emptyList<Any>())
         assertNotNull(models.supplement(pair))
+    }
+
+    @Test fun actualKeyboardResolvesBottomLiftAndMaterialAllowlist() {
+        val loader = keyboardLoader()
+        val lift = KeyboardBottomLiftHooker::class.java.getDeclaredMethod("resolve", ClassLoader::class.java, String::class.java)
+            .apply { isAccessible = true }
+        val liftTargets = lift.invoke(KeyboardBottomLiftHooker, loader, keyboardApk) as Array<*>
+        assertEquals("onWindowShown", (liftTargets[0] as java.lang.reflect.Method).name)
+
+        val material = KeyboardMaterialHooker::class.java.getDeclaredMethod("resolve", ClassLoader::class.java, String::class.java)
+            .apply { isAccessible = true }
+        val materialTargets = material.invoke(KeyboardMaterialHooker, loader, keyboardApk) as Array<*>
+        assertTrue(materialTargets.size > 1)
     }
     @Test fun actualSystemUiProvidesRotationEventsCurrentBitmapAndExistingClockAccess() {
         val loader = loader("com.android.systemui")

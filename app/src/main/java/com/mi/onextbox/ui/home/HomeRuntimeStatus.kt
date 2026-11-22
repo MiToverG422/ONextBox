@@ -26,6 +26,8 @@ import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspStatus
 import com.mi.onextbox.lsp.LsposedScopeRequester
 import com.mi.onextbox.ui.common.AppUiTokens
+import com.mi.onextbox.ui.common.LocalPreviewTextPlaceholders
+import com.mi.onextbox.ui.common.PreviewTextLine
 import com.mi.onextbox.ui.common.RootStartupCheck
 import com.mi.onextbox.ui.common.homeLspDisplayStatus
 import com.mi.onextbox.ui.common.lspStatusText
@@ -128,6 +130,14 @@ private fun RuntimeStatusCard(
         showIndication = onClick != null,
     ) {
         Column {
+            if (LocalPreviewTextPlaceholders.current) {
+                val colors = COUITheme.colorScheme
+                Spacer(Modifier.height(3.dp))
+                PreviewTextLine(56.dp, 10.dp, colors.onSurface.copy(alpha = .75f))
+                Spacer(Modifier.height(11.dp))
+                PreviewTextLine(89.dp, 7.dp, colors.onSurfaceVariantSummary.copy(alpha = .64f))
+                return@Column
+            }
             Text(
                 text = title,
                 style = COUITheme.textStyles.title3,

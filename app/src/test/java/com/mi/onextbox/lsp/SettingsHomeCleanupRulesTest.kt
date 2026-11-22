@@ -38,6 +38,16 @@ class SettingsHomeCleanupRulesTest {
         assertTrue(SettingsHomeCleanupRules.shouldHideAccountCategory(emptyList()))
     }
 
+    @Test fun guideToggleHidesOnlyTheNativeSafetyRow() {
+        val guide = SettingsHomeCleanupRules.ACCOUNT_GUIDE
+        assertTrue(SettingsHomeCleanupRules.shouldHideAccountRow(guide, hideAccount = false, hideGuide = true))
+        assertFalse(SettingsHomeCleanupRules.shouldHideAccountRow(guide, hideAccount = false, hideGuide = false))
+        assertTrue(SettingsHomeCleanupRules.shouldHideAccountRow(guide, hideAccount = true, hideGuide = false))
+        listOf("usercenter_preference", "member_sign", "top_level_app_updater", null).forEach { key ->
+            assertFalse(SettingsHomeCleanupRules.shouldHideAccountRow(key, hideAccount = false, hideGuide = true))
+        }
+    }
+
     @Test fun realmeAppUpdaterAndUnknownNativeSiblingsArePreserved() {
         val account = SettingsHomeCleanupRules.accountKeys.map { it to true }
         assertFalse(SettingsHomeCleanupRules.shouldHideAccountCategory(account + ("top_level_app_updater" to true)))

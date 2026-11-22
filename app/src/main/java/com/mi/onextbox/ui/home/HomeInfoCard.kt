@@ -4,7 +4,9 @@ import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -18,6 +20,8 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppUiTokens
+import com.mi.onextbox.ui.common.LocalPreviewTextPlaceholders
+import com.mi.onextbox.ui.common.PreviewTextLine
 import com.mi.onextbox.ui.common.TwemojiFlagIcon
 import com.mi.onextbox.ui.common.countryFlagRanges
 import com.mi.onextbox.ui.common.rememberCountryFlagGlyph
@@ -25,10 +29,28 @@ import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsRowTextContent
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.util.Locale
 
 @Composable
 fun HomeInfoCard() {
+    if (LocalPreviewTextPlaceholders.current) {
+        val colors = COUITheme.colorScheme
+        Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppUiTokens.CardCornerRadius) {
+            repeat(7) { row ->
+                if (row > 0) SettingsDivider()
+                BasicComponent {
+                    Column(Modifier.fillMaxWidth().height(38.dp)) {
+                        PreviewTextLine((72 + row % 3 * 12).dp, 10.dp, colors.onSurface.copy(alpha = .75f))
+                        Spacer(Modifier.height(9.dp))
+                        PreviewTextLine((102 + row % 4 * 14).dp, 8.dp,
+                            colors.onSurfaceVariantSummary.copy(alpha = .64f))
+                    }
+                }
+            }
+        }
+        return
+    }
     val context = LocalContext.current
     val systemVersion = Build.DISPLAY.ifBlank { Build.VERSION.INCREMENTAL }
     val kernelVersion = remember {

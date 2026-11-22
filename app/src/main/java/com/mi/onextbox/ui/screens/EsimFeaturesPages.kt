@@ -252,7 +252,7 @@ internal fun EsimDiagnosticsContent(
     confirmationCodePromptEnabled: Boolean,
     refreshing: Boolean = false,
     onRefresh: () -> Unit,
-) {
+) = Column(Modifier.fillMaxWidth()) {
     val googleEsim = com.mi.onextbox.lsp.RegionalAppPackages.googleEsim(LocalContext.current)
     val unknown = stringResource(R.string.feature_esim_diag_unknown)
     val on = stringResource(R.string.feature_esim_diag_on)

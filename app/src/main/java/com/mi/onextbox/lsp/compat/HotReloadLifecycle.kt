@@ -29,6 +29,7 @@ internal open class HotReloadResourceCoordinator(
         val restore: (Any?) -> Unit,
         val canReload: () -> Boolean,
         val canPrepare: () -> Boolean,
+        val waitForGesture: Boolean,
         val resumeAfterRejection: () -> Unit,
     )
     private data class Replay(val capture: () -> Any?, val replay: (Any?) -> Unit)
@@ -65,11 +66,12 @@ internal open class HotReloadResourceCoordinator(
         restore: (Any?) -> Unit = {},
         canReload: () -> Boolean = { true },
         canPrepare: () -> Boolean = { true },
+        waitForGesture: Boolean = false,
         resumeAfterRejection: () -> Unit = {},
     ) {
         synchronized(lock) {
             check(!isRetiring) { "Cannot acquire resources after retirement" }
-            participants[key] = Participant(capture, detach, restore, canReload, canPrepare, resumeAfterRejection)
+            participants[key] = Participant(capture, detach, restore, canReload, canPrepare, waitForGesture, resumeAfterRejection)
         }
     }
 
@@ -100,14 +102,28 @@ internal open class HotReloadResourceCoordinator(
     /** All checks precede detach; a busy authentication/download flow vetoes the whole update. */
     fun prepare(): Map<String, Any?> {
         check(!isRetiring) { "This generation has already retired; restart the scope" }
+        var preflightStarted = false
         var rollbackFailed = false
         try {
             // Reject long-lived host resources before interrupting their active callbacks.
             // Recheck after draining to cover resources acquired during this preflight.
-            onMain {
-                synchronized(lock) { participants.toList() }.forEach { (key, participant) ->
+            var gestures = onMain {
+                preflightStarted = true
+                val owned = synchronized(lock) { participants.toList() }
+                owned.forEach { (key, participant) ->
                     check(participant.canPrepare()) { "Resource is busy: $key" }
                 }
+                owned.filter { (_, participant) -> participant.waitForGesture && !participant.canReload() }
+            }
+            if (gestures.isNotEmpty()) {
+                // Keep delivering input while the current gesture and its exit animation finish.
+                val canWait = mainDispatch != null || Looper.myLooper() != Looper.getMainLooper()
+                val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+                while (canWait && gestures.isNotEmpty() && System.nanoTime() < deadline) {
+                    Thread.sleep(48)
+                    gestures = onMain { gestures.filterNot { (_, participant) -> participant.canReload() } }
+                }
+                check(gestures.isEmpty()) { "Gesture is still active: ${gestures.first().first}" }
             }
             check(gate.pause()) { "Hook callbacks are busy; restart the scope" }
             isRetiring = true
@@ -145,6 +161,8 @@ internal open class HotReloadResourceCoordinator(
                 state
             }
         } catch (error: Throwable) {
+            // A cancelled main-thread dispatch never ran the preflight or paused the gate.
+            if (!preflightStarted) throw error
             if (rollbackFailed) {
                 quarantine()
             } else {
@@ -171,7 +189,7 @@ internal open class HotReloadResourceCoordinator(
             pending.second.replay(imported[pending.first])
         }
         val known = synchronized(lock) { participants.keys + replays.keys }
-        check(known.containsAll(imported.keys)) { "A previous resource has no replacement owner" }
+        check(known.containsAll(imported.keys)) { "A previous resource has no replacement owner: ${imported.keys - known}" }
     }
 
     fun cancelPreparation(state: Map<String, Any?>) {

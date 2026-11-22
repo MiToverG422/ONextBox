@@ -74,6 +74,8 @@ class MediaUnlockTargetsTest {
             assertEquals(1, xpan.getValue("legacy").size)
             assertEquals(1, xpan.getValue("legacyWrite").size)
             assertEquals(1, xpan.getValue("preview").size)
+            assertEquals(4, xpan.getValue("capture").size)
+            assertEquals(1, xpan.getValue("panel").size)
             assertTrue(xpan.getValue("callers").isNotEmpty())
         }
     }

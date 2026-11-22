@@ -66,4 +66,48 @@ class NetworkIdentitySlotsTest {
         val changed = NetworkIdentityRules.transformSlots(native(), mapOf(0 to tw.copy(region = "bad"), 1 to us))
         assertEquals("46011,310260", changed["gsm.sim.operator.numeric"])
     }
+
+    @Test fun callRegionProtectionIsOptInAndScopedToConfiguredCallers() {
+        val key = NetworkIdentitySettings.PRESERVE_CALL_REGION
+        val legacy = mapOf(NetworkIdentitySettings.ENABLED to true)
+        assertFalse(NetworkIdentitySettings.fromValues(legacy).preserveCallRegion)
+        assertTrue(NetworkIdentitySettings.fromValues(legacy + (key to true)).preserveCallRegion)
+        assertTrue(key in NetworkIdentitySettings.keys)
+        val profiles = mapOf(0 to tw, 1 to us)
+        val normal = NetworkIdentityRules.Publication(profiles)
+        val protected = normal.copy(attributionAppIds = setOf(10136, 10087))
+        assertEquals(profiles, normal.profilesForApp(10136))
+        assertTrue(protected.profilesForApp(10136).isEmpty())
+        assertTrue(protected.profilesForApp(10087).isEmpty())
+        assertEquals(profiles, protected.profilesForApp(11001))
+    }
+
+    @Test fun protectionRestoresBothRegionsAndTracksRoamingAndSimRemoval() {
+        val values = native().toMutableMap()
+        var saved = emptyMap<String, NetworkIdentityProperties.Record>()
+        fun engine() = NetworkIdentityProperties({ values.getValue(it) }, { k, v -> values[k] = v }, { saved = it.toMap() }, saved)
+        val profiles = mapOf(0 to tw, 1 to us)
+        engine().refreshSlots(profiles)
+        val active = engine()
+        active.refreshSlots(profiles, preserveCallRegion = true)
+        for ((key, value) in native()) {
+            assertEquals(key, if (key.endsWith(".alpha")) "Chunghwa Telecom,T-Mobile" else value, values[key])
+        }
+        val updates = mapOf("gsm.operator.iso-country" to "jp,", "gsm.operator.numeric" to "44010,",
+            "gsm.sim.operator.numeric" to "46011,", "gsm.sim.operator.iso-country" to "cn,",
+            "gsm.sim.operator.alpha" to "China Telecom,", "gsm.operator.alpha" to "Roaming carrier,")
+        for ((key, value) in updates) {
+            values[key] = value
+            active.refreshAfterNativeWrite(key, value, profiles, preserveCallRegion = true)
+        }
+        assertEquals("cn,", values["gsm.sim.operator.iso-country"])
+        assertEquals("jp,", values["gsm.operator.iso-country"])
+        assertEquals("Chunghwa Telecom,", values["gsm.operator.alpha"])
+        active.refreshSlots(profiles)
+        assertEquals("tw,", values["gsm.operator.iso-country"])
+        assertEquals("46692,", values["gsm.sim.operator.numeric"])
+        engine().refreshSlots(emptyMap())
+        assertEquals(updates, values)
+        assertTrue(saved.isEmpty())
+    }
 }

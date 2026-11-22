@@ -74,11 +74,11 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -94,7 +94,6 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -111,8 +110,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowInsetsCompat
@@ -142,9 +139,8 @@ import com.mi.onextbox.ui.common.LspMissingScopesNotice
 import com.mi.onextbox.ui.onboarding.OnboardingPreferences.Agreement
 import com.mi.onextbox.ui.onboarding.OnboardingPreferences.DraftStep
 import com.mi.onextbox.ui.onboarding.OnboardingPreferences.CompletionResult
+import com.mi.onextbox.ui.settings.AppUpdatePreferences
 import com.mi.onextbox.ui.platform.findActivity
-import com.mi.onextbox.ui.screens.FeatureLaunchIcon
-import com.mi.onextbox.ui.screens.FeaturePageMode
 import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsTokens
 import io.github.suqi8.coui.kmp.basic.BasicComponent
@@ -165,8 +161,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.max
-import kotlin.math.roundToInt
 
 private val ActivationInk = Color(0xFF17181A)
 private val ActivationMutedInk = Color(0xFF62666C)
@@ -183,20 +177,7 @@ private data class AgreementUi(
 
 private data class ActivationPage(
     val step: DraftStep,
-) {
-    val sequence: Int
-        get() = when (step) {
-            DraftStep.Welcome -> 0
-            DraftStep.Language -> 1
-            DraftStep.Appearance -> 2
-            DraftStep.Personalization -> 3
-            DraftStep.Migration -> 4
-            DraftStep.Agreements -> 5
-            DraftStep.RootAccess -> 6
-            DraftStep.Lsposed -> 7
-            DraftStep.Complete -> 8
-        }
-}
+)
 
 private sealed interface MigrationImportState {
     data object Idle : MigrationImportState
@@ -261,8 +242,6 @@ fun OnboardingScreen(
     onAppUiStyleChange: (AppUiStyle) -> Unit,
     appThemeMode: AppThemeMode,
     onAppThemeModeChange: (AppThemeMode) -> Unit,
-    featurePageNewStyleEnabled: Boolean,
-    onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
     onDestinationPreparationRequested: () -> Unit,
     onActivationCommitted: (rootGranted: Boolean) -> Unit,
     onExitFinished: () -> Unit,
@@ -272,15 +251,15 @@ fun OnboardingScreen(
     val scope = rememberCoroutineScope()
     val initialSnapshot = remember(context) { OnboardingPreferences.read(context) }
     var step by remember { mutableStateOf(initialSnapshot.draftStep) }
+    var welcomeIntroFinished by rememberSaveable {
+        mutableStateOf(initialSnapshot.draftStep != DraftStep.Welcome)
+    }
     val agreementState = remember {
         mutableStateMapOf<Agreement, Boolean>().also { state ->
             Agreement.entries.forEach { agreement ->
                 state[agreement] = agreement in initialSnapshot.acceptedAgreements
             }
         }
-    }
-    var allowBackgroundUpdates by remember {
-        mutableStateOf(initialSnapshot.allowBackgroundUpdateChecks)
     }
     var rootInfo by remember(context) {
         mutableStateOf(readCachedRootAccessInfo(context) ?: RootAccessInfo(RootAccessState.NotGranted))
@@ -416,8 +395,7 @@ fun OnboardingScreen(
                 DraftStep.Welcome -> Unit
                 DraftStep.Language -> moveTo(DraftStep.Welcome)
                 DraftStep.Appearance -> moveTo(DraftStep.Language)
-                DraftStep.Personalization -> moveTo(DraftStep.Appearance)
-                DraftStep.Migration -> moveTo(DraftStep.Personalization)
+                DraftStep.Migration -> moveTo(DraftStep.Appearance)
                 DraftStep.Agreements -> moveTo(DraftStep.Migration)
                 DraftStep.RootAccess -> moveTo(DraftStep.Agreements)
                 DraftStep.Lsposed -> moveTo(DraftStep.RootAccess)
@@ -535,9 +513,14 @@ fun OnboardingScreen(
                     // which lets the outgoing video, title and button bleed through it.
                     ActivationBackground()
                     when (page.step) {
-                        DraftStep.Welcome -> WelcomePage(
-                            onNext = pageAction(page) { moveTo(DraftStep.Language) },
-                        )
+                        DraftStep.Welcome -> if (welcomeIntroFinished) {
+                            WelcomeGuidePage(
+                                active = step == DraftStep.Welcome && !stateWriteInProgress,
+                                onNext = pageAction(page) { moveTo(DraftStep.Language) },
+                            )
+                        } else {
+                            WelcomeIntro { welcomeIntroFinished = true }
+                        }
                         DraftStep.Language -> LanguagePage(
                             selectedLanguageTag = appLanguageTag,
                             onLanguageSelected = onAppLanguageChange,
@@ -549,18 +532,12 @@ fun OnboardingScreen(
                             onUiStyleSelected = onAppUiStyleChange,
                             selectedThemeMode = appThemeMode,
                             onThemeModeSelected = onAppThemeModeChange,
-                            onNext = pageAction(page) { moveTo(DraftStep.Personalization) },
-                            onBack = pageAction(page) { moveTo(DraftStep.Language) },
-                        )
-                        DraftStep.Personalization -> PersonalizationPage(
-                            newStyleEnabled = featurePageNewStyleEnabled,
-                            onNewStyleEnabledChange = onFeaturePageNewStyleEnabledChange,
                             onNext = pageAction(page) { moveTo(DraftStep.Migration) },
-                            onBack = pageAction(page) { moveTo(DraftStep.Appearance) },
+                            onBack = pageAction(page) { moveTo(DraftStep.Language) },
                         )
                         DraftStep.Migration -> MigrationPage(
                             onNext = pageAction(page) { moveTo(DraftStep.Agreements) },
-                            onBack = pageAction(page) { moveTo(DraftStep.Personalization) },
+                            onBack = pageAction(page) { moveTo(DraftStep.Appearance) },
                         )
                         DraftStep.Agreements -> UnifiedAgreementsPage(
                             accepted = Agreement.entries.all { agreementState[it] == true },
@@ -672,7 +649,8 @@ fun OnboardingScreen(
                                              val result = withContext(Dispatchers.IO) {
                                                  OnboardingPreferences.completeWithResult(
                                                      context,
-                                                     allowBackgroundUpdates,
+                                                     AppUpdatePreferences.getUpdateNotificationsEnabled(context) ||
+                                                         AppUpdatePreferences.getAutomaticSilentUpdate(context),
                                                  )
                                              }
                                             if (result == CompletionResult.Completed) {
@@ -714,7 +692,7 @@ fun OnboardingScreen(
 
 private fun AnimatedContentTransitionScope<ActivationPage>.c17ActivationPageTransition(): ContentTransform {
     val easing = CubicBezierEasing(0.3f, 0f, 0.1f, 1f)
-    val forward = targetState.sequence > initialState.sequence
+    val forward = targetState.step > initialState.step
     val duration = 350
 
     if (initialState.step == DraftStep.Welcome || targetState.step == DraftStep.Welcome) {
@@ -757,7 +735,7 @@ private fun ActivationBackground() {
 }
 
 @Composable
-private fun WelcomePage(onNext: () -> Unit) {
+private fun WelcomeIntro(onFinished: () -> Unit) {
     val firstTitle = stringResource(R.string.onboarding_welcome_first)
     val secondTitle = stringResource(R.string.onboarding_welcome_second)
     var startupCompleted by remember { mutableStateOf(false) }
@@ -765,8 +743,6 @@ private fun WelcomePage(onNext: () -> Unit) {
     var slideDownCompleted by remember { mutableStateOf(false) }
     var welcomeTextTyping by remember { mutableStateOf(false) }
     var welcomeDollFinished by remember { mutableStateOf(false) }
-    var guideContentVisible by remember { mutableStateOf(false) }
-    var leavingGuide by remember { mutableStateOf(false) }
     var shownTitle by remember { mutableStateOf("") }
     var secondTitleActive by remember { mutableStateOf(false) }
     val panelOffset = remember { Animatable(0f) }
@@ -851,17 +827,10 @@ private fun WelcomePage(onNext: () -> Unit) {
             }
         }
         delay(48)
-        guideContentVisible = true
-    }
-    LaunchedEffect(leavingGuide) {
-        if (!leavingGuide) return@LaunchedEffect
-        // Commit the hidden TextureView before AnimatedContent retains the outgoing page. A real
-        // frame boundary is required here; a fixed delay can still land in the same frame.
-        withFrameNanos { }
-        onNext()
+        onFinished()
     }
 
-    val welcomeDollVisible = welcomeTextTyping && !welcomeDollFinished && !leavingGuide
+    val welcomeDollVisible = welcomeTextTyping && !welcomeDollFinished
     BootregMatteVideoSandwich(
         videoResId = R.raw.c17_guide_little_cloth,
         scaleMode = BootregVideoScaleMode.Stretch,
@@ -894,7 +863,7 @@ private fun WelcomePage(onNext: () -> Unit) {
                 contentScale = ContentScale.FillBounds,
                 modifier = Modifier.fillMaxSize(),
             )
-            if (startupCompleted && !guideContentVisible) {
+            if (startupCompleted) {
                 BootregVideoPlayer(
                     videoResId = R.raw.c17_guide_video_background,
                     playCount = Int.MAX_VALUE,
@@ -905,46 +874,11 @@ private fun WelcomePage(onNext: () -> Unit) {
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            if (guideContentVisible) {
-                BootregVideoPlayer(
-                    videoResId = R.raw.c17_guide_content_animation,
-                    hapticResId = R.raw.c17_guide_next_morph_haptic,
-                    playCount = 5,
-                    scaleMode = BootregVideoScaleMode.Stretch,
-                    autoPlay = !leavingGuide,
-                    visible = !leavingGuide,
-                    backgroundColor = Color.Transparent,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(480.dp)
-                        .align(Alignment.TopCenter),
-                )
-                Text(
-                    text = stringResource(R.string.app_name),
-                    color = ActivationInk,
-                    fontSize = 36.sp,
-                    lineHeight = 44.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.Center)
-                        .padding(horizontal = 16.dp)
-                        .offset(y = 92.dp),
-                )
-                C17MorphArrowButton(
-                    visible = true,
-                    enabled = !leavingGuide,
-                    contentDescription = stringResource(R.string.onboarding_get_started),
-                    onClick = { leavingGuide = true },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
             WelcomeTypewriter(
                 text = shownTitle,
                 fullText = if (secondTitleActive) secondTitle else firstTitle,
                 gradientStart = if (secondTitleActive) secondTitle.indexOf('\n').let { if (it < 0) 0 else it + 1 } else -1,
-                active = slideDownCompleted && !guideContentVisible,
+                active = slideDownCompleted,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 72.dp, start = 32.dp, end = 32.dp)
@@ -963,6 +897,43 @@ private fun WelcomePage(onNext: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         }
+    }
+}
+
+@Composable
+private fun WelcomeGuidePage(active: Boolean, onNext: () -> Unit) {
+    Box(
+        Modifier.fillMaxSize().background(Color.Black)
+            .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)),
+    ) {
+        ActivationBackground()
+        BootregVideoPlayer(
+            videoResId = R.raw.c17_guide_content_animation,
+            hapticResId = R.raw.c17_guide_next_morph_haptic,
+            playCount = 5,
+            scaleMode = BootregVideoScaleMode.Stretch,
+            autoPlay = active,
+            visible = active,
+            backgroundColor = Color.Transparent,
+            modifier = Modifier.fillMaxWidth().height(480.dp).align(Alignment.TopCenter),
+        )
+        Text(
+            text = stringResource(R.string.app_name),
+            color = ActivationInk,
+            fontSize = 36.sp,
+            lineHeight = 44.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().align(Alignment.Center)
+                .padding(horizontal = 16.dp).offset(y = 92.dp),
+        )
+        C17MorphArrowButton(
+            visible = true,
+            enabled = active,
+            contentDescription = stringResource(R.string.onboarding_get_started),
+            onClick = onNext,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 
@@ -1089,7 +1060,11 @@ private fun AppearancePage(
                 }
             }
             Text(
-                text = stringResource(R.string.onboarding_appearance_theme_note),
+                text = stringResource(
+                    R.string.onboarding_appearance_theme_note,
+                    stringResource(R.string.setting_theme_settings),
+                    stringResource(R.string.setting_display_theme),
+                ),
                 color = ActivationMutedInk,
                 fontSize = 12.sp,
                 lineHeight = 17.sp,
@@ -1440,648 +1415,6 @@ private fun MiniAppearanceDivider(dark: Boolean) {
             .background(if (dark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)),
     )
 }
-
-@Composable
-private fun PersonalizationPage(
-    newStyleEnabled: Boolean,
-    onNewStyleEnabledChange: (Boolean) -> Unit,
-    onNext: () -> Unit,
-    onBack: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 22.dp),
-    ) {
-        ActivationBackButton(onBack = onBack)
-        Spacer(modifier = Modifier.height(20.dp))
-        PageHeading(
-            title = stringResource(R.string.onboarding_personalization_title),
-            summary = stringResource(R.string.onboarding_personalization_summary),
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        FeatureStylePreview(
-            newStyleEnabled = newStyleEnabled,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(230.dp),
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            Text(
-                text = stringResource(R.string.onboarding_feature_style_section),
-                color = ActivationMutedInk,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-            )
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = AppUiTokens.CardCornerRadius,
-            ) {
-                BasicComponent(
-                    title = stringResource(R.string.onboarding_feature_style_new),
-                    summary = stringResource(R.string.onboarding_feature_style_new_summary),
-                    insideMargin = SettingsTokens.RowInsideMargin,
-                    endActions = { C17RadioIndicator(selected = newStyleEnabled) },
-                    onClick = { onNewStyleEnabledChange(true) },
-                )
-                SettingsDivider()
-                BasicComponent(
-                    title = stringResource(R.string.onboarding_feature_style_classic),
-                    summary = stringResource(R.string.onboarding_feature_style_classic_summary),
-                    insideMargin = SettingsTokens.RowInsideMargin,
-                    endActions = { C17RadioIndicator(selected = !newStyleEnabled) },
-                    onClick = { onNewStyleEnabledChange(false) },
-                )
-            }
-        }
-        ActivationCapsuleButton(
-            label = stringResource(R.string.onboarding_next),
-            visible = true,
-            enabled = true,
-            onClick = onNext,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(top = 12.dp, bottom = 10.dp),
-        )
-    }
-}
-
-@Composable
-private fun FeatureStylePreview(
-    newStyleEnabled: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val workspaceProgress = remember { Animatable(0f) }
-    val firstWindowProgress = remember { Animatable(0f) }
-    val secondWindowProgress = remember { Animatable(0f) }
-    val classicPageProgress = remember { Animatable(0f) }
-    var firstWindowActive by remember { mutableStateOf(false) }
-    var secondWindowActive by remember { mutableStateOf(false) }
-    var previewBoundsInRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
-    val iconBoundsInRoot = remember { mutableStateMapOf<FeaturePageMode, androidx.compose.ui.geometry.Rect>() }
-
-    LaunchedEffect(newStyleEnabled) {
-        firstWindowActive = false
-        secondWindowActive = false
-        workspaceProgress.snapTo(0f)
-        firstWindowProgress.snapTo(0f)
-        secondWindowProgress.snapTo(0f)
-        classicPageProgress.snapTo(0f)
-
-        if (newStyleEnabled) {
-            while (isActive) {
-                delay(720)
-                firstWindowActive = true
-                coroutineScope {
-                    launch {
-                        firstWindowProgress.animateTo(
-                            targetValue = 1f,
-                            animationSpec = spring(
-                                dampingRatio = PREVIEW_OPEN_GEOMETRY_DAMPING,
-                                stiffness = PREVIEW_OPEN_GEOMETRY_STIFFNESS,
-                                visibilityThreshold = 0.0005f,
-                            ),
-                        )
-                    }
-                    launch {
-                        workspaceProgress.animateTo(
-                            targetValue = 1f,
-                            animationSpec = spring(
-                                dampingRatio = PREVIEW_OPEN_WORKSPACE_DAMPING,
-                                stiffness = PREVIEW_OPEN_WORKSPACE_STIFFNESS,
-                                visibilityThreshold = 0.001f,
-                            ),
-                        )
-                    }
-                }
-                delay(420)
-                coroutineScope {
-                    val firstClose = launch {
-                        try {
-                            firstWindowProgress.animateTo(
-                                targetValue = 0f,
-                                animationSpec = spring(
-                                    dampingRatio = PREVIEW_CLOSE_GEOMETRY_DAMPING,
-                                    stiffness = PREVIEW_CLOSE_GEOMETRY_STIFFNESS,
-                                    visibilityThreshold = 0.0005f,
-                                ),
-                            )
-                        } finally {
-                            firstWindowActive = false
-                        }
-                    }
-                    launch {
-                        workspaceProgress.animateTo(
-                            targetValue = 0f,
-                            animationSpec = spring(
-                                dampingRatio = PREVIEW_CLOSE_WORKSPACE_DAMPING,
-                                stiffness = PREVIEW_CLOSE_WORKSPACE_STIFFNESS,
-                                visibilityThreshold = 0.001f,
-                            ),
-                        )
-                    }
-                    // Start the second page while the first close leash is still alive. This is
-                    // the same ownership overlap used by the real C17-style parallel transition.
-                    delay(125)
-                    secondWindowActive = true
-                    val secondOpen = launch {
-                        secondWindowProgress.animateTo(
-                            targetValue = 1f,
-                            animationSpec = spring(
-                                dampingRatio = PREVIEW_OPEN_GEOMETRY_DAMPING,
-                                stiffness = PREVIEW_OPEN_GEOMETRY_STIFFNESS,
-                                visibilityThreshold = 0.0005f,
-                            ),
-                        )
-                    }
-                    launch {
-                        workspaceProgress.animateTo(
-                            targetValue = 1f,
-                            animationSpec = spring(
-                                dampingRatio = PREVIEW_OPEN_WORKSPACE_DAMPING,
-                                stiffness = PREVIEW_OPEN_WORKSPACE_STIFFNESS,
-                                visibilityThreshold = 0.001f,
-                            ),
-                        )
-                    }
-                    firstClose.join()
-                    secondOpen.join()
-                }
-                delay(460)
-                coroutineScope {
-                    launch {
-                        try {
-                            secondWindowProgress.animateTo(
-                                targetValue = 0f,
-                                animationSpec = spring(
-                                    dampingRatio = PREVIEW_CLOSE_GEOMETRY_DAMPING,
-                                    stiffness = PREVIEW_CLOSE_GEOMETRY_STIFFNESS,
-                                    visibilityThreshold = 0.0005f,
-                                ),
-                            )
-                        } finally {
-                            secondWindowActive = false
-                        }
-                    }
-                    launch {
-                        workspaceProgress.animateTo(
-                            targetValue = 0f,
-                            animationSpec = spring(
-                                dampingRatio = PREVIEW_CLOSE_WORKSPACE_DAMPING,
-                                stiffness = PREVIEW_CLOSE_WORKSPACE_STIFFNESS,
-                                visibilityThreshold = 0.001f,
-                            ),
-                        )
-                    }
-                }
-                delay(620)
-            }
-        } else {
-            while (isActive) {
-                delay(850)
-                classicPageProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(360, easing = FastOutSlowInEasing),
-                )
-                delay(620)
-                classicPageProgress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(320, easing = FastOutSlowInEasing),
-                )
-                delay(620)
-            }
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(28.dp))
-            .background(if (newStyleEnabled) Color(0xFF202126) else Color(0xFFF2F3F5))
-            .onGloballyPositioned { previewBoundsInRoot = it.boundsInRoot() },
-    ) {
-        if (newStyleEnabled) {
-            val hiddenModes = buildSet {
-                if (firstWindowActive) add(PREVIEW_FIRST_MODE)
-                if (secondWindowActive) add(PREVIEW_SECOND_MODE)
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        val progress = workspaceProgress.value.coerceIn(0f, 1f)
-                        val scale = previewLerp(1f, 0.9f, progress)
-                        scaleX = scale
-                        scaleY = scale
-                        alpha = 1f - progress
-                        transformOrigin = TransformOrigin.Center
-                    }
-                    .blur((18f * workspaceProgress.value.coerceIn(0f, 1f)).dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    Color(0xFF4169E1),
-                                    Color(0xFF9E5BE8),
-                                    Color(0xFFE97883),
-                                ),
-                            ),
-                        ),
-                )
-                FeaturePreviewGrid(
-                    hiddenModes = hiddenModes,
-                    captureOrigins = hiddenModes.isEmpty(),
-                    onIconBoundsChanged = { mode, bounds ->
-                        iconBoundsInRoot[mode] = bounds
-                    },
-                )
-            }
-
-            fun localOrigin(mode: FeaturePageMode): androidx.compose.ui.geometry.Rect? {
-                val bounds = iconBoundsInRoot[mode] ?: return null
-                if (previewBoundsInRoot.width <= 0f || previewBoundsInRoot.height <= 0f) return null
-                return androidx.compose.ui.geometry.Rect(
-                    left = bounds.left - previewBoundsInRoot.left,
-                    top = bounds.top - previewBoundsInRoot.top,
-                    right = bounds.right - previewBoundsInRoot.left,
-                    bottom = bounds.bottom - previewBoundsInRoot.top,
-                )
-            }
-
-            if (firstWindowActive) {
-                PreviewFeatureWindowLayer(
-                    mode = PREVIEW_FIRST_MODE,
-                    progress = firstWindowProgress.value,
-                    sourceBounds = localOrigin(PREVIEW_FIRST_MODE),
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-            if (secondWindowActive) {
-                PreviewFeatureWindowLayer(
-                    mode = PREVIEW_SECOND_MODE,
-                    progress = secondWindowProgress.value,
-                    sourceBounds = localOrigin(PREVIEW_SECOND_MODE),
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        translationX = -size.width * 0.08f * classicPageProgress.value
-                        alpha = 1f - 0.18f * classicPageProgress.value
-                    },
-            ) {
-                ClassicFeatureListPreview()
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        translationX = size.width * (1f - classicPageProgress.value)
-                    }
-                    .background(Color(0xFFF2F3F5)),
-            ) {
-                PreviewFeatureSubPage(PREVIEW_FIRST_MODE)
-            }
-        }
-    }
-}
-
-private const val PREVIEW_OPEN_GEOMETRY_STIFFNESS = 420f
-private const val PREVIEW_OPEN_GEOMETRY_DAMPING = 1.12f
-private const val PREVIEW_OPEN_WORKSPACE_STIFFNESS = 420f
-private const val PREVIEW_OPEN_WORKSPACE_DAMPING = 1f
-private const val PREVIEW_CLOSE_GEOMETRY_STIFFNESS = 160f
-private const val PREVIEW_CLOSE_GEOMETRY_DAMPING = 0.84f
-private const val PREVIEW_CLOSE_WORKSPACE_STIFFNESS = 200f
-private const val PREVIEW_CLOSE_WORKSPACE_DAMPING = 1f
-private const val PREVIEW_CLOSE_MIN_PROGRESS = -0.012f
-private val PREVIEW_FIRST_MODE = FeaturePageMode.Settings
-private val PREVIEW_SECOND_MODE = FeaturePageMode.Assistant
-
-private data class PreviewFeatureEntry(
-    val mode: FeaturePageMode,
-    @param:StringRes val titleRes: Int,
-)
-
-private val previewFeatureEntries = listOf(
-    PreviewFeatureEntry(FeaturePageMode.Desktop, R.string.section_system_desktop),
-    PreviewFeatureEntry(FeaturePageMode.SystemUi, R.string.section_lsp),
-    PreviewFeatureEntry(FeaturePageMode.Settings, R.string.tab_settings),
-    PreviewFeatureEntry(FeaturePageMode.MobileNetwork, R.string.feature_mobile_network_title),
-    PreviewFeatureEntry(FeaturePageMode.Aod, R.string.feature_aod_enhance_title),
-    PreviewFeatureEntry(FeaturePageMode.Assistant, R.string.feature_assistant_title),
-    PreviewFeatureEntry(FeaturePageMode.AndroidSystem, R.string.feature_android_system_title),
-    PreviewFeatureEntry(FeaturePageMode.Esim, R.string.feature_esim_title),
-)
-
-@Composable
-private fun FeaturePreviewHeader(
-    showBack: Boolean = false,
-    title: String = stringResource(R.string.tab_features),
-    foreground: Color = ActivationInk,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(38.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (showBack) {
-            Text(
-                text = "‹",
-                color = foreground,
-                fontSize = 28.sp,
-                modifier = Modifier.width(24.dp),
-            )
-        }
-        Text(
-            text = title,
-            color = foreground,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        if (!showBack) {
-            Box(
-                modifier = Modifier
-                    .size(27.dp)
-                    .clip(CircleShape)
-                    .background(foreground.copy(alpha = 0.16f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(text = "↻", color = foreground, fontSize = 15.sp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeaturePreviewGrid(
-    hiddenModes: Set<FeaturePageMode>,
-    captureOrigins: Boolean,
-    onIconBoundsChanged: (FeaturePageMode, androidx.compose.ui.geometry.Rect) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-    ) {
-        FeaturePreviewHeader(foreground = Color.White)
-        Spacer(modifier = Modifier.height(5.dp))
-        previewFeatureEntries.chunked(4).forEachIndexed { rowIndex, entries ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                entries.forEach { entry ->
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(72.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .onGloballyPositioned { coordinates ->
-                                    if (captureOrigins) {
-                                        onIconBoundsChanged(entry.mode, coordinates.boundsInRoot())
-                                    }
-                                }
-                                .graphicsLayer {
-                                    alpha = if (entry.mode in hiddenModes) 0f else 1f
-                                },
-                        ) {
-                            FeatureLaunchIcon(
-                                pageMode = entry.mode,
-                                visualSize = 38.dp,
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(3.dp))
-                        Text(
-                            text = stringResource(entry.titleRes),
-                            color = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            }
-            if (rowIndex == 0) Spacer(modifier = Modifier.height(1.dp))
-        }
-    }
-}
-
-@Composable
-private fun ClassicFeatureListPreview() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        FeaturePreviewHeader()
-        Spacer(modifier = Modifier.height(5.dp))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(Color.White),
-        ) {
-            previewFeatureEntries.take(3).forEachIndexed { index, entry ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(51.dp)
-                        .padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    FeatureLaunchIcon(
-                        pageMode = entry.mode,
-                        visualSize = 32.dp,
-                    )
-                    Text(
-                        text = stringResource(entry.titleRes),
-                        color = ActivationInk,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 10.dp),
-                    )
-                    Text(text = "›", color = ActivationMutedInk, fontSize = 21.sp)
-                }
-                if (index < 2) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 54.dp, end = 12.dp)
-                            .height(0.5.dp)
-                            .background(Color.Black.copy(alpha = 0.09f)),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PreviewFeatureWindowLayer(
-    mode: FeaturePageMode,
-    progress: Float,
-    sourceBounds: androidx.compose.ui.geometry.Rect?,
-    modifier: Modifier = Modifier,
-) {
-    if (sourceBounds == null) return
-    BoxWithConstraints(modifier = modifier) {
-        val density = androidx.compose.ui.platform.LocalDensity.current
-        val viewportWidth = constraints.maxWidth.toFloat().coerceAtLeast(1f)
-        val viewportHeight = constraints.maxHeight.toFloat().coerceAtLeast(1f)
-        val physicalProgress = progress.coerceAtLeast(PREVIEW_CLOSE_MIN_PROGRESS)
-        val boundedProgress = progress.coerceIn(0f, 1f)
-        val sourceWidth = sourceBounds.width.coerceAtLeast(1f)
-        val sourceHeight = sourceBounds.height.coerceAtLeast(1f)
-        val sourceCenterX = sourceBounds.left + sourceWidth / 2f
-        val animatedCenterX = previewLerp(sourceCenterX, viewportWidth / 2f, physicalProgress)
-        val animatedTop = previewLerp(sourceBounds.top, 0f, physicalProgress)
-        val animatedWidth = previewLerp(sourceWidth, viewportWidth, physicalProgress)
-            .coerceAtLeast(1f)
-        val animatedAspectRatio = previewLerp(
-            sourceHeight / sourceWidth,
-            viewportHeight / viewportWidth,
-            physicalProgress,
-        ).coerceAtLeast(0.01f)
-        val animatedHeight = (animatedWidth * animatedAspectRatio).coerceAtLeast(1f)
-        val animatedLeft = animatedCenterX - animatedWidth / 2f
-        val taskAlpha = ((boundedProgress - 0.2f) / 0.3f).coerceIn(0f, 1f)
-        val iconVisible = taskAlpha < 1f
-        val animatedWidthDp = with(density) { animatedWidth.toDp() }
-        val animatedHeightDp = with(density) { animatedHeight.toDp() }
-        val iconSurfaceHeightDp = with(density) { max(animatedHeight, animatedWidth).toDp() }
-        val cornerRadius = previewLerp(11f, 24f, boundedProgress).dp
-
-        FeatureLaunchIcon(
-            pageMode = mode,
-            visualSize = animatedWidthDp,
-            surfaceHeight = iconSurfaceHeightDp,
-            modifier = Modifier
-                .offset {
-                    IntOffset(animatedLeft.roundToInt(), animatedTop.roundToInt())
-                }
-                .size(width = animatedWidthDp, height = iconSurfaceHeightDp)
-                .graphicsLayer { alpha = if (iconVisible) 1f else 0f },
-        )
-        Box(
-            modifier = Modifier
-                .offset {
-                    IntOffset(animatedLeft.roundToInt(), animatedTop.roundToInt())
-                }
-                .size(width = animatedWidthDp, height = animatedHeightDp)
-                .graphicsLayer { alpha = taskAlpha }
-                .clip(RoundedCornerShape(cornerRadius))
-                .background(Color(0xFFF2F3F5)),
-        ) {
-            Layout(
-                content = { PreviewFeatureSubPage(mode) },
-                modifier = Modifier.fillMaxSize(),
-            ) { measurables, layoutConstraints ->
-                val fullWidth = viewportWidth.roundToInt().coerceAtLeast(1)
-                val fullHeight = viewportHeight.roundToInt().coerceAtLeast(1)
-                val placeable = measurables.single().measure(
-                    Constraints.fixed(fullWidth, fullHeight),
-                )
-                layout(layoutConstraints.maxWidth, layoutConstraints.maxHeight) {
-                    placeable.placeWithLayer(0, 0) {
-                        val uniformScale = animatedWidth / viewportWidth
-                        scaleX = uniformScale
-                        scaleY = uniformScale
-                        transformOrigin = TransformOrigin(0f, 0f)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PreviewFeatureSubPage(mode: FeaturePageMode) {
-    val titleRes = previewFeatureEntries.firstOrNull { it.mode == mode }?.titleRes
-        ?: R.string.tab_settings
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        FeaturePreviewHeader(
-            showBack = true,
-            title = stringResource(titleRes),
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        repeat(3) { index ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(47.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
-                    .padding(horizontal = 13.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier
-                            .width(if (index == 1) 88.dp else 112.dp)
-                            .height(6.dp)
-                            .clip(CircleShape)
-                            .background(ActivationInk.copy(alpha = 0.72f)),
-                    )
-                    Spacer(modifier = Modifier.height(5.dp))
-                    Box(
-                        modifier = Modifier
-                            .width(if (index == 2) 120.dp else 144.dp)
-                            .height(4.dp)
-                            .clip(CircleShape)
-                            .background(ActivationMutedInk.copy(alpha = 0.24f)),
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .width(29.dp)
-                        .height(17.dp)
-                        .clip(CircleShape)
-                        .background(if (index == 0) ActivationBlue else Color(0xFFD8DBDF)),
-                    contentAlignment = if (index == 0) Alignment.CenterEnd else Alignment.CenterStart,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(2.dp)
-                            .size(13.dp)
-                            .clip(CircleShape)
-                            .background(Color.White),
-                    )
-                }
-            }
-            if (index < 2) Spacer(modifier = Modifier.height(7.dp))
-        }
-    }
-}
-
-private fun previewLerp(start: Float, end: Float, fraction: Float): Float =
-    start + (end - start) * fraction
 
 @Composable
 private fun MigrationPage(

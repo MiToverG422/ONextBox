@@ -32,12 +32,16 @@ import androidx.compose.ui.unit.dp
 import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
+import com.mi.onextbox.ui.common.ColorOsRefreshIconButton
+import com.mi.onextbox.ui.layout.BottomBarAutoCollapse
+import com.mi.onextbox.ui.layout.FloatingBottomBarMode
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
 import io.github.suqi8.coui.kmp.basic.TopAppBarState
 
 enum class AboutPageMode {
     Main,
     AppSettings,
+    DisplayTheme,
     DeveloperOptions,
     Logs,
     Update,
@@ -85,17 +89,16 @@ fun AboutMainRoute(
 fun AboutSubRoute(
     modifier: Modifier,
     pageMode: AboutPageMode,
+    rootGranted: Boolean,
     softwareUpdateState: SoftwareUpdateUiState,
-    blurEffectEnabled: Boolean,
-    onBlurEffectEnabledChange: (Boolean) -> Unit,
-    featurePageNewStyleEnabled: Boolean,
-    onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
     popDirectionFollowsSwipeEdge: Boolean,
     onPopDirectionFollowsSwipeEdgeChange: (Boolean) -> Unit,
     showFpsMonitor: Boolean,
     onShowFpsMonitorChange: (Boolean) -> Unit,
-    liquidGlassBottomBarEnabled: Boolean,
-    onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
+    floatingBottomBarMode: FloatingBottomBarMode,
+    onFloatingBottomBarModeChange: (FloatingBottomBarMode) -> Unit,
+    bottomBarAutoCollapse: BottomBarAutoCollapse,
+    onBottomBarAutoCollapseChange: (BottomBarAutoCollapse) -> Unit,
     bottomBarHideLabels: Boolean,
     mainPageSwipeEnabled: Boolean,
     subPageSwipeEnabled: Boolean,
@@ -106,7 +109,6 @@ fun AboutSubRoute(
     onAppLanguageChange: (String) -> Unit,
     appThemeMode: AppThemeMode,
     onAppThemeModeChange: (AppThemeMode) -> Unit,
-    appUiStyle: AppUiStyle,
     onAppUiStyleChange: (AppUiStyle) -> Unit,
     appThemeKeyColor: Long?,
     onAppThemeKeyColorChange: (Long?) -> Unit,
@@ -118,6 +120,7 @@ fun AboutSubRoute(
     subPageBottomExtension: Dp,
     blurBackdrop: LayerBackdrop?,
     onBack: () -> Unit,
+    onOpenDisplayTheme: () -> Unit,
     onOpenDeveloperOptions: () -> Unit,
     onOpenUpdateSettings: () -> Unit,
     onOpenUpdateReleaseNotes: () -> Unit,
@@ -134,6 +137,7 @@ fun AboutSubRoute(
     }
     val showDownloadBar = pageMode == AboutPageMode.Update &&
         softwareUpdateState.availableUpdate != null
+    val donationLeaderboard = if (pageMode == AboutPageMode.Donation) rememberDonationLeaderboard() else null
     var downloadBarHeightPx by remember { mutableIntStateOf(0) }
     val downloadBarHeight = with(LocalDensity.current) { downloadBarHeightPx.toDp() }
 
@@ -141,6 +145,7 @@ fun AboutSubRoute(
         SettingsPageSurface(
             title = when (pageMode) {
                 AboutPageMode.AppSettings -> stringResource(R.string.setting_theme_settings)
+                AboutPageMode.DisplayTheme -> stringResource(R.string.setting_display_theme)
                 AboutPageMode.DeveloperOptions -> stringResource(R.string.setting_developer_options)
                 AboutPageMode.Logs -> stringResource(R.string.about_logs_title)
                 AboutPageMode.Update -> stringResource(R.string.setting_software_update)
@@ -159,6 +164,12 @@ fun AboutSubRoute(
                         onOpenAutoUpdateSettings = onOpenUpdateSettings,
                     )
                 }
+                if (donationLeaderboard != null) {
+                    ColorOsRefreshIconButton(
+                        contentDescription = stringResource(R.string.diagnostics_refresh),
+                        onClick = donationLeaderboard::refresh,
+                    )
+                }
             },
             blurBackdrop = blurBackdrop,
             bottomContentPadding = bottomContentPadding + if (showDownloadBar) {
@@ -172,31 +183,32 @@ fun AboutSubRoute(
         ) {
             when (pageMode) {
                 AboutPageMode.AppSettings -> AppSettingsPage(
-                    blurEffectEnabled = blurEffectEnabled,
-                    onBlurEffectEnabledChange = onBlurEffectEnabledChange,
-                    featurePageNewStyleEnabled = featurePageNewStyleEnabled,
-                    onFeaturePageNewStyleEnabledChange = onFeaturePageNewStyleEnabledChange,
                     appLanguageTag = appLanguageTag,
                     onAppLanguageChange = onAppLanguageChange,
+                    onOpenDisplayTheme = onOpenDisplayTheme,
+                    onOpenDeveloperOptions = onOpenDeveloperOptions,
+                )
+                AboutPageMode.DisplayTheme -> DisplayThemeSettingsPage(
+                    onAppUiStyleChange = onAppUiStyleChange,
+                    rootGranted = rootGranted,
                     appThemeMode = appThemeMode,
                     onAppThemeModeChange = onAppThemeModeChange,
-                    appUiStyle = appUiStyle,
-                    onAppUiStyleChange = onAppUiStyleChange,
                     appThemeKeyColor = appThemeKeyColor,
                     onAppThemeKeyColorChange = onAppThemeKeyColorChange,
                     appThemePaletteStyle = appThemePaletteStyle,
                     onAppThemePaletteStyleChange = onAppThemePaletteStyleChange,
                     appThemeColorSpec = appThemeColorSpec,
                     onAppThemeColorSpecChange = onAppThemeColorSpecChange,
-                    liquidGlassBottomBarEnabled = liquidGlassBottomBarEnabled,
-                    onLiquidGlassBottomBarEnabledChange = onLiquidGlassBottomBarEnabledChange,
+                    floatingBottomBarMode = floatingBottomBarMode,
+                    onFloatingBottomBarModeChange = onFloatingBottomBarModeChange,
+                    bottomBarAutoCollapse = bottomBarAutoCollapse,
+                    onBottomBarAutoCollapseChange = onBottomBarAutoCollapseChange,
                     bottomBarHideLabels = bottomBarHideLabels,
                     mainPageSwipeEnabled = mainPageSwipeEnabled,
                     subPageSwipeEnabled = subPageSwipeEnabled,
                     onBottomBarHideLabelsChange = onBottomBarHideLabelsChange,
                     onMainPageSwipeEnabledChange = onMainPageSwipeEnabledChange,
                     onSubPageSwipeEnabledChange = onSubPageSwipeEnabledChange,
-                    onOpenDeveloperOptions = onOpenDeveloperOptions,
                 )
                 AboutPageMode.DeveloperOptions -> DeveloperOptionsPage(
                     showFpsMonitor = showFpsMonitor,
@@ -210,7 +222,9 @@ fun AboutSubRoute(
                 AboutPageMode.UpdateReleaseNotes -> SoftwareUpdateReleaseNotesPage(softwareUpdateState, onOpenFeatureUpdates)
                 AboutPageMode.Contributors -> AboutContributorsPage()
                 AboutPageMode.References -> AboutReferencesPage()
-                AboutPageMode.Donation -> AboutDonationPage()
+                AboutPageMode.Donation -> with(requireNotNull(donationLeaderboard)) {
+                    AboutDonationPage(records, refreshFailed)
+                }
                 AboutPageMode.Logs -> Unit
                 AboutPageMode.Main -> Unit
             }

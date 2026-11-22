@@ -14,6 +14,7 @@ import android.os.SystemClock
 import android.view.View
 import android.view.WindowManager
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
+import com.mi.onextbox.lsp.compat.ModernHotReloadSession
 import com.mi.onextbox.lsp.compat.ModernReflect
 import io.github.libxposed.api.XposedInterface
 import java.lang.ref.WeakReference
@@ -25,10 +26,11 @@ internal class SoftLightPanelPass(
     private val packageName: String,
     private val skipWhiteControl: () -> Boolean,
     private val skipWhiteVolume: () -> Boolean,
+    private val pluginMaterial: () -> Boolean,
     private val report: (String) -> Unit,
 ) {
     private class Surface(val view: WeakReference<View>, val role: Int, val locked: Boolean)
-    private data class Tint(val role: Int, val dark: Boolean)
+    private data class Tint(val role: Int, val dark: Boolean, val owner: Int)
     private val programs = WeakHashMap<RuntimeShader, Tint>()
     private val keyguardPrograms = WeakHashMap<RuntimeShader, Boolean>()
     private val aodPrograms = WeakHashMap<RuntimeShader, Boolean>()
@@ -39,7 +41,6 @@ internal class SoftLightPanelPass(
     private val drawing = ThreadLocal<Int>()
     private val baseRole = when (packageName) {
         "com.coloros.smartsidebar" -> SIDEBAR
-        "com.coloros.assistantscreen" -> ASSISTANT
         "com.heytap.quicksearchbox" -> GLOBAL_SEARCH
         "com.oplus.aod" -> AOD
         else -> UNSPECIFIED
@@ -51,6 +52,8 @@ internal class SoftLightPanelPass(
     private fun role(name: String): Int {
         val s = name.lowercase(java.util.Locale.ROOT)
         return when {
+            s.endsWith(".scrimview") || s == "scrim_behind" || s == "scrim_in_front" || s == "scrim_notifications" -> SHADE_BACKDROP
+            s.endsWith("notificationbackgroundview") || s.endsWith("expandablenotificationrow") -> NOTIFICATION
             ".qs." in s || "controlcenter" in s || "control_center" in s ||
                 "quicksettings" in s || "quick_settings" in s || "qstile" in s || "qs_tile" in s -> QS
             ".volume." in s || "volumedialog" in s || "volume_dialog" in s ||
@@ -75,10 +78,19 @@ internal class SoftLightPanelPass(
         updateLockState(context)
         val surface: Int
         synchronized(programs) {
-            surface = if (owner == LOCK && dozing && aodPrograms[shader] == true) AOD else owner
-            if (programs[shader]?.let { it.role == surface && it.dark == dark } == true) return
+            surface = when {
+                owner == NOTIFICATION && !pluginMaterial() -> when {
+                    dozing && aodPrograms[shader] == true -> AOD
+                    locked -> LOCK
+                    else -> UNSPECIFIED
+                }
+                owner == NOTIFICATION && locked -> if (dozing && aodPrograms[shader] == true) AOD_NOTIFICATION else LOCK_NOTIFICATION
+                owner == LOCK && dozing && aodPrograms[shader] == true -> AOD
+                else -> owner
+            }
+            if (programs[shader]?.let { it.role == surface && it.dark == dark && it.owner == owner } == true) return
             shader.setFloatUniform("onbPanelSurface", surface.toFloat(), if (dark) .30f else .63f)
-            programs[shader] = Tint(surface, dark)
+            programs[shader] = Tint(surface, dark, owner)
         }
         when (surface) {
             QS -> report("control center diffusion")
@@ -87,10 +99,14 @@ internal class SoftLightPanelPass(
             LOCK -> report("keyguard card material")
             AOD -> report("always-on display material")
             SIDEBAR -> report("sidebar material")
-            ASSISTANT -> report("assistant material")
             GLOBAL_SEARCH -> report("global search material")
             FOREGROUND -> report("native progress fill preserved")
         }
+    }
+
+    fun copyRole(from: RuntimeShader, to: RuntimeShader, context: Context) {
+        val owner = synchronized(programs) { programs[from]?.owner } ?: return
+        configure(to, owner, context)
     }
 
     private fun updateLockState(context: Context) {
@@ -107,8 +123,33 @@ internal class SoftLightPanelPass(
         return try { block() } finally { if (previous == null) drawing.remove() else drawing.set(previous) }
     }
 
-    fun installSources(loader: ClassLoader) {
+    fun installSources(loader: ClassLoader, lockscreen: Boolean) {
         if (packageName != "com.android.systemui") return
+        if (!lockscreen) {
+            ModernHotReloadSession.current?.let { session ->
+                for (target in session.previousTargets) {
+                    val retired = when (target.declaringClass.name) {
+                        "com.oplus.posteffect.BlurParam" -> target.name == "toFloatArray" &&
+                            target.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType))
+                        "com.oplus.systemui.statusbar.phone.ScrimControllerExImp" -> target.name == "setQsPosition" &&
+                            target.parameterCount == 4 && target.parameterTypes[2].isEnum
+                        "com.android.systemui.shade.NotificationShadeWindowControllerImpl" -> target.name == "setQSPanelVisible" &&
+                            target.parameterTypes.contentEquals(arrayOf(Boolean::class.javaPrimitiveType))
+                        else -> false
+                    }
+                    if (retired) session.retireLegacyFirstSlot(target)
+                }
+            }
+            for ((name, owner) in listOf("com.android.systemui.scrim.ScrimView" to SHADE_BACKDROP,
+                "com.android.systemui.statusbar.notification.row.NotificationBackgroundView" to NOTIFICATION)) {
+                val method = ModernReflect.findClassIfExists(name, loader)?.declaredMethods?.firstOrNull {
+                    it.name == "onDraw" && it.parameterTypes.contentEquals(arrayOf(Canvas::class.java))
+                } ?: continue
+                ModernHookRegistry.installFast("soft-light:panel-draw:$name", method, XposedInterface.Hooker { chain ->
+                    withRole(owner) { chain.proceed() }
+                })
+            }
+        }
         val qsProgressShape = QsSliderProgressShape()
         val volume = ModernReflect.findClassIfExists("com.oplus.systemui.volume.utils.material.VolumeSurfaceFactory", loader)
         val create = volume?.declaredMethods?.singleOrNull { it.name == "createContent" && it.parameterCount == 1 && Drawable::class.java.isAssignableFrom(it.returnType) }
@@ -230,7 +271,7 @@ internal class SoftLightPanelPass(
             updateLockState(context)
             val previous = surfaces[drawable]
             val surface = if (previous?.view?.get() === view && previous.locked == locked) previous else {
-                Surface(WeakReference(view), ownerRole(view, locked), locked).also { surfaces[drawable] = it }
+                Surface(WeakReference(view), ownerRole(view), locked).also { surfaces[drawable] = it }
             }
             if (surface.role != UNSPECIFIED || previous != null && previous !== surface && previous.role != UNSPECIFIED)
                 configure(shader, surface.role, view.context)
@@ -240,14 +281,13 @@ internal class SoftLightPanelPass(
     private fun isVolumeMore(view: View?): Boolean = view != null && view.id > 0 &&
         runCatching { view.resources.getResourceEntryName(view.id) }.getOrNull() == "more_row_stream_ll"
 
-    private fun ownerRole(view: View, onLockscreen: Boolean): Int {
+    private fun ownerRole(view: View): Int {
         val title = (view.rootView.layoutParams as? WindowManager.LayoutParams)?.title?.toString().orEmpty()
         if (role(title) == VOLUME) return if (isVolumeMore(view)) VOLUME_MORE else VOLUME
         var current: View? = view
         while (current != null) {
             val v = current
             val name = v.javaClass.name
-            if (onLockscreen && (name.endsWith("NotificationBackgroundView") || name.endsWith("ExpandableNotificationRow"))) return LOCK
             val kind = role(name)
             if (kind != UNSPECIFIED) return kind
             if (v.id > 0) {
@@ -261,7 +301,7 @@ internal class SoftLightPanelPass(
 
     fun capture(): Any = arrayOf(
         synchronized(kinds) { kinds.map { (drawable, kind) -> arrayOf(drawable, kind) }.toTypedArray() },
-        synchronized(programs) { programs.map { (shader, tint) -> arrayOf(shader, tint.role, tint.dark) }.toTypedArray() },
+        synchronized(programs) { programs.map { (shader, tint) -> arrayOf(shader, tint.role, tint.dark, tint.owner) }.toTypedArray() },
         synchronized(programs) { keyguardPrograms.keys.toTypedArray() },
         synchronized(programs) { aodPrograms.keys.toTypedArray() },
     )
@@ -273,22 +313,26 @@ internal class SoftLightPanelPass(
             (state.getOrNull(2) as? Array<*>)?.filterIsInstance<RuntimeShader>()?.forEach { keyguardPrograms[it] = true }
             (state.getOrNull(3) as? Array<*>)?.filterIsInstance<RuntimeShader>()?.forEach { aodPrograms[it] = true }
             (state[1] as? Array<*>)?.filterIsInstance<Array<*>>()?.forEach {
-                programs[it[0] as RuntimeShader] = Tint(it[1] as Int, it[2] as Boolean)
+                val role = it[1] as Int
+                programs[it[0] as RuntimeShader] = Tint(role, it[2] as Boolean, it.getOrNull(3) as? Int ?: role)
             }
         }
     }
 
     private companion object {
+        const val SHADE_BACKDROP = -3
         const val VOLUME_PROGRESS = -2
         const val FOREGROUND = -1
         const val UNSPECIFIED = 0
         const val QS = 1
         const val VOLUME = 2
         const val LOCK = 3
-        const val ASSISTANT = 4
         const val SIDEBAR = 5
         const val VOLUME_MORE = 6
         const val GLOBAL_SEARCH = 7
         const val AOD = 8
+        const val NOTIFICATION = 9
+        const val LOCK_NOTIFICATION = 10
+        const val AOD_NOTIFICATION = 11
     }
 }

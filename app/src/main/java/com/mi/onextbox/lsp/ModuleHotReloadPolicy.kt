@@ -12,7 +12,7 @@ internal object ModuleHotReloadPolicy {
         "com.android.launcher", "com.oplus.aod",
         "com.oplus.athena", "com.oplus.euicc", "com.oplus.wallpapers", "com.android.phone", "com.oplus.multiapp",
         "com.google.android.googlequicksearchbox", "com.google.android.apps.messaging",
-        "com.heytap.market", "com.oplus.battery", "com.oplus.trafficmonitor", "com.oplus.keyboard",
+        WalletOptions.PACKAGE, "com.heytap.market", "com.oplus.battery", "com.oplus.trafficmonitor", "com.oplus.keyboard",
         "com.coloros.filemanager", "com.heytap.mcs", "com.nearme.instant.platform",
         "com.coloros.assistantscreen", "com.coloros.oshare", "com.heytap.colorfulengine",
         "com.heytap.quicksearchbox",

@@ -92,7 +92,7 @@ import com.mi.onextbox.lsp.SoftwareUpdateSettings
 import com.mi.onextbox.lsp.FluidCloudBrowserSettings
 import com.mi.onextbox.ui.common.AssistantScreenOption
 import com.mi.onextbox.ui.common.CouiConfirmDialog
-import com.mi.onextbox.ui.common.ColorOsTopBarButton
+import com.mi.onextbox.ui.common.ColorOsRefreshIconButton
 import com.mi.onextbox.ui.common.restartScopePackages
 import com.mi.onextbox.ui.settings.SettingsCardRow
 import com.mi.onextbox.ui.settings.SettingsDivider
@@ -104,10 +104,9 @@ import io.github.suqi8.coui.kmp.basic.Checkbox
 import io.github.suqi8.coui.kmp.basic.Icon
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
-import io.github.suqi8.coui.kmp.icon.COUIIcons
-import io.github.suqi8.coui.kmp.icon.extended.Refresh
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -119,6 +118,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Main,
     Coui(true),
     SoftLightGlass(true),
+    LiquidGlass(true),
     Tools(true),
     More(true),
     GlobalLocalization(true),
@@ -165,6 +165,7 @@ enum class FeaturePageMode(val isNestedPage: Boolean = false) {
     Esim,
     EsimDiagnostics(true),
     AppMarket,
+    Wallet,
     Battery,
     TrafficManagement,
     PhoneManager,
@@ -308,7 +309,7 @@ fun FeatureMainRoute(
         actions = {
             FeatureUpdatesAction { onOpen(FeaturePageMode.Updates, null) }
             EnabledFeaturesAction { onOpen(FeaturePageMode.EnabledFeatures, null) }
-            FeatureRestartActionButton(
+            ColorOsRefreshIconButton(
                 contentDescription = stringResource(R.string.feature_restart_all_scope_title),
                 onClick = { showRestartConfirm = true },
             )
@@ -459,7 +460,7 @@ fun FeatureSubRoute(
     }
     var restartConfirmMode by remember { mutableStateOf<FeaturePageMode?>(null) }
     var pushMonitorRefresh by remember { mutableStateOf(0) }
-    val restartTargets = featureRestartPackages(pageMode, adaptationVersion)
+    val restartTargets = remember(pageMode, adaptationVersion) { featureRestartPackages(pageMode, adaptationVersion) }
     // The monitor owns its scroll padding and stays within the actual window size.
     val pageBottomExtension = if (pageMode == FeaturePageMode.SystemMessages) 0.dp else subPageBottomExtension
 
@@ -474,13 +475,13 @@ fun FeatureSubRoute(
         edgeToEdgeBottom = pageMode == FeaturePageMode.SystemMessages,
         actions = {
             if (pageMode == FeaturePageMode.SystemMessages) {
-                FeatureRestartActionButton(
+                ColorOsRefreshIconButton(
                     contentDescription = stringResource(R.string.push_monitor_refresh),
                     onClick = { pushMonitorRefresh++ },
                 )
             }
             if (pageMode != FeaturePageMode.GlobalLocalization && pageMode != FeaturePageMode.Tools && pageMode != FeaturePageMode.More && pageMode != FeaturePageMode.EsimDiagnostics && pageMode != FeaturePageMode.TouchSampling && pageMode != FeaturePageMode.SystemMessages) {
-                FeatureRestartActionButton(
+                ColorOsRefreshIconButton(
                     contentDescription = stringResource(R.string.feature_restart_scope_confirm_action),
                     onClick = {
                         if (restartTargets.isEmpty()) {
@@ -600,6 +601,7 @@ private fun Modifier.extendPastBottom(extra: Dp): Modifier = layout { measurable
 @Composable
 internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Coui -> stringResource(R.string.coui_page_title)
+    FeaturePageMode.LiquidGlass -> stringResource(R.string.lg_settings)
     FeaturePageMode.SoftLightGlass -> stringResource(R.string.soft_light_glass_title)
     FeaturePageMode.Tools -> stringResource(R.string.tab_tools)
     FeaturePageMode.GlobalLocalization -> stringResource(R.string.global_localization_title)
@@ -650,6 +652,7 @@ internal fun featurePageTitle(mode: FeaturePageMode): String = when (mode) {
     FeaturePageMode.Esim -> stringResource(R.string.feature_esim_title)
     FeaturePageMode.EsimDiagnostics -> stringResource(R.string.feature_group_esim_diagnostics)
     FeaturePageMode.AppMarket -> stringResource(R.string.feature_app_market_title)
+    FeaturePageMode.Wallet -> stringResource(R.string.feature_wallet_title)
     FeaturePageMode.Battery -> stringResource(R.string.battery_page_title)
     FeaturePageMode.TrafficManagement -> stringResource(R.string.traffic_page_title)
     FeaturePageMode.PhoneManager -> stringResource(R.string.phone_manager_title)
@@ -710,7 +713,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.Camera, FeaturePageMode.Gallery, FeaturePageMode.CameraWatermarks, FeaturePageMode.GalleryWatermarks ->
         listOf(com.mi.onextbox.lsp.CameraGallerySettings.PACKAGE_NAME, com.mi.onextbox.lsp.GalleryAiRetouchSettings.PACKAGE_NAME)
     FeaturePageMode.Coui -> com.mi.onextbox.lsp.CouiDividerSettings.recommendedPackages.toList()
-    FeaturePageMode.SoftLightGlass -> com.mi.onextbox.lsp.SoftLightGlassSettings.mainPackages.toList()
+    FeaturePageMode.SoftLightGlass, FeaturePageMode.LiquidGlass -> com.mi.onextbox.lsp.SoftLightGlassSettings.mainPackages.toList()
     FeaturePageMode.Desktop,
     FeaturePageMode.DesktopLayout,
     FeaturePageMode.DesktopRecent,
@@ -764,6 +767,7 @@ internal fun featureRestartPackages(mode: FeaturePageMode): List<String> = when 
     FeaturePageMode.Installer -> listOf("android", "system")
     FeaturePageMode.Esim -> com.mi.onextbox.lsp.RegionalAppPackages.esim + "com.android.phone"
     FeaturePageMode.AppMarket -> listOf("com.heytap.market")
+    FeaturePageMode.Wallet -> listOf("com.finshell.wallet")
     FeaturePageMode.Battery -> listOf("android", "system", "com.oplus.battery")
     FeaturePageMode.TrafficManagement -> listOf("com.oplus.trafficmonitor")
     FeaturePageMode.PhoneManager -> listOf(PhoneManagerSettings.PACKAGE_NAME)
@@ -833,24 +837,6 @@ private fun allFeatureRestartPackages(): List<String> = FeaturePageMode.entries
     .distinct()
 
 @Composable
-private fun FeatureRestartActionButton(
-    contentDescription: String,
-    onClick: () -> Unit,
-) {
-
-    ColorOsTopBarButton(
-        onClick = onClick,
-    ) {
-        Icon(
-            imageVector = COUIIcons.Refresh,
-            contentDescription = contentDescription,
-            tint = COUITheme.colorScheme.onSurface,
-            modifier = Modifier.size(24.dp),
-        )
-    }
-}
-
-@Composable
 internal fun FeatureRestartConfirmDialog(
     show: Boolean,
     title: String,
@@ -867,22 +853,29 @@ internal fun FeatureRestartConfirmDialog(
     }
     val displayedTargets = if (show) targets else lastVisibleTargets
     val plan = remember(displayedTargets) { FeatureRestartPlan(displayedTargets) }
-    val scopeLabels = remember(context, localeTag, plan) {
-        plan.appPackages.map { packageName ->
-            val label = when (packageName) {
-                "com.android.settings" -> resources.getString(R.string.tab_settings)
-                "com.android.systemui" -> resources.getString(R.string.section_lsp)
-                "com.android.launcher" ->
-                    resources.getString(R.string.section_system_desktop)
-                else -> runCatching {
-                    val info = context.packageManager.getApplicationInfo(packageName, 0)
-                    context.packageManager.getApplicationLabel(info).toString()
-                        .lineSequence().firstOrNull().orEmpty().trim().take(80)
-                }.getOrDefault(packageName).ifBlank { packageName }
+    val fallbackText = remember(plan) { plan.appPackages.joinToString("\n") }
+    var resolvedText by remember(context, localeTag, plan) { mutableStateOf<String?>(null) }
+    LaunchedEffect(show, context, localeTag, plan) {
+        if (!show || resolvedText != null || plan.appPackages.isEmpty()) return@LaunchedEffect
+        resolvedText = withContext(Dispatchers.IO) {
+            val pm = context.packageManager
+            plan.appPackages.joinToString("\n") { packageName ->
+                ensureActive()
+                val label = when (packageName) {
+                    "com.android.settings" -> resources.getString(R.string.tab_settings)
+                    "com.android.systemui" -> resources.getString(R.string.section_lsp)
+                    "com.android.launcher" -> resources.getString(R.string.section_system_desktop)
+                    else -> runCatching {
+                        pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
+                            .lineSequence().firstOrNull().orEmpty().trim().take(80)
+                    }.getOrNull()
+                }
+                if (label.isNullOrBlank() || label == packageName) packageName else "$label ($packageName)"
             }
-            if (label == packageName) packageName else "$label ($packageName)"
         }
     }
+    val scopeText = resolvedText ?: fallbackText
+    var confirmed by remember(show) { mutableStateOf(false) }
     var restartSystem by remember(displayedTargets) { mutableStateOf(false) }
     LaunchedEffect(show) {
         if (show) restartSystem = false
@@ -905,7 +898,9 @@ internal fun FeatureRestartConfirmDialog(
             else R.string.feature_restart_scope_confirm_action,
         ),
         onDismissRequest = onDismissRequest,
-        onPositive = {
+        onPositive = confirm@{
+            if (!show || confirmed) return@confirm
+            confirmed = true
             val shouldRestartSystem = plan.shouldRebootDevice(restartSystem)
             onDismissRequest()
             scope.launch {
@@ -933,9 +928,9 @@ internal fun FeatureRestartConfirmDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (scopeLabels.isNotEmpty()) {
+                if (scopeText.isNotEmpty()) {
                     FeatureRestartDialogText(
-                        text = scopeLabels.joinToString("\n"),
+                        text = scopeText,
                         modifier = Modifier.padding(vertical = 12.dp),
                     )
                 }
@@ -1329,6 +1324,13 @@ private fun colorOs17FeatureMainEntries(): List<FeatureMainEntry> = buildList {
         )
         add(
             FeatureMainEntry(
+                titleRes = R.string.feature_wallet_title,
+                iconPackages = listOf("com.finshell.wallet"),
+                pageMode = FeaturePageMode.Wallet,
+            )
+        )
+        add(
+            FeatureMainEntry(
                 titleRes = R.string.feature_quick_app_services_title,
                 iconPackages = listOf("com.nearme.instant.platform"),
                 pageMode = FeaturePageMode.QuickAppServices,
@@ -1659,13 +1661,14 @@ private fun FeatureSubPage(
     pushMonitorRefresh: Int,
 ) {
     if (rememberSystemAdaptationVersion() == SystemAdaptationVersion.ColorOs16 &&
-        mode != FeaturePageMode.Coui && mode != FeaturePageMode.SoftLightGlass && mode != FeaturePageMode.Aod && mode != FeaturePageMode.SystemMessages) {
+        mode != FeaturePageMode.Coui && mode != FeaturePageMode.SoftLightGlass && mode != FeaturePageMode.LiquidGlass && mode != FeaturePageMode.Aod && mode != FeaturePageMode.SystemMessages) {
         ColorOs16Features(mode, onOpenSubPage)
         return
     }
     when (mode) {
         FeaturePageMode.Coui -> CouiSystemMaterialSettingsGroup(onOpenSubPage)
-        FeaturePageMode.SoftLightGlass -> SoftLightGlassPage()
+        FeaturePageMode.SoftLightGlass -> SoftLightGlassPage(onOpenSubPage)
+        FeaturePageMode.LiquidGlass -> LiquidGlassPage()
         FeaturePageMode.Tools -> ToolsMainPage(onOpenSubPage)
         FeaturePageMode.More -> MoreMainPage(onOpenSubPage)
         FeaturePageMode.GlobalLocalization -> GlobalLocalizationPage(onOpenSubPage)
@@ -1780,6 +1783,7 @@ private fun FeatureSubPage(
         FeaturePageMode.Esim -> EsimFeaturesPage(onOpenSubPage = onOpenSubPage)
         FeaturePageMode.EsimDiagnostics -> EsimDiagnosticsPage()
         FeaturePageMode.AppMarket -> AppMarketFeaturesPage()
+        FeaturePageMode.Wallet -> WalletFeaturesPage()
         FeaturePageMode.Battery -> BatteryFeaturesPage()
         FeaturePageMode.TrafficManagement -> TrafficManagementPage()
         FeaturePageMode.PhoneManager -> PhoneManagerFeaturesPage()

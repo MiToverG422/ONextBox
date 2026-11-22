@@ -1,10 +1,10 @@
 package com.mi.onextbox.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppThemeMode
-import com.mi.onextbox.ui.common.isMonet
 
 @Composable
 fun SettingsThemeModeDropdown(
@@ -14,30 +14,24 @@ fun SettingsThemeModeDropdown(
     hasDividerAbove: Boolean = false,
     hasDividerBelow: Boolean = false,
 ) {
-    val modes = listOf(
-        AppThemeMode.System,
-        AppThemeMode.Light,
-        AppThemeMode.Dark,
-        AppThemeMode.MonetSystem,
-        AppThemeMode.MonetLight,
-        AppThemeMode.MonetDark,
-    )
-    val labels = listOf(
-        stringResource(R.string.theme_mode_system),
-        stringResource(R.string.theme_mode_light),
-        stringResource(R.string.theme_mode_dark),
-        stringResource(R.string.theme_mode_monet_system),
-        stringResource(R.string.theme_mode_monet_light),
-        stringResource(R.string.theme_mode_monet_dark),
-    )
-    val selectedIndex = modes.indexOf(selectedMode).takeIf { it >= 0 } ?: 0
-
+    val modes = AppThemeMode.entries
     SettingsWindowDropdownPreference(
-        items = labels,
-        selectedIndex = selectedIndex,
+        items = modes.map { stringResource(it.labelRes) },
+        selectedIndex = selectedMode.ordinal,
         title = title,
         onSelectedIndexChange = { index ->
             modes.getOrNull(index)?.let(onModeChange)
         },
     )
 }
+
+@get:StringRes
+internal val AppThemeMode.labelRes: Int
+    get() = when (this) {
+        AppThemeMode.System -> R.string.theme_mode_system
+        AppThemeMode.Light -> R.string.theme_mode_light
+        AppThemeMode.Dark -> R.string.theme_mode_dark
+        AppThemeMode.MonetSystem -> R.string.theme_mode_monet_system
+        AppThemeMode.MonetLight -> R.string.theme_mode_monet_light
+        AppThemeMode.MonetDark -> R.string.theme_mode_monet_dark
+    }

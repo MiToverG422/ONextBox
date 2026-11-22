@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.ui.layout.LocalChromeNativeBlurEnabled
+import com.mi.onextbox.ui.common.LocalSegmentBackdropEnabled
+import com.mi.onextbox.ui.common.LocalAppVisualEffects
 import com.mi.onextbox.ui.layout.Page
 import com.mi.onextbox.ui.screens.FeatureLaunchIcon
 import com.mi.onextbox.ui.screens.FeatureLaunchOrigin
@@ -339,7 +341,7 @@ internal fun Modifier.c17LauncherSourceTransform(
     blurProgress: () -> Float,
 ): Modifier {
     val boundedBlurProgress = blurProgress().coerceIn(0f, 1f)
-    return this
+    val transform = this
         .graphicsLayer {
             val scale = lerpFloat(1f, C17_SOURCE_SCALE, scaleProgress().coerceIn(0f, 1f))
             scaleX = scale
@@ -347,7 +349,8 @@ internal fun Modifier.c17LauncherSourceTransform(
             alpha = 1f - alphaProgress().coerceIn(0f, 1f)
             transformOrigin = TransformOrigin.Center
         }
-        .blur((C17_SOURCE_BLUR_DP * boundedBlurProgress).dp)
+    return if (boundedBlurProgress > 0f) transform.blur((C17_SOURCE_BLUR_DP * boundedBlurProgress).dp)
+    else transform
 }
 
 @Composable
@@ -359,11 +362,13 @@ internal fun C17StableBaseSceneLayer(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    val animationBlur = LocalAppVisualEffects.current.animationBlur
+    val blurProgress: () -> Float = if (animationBlur) workspaceBlurProgress else { { 0f } }
     val sourceModifier = if (transformActive) {
         Modifier.c17LauncherSourceTransform(
             scaleProgress = workspaceScaleProgress,
             alphaProgress = workspaceAlphaProgress,
-            blurProgress = workspaceBlurProgress,
+            blurProgress = blurProgress,
         )
     } else {
         Modifier
@@ -505,7 +510,12 @@ internal fun C17FeatureWindowLayer(
             Layout(
                 content = {
                     Box(Modifier.fillMaxSize()) {
-                        CompositionLocalProvider(LocalChromeNativeBlurEnabled provides false) { content() }
+                        val stableSegmentBackdrop = LocalSegmentBackdropEnabled.current &&
+                            motion == null && predictiveBackMotion == null
+                        CompositionLocalProvider(
+                            LocalChromeNativeBlurEnabled provides false,
+                            LocalSegmentBackdropEnabled provides stableSegmentBackdrop,
+                        ) { content() }
                     }
                 },
                 modifier = Modifier.fillMaxSize(),

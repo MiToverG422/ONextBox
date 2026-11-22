@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mi.onextbox.ui.common.ColorOsSwitch
+import com.mi.onextbox.ui.common.rememberHapticToggle
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.DropdownColors
 import io.github.suqi8.coui.kmp.basic.DropdownDefaults
@@ -46,7 +47,7 @@ internal fun SettingsSwitchPreference(
     interactionEnabled: Boolean = true,
 ) {
     var switchPressed by remember { mutableStateOf(false) }
-    val currentOnCheckedChange by rememberUpdatedState(onCheckedChange)
+    val currentOnCheckedChange = rememberHapticToggle(onCheckedChange)
     val currentInteractionEnabled by rememberUpdatedState(interactionEnabled)
     val currentSwitchEnabled by rememberUpdatedState(enabled && switchEnabled)
     val onChange: (Boolean) -> Unit = { if (currentInteractionEnabled && currentSwitchEnabled) currentOnCheckedChange(it) }
@@ -76,9 +77,7 @@ internal fun SettingsSwitchPreference(
                     }
                 },
                 onTap = {
-                    if (!hiddenHoldTriggered && enabled && currentInteractionEnabled) {
-                        currentOnCheckedChange(!checked)
-                    }
+                    if (!hiddenHoldTriggered) onChange(!checked)
                 },
             )
         }

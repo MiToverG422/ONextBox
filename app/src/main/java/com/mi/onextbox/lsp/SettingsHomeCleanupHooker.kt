@@ -45,7 +45,7 @@ internal object SettingsHomeCleanupHooker {
                 if (active) {
                     homes.keysSnapshot().forEach { home -> guarded {
                         reconcile(home)
-                        // Let the host recompute first-group spacing after either switch changes.
+                        // Let the host recompute first-group spacing after a switch changes.
                         call(home, "updateFirstGroupCategory")
                     } }
                     controllers.keysSnapshot().forEach { owner -> guarded { messageRefresh?.invoke(owner) } }
@@ -155,18 +155,19 @@ internal object SettingsHomeCleanupHooker {
         }
 
         private fun hidden(preference: Any): Boolean {
-            if (!SettingsHomeCleanupSettings.enabledXposed(SettingsHomeCleanupSettings.ACCOUNT)) return false
-            return when (call(preference, "getKey")) {
-                in SettingsHomeCleanupRules.accountKeys -> true
-                SettingsHomeCleanupRules.ACCOUNT_CATEGORY -> {
-                    val count = call(preference, "getPreferenceCount") as Int
-                    SettingsHomeCleanupRules.shouldHideAccountCategory((0 until count).map { index ->
-                        val child = requireNotNull(call(preference, "getPreference", index))
-                        (call(child, "getKey") as? String) to (call(child, "isVisible") == true)
-                    })
-                }
-                else -> false
+            val key = call(preference, "getKey") as? String
+            val hideAccount = SettingsHomeCleanupSettings.enabledXposed(SettingsHomeCleanupSettings.ACCOUNT)
+            if (key == SettingsHomeCleanupRules.ACCOUNT_CATEGORY) {
+                if (!hideAccount) return false
+                val count = call(preference, "getPreferenceCount") as Int
+                return SettingsHomeCleanupRules.shouldHideAccountCategory((0 until count).map { index ->
+                    val child = requireNotNull(call(preference, "getPreference", index))
+                    (call(child, "getKey") as? String) to (call(child, "isVisible") == true)
+                })
             }
+            val hideGuide = key == SettingsHomeCleanupRules.ACCOUNT_GUIDE &&
+                SettingsHomeCleanupSettings.enabledXposed(SettingsHomeCleanupSettings.GUIDE)
+            return SettingsHomeCleanupRules.shouldHideAccountRow(key, hideAccount, hideGuide)
         }
 
         private fun applyVisibility(preference: Any) {

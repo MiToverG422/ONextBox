@@ -2,22 +2,19 @@ package com.mi.onextbox.ui.common
 
 import android.content.Context
 
-enum class AppUiStyle {
-    ColorOs;
+enum class AppUiStyle(val label: String) {
+    ColorOs("ColorOS 17"),
+    ColorOs16("ColorOS 16");
 
     companion object {
         private const val PREFS_NAME = "onextbox_prefs"
         private const val PREF_KEY = "app_ui_style"
 
-        @Suppress("UNUSED_PARAMETER")
-        fun fromName(name: String?): AppUiStyle = ColorOs
+        fun fromName(name: String?): AppUiStyle = entries.find { it.name == name } ?: ColorOs
 
         fun get(context: Context): AppUiStyle {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            if (prefs.getString(PREF_KEY, ColorOs.name) != ColorOs.name) {
-                prefs.edit().putString(PREF_KEY, ColorOs.name).apply()
-            }
-            return ColorOs
+            return fromName(prefs.getString(PREF_KEY, null))
         }
 
         fun set(context: Context, style: AppUiStyle) {

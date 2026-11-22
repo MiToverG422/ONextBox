@@ -20,7 +20,10 @@ class AppUiDensityTest {
         val activity = File(app, "src/main/java/com/mi/onextbox/MainActivity.kt").readText()
         assertTrue(activity.contains("val scale = appUiStyle.pageDensityScale"))
         assertTrue(activity.contains("Density(systemDensity.density * scale, systemDensity.fontScale)"))
-        assertTrue(activity.contains("CompositionLocalProvider(LocalDensity provides systemDensity)"))
+        val onboarding = activity.substringAfter("if (onboardingVisible) {", "")
+        assertTrue(Regex(
+            """CompositionLocalProvider\([^)]*\bLocalDensity provides systemDensity\b[^)]*\)\s*\{\s*OnboardingScreen\(""",
+        ).containsMatchIn(onboarding))
         assertFalse(activity.contains("wm density"))
         assertFalse(activity.contains("fontScale = 1f"))
     }

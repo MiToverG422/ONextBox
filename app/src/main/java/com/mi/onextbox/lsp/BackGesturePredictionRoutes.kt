@@ -137,7 +137,8 @@ internal object BackGesturePredictionRoutes {
             capture = { synchronized(registries) {
                 registries.entries.map { arrayOf(it.key, it.value.activity, it.value.task) }.toTypedArray()
             } }, detach = { synchronized(registries) { registries.clear() } }, restore = ::restore,
-            canReload = { synchronized(registries) { registries.values.none { it.activitySlot.active || it.taskSlot.active } } })
+            canReload = { synchronized(registries) { registries.values.none { it.activitySlot.active || it.taskSlot.active } } },
+            waitForGesture = true)
         (registry.declaredMethods.toList() + controller.declaredMethods).forEach {
             runCatching { ModernHookRuntime.requireModule().deoptimize(it) }
         }

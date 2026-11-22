@@ -101,8 +101,6 @@ fun ToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     icon: ImageVector,
 ) {
-    val hapticToggle = rememberHapticToggle()
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         cornerRadius = AppUiTokens.CardCornerRadius,
@@ -133,10 +131,7 @@ fun ToggleRow(
             }
             ColorOsSwitch(
                 checked = checked,
-                onCheckedChange = {
-                    hapticToggle()
-                    onCheckedChange(it)
-                },
+                onCheckedChange = rememberHapticToggle(onCheckedChange),
             )
         }
     }

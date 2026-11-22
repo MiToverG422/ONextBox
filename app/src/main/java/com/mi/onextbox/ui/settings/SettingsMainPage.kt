@@ -101,8 +101,6 @@ import androidx.core.content.ContextCompat
 import com.mi.onextbox.BuildConfig
 import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppIcons
-import com.mi.onextbox.ui.common.AppThemeMode
-import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.ConfigBackup
 import com.mi.onextbox.ui.common.ColorOsTopBarButton
 import com.mi.onextbox.ui.common.ColorOsPopup
@@ -110,7 +108,6 @@ import com.mi.onextbox.ui.common.CouiConfirmDialog
 import com.mi.onextbox.ui.common.ColorOs17ConfirmDialog
 import com.mi.onextbox.ui.common.ONextBoxLogo
 import com.mi.onextbox.ui.common.ONextBoxLogoFontFamily
-import com.mi.onextbox.ui.common.isMonet
 import com.mi.onextbox.ui.onboarding.OnboardingPreferences
 import com.mi.onextbox.ui.home.rememberDeviceMarketName
 import com.mi.onextbox.ui.home.rememberAppVersionName
@@ -123,10 +120,12 @@ import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.icon.COUIIcons
 import io.github.suqi8.coui.kmp.icon.extended.Ok
 import io.github.suqi8.coui.kmp.squircle.squircleBackground
+import io.github.suqi8.coui.kmp.squircle.squircleBorder
+import io.github.suqi8.coui.kmp.squircle.squircleClip
+import com.mi.onextbox.ui.common.AppUiStyle
+import com.mi.onextbox.ui.common.AppUiTokens
+import com.mi.onextbox.ui.common.LocalAppUiStyle
 import io.github.suqi8.coui.kmp.theme.COUITheme
-import com.mi.onextbox.ui.common.CouiColorSpec as ThemeColorSpec
-import io.github.suqi8.coui.kmp.theme.ThemePaletteStyle
-import io.github.suqi8.coui.kmp.blur.isRuntimeShaderSupported
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -489,6 +488,7 @@ data class SoftwareUpdateUiState(
     val updateDownloaded: Boolean,
     val automaticSilentUpdate: Boolean,
     val updateNotificationsEnabled: Boolean,
+    val launchUpdatePromptEnabled: Boolean,
     val buildType: UpdateBuildType,
     val betaPlanEnabled: Boolean,
     val statusText: String,
@@ -496,6 +496,7 @@ data class SoftwareUpdateUiState(
     val onDownloadUpdate: () -> Unit,
     val onAutomaticSilentUpdateChange: (Boolean) -> Unit,
     val onUpdateNotificationsEnabledChange: (Boolean) -> Unit,
+    val onLaunchUpdatePromptEnabledChange: (Boolean) -> Unit,
     val onBetaPlanEnabledChange: (Boolean) -> Unit,
 )
 
@@ -515,6 +516,9 @@ fun rememberSoftwareUpdateUiState(
     }
     var updateNotificationsEnabled by remember {
         mutableStateOf(AppUpdatePreferences.getUpdateNotificationsEnabled(context))
+    }
+    var launchUpdatePromptEnabled by remember {
+        mutableStateOf(AppUpdatePreferences.getLaunchUpdatePromptEnabled(context))
     }
     val buildType = AppUpdatePreferences.currentBuildType
     var betaPlanEnabled by remember {
@@ -616,6 +620,7 @@ fun rememberSoftwareUpdateUiState(
         updateDownloaded = downloadedApk?.isFile == true,
         automaticSilentUpdate = automaticSilentUpdate,
         updateNotificationsEnabled = updateNotificationsEnabled,
+        launchUpdatePromptEnabled = launchUpdatePromptEnabled,
         buildType = buildType,
         betaPlanEnabled = betaPlanEnabled,
         statusText = statusText ?: noUpdateText,
@@ -638,6 +643,11 @@ fun rememberSoftwareUpdateUiState(
             )
             UpdateNotificationScheduler.configure(context, enabled)
         },
+        onLaunchUpdatePromptEnabledChange = { enabled ->
+            launchUpdatePromptEnabled = enabled
+            AppUpdatePreferences.setLaunchUpdatePromptEnabled(context, enabled)
+            if (!enabled) UpdateNotificationScheduler.dismissLaunchUpdatePrompt()
+        },
         onBetaPlanEnabledChange = { enabled ->
             if (checkingUpdates || downloadingUpdate) return@SoftwareUpdateUiState
             betaPlanEnabled = AppUpdatePreferences.BETA_PLAN_AVAILABLE && enabled
@@ -647,6 +657,7 @@ fun rememberSoftwareUpdateUiState(
             statusText = null
             AppUpdatePreferences.setBetaPlanEnabled(context, enabled)
             UpdateNotificationScheduler.cancelAvailableUpdateNotification(context)
+            UpdateNotificationScheduler.dismissLaunchUpdatePrompt()
         },
     )
 }
@@ -677,7 +688,14 @@ fun SoftwareUpdatePage(
     )
     val updateCardAspectRatio = 0.65f + (1.08f - 0.65f) * compactProgress
     val updateCardSpacing = (24f - 12f * compactProgress).dp
-    val updateCardShape = RoundedCornerShape((28f - 4f * compactProgress).dp)
+    val borderColor = COUITheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    val updateCardOutline = if (LocalAppUiStyle.current == AppUiStyle.ColorOs16) {
+        val radius = AppUiTokens.CardCornerRadius
+        Modifier.squircleClip(radius).then(if (isLightTheme) Modifier.squircleBorder(0.5.dp, borderColor, radius) else Modifier)
+    } else {
+        val shape = RoundedCornerShape((28f - 4f * compactProgress).dp)
+        Modifier.clip(shape).then(if (isLightTheme) Modifier.border(0.5.dp, borderColor, shape) else Modifier)
+    }
     val cardContentStartPadding = (26f - 4f * compactProgress).dp
     val cardContentEndPadding = (36f - 6f * compactProgress).dp
     val cardNumberTopPadding = (28f - 8f * compactProgress).dp
@@ -706,18 +724,7 @@ fun SoftwareUpdatePage(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(updateCardAspectRatio)
-                    .clip(updateCardShape)
-                    .then(
-                        if (isLightTheme) {
-                            Modifier.border(
-                                width = 0.5.dp,
-                                color = COUITheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                shape = updateCardShape,
-                            )
-                        } else {
-                            Modifier
-                        },
-                    ),
+                    .then(updateCardOutline),
             ) {
                 Image(
                     painter = painterResource(R.drawable.software_update_wave_bg),
@@ -1329,6 +1336,15 @@ fun SoftwareUpdateAutoSettingsPage(
                 hasDividerAbove = true,
                 hasDividerBelow = true,
             )}
+        SettingsDivider()
+        SettingsToggleRow(
+            title = stringResource(R.string.setting_launch_update_prompt),
+            summary = stringResource(R.string.setting_launch_update_prompt_summary),
+            checked = state.launchUpdatePromptEnabled,
+            onCheckedChange = state.onLaunchUpdatePromptEnabledChange,
+            hasDividerAbove = true,
+            hasDividerBelow = true,
+        )
         SettingsDivider()
         run {SettingsCardRow(
                 title = stringResource(R.string.update_build_type_title),
@@ -1968,30 +1984,9 @@ private fun Context.documentDisplayName(uri: Uri): String? = runCatching {
 
 @Composable
 fun AppSettingsPage(
-    blurEffectEnabled: Boolean,
-    onBlurEffectEnabledChange: (Boolean) -> Unit,
-    featurePageNewStyleEnabled: Boolean,
-    onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
     appLanguageTag: String,
     onAppLanguageChange: (String) -> Unit,
-    appThemeMode: AppThemeMode,
-    onAppThemeModeChange: (AppThemeMode) -> Unit,
-    appUiStyle: AppUiStyle,
-    onAppUiStyleChange: (AppUiStyle) -> Unit,
-    appThemeKeyColor: Long?,
-    onAppThemeKeyColorChange: (Long?) -> Unit,
-    appThemePaletteStyle: Int,
-    onAppThemePaletteStyleChange: (Int) -> Unit,
-    appThemeColorSpec: Int,
-    onAppThemeColorSpecChange: (Int) -> Unit,
-    liquidGlassBottomBarEnabled: Boolean,
-    onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
-    bottomBarHideLabels: Boolean,
-    mainPageSwipeEnabled: Boolean,
-    subPageSwipeEnabled: Boolean,
-    onBottomBarHideLabelsChange: (Boolean) -> Unit,
-    onMainPageSwipeEnabledChange: (Boolean) -> Unit,
-    onSubPageSwipeEnabledChange: (Boolean) -> Unit,
+    onOpenDisplayTheme: () -> Unit,
     onOpenDeveloperOptions: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -1999,7 +1994,6 @@ fun AppSettingsPage(
     val scope = rememberCoroutineScope()
     var showClearConfigConfirm by rememberSaveable { mutableStateOf(false) }
     var isClearingConfig by remember { mutableStateOf(false) }
-    val liquidGlassBottomBarSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     val exportConfigLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(ConfigBackup.MIME_TYPE),
     ) { uri ->
@@ -2104,159 +2098,24 @@ fun AppSettingsPage(
         },
     )
 
-    val (backgroundStyle, setBackgroundStyle) = com.mi.onextbox.ui.screens.rememberFeatureBackgroundSelection()
     SettingsSection(title = stringResource(R.string.settings_section_display))
-    run {
     SettingsGroup {
-        SettingsThemeModeDropdown(
-            title = stringResource(R.string.setting_theme_mode),
-            selectedMode = appThemeMode,
-            onModeChange = onAppThemeModeChange,
+        SettingsCardRow(
+            title = stringResource(R.string.setting_display_theme),
+            summary = "",
+            showArrow = true,
+            onClick = onOpenDisplayTheme,
             hasDividerBelow = true,
         )
         SettingsDivider()
-        AnimatedVisibility(
-            visible = appThemeMode.isMonet,
-            enter = expandVertically(
-                animationSpec = tween(260, easing = FastOutSlowInEasing),
-            ) + fadeIn(animationSpec = tween(180)),
-            exit = shrinkVertically(
-                animationSpec = tween(220, easing = FastOutSlowInEasing),
-            ) + fadeOut(animationSpec = tween(160)),
-        ) {
-            Column {
-                SettingsThemeKeyColorDropdown(
-                    title = stringResource(R.string.setting_theme_key_color),
-                    selectedKeyColor = appThemeKeyColor,
-                    onKeyColorChange = onAppThemeKeyColorChange,
-                    hasDividerAbove = true,
-                    hasDividerBelow = true,
-                )
-                SettingsDivider()
-            }
-        }
-        AnimatedVisibility(
-            visible = appThemeMode.isMonet,
-            enter = expandVertically(
-                animationSpec = tween(260, easing = FastOutSlowInEasing),
-            ) + fadeIn(animationSpec = tween(180)),
-            exit = shrinkVertically(
-                animationSpec = tween(220, easing = FastOutSlowInEasing),
-            ) + fadeOut(animationSpec = tween(160)),
-        ) {
-            Column {
-                SettingsThemeTextDropdown(
-                    title = stringResource(R.string.setting_theme_palette_style),
-                    labels = if (appThemeColorSpec == ThemeColorSpec.Spec2026.ordinal) listOf("CMF") else ThemePaletteStyle.entries.map { it.name },
-                    selectedIndex = if (appThemeColorSpec == ThemeColorSpec.Spec2026.ordinal) 0 else appThemePaletteStyle,
-                    enabled = appThemeColorSpec != ThemeColorSpec.Spec2026.ordinal,
-                    onSelectedIndexChange = onAppThemePaletteStyleChange,
-                    hasDividerAbove = true,
-                    hasDividerBelow = true,
-                )
-                SettingsDivider()
-                SettingsThemeTextDropdown(
-                    title = stringResource(R.string.setting_theme_color_spec),
-                    labels = ThemeColorSpec.entries.map { it.label },
-                    selectedIndex = appThemeColorSpec,
-                    onSelectedIndexChange = onAppThemeColorSpecChange,
-                    hasDividerAbove = true,
-                    hasDividerBelow = true,
-                )
-                SettingsDivider()
-            }
-        }
         SettingsLanguageDropdown(
             title = stringResource(R.string.setting_app_language),
             summary = "",
             selectedLanguageTag = appLanguageTag,
             onLanguageChange = onAppLanguageChange,
             hasDividerAbove = true,
-            hasDividerBelow = true,
-        )
-        SettingsDivider()
-        AnimatedVisibility(
-            visible = isRuntimeShaderSupported(),
-            enter = expandVertically(
-                animationSpec = tween(260, easing = FastOutSlowInEasing),
-            ) + fadeIn(animationSpec = tween(180)),
-            exit = shrinkVertically(
-                animationSpec = tween(220, easing = FastOutSlowInEasing),
-            ) + fadeOut(animationSpec = tween(160)),
-        ) {
-            Column {
-                SettingsToggleRow(
-                    title = stringResource(R.string.setting_blur_effect),
-                    summary = "",
-                    checked = blurEffectEnabled,
-                    onCheckedChange = onBlurEffectEnabledChange,
-                    hasDividerAbove = true,
-                    hasDividerBelow = true,
-                )
-                SettingsDivider()
-            }
-        }
-        run {
-        SettingsToggleRow(
-            title = stringResource(R.string.setting_feature_page_new_style),
-            summary = "",
-            checked = featurePageNewStyleEnabled,
-            onCheckedChange = onFeaturePageNewStyleEnabledChange,
-            hasDividerAbove = true,
-            hasDividerBelow = true,
-        )
-        SettingsDivider()
-        SettingsThemeTextDropdown(
-            title = stringResource(R.string.setting_feature_background),
-            labels = androidx.compose.ui.res.stringArrayResource(R.array.feature_background_styles).toList(),
-            selectedIndex = com.mi.onextbox.ui.screens.FeatureBackgroundStyleIds.indexOf(backgroundStyle),
-            onSelectedIndexChange = { setBackgroundStyle(com.mi.onextbox.ui.screens.FeatureBackgroundStyleIds[it]) },
-            hasDividerAbove = true,
-            hasDividerBelow = true,
-        )
-        SettingsDivider()
-        SettingsToggleRow(
-            title = stringResource(R.string.setting_liquid_glass_bottom_bar),
-            summary = stringResource(R.string.setting_liquid_glass_bottom_bar_summary),
-            checked = liquidGlassBottomBarEnabled && liquidGlassBottomBarSupported,
-            onCheckedChange = {
-                if (liquidGlassBottomBarSupported) {
-                    onLiquidGlassBottomBarEnabledChange(it)
-                }
-            },
-            hasDividerAbove = true,
-            hasDividerBelow = true,
-            enabled = liquidGlassBottomBarSupported,
-        )
-        SettingsDivider()
-        SettingsToggleRow(
-            title = stringResource(R.string.setting_bottom_bar_hide_labels),
-            summary = "",
-            checked = bottomBarHideLabels,
-            onCheckedChange = onBottomBarHideLabelsChange,
-            hasDividerAbove = true,
-            hasDividerBelow = true,
-        )
-        SettingsDivider()
-        SettingsToggleRow(
-            title = stringResource(R.string.setting_main_page_swipe),
-            summary = "",
-            checked = mainPageSwipeEnabled,
-            onCheckedChange = onMainPageSwipeEnabledChange,
-            hasDividerAbove = true,
-            hasDividerBelow = true,
-        )
-        SettingsDivider()
-        SettingsToggleRow(
-            title = stringResource(R.string.setting_sub_page_swipe),
-            summary = "",
-            checked = subPageSwipeEnabled,
-            onCheckedChange = onSubPageSwipeEnabledChange,
-            hasDividerAbove = true,
             hasDividerBelow = false,
         )
-        }
-    }
     }
 
     SettingsHomeEntrySettingsGroup()

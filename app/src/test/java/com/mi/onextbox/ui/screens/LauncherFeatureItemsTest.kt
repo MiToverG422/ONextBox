@@ -32,8 +32,10 @@ class LauncherFeatureItemsTest {
         assertEquals(items.size, items.map { it.feature }.distinct().size)
         assertTrue(items.all { it.title != 0 })
         assertEquals(
-            LauncherFeatureItems.recent.map { it.feature },
-            items.filter { it.summary == 0 }.map { it.feature },
+            LauncherFeatureItems.recent.map { it.feature }.toSet() + setOf(
+                LspConfig.LauncherFeature.FolderReturnHome, LspConfig.LauncherFeature.HideFolderBackground,
+                LspConfig.LauncherFeature.HideFolderIndicator),
+            items.filter { it.summary == 0 }.map { it.feature }.toSet(),
         )
     }
 

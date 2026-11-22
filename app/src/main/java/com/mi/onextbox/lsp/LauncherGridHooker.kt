@@ -70,11 +70,13 @@ internal object LauncherGridHooker {
                     .onFailure { HookLog.w(TAG, "Unable to retain custom option during text mode change", it) }
                 result
             })
-            install("preview", targets.draw, XposedInterface.Hooker { chain ->
-                menus.draw(chain.thisObject as? View) { chain.proceed() }
-            })
+            targets.draw?.let { draw ->
+                install("preview", draw, XposedInterface.Hooker { chain ->
+                    menus.draw(chain.thisObject as? View) { chain.proceed() }
+                })
+            }
             targets.callers.forEach { check(ModernHookRuntime.requireModule().deoptimize(it)) { "Native layout caller cannot be deoptimized" } }
-            install("constructor", targets.constructor, XposedInterface.Hooker { chain ->
+            install("initialize", targets.initializer, XposedInterface.Hooker { chain ->
                 val prepared = runCatching {
                     val state = LauncherGridSettings.stateXposed()
                     if (state.enabled && targets.allowed()) LauncherGridMenus.Pinned(state.grid, targets.wordless()) else null
@@ -84,15 +86,17 @@ internal object LauncherGridHooker {
                 } ?: return@Hooker chain.proceed()
                 menus.creating(prepared.grid, prepared.wordless) {
                     val result = chain.proceed()
-                    val adapter = chain.thisObject ?: return@creating result
                     runCatching {
+                        val owner = chain.thisObject ?: return@runCatching
+                        val adapter = targets.adapter(owner) ?: return@runCatching
                         val pinned = menus.pinned(adapter)!!
-                        val chosen = menus.selected(adapter, targets.wordless())
-                        val stored = if (chosen == null) {
-                            (targets.currentGrid.invoke(null, chain.getArg(0) as Context) as IntArray)
-                                .takeIf { it.size == 2 }?.let { LauncherGrid(it[0], it[1]) }
+                        val wordless = targets.wordless()
+                        val chosen = menus.selected(adapter, wordless)
+                        val stored = if (chosen == null && !targets.nativeItems) {
+                            (targets.currentGrid.invoke(null, chain.getArg(0) as Context) as? IntArray)
+                                ?.takeIf { it.size == 2 }?.let { LauncherGrid(it[0], it[1]) }
                         } else chosen
-                        menus.update(adapter, pinned, targets.wordless(), stored)
+                        menus.update(adapter, pinned, wordless, stored)
                     }.onFailure { HookLog.w(TAG, "Unable to complete custom layout menu", it) }
                     result
                 }
@@ -152,7 +156,7 @@ internal class LauncherGridMenus(
         val maximum = maximum()
         if (maximum != null && LauncherGridRules.supports(maximum, columns, rows, wordless)) return true
         return ownersSnapshot().any { (adapter, pinned) ->
-            (targets.recycler.invoke(adapter) as? View)?.isAttachedToWindow == true &&
+            targets.recyclerView(adapter)?.isAttachedToWindow == true &&
                 LauncherGridRules.supports(pinned.grid, columns, rows, wordless)
         }
     }
@@ -183,7 +187,8 @@ internal class LauncherGridMenus(
         try {
             if (all.isEmpty()) all.addAll(visible)
             for (option in LauncherGridRules.expand(emptyList(), pinned.grid)) {
-                val item = all.firstOrNull { targets.option(it) == option } ?: targets.item(option).also { all.add(it) }
+                val native = all.firstOrNull { targets.option(it) == option }
+                val item = native ?: if (targets.nativeItems) continue else targets.item(option).also { all.add(it) }
                 if (visible.none { targets.grid(it, wordless) == option.grid(wordless) }) visible.add(item)
             }
             val chosen = previous?.takeIf { grid -> visible.any { targets.grid(it, wordless) == grid } }
@@ -250,8 +255,8 @@ internal class LauncherGridMenus(
     @Synchronized
     private fun ownersSnapshot() = owned.entries.map { it.key to it.value.copy() }
 
-    fun canReload(): Boolean = targets.busy.none { it.invoke(null) == true } &&
-        ownersSnapshot().none { (adapter, _) -> (targets.recycler.invoke(adapter) as? View)?.isAttachedToWindow == true }
+    fun canReload(): Boolean = targets.idle() &&
+        ownersSnapshot().none { (adapter, _) -> targets.recyclerView(adapter)?.isAttachedToWindow == true }
 
     @Synchronized
     fun capture(): Array<Array<Any>> = owned.entries.map { (adapter, pinned) ->
@@ -266,7 +271,7 @@ internal class LauncherGridMenus(
         owned.clear()
         (value as? Array<*>)?.forEach { entry ->
             val row = entry as? Array<*> ?: return@forEach
-            val adapter = row.getOrNull(0)?.takeIf(targets.constructor.declaringClass::isInstance) ?: return@forEach
+            val adapter = row.getOrNull(0)?.takeIf(targets::isAdapter) ?: return@forEach
             val dimensions = row.getOrNull(1) as? IntArray ?: return@forEach
             if (dimensions.size != 3) return@forEach
             val grid = LauncherGrid(dimensions[0], dimensions[1])

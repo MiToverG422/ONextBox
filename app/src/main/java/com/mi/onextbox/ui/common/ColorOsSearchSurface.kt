@@ -1,11 +1,15 @@
 package com.mi.onextbox.ui.common
 
+import androidx.compose.ui.geometry.Offset
+
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.key
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -16,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.Modifier
@@ -56,7 +61,8 @@ internal fun ColorOsSearchSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val dark = COUITheme.colorScheme.background.luminance() < .5f
-    val nativeBlurEnabled = LocalChromeNativeBlurEnabled.current
+    val effects = LocalAppVisualEffects.current
+    val nativeBlurEnabled = effects.backgroundBlur && LocalChromeNativeBlurEnabled.current
     val fallbackColor = ColorOsToolbarGlass.fallbackColor(background, COUITheme.colorScheme.surface)
     val motion = remember { SearchMotion() }
     val editing = rememberUpdatedState(focused)
@@ -164,26 +170,29 @@ internal fun ColorOsSearchSurface(
         // One transform owns the material, icons, editor and clear button. Focus/layout
         // stays stable; only a render transform changes while the finger drags.
         Box(Modifier.matchParentSize().then(wholeCapsuleMotion)) {
-            AndroidView(
-                factory = {
-                    ColorOsTopBarMaterialView(
-                        it, dark, fallbackColor.toArgb(), searchCapsule = true,
-                        nativeBlurEnabled = nativeBlurEnabled,
-                    )
-                },
-                update = {
-                    it.updateAppearance(dark, fallbackColor.toArgb(), nativeBlurEnabled)
-                    it.updateSearchProgress(1f)
-                    val progress = revealProgress().coerceIn(0f, 1f)
-                    it.alpha = if (nativeBlurEnabled) (progress / .2f).coerceAtMost(1f) else progress
-                },
-                modifier = Modifier.fillMaxSize(),
-            )
+            key(effects.outline) {
+                AndroidView(
+                    factory = {
+                        ColorOsTopBarMaterialView(
+                            it, dark, fallbackColor.toArgb(), searchCapsule = true,
+                            nativeBlurEnabled = nativeBlurEnabled,
+                            outlineEnabled = effects.outline,
+                        )
+                    },
+                    update = {
+                        it.updateAppearance(dark, fallbackColor.toArgb(), nativeBlurEnabled)
+                        it.updateSearchProgress(1f)
+                        val progress = revealProgress().coerceIn(0f, 1f)
+                        it.alpha = if (nativeBlurEnabled) (progress / .2f).coerceAtMost(1f) else progress
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             Box(Modifier.matchParentSize().graphicsLayer {
                 val progress = revealProgress().coerceIn(0f, 1f)
                 alpha = if (nativeBlurEnabled) (progress / .2f).coerceAtMost(1f) * progress else progress
                 val radius = (1f - progress) * 30f
-                renderEffect = if (nativeBlurEnabled && radius > .01f) {
+                renderEffect = if (effects.animationBlur && radius > .01f) {
                     android.graphics.RenderEffect.createBlurEffect(
                         radius, radius, android.graphics.Shader.TileMode.DECAL,
                     ).asComposeRenderEffect()
@@ -197,7 +206,7 @@ internal fun ColorOsSearchSurface(
                 light.onSizeChanged(it.width, it.height)
             }) {
                 redraw.intValue // Subscribe in draw, not composition: don't restart the editor.
-                if (revealProgress() > .99f) light.draw(drawContext.canvas.nativeCanvas)
+                if (effects.backgroundBlur && revealProgress() > .99f) light.draw(drawContext.canvas.nativeCanvas)
             }
         }
     }
@@ -226,6 +235,68 @@ internal fun colorOsSearchLocalPosition(
 ): Pair<Float, Float> =
     (width / 2f + (x - width / 2f - translationX) / scaleX.coerceAtLeast(.001f)) to
         (height / 2f + (y - height / 2f - translationY) / scaleY.coerceAtLeast(.001f))
+
+@Composable
+internal fun Modifier.colorOsCapsulePull(
+    verticalInset: Dp,
+    spotlight: ColorOsSpotlightRenderer,
+): Modifier {
+    val motion = remember { SearchMotion() }
+    DisposableEffect(motion) { onDispose(motion::cancel) }
+    return pointerInput(verticalInset, spotlight) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val width = size.width.toFloat()
+            val inset = verticalInset.toPx()
+            val height = (size.height - inset * 2).coerceAtLeast(1f)
+            fun lightPosition(position: Offset) = colorOsSearchLocalPosition(
+                position.x, position.y, width, size.height.toFloat(),
+                motion.press.value * motion.xScale.value, motion.press.value * motion.yScale.value,
+                motion.x.value, motion.y.value,
+            ).let { (x, y) -> Offset(x, y - inset) }
+            val elongated = width > 2 * height
+            var pulling = false
+            var lastPosition = down.position
+            val touch = lightPosition(lastPosition)
+            spotlight.onDown(touch.x, touch.y)
+            motion.press.to(colorOsSearchPressScale(width / density, height / density), 0f, if (elongated) .3f else .25f)
+            try {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    lastPosition = change.position
+                    if (!change.pressed || event.changes.any { it.id != down.id && it.pressed }) break
+                    val light = lightPosition(lastPosition)
+                    spotlight.onMove(light.x, light.y)
+                    val dx = change.position.x - down.position.x
+                    val dy = change.position.y - down.position.y
+                    if (!pulling && maxOf(abs(dx), abs(dy)) < 5.dp.toPx()) continue
+                    pulling = true
+                    val scale = colorOsSearchDeformation(dx, dy, width, height, density)
+                    motion.x.to(colorOsSearchRubber(dx, .05f, 28f * density), .15f, .15f)
+                    motion.y.to(colorOsSearchRubber(dy, .05f, 28f * density), .15f, .15f)
+                    motion.xScale.to(scale.first, .15f, .15f)
+                    motion.yScale.to(scale.second, .15f, .15f)
+                }
+            } finally {
+                val light = lightPosition(lastPosition)
+                spotlight.onUp(light.x, light.y)
+                motion.press.to(1f, if (elongated) .5f else .6f, .5f)
+                if (pulling) {
+                    motion.x.to(0f, .65f, .45f)
+                    motion.y.to(0f, .65f, .45f)
+                    motion.xScale.to(1f, .65f, .45f)
+                    motion.yScale.to(1f, .65f, .45f)
+                }
+            }
+        }
+    }.graphicsLayer {
+        scaleX = motion.press.value * motion.xScale.value
+        scaleY = motion.press.value * motion.yScale.value
+        translationX = motion.x.value
+        translationY = motion.y.value
+    }
+}
 
 private class SearchMotion {
     val press = SearchSpring(1f)

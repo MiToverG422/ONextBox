@@ -4,7 +4,11 @@ import java.lang.reflect.Field
 
 internal object SettingsHomeCleanupRules {
     const val ACCOUNT_CATEGORY = "user_center_category"
-    val accountKeys = setOf("member_sign", "usercenter_preference", "usercenter_guide")
+    const val ACCOUNT_GUIDE = "usercenter_guide"
+    val accountKeys = setOf("member_sign", "usercenter_preference", ACCOUNT_GUIDE)
+
+    fun shouldHideAccountRow(key: String?, hideAccount: Boolean, hideGuide: Boolean): Boolean =
+        (hideAccount && key in accountKeys) || (hideGuide && key == ACCOUNT_GUIDE)
 
     fun isUpdateReminder(owner: String?, target: String?, entrance: String?): Boolean =
         owner in otaPackages || target in otaPackages || entrance == "ota_settings"

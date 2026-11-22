@@ -20,6 +20,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mi.onextbox.R
+import com.mi.onextbox.lsp.LspPreferenceStore
+import com.mi.onextbox.lsp.ModernXposedPreferenceSync
 import com.mi.onextbox.lsp.LspConfig
 import com.mi.onextbox.lsp.ImmersiveNavigationRules
 import com.mi.onextbox.ui.settings.SettingsToggleRow
@@ -53,6 +55,11 @@ internal fun NavigationBarFeaturesPage() {
         defaultLengthDp ?: ImmersiveNavigationRules.DEFAULT_LENGTH_DP
     } else {
         lengthDp
+    }
+    val displayedOpacity = if (opacityPreference == ImmersiveNavigationRules.SYSTEM_DEFAULT) {
+        ImmersiveNavigationRules.MAX_OPACITY_PERCENT
+    } else {
+        opacity
     }
     fun saveLength(valueDp: Int) {
         scope.launch {
@@ -105,12 +112,13 @@ internal fun NavigationBarFeaturesPage() {
             )
         }
         row(1, visible = customHandleEnabled) { above, below ->
+            val valueLabel = "${displayedLength}dp"
             FeatureSliderRow(
                 heading = stringResource(R.string.feature_navigation_handle_length_label),
                 currentValue = if (lengthPreference == ImmersiveNavigationRules.SYSTEM_DEFAULT) {
-                    stringResource(R.string.feature_slider_current_default)
+                    stringResource(R.string.feature_slider_default_with_value, valueLabel)
                 } else {
-                    stringResource(R.string.feature_slider_current_dp, displayedLength)
+                    valueLabel
                 },
                 resetDescription = stringResource(R.string.feature_navigation_handle_length_reset),
                 value = displayedLength.toFloat(),
@@ -131,16 +139,22 @@ internal fun NavigationBarFeaturesPage() {
                 hasDividerBelow = below,
             )
         }
+        ImmersiveNavigationRules.Geometry.entries.forEach { field ->
+            row(field.key, visible = customHandleEnabled) { above, below ->
+                HandleGeometrySlider(field, above, below)
+            }
+        }
         row(2, visible = customHandleEnabled) { above, below ->
+            val valueLabel = stringResource(R.string.feature_navigation_handle_current_opacity, displayedOpacity)
             FeatureSliderRow(
                 heading = stringResource(R.string.feature_navigation_handle_opacity_label),
                 currentValue = if (opacityPreference == ImmersiveNavigationRules.SYSTEM_DEFAULT) {
-                    stringResource(R.string.feature_slider_current_default)
+                    stringResource(R.string.feature_slider_default_with_value, valueLabel)
                 } else {
-                    stringResource(R.string.feature_navigation_handle_current_opacity, opacity)
+                    valueLabel
                 },
                 resetDescription = stringResource(R.string.feature_navigation_handle_opacity_reset),
-                value = if (opacityPreference == ImmersiveNavigationRules.SYSTEM_DEFAULT) 100f else opacity.toFloat(),
+                value = displayedOpacity.toFloat(),
                 valueRange = ImmersiveNavigationRules.MIN_OPACITY_PERCENT.toFloat()..ImmersiveNavigationRules.MAX_OPACITY_PERCENT.toFloat(),
                 steps = ImmersiveNavigationRules.MAX_OPACITY_PERCENT - ImmersiveNavigationRules.MIN_OPACITY_PERCENT - 1,
                 enabled = customHandleEnabled,
@@ -156,20 +170,17 @@ internal fun NavigationBarFeaturesPage() {
                 hasDividerBelow = below,
             )
         }
-        row(3, visible = customHandleEnabled) { above, below ->
+        row(3) { above, below ->
             SettingsToggleRow(
                 title = stringResource(R.string.feature_immersive_navigation_title),
                 summary = stringResource(R.string.feature_immersive_navigation_summary),
                 checked = immersiveEnabled,
-                enabled = customHandleEnabled,
                 onCheckedChange = { checked ->
-                    if (customHandleEnabled) {
-                        immersiveEnabled = checked
-                        scope.launch {
-                            writeLock.withLock {
-                                withContext(Dispatchers.IO) {
-                                    LspConfig.setImmersiveNavigationEnabled(context, checked)
-                                }
+                    immersiveEnabled = checked
+                    scope.launch {
+                        writeLock.withLock {
+                            withContext(Dispatchers.IO) {
+                                LspConfig.setImmersiveNavigationEnabled(context, checked)
                             }
                         }
                     }
@@ -178,20 +189,17 @@ internal fun NavigationBarFeaturesPage() {
                 hasDividerBelow = below,
             )
         }
-        row(4, visible = customHandleEnabled) { above, below ->
+        row(4) { above, below ->
             SettingsToggleRow(
                 title = stringResource(R.string.feature_navigation_handle_auto_hide_title),
                 summary = stringResource(R.string.feature_navigation_handle_auto_hide_summary),
                 checked = autoHideEnabled,
-                enabled = customHandleEnabled,
                 onCheckedChange = { checked ->
-                    if (customHandleEnabled) {
-                        autoHideEnabled = checked
-                        scope.launch {
-                            writeLock.withLock {
-                                withContext(Dispatchers.IO) {
-                                    LspConfig.setNavigationHandleAutoHideEnabled(context, checked)
-                                }
+                    autoHideEnabled = checked
+                    scope.launch {
+                        writeLock.withLock {
+                            withContext(Dispatchers.IO) {
+                                LspConfig.setNavigationHandleAutoHideEnabled(context, checked)
                             }
                         }
                     }
@@ -216,3 +224,37 @@ private fun systemHandleLengthDp(context: Context): Int? = runCatching {
     if (density <= 0f) return@runCatching null
     (resources.getDimension(id) / density).takeIf { it.isFinite() && it > 0f }?.roundToInt()
 }.getOrNull()
+
+@Composable
+private fun HandleGeometrySlider(field: ImmersiveNavigationRules.Geometry, above: Boolean, below: Boolean) {
+    val context = LocalContext.current
+    val editor = rememberCustomization(setOf(field.key)) { ctx ->
+        field.normalize(LspPreferenceStore.readInt(ctx, field.key, ImmersiveNavigationRules.SYSTEM_DEFAULT))
+    }
+    val title = when (field) {
+        ImmersiveNavigationRules.Geometry.Height -> R.string.nav_geometry_thickness
+        ImmersiveNavigationRules.Geometry.Bottom -> R.string.nav_geometry_bottom
+        ImmersiveNavigationRules.Geometry.Radius -> R.string.nav_geometry_radius
+    }
+    val configuration = LocalConfiguration.current
+    val systemDp by produceState<Int?>(null, field, configuration) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val res = context.packageManager.getResourcesForApplication("com.android.systemui")
+                val id = res.getIdentifier(field.resource, "dimen", "com.android.systemui")
+                (res.getDimension(id) / res.displayMetrics.density).roundToInt()
+            }.getOrNull()
+        }
+    }
+    fun commit(value: Int) = editor.save(field.key, value) { ModernXposedPreferenceSync.setIntAndSync(context, field.key, value) }
+    val value = editor.state
+    val label = if (value >= 0) "${value}dp" else systemDp?.let {
+        stringResource(R.string.feature_slider_default_with_value, "${it}dp")
+    } ?: stringResource(R.string.custom_system_default)
+    FeatureSliderRow(heading = stringResource(title), currentValue = label,
+        value = (if (value >= 0) value else systemDp ?: field.range.first).coerceIn(field.range).toFloat(),
+        valueRange = field.range.first.toFloat()..field.range.last.toFloat(), steps = field.range.last - field.range.first - 1,
+        interactionEnabled = editor.savingKey == null, onValueChange = { editor.state = it.roundToInt() },
+        onValueChangeFinished = { commit(editor.state) }, onReset = { commit(ImmersiveNavigationRules.SYSTEM_DEFAULT) },
+        hasDividerAbove = above, hasDividerBelow = below)
+}

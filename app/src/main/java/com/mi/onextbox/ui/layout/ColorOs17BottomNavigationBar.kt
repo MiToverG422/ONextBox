@@ -1,5 +1,8 @@
 package com.mi.onextbox.ui.layout
 
+import com.mi.onextbox.ui.common.LocalPreviewTextPlaceholders
+import com.mi.onextbox.ui.common.PreviewTextLine
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
@@ -19,6 +22,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.runtime.key
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -63,6 +68,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.mi.onextbox.ui.common.ColorOsBottomBarMaterialView
+import com.mi.onextbox.ui.common.LocalAppVisualEffects
 import com.mi.onextbox.ui.LocalBottomBarContentOpacity
 import com.mi.onextbox.ui.common.ColorOsTopBarSpotlightView
 import androidx.dynamicanimation.animation.FloatValueHolder
@@ -343,36 +349,40 @@ internal fun ColorOs17BottomNavigationBar(
             contentAlignment = Alignment.Center,
         ) {
             CollapsibleBottomBarSurface(collapseState, background = {
-            AndroidView(
-                factory = { context ->
-                    ColorOsBottomBarMaterialView(
-                        context = context,
-                        darkTheme = darkTheme,
-                        fallbackColor = fallbackColor.toArgb(),
-                    )
-                },
-                update = { view ->
-                    view.updateAppearance(darkTheme, fallbackColor.toArgb())
-                },
-                modifier = Modifier.fillMaxSize()
-                    .bottomBarStartupMaterialWidth(startupRevealProgress),
-            )
+                val effects = LocalAppVisualEffects.current
+                key(effects.backgroundBlur, effects.outline) {
+                    AndroidView(
+                        factory = { context ->
+                            ColorOsBottomBarMaterialView(
+                                context = context,
+                                darkTheme = darkTheme,
+                                fallbackColor = fallbackColor.toArgb(),
+                                effects = effects,
+                            )
+                    },
+                    update = { view ->
+                        view.updateAppearance(darkTheme, fallbackColor.toArgb())
+                    },
+                    modifier = Modifier.fillMaxSize()
+                        .bottomBarStartupMaterialWidth(startupRevealProgress),
+                )
+                }
 
-            // BaseBottomFloatingMenuView draws the spotlight after its material edge but before
-            // dispatching child icons/text, so the content stays crisp above the moving light.
-            AndroidView(
-                factory = { context ->
-                    ColorOsTopBarSpotlightView(
-                        context = context,
-                        darkTheme = darkTheme,
-                    ).also { spotlightHolder.view = it }
-                },
-                update = { view ->
-                    view.updateAppearance(darkTheme)
-                    spotlightHolder.view = view
-                },
-                modifier = Modifier.fillMaxSize(),
-            )
+                // BaseBottomFloatingMenuView draws the spotlight after its material edge but before
+                // dispatching child icons/text, so the content stays crisp above the moving light.
+                if (effects.backgroundBlur) AndroidView(
+                    factory = { context ->
+                        ColorOsTopBarSpotlightView(
+                            context = context,
+                            darkTheme = darkTheme,
+                        ).also { spotlightHolder.view = it }
+                    },
+                    update = { view ->
+                        view.updateAppearance(darkTheme)
+                        spotlightHolder.view = view
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                ) else SideEffect { spotlightHolder.view = null }
             }) {
 
             Box(
@@ -382,7 +392,7 @@ internal fun ColorOs17BottomNavigationBar(
                         clip = collapseState != null
                         compositingStrategy = CompositingStrategy.ModulateAlpha
                     }
-                    .then(if (collapseState?.collapsed == true) Modifier.clearAndSetSemantics {} else Modifier),
+                        .then(if (collapseState?.folderCollapsed == true) Modifier.clearAndSetSemantics {} else Modifier),
                 contentAlignment = Alignment.Center,
             ) {
             Row(
@@ -439,7 +449,9 @@ internal fun ColorOs17BottomNavigationBar(
                         )
                         if (!hideLabels) {
                             Spacer(modifier = Modifier.height(BottomBarIconTitleGap))
-                            BasicText(
+                            if (LocalPreviewTextPlaceholders.current) {
+                                PreviewTextLine(20.dp, 4.dp, itemColor.copy(alpha = .7f))
+                            } else BasicText(
                                 text = item.label,
                                 modifier = Modifier.fillMaxWidth(),
                                 style = TextStyle(

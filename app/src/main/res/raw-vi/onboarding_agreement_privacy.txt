@@ -5,3 +5,5 @@ Cài đặt được lưu trữ cục bộ. Nhật ký thời gian chạy đư�
 Kiểm tra LSPosed có thể tạm thời sao chép cơ sở dữ liệu cấu hình của nó vào bộ đệm ứng dụng cho truy vấn chỉ đọc, sau đó xóa nó. Các bản sao lưu cấu hình do người dùng khởi tạo chỉ được ghi vào vị trí bạn chọn.
 
 Kiểm tra cập nhật nền, khi được cho phép riêng, hãy liên hệ với GitHub và do đó tiết lộ siêu dữ liệu mạng thông thường như địa chỉ IP của bạn cho GitHub. ONextBox không chứa SDK quảng cáo hoặc phân tích và không có tài khoản hoặc máy chủ đo từ xa do nhà phát triển vận hành.
+
+Ảnh bạn chọn cho thẻ cập nhật được sao chép vào thiết bị để ứng dụng Cài đặt hiển thị. Hãy chọn ảnh phù hợp để hiển thị trên trang giới thiệu thiết bị.

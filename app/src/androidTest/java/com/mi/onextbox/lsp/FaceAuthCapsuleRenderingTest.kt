@@ -33,7 +33,12 @@ class FaceAuthCapsuleRenderingTest {
     private fun value(view: FaceAuthCapsuleView, name: String) =
         FaceAuthCapsuleView::class.java.getDeclaredField(name).apply { isAccessible = true }.getFloat(view)
 
-    private fun view(contentTop: () -> Float? = { 135f * d }) = FaceAuthCapsuleView(context).apply {
+    private fun view(contentTop: () -> Float? = { 135f * d }) = FaceAuthCapsuleView(context,
+        View(context).apply { background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(Color.BLACK)
+            cornerRadius = 15f * d
+        } }).apply {
+        reserveIcons = { true }
         layout(0, 0, (400 * d).toInt(), (150 * d).toInt())
         nativeLayout = { FaceAuthCapsuleNativeLayout(5f * d, 30f * d, 100f * d, 15f * d) }
         protectedContentTop = contentTop
@@ -398,7 +403,7 @@ class FaceAuthCapsuleRenderingTest {
                 assertEquals(View.INVISIBLE, glyph.visibility)
                 active = false
                 native.reconcile()
-                assertEquals("Native open padlock reappeared after completion", View.INVISIBLE, glyph.visibility)
+                assertEquals("Native lock glyph must return when the capsule releases its slot", View.VISIBLE, glyph.visibility)
                 enabled = false
                 native.reconcile()
                 assertEquals(View.VISIBLE, glyph.visibility)

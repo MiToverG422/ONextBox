@@ -3,6 +3,13 @@ package com.mi.onextbox.lsp
 /** Display identity only; never contains subscriber identifiers or radio configuration. */
 internal object NetworkIdentityRules {
     data class Profile(val region: String, val numeric: String, val name: String)
+    data class Publication(
+        val profiles: Map<Int, Profile> = emptyMap(),
+        val attributionAppIds: Set<Int>? = null,
+    ) {
+        val preserveCallRegion get() = attributionAppIds != null
+        fun profilesForApp(appId: Int) = if (attributionAppIds?.contains(appId) == true) emptyMap() else profiles
+    }
     val regions = listOf("tw", "hk", "cn", "us")
     val properties = listOf("gsm.sim.operator.numeric", "gsm.sim.operator.alpha", "gsm.sim.operator.iso-country",
         "gsm.operator.numeric", "gsm.operator.alpha", "gsm.operator.iso-country")
@@ -44,9 +51,12 @@ internal object NetworkIdentityRules {
         return transformSlots(original, (0 until count).associateWith { profile })
     }
 
-    fun transformSlots(original: Map<String, String>, profiles: Map<Int, Profile>): Map<String, String> {
+    fun transformSlots(original: Map<String, String>, profiles: Map<Int, Profile>, preserveCallRegion: Boolean = false): Map<String, String> {
         if (profiles.isEmpty()) return original
         return properties.associateWith { key ->
+            // Property readers do not supply a caller UID. Keep the native per-slot location
+            // fields intact when the system dialer needs them to query number attribution.
+            if (preserveCallRegion && !key.endsWith(".alpha")) return@associateWith original.getValue(key)
             val prefix = if (key.startsWith("gsm.sim.")) "gsm.sim.operator" else "gsm.operator"
             val numeric = decode(original["$prefix.numeric"].orEmpty())
             val values = decode(original[key].orEmpty()).toMutableList()
@@ -92,20 +102,20 @@ internal class NetworkIdentityProperties(
     }
 
     /** One WAL transaction instead of persisting a native update and then another publication. */
-    fun refreshAfterNativeWrite(key: String, value: String, profiles: Map<Int, NetworkIdentityRules.Profile>) {
+    fun refreshAfterNativeWrite(key: String, value: String, profiles: Map<Int, NetworkIdentityRules.Profile>, preserveCallRegion: Boolean = false) {
         // Native set() has succeeded. Keep its genuine value even if transformation or storage
         // fails, so the caller's recovery path never restores an obsolete native value.
         records[key]?.let { records[key] = it.copy(original = value) }
-        refreshSlots(profiles)
+        refreshSlots(profiles, preserveCallRegion)
     }
 
     fun refresh(profile: NetworkIdentityRules.Profile?) {
         if (profile == null && !hasOverrides) return
         refreshWith { NetworkIdentityRules.transform(it, profile) }
     }
-    fun refreshSlots(profiles: Map<Int, NetworkIdentityRules.Profile>) {
+    fun refreshSlots(profiles: Map<Int, NetworkIdentityRules.Profile>, preserveCallRegion: Boolean = false) {
         if (profiles.isEmpty() && !hasOverrides) return
-        refreshWith { NetworkIdentityRules.transformSlots(it, profiles) }
+        refreshWith { NetworkIdentityRules.transformSlots(it, profiles, preserveCallRegion) }
     }
 
     private fun refreshWith(transform: (Map<String, String>) -> Map<String, String>) {

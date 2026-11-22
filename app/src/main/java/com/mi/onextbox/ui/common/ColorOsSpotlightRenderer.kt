@@ -30,6 +30,7 @@ internal class ColorOsSpotlightRenderer(
         /** COUISpotLightEffect.TYPE_OPAQUE_MEDIUM_2, used by SearchBarBackgroundView. */
         SearchBar,
 
+        Segment,
         DialogPrimary,
         DialogSecondary,
     }
@@ -76,6 +77,7 @@ internal class ColorOsSpotlightRenderer(
     private var positionX = 0.5f
     private var positionY = 0.5f
     private var extinguishing = false
+    val isLit: Boolean get() = shader != null && progress > 0f
 
     fun updateAppearance(style: Style = this.style, darkTheme: Boolean = this.darkTheme) {
         if (this.style == style && this.darkTheme == darkTheme) return
@@ -165,8 +167,8 @@ internal class ColorOsSpotlightRenderer(
             "u_lightingParams",
             DiffuseStrength,
             LightHeight,
-            Noise,
-            Dither,
+            params.noise,
+            params.dither,
         )
 
         paint.shader = runtimeShader
@@ -217,6 +219,15 @@ internal class ColorOsSpotlightRenderer(
             blendMode = if (darkTheme) BlendMode.PLUS else BlendMode.OVERLAY,
         )
 
+        Style.Segment -> Parameters(
+            endIntensity = if (darkTheme) 0.15f else 1f,
+            startRadius = 100f,
+            endRadius = 500f,
+            blendMode = if (darkTheme) BlendMode.PLUS else BlendMode.OVERLAY,
+            noise = if (darkTheme) .1f else .3f,
+            dither = if (darkTheme) 0f else 1f,
+        )
+
         Style.DialogPrimary -> Parameters(
             endIntensity = if (darkTheme) 0.8f else 0.6f,
             startRadius = 100f,
@@ -237,14 +248,14 @@ internal class ColorOsSpotlightRenderer(
         val startRadius: Float,
         val endRadius: Float,
         val blendMode: BlendMode,
+        val noise: Float = .08f,
+        val dither: Float = 0f,
     )
 
     private companion object {
         const val AmbientStrength = 0.4f
         const val DiffuseStrength = 0.4f
         const val LightHeight = 200f
-        const val Noise = 0.08f
-        const val Dither = 0f
 
         // COUISpringForce bounce/response pairs from ColorOS 17, converted to AndroidX
         // damping ratio and stiffness.

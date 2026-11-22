@@ -1,3 +1,5 @@
 Root cho phép ONextBox thực thi các lệnh với đặc quyền thiết bị cao nhất. LSPosed tải mã mô-đun bên trong Android, Giao diện người dùng hệ thống, Cài đặt, trình khởi chạy và các quy trình đã chọn khác.
 
 Cài đặt không chính xác, cập nhật hệ thống không tương thích hoặc xung đột với các mô-đun khác có thể làm suy yếu tính bảo mật hoặc gây mất ổn định. Chỉ cấp quyền truy cập trên thiết bị mà bạn được ủy quyền quản lý. Xem lại từng phạm vi trong LSPosed và thực hiện theo cách đã được thử nghiệm để vô hiệu hóa các mô-đun hoặc vào khôi phục.
+
+Mật độ hiển thị thay đổi kích thước của toàn bộ giao diện. Tắt tùy chọn để khôi phục mật độ trước đó. Khi chọn giữ DPI sau khi khởi động lại, ONextBox sẽ áp dụng lại lúc khởi động. Hiệu ứng kính và các chế độ máy ảnh có thể khác nhau tùy thiết bị và hệ thống.

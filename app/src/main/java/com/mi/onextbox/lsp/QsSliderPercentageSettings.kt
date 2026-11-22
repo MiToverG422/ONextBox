@@ -57,15 +57,17 @@ internal object QsSliderPercentageSettings {
             QsSliderPercentageRules.offset(it.getInt(OFFSET, QsSliderPercentageRules.DEFAULT_OFFSET)))
     }
 
+    fun enabledXposed() = HookConfigSnapshot.boolean(ENABLED, false) == true
+
     fun stateXposed() = State(
-        HookConfigSnapshot.boolean(ENABLED, false) == true,
+        enabledXposed(),
         QsSliderPercentageRules.size(HookConfigSnapshot.int(SIZE, QsSliderPercentageRules.DEFAULT_SIZE_SP)
             ?: QsSliderPercentageRules.DEFAULT_SIZE_SP),
         HookConfigSnapshot.long(COLOR),
         QsSliderPercentageRules.offset(HookConfigSnapshot.int(OFFSET, QsSliderPercentageRules.DEFAULT_OFFSET)
             ?: QsSliderPercentageRules.DEFAULT_OFFSET))
 
-    fun configurationTokenXposed(): Int? = stateXposed().takeIf { it.enabled }?.hashCode()
+    fun configurationTokenXposed(): Int? = if (enabledXposed()) stateXposed().hashCode() else null
 
     fun setEnabled(context: Context, enabled: Boolean) = save(context, ENABLED, State(enabled = enabled))
 

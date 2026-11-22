@@ -22,7 +22,7 @@ class SettingsHomeEntryContractTest {
         val page = source("ui/settings/SettingsMainPage").substringAfter("fun AppSettingsPage(")
             .substringBefore("private fun Material3ExpressiveAppearanceSettingsGroup(")
         assertEquals(1, Regex("SettingsHomeEntrySettingsGroup\\(\\)").findAll(page).count())
-        assertTrue(page.indexOf("SettingsHomeEntrySettingsGroup()") > page.indexOf("R.string.settings_section_display"))
+        assertTrue(page.indexOf("R.string.setting_display_theme") in 0 until page.indexOf("SettingsHomeEntrySettingsGroup()"))
         assertTrue(page.indexOf("SettingsHomeEntrySettingsGroup()") < page.indexOf("R.string.section_restore_backup"))
         val group = source("ui/settings/SettingsHomeEntrySettingsGroup")
         assertTrue(group.contains("SettingsSection(title = stringResource(R.string.settings_section_system_entry))"))

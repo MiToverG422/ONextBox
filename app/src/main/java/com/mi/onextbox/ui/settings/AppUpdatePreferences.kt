@@ -14,6 +14,7 @@ object AppUpdatePreferences {
     private const val KEY_BETA_PLAN = "update_beta_plan"
     private const val KEY_FEATURE_UPDATES_SEEN = "feature_updates_seen"
     private const val KEY_UPDATE_NOTIFICATIONS = "update_notifications"
+    private const val KEY_LAUNCH_UPDATE_PROMPT = "launch_update_prompt"
     private const val KEY_AUTO_SILENT_UPDATE = "auto_silent_update"
     private const val KEY_LAST_AUTO_SILENT_UPDATE_CHECK = "last_auto_silent_update_check"
     private const val AUTO_SILENT_UPDATE_INTERVAL_MS = 12 * 60 * 60 * 1000L
@@ -59,6 +60,13 @@ object AppUpdatePreferences {
             .edit()
             .putBoolean(KEY_UPDATE_NOTIFICATIONS, enabled)
             .apply()
+    }
+
+    internal fun getLaunchUpdatePromptEnabled(context: Context): Boolean =
+        preferences(context).getBoolean(KEY_LAUNCH_UPDATE_PROMPT, true)
+
+    internal fun setLaunchUpdatePromptEnabled(context: Context, enabled: Boolean) {
+        preferences(context).edit().putBoolean(KEY_LAUNCH_UPDATE_PROMPT, enabled).apply()
     }
 
     fun getAutomaticSilentUpdate(context: Context): Boolean {

@@ -300,7 +300,7 @@ internal object FluidCloudMaterialHooker {
     }
 
     private fun installFlashlightMaterial(loader: ClassLoader) = runCatching {
-        val flashlight = FluidCloudFlashlightMaterial()
+        val flashlight = FluidCloudFlashlightMaterial(::enabled, material::flashlightMix)
         val target = Reflect.findClass("com.oplus.systemui.qs.detail.flashlight.FlashlightCardBgDrawableUtils", loader)
         val method = target.getDeclaredMethod("create", View::class.java)
         ModernHookRegistry.installFast("$TAG:qs:flashlight", method, XposedInterface.Hooker { chain ->
@@ -312,7 +312,7 @@ internal object FluidCloudMaterialHooker {
             }
             runCatching {
                 if (original is Drawable && material.available(view) &&
-                    flashlight.apply(original) { material.flashlightMix(view.context) }) {
+                    flashlight.apply(original, view.context)) {
                     logged("qs", "Flashlight native corner/launch chain retained; notification color inputs applied")
                 }
             }.onFailure { diagnose("Cannot update control-center card", it) }

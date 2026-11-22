@@ -69,8 +69,9 @@ internal class LauncherFolderAnimationGeometry(loader: ClassLoader) {
         ModernHookRegistry.installFast("$key:factory", factory) { chain ->
             val host = chain.thisObject ?: return@installFast chain.proceed()
             val view = content.get(host) as? View ?: return@installFast chain.proceed()
-            if (active.get() != null || !accepts(view) ||
-                !SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.FolderLayout)) {
+            val customGrid = SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.FolderLayout) && accepts(view)
+            if (active.get() != null || (!customGrid &&
+                !SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.FolderIconSize))) {
                 return@installFast chain.proceed()
             }
             val page = currentPage.invoke(view) as? View ?: return@installFast chain.proceed()
@@ -96,10 +97,12 @@ internal class LauncherFolderAnimationGeometry(loader: ClassLoader) {
                 }
             }
             try {
-                replace(animationWidth, nativeFolder, width)
-                replace(animationHeight, nativeFolder, height)
+                if (customGrid) {
+                    replace(animationWidth, nativeFolder, width)
+                    replace(animationHeight, nativeFolder, height)
+                    if (verifier != null && itemCapacity > 0) replace(capacity, verifier, itemCapacity)
+                }
                 replace(animationIcon, nativeIcon, renderedIcon)
-                if (verifier != null && itemCapacity > 0) replace(capacity, verifier, itemCapacity)
                 active.set(Animation(host, referenceIcon, renderedIcon))
                 val signature = "${opening.getBoolean(host)}:$width:$height:$renderedIcon:$itemCapacity"
                 if (logged.add(signature)) HookLog.i("LauncherCustomization",

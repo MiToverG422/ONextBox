@@ -46,11 +46,18 @@ class AppUpdateSettingsContractTest {
         assertEquals(1, Regex("state.onBetaPlanEnabledChange\\(true\\)").findAll(page).count())
     }
 
-    @Test fun bothUiStylesUseFourJoinedRowsWithReadOnlyBuildTypeAndNoChannelSelector() {
+    @Test fun softwareUpdateSettingsHaveAnIndependentLaunchPromptAndReadOnlyBuildType() {
+        val preferences = source("ui/settings/AppUpdatePreferences.kt")
+        assertTrue(preferences.contains("getBoolean(KEY_UPDATE_NOTIFICATIONS, true)"))
+        assertTrue(preferences.contains("getBoolean(KEY_LAUNCH_UPDATE_PROMPT, true)"))
         val page = source("ui/settings/SettingsMainPage.kt").substringAfter("fun SoftwareUpdateAutoSettingsPage(")
             .substringBefore("private fun SoftwareUpdateMenuRow")
         assertTrue(page.contains("SettingsGroup"))
-        val buildRow = page.substringAfter("title = stringResource(R.string.about_update_build_type_title)")
+        val promptRow = page.substringAfter("title = stringResource(R.string.setting_launch_update_prompt)")
+            .substringBefore("SettingsDivider()")
+        assertTrue(promptRow.contains("checked = state.launchUpdatePromptEnabled"))
+        assertTrue(promptRow.contains("onCheckedChange = state.onLaunchUpdatePromptEnabledChange"))
+        val buildRow = page.substringAfter("title = stringResource(R.string.update_build_type_title)")
             .substringBefore("SettingsDivider()")
         assertTrue(page.contains("SettingsCardRow("))
         assertFalse(buildRow.contains("onClick"))
@@ -58,7 +65,6 @@ class AppUpdateSettingsContractTest {
         assertFalse(page.contains("SettingsUpdateChannelDropdown"))
         assertFalse(page.contains("about_update_channel_title"))
         assertFalse(page.contains("selectedChannel"))
-        assertFalse(page.contains("count = 5"))
     }
 
     @Test fun everyUpdateEntryPointUsesTheSameBetaPlanPreference() {

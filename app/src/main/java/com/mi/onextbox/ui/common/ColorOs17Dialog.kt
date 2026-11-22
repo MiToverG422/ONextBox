@@ -146,11 +146,12 @@ internal fun ColorOs17ConfirmDialog(
             onDismissRequest = onDismissRequest,
             onDismissFinished = onDismissFinished,
         ) {
+            val effects = LocalAppVisualEffects.current
             ColorOsDialogSystemBars(darkTheme, dimProgress)
             Box(Modifier.fillMaxWidth().graphicsLayer { shape = ColorOsDialogShape; clip = true }) {
-                key(darkTheme, density.density) {
+                key(darkTheme, density.density, effects.backgroundBlur, effects.outline) {
                     AndroidView(
-                        factory = { ColorOsDialogMaterialView(it, darkTheme, ColorOsDialogMaterialView.Kind.Panel) },
+                        factory = { ColorOsDialogMaterialView(it, darkTheme, ColorOsDialogMaterialView.Kind.Panel, effects = effects) },
                         modifier = Modifier.matchParentSize(),
                     )
                 }
@@ -387,10 +388,11 @@ internal fun ColorOs17Button(
             colors = ButtonDefaults.buttonColors(color = Color.Transparent, contentColor = Color.White),
         ) {
             Box(Modifier.fillMaxWidth().heightIn(min = minimumHeight).graphicsLayer { shape = CircleShape; clip = true }, contentAlignment = Alignment.Center) {
-                key(darkTheme, density.density, accent, primary) {
+                val effects = LocalAppVisualEffects.current
+                key(darkTheme, density.density, accent, primary, effects.backgroundBlur, effects.outline) {
                     AndroidView(
                         factory = {
-                            ColorOsDialogMaterialView(it, darkTheme, if (primary) ColorOsDialogMaterialView.Kind.Primary else ColorOsDialogMaterialView.Kind.Secondary, accent).also { holder.view = it }
+                            ColorOsDialogMaterialView(it, darkTheme, if (primary) ColorOsDialogMaterialView.Kind.Primary else ColorOsDialogMaterialView.Kind.Secondary, accent, effects).also { holder.view = it }
                         },
                         modifier = Modifier.matchParentSize(),
                     )

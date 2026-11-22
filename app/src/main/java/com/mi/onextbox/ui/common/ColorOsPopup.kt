@@ -2,7 +2,6 @@ package com.mi.onextbox.ui.common
 
 import android.graphics.drawable.Drawable
 import android.os.Build
-import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
 import androidx.compose.animation.core.Animatable
@@ -413,13 +412,15 @@ internal fun ColorOsPopupMiniatureMaterial(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    key(darkTheme, density.density) {
+    val outline = LocalAppVisualEffects.current.outline
+    key(darkTheme, density.density, outline) {
         AndroidView(
             factory = { context ->
                 ColorOsPopupMaterialView(
                     context = context,
                     darkTheme = darkTheme,
                     cornerRadiusDp = 19f,
+                    outlineEnabled = outline,
                 ).also { view ->
                     view.isForceDarkAllowed = false
                     view.setBackgroundColor(
@@ -441,6 +442,7 @@ private fun ColorOsPopupSurface(
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
+    val effects = LocalAppVisualEffects.current
     val darkTheme = COUITheme.colorScheme.background.luminance() < 0.5f
     val touchMotion = remember { PopupTouchMotionState() }
     val blurViewHolder = remember { PopupBlurViewHolder() }
@@ -455,10 +457,9 @@ private fun ColorOsPopupSurface(
     }
 
     val fallbackColor = if (darkTheme) Color(0xFF1E1E1E) else Color.White
-    val nativeShadowSupported = remember {
-        runCatching { Class.forName("com.oplus.view.OplusView") }.isSuccess
+    val nativeShadow = remember(darkTheme, density.density, effects.backgroundBlur, effects.outline) {
+        mutableStateOf(false)
     }
-    val nativeShadow = nativeShadowSupported
     val renderedScaleX = scaleProgress * touchMotion.scaleX
     val renderedScaleY = scaleProgress * touchMotion.scaleY
     val renderedOrigin = if (touchMotion.active) {
@@ -568,7 +569,7 @@ private fun ColorOsPopupSurface(
         },
     ) {
         Box(Modifier.matchParentSize().then(contentMotion).shadow(
-            elevation = if (nativeShadow) 0.dp else if (darkTheme) 12.dp else 30.dp,
+            elevation = if (nativeShadow.value) 0.dp else if (darkTheme) 12.dp else 30.dp,
             shape = ColorOsPopupSmoothShape,
             clip = false,
             ambientColor = Color.Black.copy(alpha = if (darkTheme) .30f else 48f / 255f),
@@ -579,22 +580,29 @@ private fun ColorOsPopupSurface(
         }.background(fallbackColor))
         // BackgroundBlurDrawable must stay out of Compose's offscreen alpha layer.
         // Its drawable, outline and edge alpha are synchronized separately.
-        key(darkTheme, density.density) {
+        key(darkTheme, density.density, effects.backgroundBlur, effects.outline) {
             AndroidView(
                 factory = { context ->
-                    ColorOsPopupMaterialView(context, darkTheme, nativeShadow = nativeShadow).also { blurView ->
+                    ColorOsPopupMaterialView(
+                        context, darkTheme,
+                        outlineEnabled = effects.outline, spotlightEnabled = effects.backgroundBlur,
+                    ).also { blurView ->
                         updateMaterialMotion(blurView)
                         blurViewHolder.view = blurView
-                        blurView.post {
-                            applyOplusPopupBlur(
-                                view = blurView,
-                                darkTheme = darkTheme,
-                                density = density.density,
-                            )
+                        if (effects.backgroundBlur) blurView.post {
+                            if (blurView.isAttachedToWindow && blurViewHolder.view === blurView &&
+                                applyOplusPopupBlur(blurView, darkTheme, density.density)
+                            ) {
+                                nativeShadow.value = blurView.applyNativeShadow()
+                            }
                         }
                     }
                 },
                 update = { view -> updateMaterialMotion(view) },
+                onRelease = { view ->
+                    nativeShadow.value = false
+                    if (blurViewHolder.view === view) blurViewHolder.view = null
+                },
                 modifier = Modifier.matchParentSize(),
             )
         }
@@ -618,9 +626,6 @@ private fun applyOplusPopupBlur(
     cornerRadiusDp: Float = ColorOsPopupCornerRadius.value,
 ): Boolean = runCatching {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
-    if (Settings.System.getInt(view.context.contentResolver, "system_material_blur_enable", 0) != 1) {
-        return false
-    }
     val windowManager = view.context.getSystemService(WindowManager::class.java)
     if (!windowManager.isCrossWindowBlurEnabled) return false
 

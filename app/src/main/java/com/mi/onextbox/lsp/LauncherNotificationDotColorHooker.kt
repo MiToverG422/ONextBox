@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import androidx.core.graphics.ColorUtils
 import com.mi.onextbox.lsp.LspConfig.LauncherFeature
@@ -33,12 +34,9 @@ internal object LauncherNotificationDotColorHooker {
     private const val FOLDER_ICON = "com.android.launcher3.folder.FlexibleFolderIcon"
     private const val SHORTCUT_CONTAINER = "com.android.launcher3.viewcontainer.ShortcutContainer"
 
-    // The red dot drawable is a process-wide singleton reached through an obfuscated lazy holder
-    // (f4.k -> Lht/c -> launcher_unread_notification_dot). It inflates from an XML <shape> to a
-    // GradientDrawable; the only other Lazy<Drawable> in f4 (ic_shadow_under_btv) is a PNG
-    // BitmapDrawable, so matching the type selects the dot unambiguously.
     @Volatile
-    private var dotDrawable: GradientDrawable? = null
+    private var dotDrawable: Drawable? = null
+    private var readDotDrawable: (() -> Drawable?)? = null
 
     @Volatile
     private var extractor: Any? = null
@@ -134,6 +132,22 @@ internal object LauncherNotificationDotColorHooker {
     private fun installDot(loader: ClassLoader) {
         val renderer = ModernReflect.findClass(OPLUS_DOT_RENDERER, loader)
         val draw = renderer.declaredMethods.single { it.name == "draw" && it.parameterTypes.size == 3 }
+        dotDrawable = null
+        readDotDrawable = null
+        if (SystemAdaptationDetector.current() != SystemAdaptationVersion.ColorOs16) {
+            val holder by lazy {
+                runCatching {
+                    val field = LauncherDexResolver.field(loader, "notification-dot-drawable") { dex ->
+                        requireNotNull(dex.getMethodData(draw)).usingFields.map { it.field }.distinctBy { it.descriptor }.single { data ->
+                            val member = data.getFieldInstance(loader)
+                            Modifier.isStatic(member.modifiers) && member.type.methods.any { it.name == "getValue" && it.parameterCount == 0 }
+                        }
+                    }
+                    field to field.type.getMethod("getValue")
+                }.onFailure { HookLog.w(TAG, "Unable to resolve the notification dot drawable", it) }.getOrNull()
+            }
+            readDotDrawable = { holder?.let { (field, getter) -> getter.invoke(field.get(null)) as? Drawable } }
+        }
         runCatching { ModernHookRuntime.requireModule().deoptimize(draw) }
         ModernHookRegistry.installCompat("$TAG:dot", draw, object : ScopedTintHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
@@ -269,7 +283,7 @@ internal object LauncherNotificationDotColorHooker {
             java.util.IdentityHashMap<MethodHookParam, MutableList<() -> Unit>>()
         )
 
-        protected fun tint(param: MethodHookParam, drawable: GradientDrawable?, color: Int) {
+        protected fun tint(param: MethodHookParam, drawable: Drawable?, color: Int) {
             drawable ?: return
             val original = drawable.colorFilter
             restores.getOrPut(param) { mutableListOf() }.add { drawable.colorFilter = original }
@@ -450,7 +464,7 @@ internal object LauncherNotificationDotColorHooker {
         runCatching { ModernReflect.setIntField(renderer, "mBadgeNumTextColor", textColor) }
     }
 
-    private fun resolveDotDrawable(loader: ClassLoader): GradientDrawable? {
+    private fun resolveDotDrawable(loader: ClassLoader): Drawable? {
         dotDrawable?.let { return it }
         dotDrawable = runCatching {
             if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16) {
@@ -458,15 +472,7 @@ internal object LauncherNotificationDotColorHooker {
                 val instance = cache.getDeclaredField("INSTANCE").get(null)
                 return@runCatching cache.getDeclaredMethod("getDotDrawable").invoke(instance) as? GradientDrawable
             }
-            val holder = ModernReflect.findClass("com.android.common.util.f4", loader)
-            holder.declaredFields.asSequence()
-                .filter { Modifier.isStatic(it.modifiers) && it.type.name == "ht.c" }
-                .firstNotNullOfOrNull { field ->
-                    runCatching {
-                        field.isAccessible = true
-                        ModernReflect.callMethod(field.get(null), "getValue") as? GradientDrawable
-                    }.getOrNull()
-                }
+            readDotDrawable?.invoke()
         }.getOrNull()
         return dotDrawable
     }

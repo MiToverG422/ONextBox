@@ -71,6 +71,14 @@ class OnboardingPreferencesTest {
         }
     }
 
+    @Test fun removedPersonalizationDraftResumesAtMigration() {
+        val store = MemoryPreferences(current() + ("draft_step" to "personalization"))
+        val snapshot = OnboardingPreferences.read(store.preferences)
+        assertEquals(DraftStep.Migration, snapshot.draftStep)
+        assertFalse(snapshot.completed)
+        assertTrue(snapshot.acceptedAgreements.isEmpty())
+    }
+
     @Test fun validPreAgreementDraftsAndCompletedUsersAreNotReset() {
         val language = MemoryPreferences(current(0L, DraftStep.Language))
         assertEquals(DraftStep.Language, OnboardingPreferences.read(language.preferences).draftStep)

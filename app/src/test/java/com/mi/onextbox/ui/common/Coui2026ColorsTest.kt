@@ -39,9 +39,10 @@ class Coui2026ColorsTest {
         val defaults = File(ui, "common/AppThemeMode.kt").readText()
         assertTrue(defaults.contains("prefs.getInt(PREF_KEY, ThemeColorSpec.Spec2021.ordinal)"))
         assertTrue(defaults.contains("prefs.getInt(PREF_KEY, ThemePaletteStyle.TonalSpot.ordinal)"))
-        val settings = File(ui, "settings/SettingsMainPage.kt").readText()
+        val settings = File(ui, "settings/DisplayThemeSettingsPage.kt").readText()
         assertTrue(settings.contains("enabled = appThemeColorSpec != ThemeColorSpec.Spec2026.ordinal"))
-        assertTrue(settings.contains("listOf(\"CMF\")"))
+        assertTrue(settings.contains("labels = if (appThemeColorSpec == ThemeColorSpec.Spec2026.ordinal) listOf(\"CMF\")"))
+        assertTrue(settings.contains("selectedIndex = if (appThemeColorSpec == ThemeColorSpec.Spec2026.ordinal) 0 else appThemePaletteStyle"))
         assertTrue(File(ui, "Root.kt").readText().contains("monetColors = monet2026Colors"))
     }
 }

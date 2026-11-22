@@ -26,6 +26,18 @@ class HotReloadResourceCoordinatorTest {
         assertEquals("module", hookResult(owner))
     }
 
+    @Test fun aFinishingGestureCanDeliverItsLastEventBeforeHandover() {
+        val owner = coordinator()
+        var checks = 0
+        owner.register("back", canReload = {
+            if (!owner.isRetiring) assertEquals("module", hookResult(owner))
+            ++checks >= 2
+        }, waitForGesture = true, capture = { "idle" })
+        assertEquals("idle", owner.prepare()["back"])
+        assertEquals(3, checks)
+        assertEquals("original", hookResult(owner))
+    }
+
     @Test fun resourceBecomingBusyAfterPreflightStillVetoesDetach() {
         val owner = coordinator()
         var checks = 0
@@ -490,7 +502,7 @@ class HotReloadResourceCoordinatorTest {
         assertEquals("module", hookResult(next))
     }
 
-    @Test fun failedPreparationDispatchStillResumesOwnersThroughMainDispatcher() {
+    @Test fun cancelledPreflightLeavesLiveHooksAvailableAndTheNextUpdateCanRetry() {
         var dispatches = 0
         var dispatching = false
         val owner = HotReloadResourceCoordinator { action ->
@@ -506,13 +518,20 @@ class HotReloadResourceCoordinatorTest {
             resumed = true
         })
         assertThrows(IllegalStateException::class.java) { owner.prepare() }
-        assertEquals(2, dispatches)
-        assertTrue(resumed)
+        assertEquals(1, dispatches)
+        assertFalse(resumed)
         assertFalse(owner.isRetiring)
+        assertEquals("module", hookResult(owner))
+        val saved = owner.prepare()
+        owner.cancelPreparation(saved)
+        assertTrue(resumed)
     }
 
     @Test fun failedResumeDispatchQuarantinesInsteadOfSilentlyLosingTimers() {
-        val owner = HotReloadResourceCoordinator { error("main unavailable") }
+        var dispatches = 0
+        val owner = HotReloadResourceCoordinator { action ->
+            if (++dispatches == 1) action() else error("main unavailable")
+        }
         var resumed = false
         owner.register("resource", resumeAfterRejection = { resumed = true })
         val thrown = assertThrows(IllegalStateException::class.java) { owner.prepare() }

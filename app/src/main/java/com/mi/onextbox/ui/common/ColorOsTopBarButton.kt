@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.key
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -54,7 +55,8 @@ fun ColorOsTopBarButton(
         COUITheme.colorScheme.surfaceContainer,
         COUITheme.colorScheme.surface,
     )
-    val nativeBlurEnabled = LocalChromeNativeBlurEnabled.current
+    val effects = LocalAppVisualEffects.current
+    val nativeBlurEnabled = effects.backgroundBlur && LocalChromeNativeBlurEnabled.current
     val maskColor = if (darkTheme) {
         androidx.compose.ui.graphics.Color(0x33FFFFFF)
     } else {
@@ -145,20 +147,23 @@ fun ColorOsTopBarButton(
             },
             contentAlignment = contentAlignment,
         ) {
-            if (background != null) background() else AndroidView(
-                factory = { context ->
-                    ColorOsTopBarMaterialView(
-                        context = context,
-                        darkTheme = darkTheme,
-                        fallbackColor = fallbackColor.toArgb(),
-                        nativeBlurEnabled = nativeBlurEnabled,
-                    )
-                },
-                update = { view ->
-                    view.updateAppearance(darkTheme, fallbackColor.toArgb(), nativeBlurEnabled)
-                },
-                modifier = Modifier.fillMaxSize(),
-            )
+            if (background != null) background() else key(effects.outline) {
+                AndroidView(
+                    factory = { context ->
+                        ColorOsTopBarMaterialView(
+                            context = context,
+                            darkTheme = darkTheme,
+                            fallbackColor = fallbackColor.toArgb(),
+                            nativeBlurEnabled = nativeBlurEnabled,
+                            outlineEnabled = effects.outline,
+                        )
+                    },
+                    update = { view ->
+                        view.updateAppearance(darkTheme, fallbackColor.toArgb(), nativeBlurEnabled)
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             Canvas(modifier = Modifier.fillMaxSize()) {
                 if (motion.maskProgress > 0.001f) {
                     drawCircle(
@@ -174,7 +179,7 @@ fun ColorOsTopBarButton(
                 spotlight.onSizeChanged(it.width, it.height)
             }) {
                 redraw.intValue
-                spotlight.draw(drawContext.canvas.nativeCanvas)
+                if (effects.backgroundBlur) spotlight.draw(drawContext.canvas.nativeCanvas)
             }
         }
     }

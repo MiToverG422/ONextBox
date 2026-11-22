@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -16,6 +17,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -30,6 +32,8 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -89,6 +93,16 @@ class PushMonitorUiTest {
         assertFilterScrollReset(AppUiStyle.ColorOs)
     }
 
+    @Test fun draggingTheSelectedFilterSwitchesToTheNextSegment() {
+        compose.setContent { MonitorTheme(AppUiStyle.ColorOs) { PushMonitorContent(apps, null, 0) } }
+        compose.onNode(filterMatcher(R.string.push_monitor_all)).performTouchInput {
+            swipe(center, center + Offset(width.toFloat(), 0f), durationMillis = 300L)
+        }
+        compose.onNode(filterMatcher(R.string.push_monitor_registered)).assertIsSelected()
+        compose.onNodeWithText("com.example.registered").assertExists()
+        compose.onNodeWithText("com.example.unregistered").assertDoesNotExist()
+    }
+
     private fun assertJoinedRows(style: AppUiStyle) {
         compose.setContent { MonitorTheme(style) { PushMonitorContent(apps, null, 0) } }
         compose.onNode(hasText("Registered app") and hasText("com.example.registered") and
@@ -98,7 +112,9 @@ class PushMonitorUiTest {
 
     private fun assertSearchAndFilter(style: AppUiStyle) {
         compose.setContent { MonitorTheme(style) { PushMonitorContent(apps, null, 0) } }
+        compose.onNode(filterMatcher(R.string.push_monitor_all)).assertIsSelected()
         compose.onNode(filterMatcher(R.string.push_monitor_unregistered)).performClick()
+        compose.onNode(filterMatcher(R.string.push_monitor_unregistered)).assertIsSelected()
         compose.onNodeWithText("com.example.unregistered").assertExists()
         compose.onNodeWithText("com.example.unknown").assertDoesNotExist()
         compose.onNodeWithText("com.example.registered").assertDoesNotExist()
@@ -146,6 +162,9 @@ class PushMonitorUiTest {
         val initialBounds = pinnedMatchers.map { matcher ->
             compose.onNode(matcher).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         }
+        assertTrue("Filter tabs should sit above the search field", initialBounds.drop(1).all {
+            it.bottom <= initialBounds.first().top
+        })
 
         val footer = context.getString(R.string.push_monitor_privacy)
         compose.onNode(hasScrollAction() and SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
@@ -232,7 +251,7 @@ class PushMonitorUiTest {
     }
 
     private fun filterMatcher(titleRes: Int) = hasText(context.getString(titleRes)) and
-        SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox)
+        SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
 
     private fun assertStatusTransition(style: AppUiStyle) {
         val rows = mutableStateOf(listOf(PushApp("com.example.refresh", "Refresh app", PushRegistration.Unknown)))

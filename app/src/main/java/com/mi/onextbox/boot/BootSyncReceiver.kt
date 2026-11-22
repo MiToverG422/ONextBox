@@ -24,11 +24,17 @@ class BootSyncReceiver : BroadcastReceiver() {
         }
 
         // Credential-encrypted selections are unavailable until the first unlock.
-        if (!context.getSystemService(UserManager::class.java).isUserUnlocked) return
+        val unlocked = context.getSystemService(UserManager::class.java).isUserUnlocked
+        if (!unlocked && action != Intent.ACTION_LOCKED_BOOT_COMPLETED) return
         val pendingResult = goAsync()
         val appContext = context.applicationContext
         worker.execute {
             try {
+                if (action == Intent.ACTION_BOOT_COMPLETED || action == Intent.ACTION_LOCKED_BOOT_COMPLETED) {
+                    runCatching { DisplayDensity.onBoot(appContext) }
+                        .onFailure { android.util.Log.w("ONextBox-DPI", "Boot density adjustment unavailable", it) }
+                }
+                if (!unlocked) return@execute
                 runCatching {
                     AppLogStore.initialize(appContext)
                     if (!ActivationGate.isActivated(appContext)) {

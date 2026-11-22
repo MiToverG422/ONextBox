@@ -58,6 +58,10 @@ internal fun BatteryFeaturesPage() {
     groups.forEach { (title, features) ->
         SettingsSection(title = stringResource(title))
         SettingsGroup {
+            if (title == R.string.battery_optimization_group) {
+                LowBatteryAutoSwitchRow()
+                SettingsDivider()
+            }
             features.forEachIndexed { index, feature ->
                 if (index > 0) SettingsDivider()
                 SettingsToggleRow(
@@ -93,4 +97,16 @@ internal fun BatteryFeaturesPage() {
             }
         }
     }
+}
+
+@Composable
+private fun LowBatteryAutoSwitchRow() {
+    val key = com.mi.onextbox.lsp.LowBatteryAutoSwitch.KEY
+    val context = LocalContext.current.applicationContext
+    val editor = rememberCustomization(setOf(key)) { com.mi.onextbox.lsp.LspPreferenceStore.readBoolean(it, key, false) }
+    SettingsToggleRow(title = stringResource(R.string.block_low_power_auto_super), summary = "",
+            checked = editor.state, interactionEnabled = editor.savingKey == null,
+            onCheckedChange = { enabled -> editor.save(key, enabled) {
+                com.mi.onextbox.lsp.ModernXposedPreferenceSync.setBooleanAndSync(context, key, enabled)
+            } })
 }

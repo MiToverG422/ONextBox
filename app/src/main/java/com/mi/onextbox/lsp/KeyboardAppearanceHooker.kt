@@ -5,11 +5,13 @@ import android.content.res.ColorStateList
 import android.graphics.*
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.StateListDrawable
+import android.graphics.drawable.TransitionDrawable
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.AdaptationHookGate
+import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import java.lang.reflect.Field
 import java.util.IdentityHashMap
 import java.util.concurrent.ConcurrentHashMap
@@ -22,21 +24,46 @@ internal object KeyboardAppearanceHooker {
     private val edgeCorners = ThreadLocal<Iterator<Float>?>()
     private val drawables = IdentityHashMap<Drawable, MutableMap<String, Drawable>>()
     private val paletteIds = ConcurrentHashMap<String, Int>()
-    private val renderedViews = WeakHashMap<View, Int>()
+    private val renderedViews = WeakHashMap<View, Any?>()
+    private val layers = KeyboardStyleLayers()
+    private val renderers = WeakHashMap<TransitionDrawable, StyledDrawable>()
     private val blurOwners = WeakHashMap<Any, Boolean>()
     private val hits = ConcurrentHashMap.newKeySet<String>()
+    private val toolbarControls = arrayOf("toolbar_bg_alpha", "toolbar_outline", "toolbar_no_shadow")
+    private val keyControls = arrayOf("monet", "key_corner", "key_alpha", "key_no_outline", "key_no_shadow")
+    private val edgeControls = arrayOf("monet", "key_corner", "key_no_outline", "key_no_shadow")
+    private val textControls = arrayOf("key_font_scale", "hide_t9_marks", "hide_qwerty_marks", "center_marks")
+    private val functionKeys = setOf("BACK", "SHIFT", "SPACE", "SYMBOL", "LEFTSYMBOL", "CLEAR")
     private data class Frame(val marks: Set<String>, val left: Float, val right: Float, val type: String)
     private val application by lazy { HostClassLookup.load("android.app.ActivityThread").getDeclaredMethod("currentApplication") }
-    private fun context() = application.invoke(null) as? Context
+    @Volatile private var appContext: Context? = null
+    private fun context() = appContext ?: (application.invoke(null) as? Context)?.also { appContext = it }
     private fun hit(name: String) { if (hits.add(name)) HookLog.i(TAG, "Applied $name") }
     private fun enabled(key: String) = KeyboardPictorialSettings.active("keyboard_$key")
     private fun number(key: String) = KeyboardPictorialSettings.number("keyboard_$key")
     private fun styled(original: Drawable, name: String, icon: Boolean): Drawable = synchronized(drawables) {
         if (drawables.size > 256) drawables.clear()
-        drawables.getOrPut(original) { mutableMapOf() }.getOrPut("$name:$icon") { StyledDrawable(original, name, icon) }
+        drawables.getOrPut(original) { mutableMapOf() }.getOrPut("$name:$icon") { layers.wrap(original, name, icon) }
     }
 
     fun hook(loader: ClassLoader, apkPath: String) {
+        // The first layer is also the native fallback while the hook gate is handing over.
+        val drawLayer = TransitionDrawable::class.java.getDeclaredMethod("draw", Canvas::class.java)
+        ModernHookRegistry.installFast("$TAG:style-layer", drawLayer) { chain ->
+            val wrapper = chain.thisObject as TransitionDrawable
+            if (!layers.owns(wrapper)) return@installFast chain.proceed()
+            val renderer = synchronized(renderers) {
+                renderers[wrapper] ?: layers.style(wrapper)?.let { key ->
+                    StyledDrawable(wrapper.getDrawable(0), key.substring(1), key.startsWith('i')).also { renderers[wrapper] = it }
+                }
+            } ?: return@installFast chain.proceed()
+            renderer.bounds = wrapper.bounds
+            renderer.state = wrapper.state
+            renderer.alpha = wrapper.getDrawable(1).alpha
+            renderer.colorFilter = wrapper.getDrawable(0).colorFilter
+            renderer.draw(chain.getArg(0) as Canvas)
+            null
+        }
         fun install(key: String, block: () -> Unit) = runCatching(block)
             .onFailure { HookLog.w(TAG, "$key unavailable", it) }
         install("theme") {
@@ -75,7 +102,7 @@ internal object KeyboardAppearanceHooker {
                     val original = chain.proceed() as? Drawable ?: return@installFast null
                     val name = chain.args.first { it is String } as String
                     when {
-                        original is StyledDrawable -> original
+                        layers.owns(original) -> original
                         enabled("monet") && (name.startsWith("bg") || name.startsWith("icon")) -> styled(original, name,
                             name.startsWith("icon") && !name.startsWith("iconHeaderToolItem"))
                         else -> original
@@ -144,7 +171,7 @@ internal object KeyboardAppearanceHooker {
                 val oldInteractive = interactiveBackground.getBoolean(owner)
                 val oldPersistent = persistentBackground.getBoolean(owner)
                 try {
-                    if (oldIcon != null && oldIcon !is StyledDrawable && (enabled("toolbar_icon_alpha") || enabled("monet")))
+                    if (oldIcon != null && !layers.owns(oldIcon) && (enabled("toolbar_icon_alpha") || enabled("monet")))
                         icon.set(chain.thisObject, styled(oldIcon, "iconHeaderItem", true))
                     if (enabled("monet")) {
                         val width = owner.width - owner.paddingLeft - owner.paddingRight
@@ -161,7 +188,7 @@ internal object KeyboardAppearanceHooker {
                         interactiveBackground.setBoolean(owner, false)
                         persistentBackground.setBoolean(owner, false)
                         hit("consistent-monet-toolbar")
-                    } else if (oldBackground != null && listOf("toolbar_bg_alpha", "toolbar_outline", "toolbar_no_shadow").any(::enabled)) {
+                    } else if (oldBackground != null && toolbarControls.any(::enabled)) {
                         val state = StateListDrawable()
                         state.addState(intArrayOf(), styled(oldBackground, "bgHeaderItem", false))
                         background.set(chain.thisObject, state)
@@ -206,7 +233,7 @@ internal object KeyboardAppearanceHooker {
                 val setShadow = effectClass.getMethod("setShadowEnable", Boolean::class.javaPrimitiveType)
                 fun nativeRadius() = 8f * (context()?.resources?.displayMetrics?.density ?: 1f)
                 ModernHookRegistry.installFast("$TAG:material-edges", edges) { chain ->
-                    if (listOf("monet", "key_corner", "key_no_outline", "key_no_shadow").none(::enabled)) return@installFast chain.proceed()
+                    if (edgeControls.none(::enabled)) return@installFast chain.proceed()
                     val nativeRadius = nativeRadius()
                     val radii = (chain.args[1] as List<*>).filterNotNull().mapNotNull { key ->
                         val width = right.getInt(key) - left.getInt(key)
@@ -247,14 +274,13 @@ internal object KeyboardAppearanceHooker {
                 ModernHookRegistry.installFast("$TAG:key-ambient-shadow", ambient) { chain ->
                     if (enabled("key_no_shadow") || enabled("monet")) null else chain.proceed()
                 }
-                renderer.declaredMethods.forEach { runCatching { com.mi.onextbox.lsp.compat.ModernHookRuntime.requireModule().deoptimize(it) } }
             }
             install("key-text") {
                 check(mark.type == String::class.java && left.type == Int::class.javaPrimitiveType && right.type == Int::class.javaPrimitiveType)
                 keyboardType
                 labelMaps
                 draws.forEach { draw -> ModernHookRegistry.installFast("$TAG:key-draw:$draw", draw) { chain ->
-                    if (listOf("key_font_scale", "hide_t9_marks", "hide_qwerty_marks", "center_marks").none(::enabled)) return@installFast chain.proceed()
+                    if (textControls.none(::enabled)) return@installFast chain.proceed()
                     val old = frames.get()
                     val key = chain.args[1]
                     val rawMark = mark.get(key)?.toString().orEmpty()
@@ -267,12 +293,12 @@ internal object KeyboardAppearanceHooker {
                 check(code.type == Int::class.javaPrimitiveType)
                 ModernHookRegistry.installFast("$TAG:key-background", background) { chain ->
                     val original = chain.proceed() as? Drawable ?: return@installFast null
-                    if (listOf("monet", "key_corner", "key_alpha", "key_no_outline", "key_no_shadow").none(::enabled)) original
+                    if (keyControls.none(::enabled)) original
                     else {
                         val name = codes[code.getInt(chain.args[0])].orEmpty()
                         val kind = when {
                             name.contains("ENTER") -> "keyEnter"
-                            name in setOf("BACK", "SHIFT", "SPACE", "SYMBOL", "LEFTSYMBOL", "CLEAR") -> "keyFunction"
+                            name in functionKeys -> "keyFunction"
                             else -> "key"
                         }
                         hit("key-background")
@@ -291,11 +317,18 @@ internal object KeyboardAppearanceHooker {
                     }
                     val paint = chain.args[3] as Paint
                     val size = paint.textSize
-                    val args = chain.args.toTypedArray()
                     try {
-                        if (enabled("key_font_scale")) { paint.textSize = size * number("key_font_scale") / 100f; hit("key-font-scale:${number("key_font_scale")}") }
-                        if (secondary && enabled("center_marks")) { args[1] = (frame.left + frame.right - paint.measureText(word)) / 2f; hit("center-secondary") }
-                        chain.proceed(args)
+                        if (enabled("key_font_scale")) {
+                            val scale = number("key_font_scale")
+                            paint.textSize = size * scale / 100f
+                            hit("key-font-scale:$scale")
+                        }
+                        if (secondary && enabled("center_marks")) {
+                            val args = chain.args.toTypedArray()
+                            args[1] = (frame.left + frame.right - paint.measureText(word)) / 2f
+                            hit("center-secondary")
+                            chain.proceed(args)
+                        } else chain.proceed()
                     } finally { paint.textSize = size }
                 }
             }
@@ -303,11 +336,9 @@ internal object KeyboardAppearanceHooker {
                 val refresh = renderer.getDeclaredMethod("setDrawRefresh", Boolean::class.javaPrimitiveType).apply { isAccessible = true }
                 ModernHookRegistry.installFast("$TAG:cached-keys", renderer.getDeclaredMethod("onDraw", Canvas::class.java)) { chain ->
                     val owner = chain.thisObject as View
-                    val token = KeyboardPictorialSettings.keyboard.fold(1) { hash, option ->
-                        hash * 31 + if (!KeyboardPictorialSettings.active(option.key)) 0 else if (option.max > option.min) KeyboardPictorialSettings.number(option.key) + 1 else 1
-                    }
+                    val token = HookConfigSnapshot.identity
                     synchronized(renderedViews) {
-                        if (renderedViews.put(owner, token) != token) refresh.invoke(owner, true)
+                        if (renderedViews.put(owner, token) !== token) refresh.invoke(owner, true)
                     }
                     chain.proceed()
                 }
@@ -328,8 +359,26 @@ internal object KeyboardAppearanceHooker {
                 result
             }
         }
-        HotReloadLifecycle.register("$TAG:frame", canReload = { synchronized(drawables) { drawables.isEmpty() } },
-            detach = { frames.remove(); edgeCorners.remove(); synchronized(drawables) { drawables.clear() }; synchronized(renderedViews) { renderedViews.clear() }; synchronized(blurOwners) { blurOwners.clear() } })
+        HotReloadLifecycle.register("$TAG:frame",
+            capture = { arrayOf(layers.capture(), synchronized(renderedViews) { renderedViews.keys.toTypedArray() },
+                synchronized(blurOwners) { blurOwners.keys.toTypedArray() }) },
+            detach = {
+                frames.remove()
+                edgeCorners.remove()
+                synchronized(drawables) { drawables.clear() }
+                synchronized(renderers) { renderers.clear() }
+                synchronized(renderedViews) { renderedViews.clear() }
+                synchronized(blurOwners) { blurOwners.clear() }
+            },
+            restore = { saved ->
+                if (saved is Array<*>) {
+                    (saved.getOrNull(0) as? Array<*>)?.let(layers::restore)
+                    (saved.getOrNull(1) as? Array<*>)?.filterIsInstance<View>()?.forEach { it.invalidate() }
+                    synchronized(blurOwners) {
+                        (saved.getOrNull(2) as? Array<*>)?.filterNotNull()?.forEach { blurOwners[it] = true }
+                    }
+                }
+            })
     }
 
     private fun systemColor(role: String): Int? = runCatching {
@@ -353,30 +402,33 @@ internal object KeyboardAppearanceHooker {
             }.getOrDefault(Color.TRANSPARENT)
         }
         override fun draw(canvas: Canvas) {
-            if (enabled("monet") || icon && enabled("toolbar_icon_alpha") || name.startsWith("bgHeader") && listOf("toolbar_bg_alpha", "toolbar_outline", "toolbar_no_shadow").any(::enabled)) hit("drawable:$name")
+            val monet = enabled("monet")
+            if (monet || icon && enabled("toolbar_icon_alpha") || name.startsWith("bgHeader") && toolbarControls.any(::enabled)) hit("drawable:$name")
             val key = name.startsWith("key")
             val toolbar = name == "bgHeaderItem"
             val themedSurface = !icon && !key && !toolbar
-            val controls = when {
-                icon -> listOf("monet", "toolbar_icon_alpha")
-                key -> listOf("monet", "key_corner", "key_alpha", "key_no_outline", "key_no_shadow")
-                toolbar -> listOf("monet", "toolbar_bg_alpha", "toolbar_outline", "toolbar_no_shadow")
-                else -> listOf("monet")
+            val active = monet || when {
+                icon -> enabled("toolbar_icon_alpha")
+                key -> keyControls.any(::enabled)
+                toolbar -> toolbarControls.any(::enabled)
+                else -> false
             }
-            if (!AdaptationHookGate.isBoundProfileActive() || HotReloadLifecycle.isRetiring || controls.none(::enabled)) {
+            if (!AdaptationHookGate.isBoundProfileActive() || HotReloadLifecycle.isRetiring || !active) {
                 val previous = Rect(original.bounds)
                 try { original.bounds = bounds; original.draw(canvas) } finally { original.bounds = previous }
                 return
             }
-            val monet = enabled("monet")
-            val alpha = when {
+            val percent = when {
                 icon && name == "iconHeaderItem" && enabled("toolbar_icon_alpha") -> number("toolbar_icon_alpha")
                 toolbar && enabled("toolbar_bg_alpha") -> number("toolbar_bg_alpha")
                 key && enabled("key_alpha") -> number("key_alpha")
                 else -> 100
-            } * extraAlpha / 100
+            }
             val flat = !icon && (monet && (!themedSurface || KeyboardAppearanceRules.rectangularKeyboardBackground(name)) || key && (enabled("key_corner") || enabled("key_no_outline") || enabled("key_no_shadow")) || toolbar && enabled("toolbar_no_shadow"))
-            val saved = canvas.saveLayerAlpha(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), alpha)
+            // The native layer already forwards host alpha to the original when drawing it.
+            val alpha = percent * (if (flat) extraAlpha else 255) / 100
+            val saved = if (alpha == 255) canvas.save() else canvas.saveLayerAlpha(
+                bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat(), alpha)
             try {
                 if (flat) {
                     val selected = state.any { it == android.R.attr.state_pressed || it == android.R.attr.state_selected || it == android.R.attr.state_checked }
@@ -417,6 +469,7 @@ internal object KeyboardAppearanceHooker {
                 }
                 if (toolbar && enabled("toolbar_outline")) {
                     paint.color = systemColor("outline_variant") ?: Color.GRAY
+                    if (!flat) paint.alpha = paint.alpha * extraAlpha / 255
                     paint.style = Paint.Style.STROKE; paint.strokeWidth = context()?.resources?.displayMetrics?.density ?: 1f
                     val r = min(bounds.width(), bounds.height()) * .5f
                     canvas.drawRoundRect(RectF(bounds).apply { inset(paint.strokeWidth, paint.strokeWidth) }, r, r, paint)
@@ -432,12 +485,5 @@ internal object KeyboardAppearanceHooker {
         override fun getPadding(padding: Rect) = original.getPadding(padding)
         override fun onStateChange(state: IntArray): Boolean = original.setState(state)
         override fun isStateful() = original.isStateful
-        override fun getConstantState(): ConstantState? = original.constantState?.let { native ->
-            object : ConstantState() {
-                override fun newDrawable(): Drawable = StyledDrawable(native.newDrawable().mutate(), name, icon)
-                override fun newDrawable(resources: android.content.res.Resources?): Drawable = StyledDrawable(native.newDrawable(resources).mutate(), name, icon)
-                override fun getChangingConfigurations() = native.changingConfigurations
-            }
-        }
     }
 }

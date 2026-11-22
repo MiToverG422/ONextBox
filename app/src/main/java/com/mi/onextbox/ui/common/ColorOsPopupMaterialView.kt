@@ -124,7 +124,8 @@ internal class ColorOsPopupMaterialView(
     context: Context,
     private val darkTheme: Boolean,
     private val cornerRadiusDp: Float = 28f,
-    private val nativeShadow: Boolean = false,
+    private val outlineEnabled: Boolean = true,
+    private val spotlightEnabled: Boolean = true,
 ) : View(context) {
     private val density = resources.displayMetrics.density
     private var transitionAlpha = 1f
@@ -179,37 +180,30 @@ internal class ColorOsPopupMaterialView(
         invalidateOutline()
     }
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (nativeShadow) {
-            val applied = runCatching {
-                val oplusViewClass = Class.forName("com.oplus.view.OplusView")
-                val oplusView = oplusViewClass.getConstructor(View::class.java).newInstance(this)
-                oplusViewClass.getMethod("setOverrideLightSourceGeometry",
-                    Float::class.javaPrimitiveType, Float::class.javaPrimitiveType,
-                    Float::class.javaPrimitiveType, Float::class.javaPrimitiveType,
-                    Float::class.javaPrimitiveType).invoke(oplusView,
-                    -1f, (-200f * density).toInt().toFloat(), (10000f * density).toInt().toFloat(),
-                    (2000f * density).toInt().toFloat(), 0f)
-                elevation = (180f * density).toInt().toFloat()
-                outlineAmbientShadowColor = 0x30000000
-                outlineSpotShadowColor = 0x30000000
-                true
-            }.getOrDefault(false)
-            if (!applied) {
-                elevation = 30f * density
-                outlineSpotShadowColor = 0x80000000.toInt()
-            }
-            (parent as? ViewGroup)?.apply {
-                clipChildren = false
-                clipToPadding = false
-            }
+    fun applyNativeShadow(): Boolean = runCatching {
+        val oplusViewClass = Class.forName("com.oplus.view.OplusView")
+        val oplusView = oplusViewClass.getConstructor(View::class.java).newInstance(this)
+        oplusViewClass.getMethod("setOverrideLightSourceGeometry",
+            Float::class.javaPrimitiveType, Float::class.javaPrimitiveType,
+            Float::class.javaPrimitiveType, Float::class.javaPrimitiveType,
+            Float::class.javaPrimitiveType).invoke(oplusView,
+            -1f, (-200f * density).toInt().toFloat(), (10000f * density).toInt().toFloat(),
+            (2000f * density).toInt().toFloat(), 0f)
+        outlineAmbientShadowColor = 0x30000000
+        outlineSpotShadowColor = 0x30000000
+        (parent as? ViewGroup)?.apply {
+            clipChildren = false
+            clipToPadding = false
         }
-    }
+        elevation = (180f * density).toInt().toFloat()
+        true
+    }.getOrDefault(false)
 
     override fun onDetachedFromWindow() {
         spotlight.cancel()
+        if (blurCornerUpdater != null) background = null
         blurCornerUpdater = null
+        elevation = 0f
         super.onDetachedFromWindow()
     }
 
@@ -241,15 +235,15 @@ internal class ColorOsPopupMaterialView(
     }
 
     fun spotlightDown(x: Float, y: Float) {
-        spotlight.onDown(x, y)
+        if (spotlightEnabled) spotlight.onDown(x, y)
     }
 
     fun spotlightMove(x: Float, y: Float) {
-        spotlight.onMove(x, y)
+        if (spotlightEnabled) spotlight.onMove(x, y)
     }
 
     fun spotlightUp(x: Float, y: Float) {
-        spotlight.onUp(x, y)
+        if (spotlightEnabled) spotlight.onUp(x, y)
     }
 
     fun cancelSpotlight() {
@@ -259,12 +253,12 @@ internal class ColorOsPopupMaterialView(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (!canvas.isHardwareAccelerated || width <= 0 || height <= 0) return
-        edgeShader?.let { shader ->
+        if (outlineEnabled) edgeShader?.let { shader ->
             edgePaint.shader = shader
             canvas.drawPaint(edgePaint)
         }
         // RoundFrameLayout draws its moving light after ShadowEdge and before child content.
-        spotlight.draw(canvas)
+        if (spotlightEnabled) spotlight.draw(canvas)
     }
 
     private fun updateShaderUniforms(width: Float, height: Float) {

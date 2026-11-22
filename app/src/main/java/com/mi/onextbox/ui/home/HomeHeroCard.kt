@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,7 +38,10 @@ import androidx.compose.ui.unit.sp
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspStatus
 import com.mi.onextbox.ui.common.AppUiTokens
+import com.mi.onextbox.ui.common.LocalColorOsMonetEnabled
+import com.mi.onextbox.ui.common.LocalPreviewTextPlaceholders
 import com.mi.onextbox.ui.common.ONextBoxLogo
+import com.mi.onextbox.ui.common.PreviewTextLine
 import com.mi.onextbox.ui.common.rememberHapticLongPress
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.squircle.squircleSurface
@@ -52,9 +57,12 @@ fun HomeHeroCard(
 ) {
 
     val hapticLongPress = rememberHapticLongPress()
-    val appVersionName = rememberAppVersionName()
-    val deviceMarketName = rememberDeviceMarketName()
+    val redactText = LocalPreviewTextPlaceholders.current
+    val appVersionName = if (redactText) "" else rememberAppVersionName()
+    val deviceMarketName = if (redactText) "" else rememberDeviceMarketName()
+    val themed = rootGranted && lsposedReady && !LocalColorOsMonetEnabled.current
     val heroColor = when {
+        themed -> COUITheme.colorScheme.primary
         rootGranted && lsposedReady -> Color(0xFF147DF5)
         lsposedStatus == LspStatus.CHECKING -> Color(0xFF64758A)
         !rootGranted || lsposedStatus == LspStatus.DISABLED -> Color(0xFFD9443F)
@@ -104,7 +112,18 @@ fun HomeHeroCard(
 
 @Composable
 internal fun HomeHeroCardContent(appVersionName: String, deviceMarketName: String) {
+    if (LocalPreviewTextPlaceholders.current) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalArrangement = Arrangement.Center) {
+            PreviewTextLine(142.dp, 24.dp, Color.White.copy(alpha = .90f))
+            Spacer(Modifier.height(12.dp))
+            PreviewTextLine(87.dp, 8.dp, Color.White.copy(alpha = .66f))
+            Spacer(Modifier.height(7.dp))
+            PreviewTextLine(154.dp, 8.dp, Color.White.copy(alpha = .55f))
+        }
+        return
+    }
     val beta = appVersionName.contains("beta", ignoreCase = true)
+    val detailColor = Color.White.copy(alpha = 0.92f)
     Layout(
         modifier = Modifier.fillMaxSize(),
         content = {
@@ -120,7 +139,7 @@ internal fun HomeHeroCardContent(appVersionName: String, deviceMarketName: Strin
                 Text(
                     text = stringResource(R.string.about_version, appVersionName),
                     style = COUITheme.textStyles.title3,
-                    color = Color.White.copy(alpha = 0.92f),
+                    color = detailColor,
                     fontWeight = FontWeight.Normal,
                     fontSize = 15.sp,
                     maxLines = 1,
@@ -130,7 +149,7 @@ internal fun HomeHeroCardContent(appVersionName: String, deviceMarketName: Strin
                 Text(
                     text = deviceMarketName,
                     style = COUITheme.textStyles.title3,
-                    color = Color.White.copy(alpha = 0.92f),
+                    color = detailColor,
                     fontWeight = FontWeight.Normal,
                     fontSize = 15.sp,
                     maxLines = 1,

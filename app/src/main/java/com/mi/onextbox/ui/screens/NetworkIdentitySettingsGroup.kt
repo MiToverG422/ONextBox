@@ -72,6 +72,13 @@ internal fun NetworkIdentitySettingsGroup() {
                 interactionEnabled = !saving, hasDividerAbove = above, hasDividerBelow = below,
                 onCheckedChange = { if (it) confirming = true else save(state.copy(enabled = false)) })
         }
+        row(NetworkIdentitySettings.PRESERVE_CALL_REGION, state.enabled) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.network_identity_preserve_call_region),
+                summary = stringResource(R.string.network_identity_preserve_call_region_summary),
+                checked = state.preserveCallRegion, interactionEnabled = !saving,
+                hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { save(state.copy(preserveCallRegion = it)) })
+        }
         (0..1).forEach { index ->
         val slot = state.slot(index)
         val choices = choicesBySlot.getValue(index)

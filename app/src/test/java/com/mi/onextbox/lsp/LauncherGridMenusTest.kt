@@ -19,6 +19,8 @@ class LauncherGridMenusTest {
         fun recycler(): Any? = null
     }
 
+    class NativeController(@JvmField val menu: NativeMenu)
+
     object NativeMethods {
         var withoutWords = false
         var migrating = false
@@ -72,6 +74,25 @@ class LauncherGridMenusTest {
         assertFalse(menu.visible[1].selected)
         assertEquals(6, menu.visible[0].textRows)
         assertEquals(7, menu.visible[0].wordlessRows)
+    }
+
+    @Test fun inlinedMenuReusesTheItemsCreatedByTheLauncher() {
+        val menu = stockMenu()
+        val custom = NativeItem().apply { textRows = 7; wordlessRows = 8 }
+        menu.all.add(custom)
+        val inlined = LauncherGridTargets(Array<Any?>(LauncherGridTargets.SCHEMA_SIZE) { targets.values.getOrNull(it) }.apply {
+            this[4] = null
+            this[22] = NativeController::class.java.getDeclaredField("menu")
+        })
+        assertSame(menu, inlined.adapter(NativeController(menu)))
+        val inlinedMenus = LauncherGridMenus(inlined, { state }, { allowed })
+        inlinedMenus.creating(LauncherGrid(6, 10)) {
+            inlinedMenus.update(menu, inlinedMenus.pinned(menu)!!, false, LauncherGrid(4, 6))
+        }
+        assertEquals(2, menu.all.size)
+        assertEquals(2, menu.visible.size)
+        assertSame(custom, menu.visible[1])
+        assertEquals(LauncherGrid(4, 6), inlinedMenus.selected(menu, false))
     }
 
     @Test fun switchingLabelModeKeepsTheSelectedPairedCustomOption() {

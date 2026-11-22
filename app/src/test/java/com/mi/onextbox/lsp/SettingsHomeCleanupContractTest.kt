@@ -46,17 +46,18 @@ class SettingsHomeCleanupContractTest {
         assertTrue(source("ui/screens/SettingsFeaturesPages").contains("SettingsHomeCleanupGroup()"))
     }
 
-    @Test fun bothFeaturesAreSearchableAndSwitchableFromEnabledFeatures() {
+    @Test fun allCleanupFeaturesAreSearchableAndSwitchableFromEnabledFeatures() {
         listOf("FeatureSearchIndex", "EnabledFeatureCatalog", "EnabledFeatureActions").forEach { file ->
             val text = source("ui/screens/$file")
-            listOf("settings_home_hide_account_title", "settings_home_hide_update_title")
+            listOf("settings_home_hide_account_title", "settings_home_hide_guide_title", "settings_home_hide_update_title")
                 .forEach { assertTrue("$file: $it", text.contains(it)) }
         }
     }
 
-    @Test fun allLocalesHaveTheFiveStringsAndTheChineseDescriptionsMatchTheRequestedShortText() {
+    @Test fun allLocalesHaveTheCleanupStringsAndTheChineseDescriptionsAreConcise() {
         val keys = setOf("settings_home_cleanup_group", "settings_home_hide_account_title", "settings_home_hide_account_summary",
-            "settings_home_hide_update_title", "settings_home_hide_update_summary")
+            "settings_home_hide_update_title", "settings_home_hide_update_summary",
+            "settings_home_hide_guide_title", "settings_home_hide_guide_summary")
         listOf("values", "values-zh-rCN", "values-zh-rTW", "values-b+yue+Hant", "values-ja", "values-ja-rCN",
             "values-ko", "values-vi", "values-ru").forEach { locale ->
             val nodes = DocumentBuilderFactory.newInstance().newDocumentBuilder()
@@ -70,6 +71,7 @@ class SettingsHomeCleanupContractTest {
             if (locale == "values-zh-rCN") {
                 fun value(key: String) = strings.single { it.attributes.getNamedItem("name").nodeValue == key }.textContent
                 assertEquals("隐藏系统设置首页的账号卡片", value("settings_home_hide_account_summary"))
+                assertEquals("隐藏系统设置首页账号卡片下方的安全建议", value("settings_home_hide_guide_summary"))
                 assertEquals("隐藏系统设置首页的更新提醒", value("settings_home_hide_update_summary"))
             }
         }

@@ -26,14 +26,19 @@ internal object MediaUnlockHooker {
                 else MediaUnlockTargets.gallery(it, loader)
             }
             val reached = ConcurrentHashMap.newKeySet<String>()
+            val modes = if (app == MediaUnlockCatalog.App.Camera) CameraModeSupport(loader) else null
+            val unavailable = ConcurrentHashMap.newKeySet<String>()
             fun result(key: String?): Boolean? {
                 val desired = MediaUnlockSettings.overrideValue(app, key) ?: return null
+                if (desired && key != null && modes?.allowOverride(key) == false) {
+                    if (unavailable.add(key)) HookLog.i(tag, "Retained factory setting for $key; native capture stream not reported")
+                    return null
+                }
                 if (key != null && reached.add(key)) HookLog.i(tag, "Native eligibility reached: $key=$desired")
                 return desired
             }
             if (app == MediaUnlockCatalog.App.Camera) {
                 targets.getValue("readers").forEachIndexed { index, method ->
-                    check(MediaUnlockTargets.cameraReader(method))
                     ModernHookRegistry.installFast("${prefix}reader:$index", method, XposedInterface.Hooker { chain ->
                         result(chain.getArg(0) as? String) ?: chain.proceed()
                     })

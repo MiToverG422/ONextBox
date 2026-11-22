@@ -42,10 +42,10 @@ internal object AospBackPanelHooker {
                 ModernHookRuntime.requireModule().deoptimize(it)
             }
             HotReloadLifecycle.register(stateKey,
-                capture = { arrayOf(targets, native.snapshot()) },
+                // A new generation binds the live panel on its first accepted edge gesture.
+                capture = { arrayOf(targets) },
                 detach = { native.detach() },
-                restore = { native.restoreSnapshot((it as? Array<*>)?.getOrNull(1)) },
-                canReload = { native.canReload() },
+                canReload = { native.canReload() }, waitForGesture = true,
             )
             install(0) { chain ->
                 val detector = chain.thisObject ?: return@install chain.proceed()
@@ -53,12 +53,40 @@ internal object AospBackPanelHooker {
                 val handlers = chain.args.getOrNull(1) as? Map<*, *> ?: return@install chain.proceed()
                 native.dispatch(detector, event, handlers) { chain.proceed() }
             }
+            if (BackGestureSettings.xposed().selectedHaptics == 1) {
+                runCatching { installColorOsFeedback(loader, targets[6] as Method, key, native) }
+                    .onFailure { HookLog.w(TAG, "ColorOS feedback adapter unavailable", it) }
+            }
             HookLog.i(TAG, "Native back panel visual routing installed")
         }.onFailure {
             runCatching { owner?.detach() }
             listOf(0, 1, 2, 3, 4, 7).forEach { ModernHookRegistry.unhook("$key:$it") }
             HookLog.w(TAG, "Native back panel unavailable, stock gestures retained", it)
         }
+    }
+
+    private fun installColorOsFeedback(loader: ClassLoader, updateArrowState: Method, key: String, native: NativeVisuals) {
+        val panel = loader.loadClass("com.android.systemui.navigationbar.gestural.BackPanel")
+        val helper = loader.loadClass("com.oplus.systemui.navigationbar.gesture.VibrationHelper")
+        val instance = helper.getDeclaredMethod("getInstance", android.content.Context::class.java)
+        val perform = helper.getDeclaredMethod("onPerformHapticFeedback")
+        val feedback = View::class.java.getDeclaredMethod("performHapticFeedback", Int::class.javaPrimitiveType)
+        ModernHookRuntime.requireModule().deoptimize(updateArrowState)
+        ModernHookRegistry.installFast("$key:panelFeedback", feedback, XposedInterface.Hooker { chain ->
+            val view = chain.thisObject as? View ?: return@Hooker chain.proceed()
+            if (!panel.isInstance(view) || !native.ownsFeedback(view)) return@Hooker chain.proceed()
+            when (chain.args.firstOrNull()) {
+                android.view.HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE -> {
+                    if (!view.isAttachedToWindow || !view.isHapticFeedbackEnabled ||
+                        android.provider.Settings.System.getInt(view.context.contentResolver,
+                            android.provider.Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 0) return@Hooker false
+                    runCatching { perform.invoke(instance.invoke(null, view.context)); true }
+                        .getOrElse { chain.proceed() }
+                }
+                android.view.HapticFeedbackConstants.GESTURE_THRESHOLD_DEACTIVATE -> false
+                else -> chain.proceed()
+            }
+        })
     }
 
     private class Gesture(
@@ -101,18 +129,22 @@ internal object AospBackPanelHooker {
         private val panels = WeakHashMap<Any, Binding>()
         private val frame = ThreadLocal<Frame?>()
         @Volatile private var broken = false
+        private var reportedVisual = false
 
-        private fun own(panel: Any, stock: Any? = null, lastEvent: Long = 0L, destroyed: Boolean = false) {
+        fun ownsFeedback(view: View): Boolean = synchronized(lock) {
+            !broken && panels.any { (panel, binding) ->
+                !binding.destroyed && callback.get(panel) === binding.visual && panelView.invoke(panel) === view
+            }
+        }
+
+        private fun own(panel: Any) {
             synchronized(lock) {
-                panels[panel]?.let {
-                    check(callback.get(panel) === it.visual) { "Native panel callback changed" }
-                    return
-                }
-                val original = stock ?: checkNotNull(callback.get(panel))
-                check(callback.get(panel) === original && !Proxy.isProxyClass(original.javaClass))
+                val original = checkNotNull(callback.get(panel))
+                if (panels[panel]?.visual === original) return
+                check(!Proxy.isProxyClass(original.javaClass))
                 val visual = Proxy.newProxyInstance(callback.type.classLoader, arrayOf(callback.type),
                     AospBackPanelVisualCallback)
-                val binding = Binding(original, visual, lastEvent, destroyed)
+                val binding = Binding(original, visual, 0L)
                 callback.set(panel, visual)
                 panels[panel] = binding
             }
@@ -178,6 +210,10 @@ internal object AospBackPanelHooker {
                         send(gesture.panel, gesture.down)
                         send(gesture.panel, event)
                         gesture.fedOnStart = true
+                        if (!reportedVisual) {
+                            reportedVisual = true
+                            HookLog.i(TAG, "AOSP back indicator attached on edge gesture")
+                        }
                     }
                 }.onFailure {
                     abort(gesture)
@@ -294,26 +330,11 @@ internal object AospBackPanelHooker {
             )
         }
 
-        fun snapshot(): Array<Array<Any>> = synchronized(lock) {
-            panels.entries.map { arrayOf<Any>(it.key, it.value.stock, it.value.lastEvent, it.value.destroyed) }.toTypedArray()
-        }
-
         fun detach() = synchronized(lock) {
             check(gestures.isEmpty()) { "Back gesture is active" }
             check(panels.keys.all { state.get(it) === gone }) { "Back panel is animating" }
             panels.forEach { (panel, binding) -> restoreCallback(panel, binding) }
             panels.clear()
-        }
-
-        fun restoreSnapshot(saved: Any?): Unit = synchronized(lock) {
-            if (!LspConfig.isAospBackPanelEnabledXposed()) return@synchronized
-            (saved as? Array<*>)?.forEach { entry ->
-                val row = entry as? Array<*> ?: return@forEach
-                val panel = row.getOrNull(0) ?: return@forEach
-                val stock = row.getOrNull(1) ?: return@forEach
-                if (motion.declaringClass.isInstance(panel)) own(panel, stock,
-                    row.getOrNull(2) as? Long ?: 0L, row.getOrNull(3) as? Boolean ?: false)
-            }
         }
 
         private fun restoreCallback(panel: Any, binding: Binding) {
@@ -322,10 +343,14 @@ internal object AospBackPanelHooker {
 
         private fun releaseIdlePanels(keepActive: Boolean) = synchronized(lock) {
             val now = SystemClock.uptimeMillis()
-            val retired = panels.entries.filter { (panel, binding) ->
-                (!keepActive || binding.destroyed) && state.get(panel) === gone && now - binding.lastEvent >= 700L
-            }.map { it.key }
-            retired.forEach { panel -> panels.remove(panel)?.let { restoreCallback(panel, it) } }
+            val entries = panels.entries.iterator()
+            while (entries.hasNext()) {
+                val (panel, binding) = entries.next()
+                if ((!keepActive || binding.destroyed) && state.get(panel) === gone && now - binding.lastEvent >= 700L) {
+                    restoreCallback(panel, binding)
+                    entries.remove()
+                }
+            }
         }
     }
 

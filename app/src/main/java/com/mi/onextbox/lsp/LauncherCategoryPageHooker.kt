@@ -86,13 +86,13 @@ internal object LauncherCategoryPageHooker {
                         .onFailure { HookLog.w(TAG, "Failed to close category entry", it) }
                     return@install chain.proceed()
                 }
-                if (failedGestures[activity] == true) {
+                failedGestures[activity]?.let { claimed ->
                     if (event.actionMasked == MotionEvent.ACTION_DOWN) failedGestures.remove(activity)
                     else {
                         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
                             failedGestures.remove(activity)
                         }
-                        return@install true
+                        return@install if (claimed) true else chain.proceed()
                     }
                 }
                 if (unavailable[activity] == true) return@install chain.proceed()
@@ -112,8 +112,10 @@ internal object LauncherCategoryPageHooker {
                         .onFailure { HookLog.w(TAG, "Failed to restore native state", it) }
                     runCatching { session?.dispose() }
                     sessions.remove(activity)
-                    unavailable[activity] = true
-                    if (claimed) failedGestures[activity] = true
+                    if (error is NoSuchMethodException || error is NoSuchFieldException || error is LinkageError) {
+                        unavailable[activity] = true
+                    }
+                    failedGestures[activity] = claimed
                     HookLog.w(TAG, "Category entry unavailable, keeping native gestures", error)
                     claimed
                 }
@@ -271,6 +273,9 @@ internal object LauncherCategoryPageHooker {
                 }
             }
             val appsClass = ModernReflect.findClass("com.android.launcher3.allapps.OplusLauncherAllAppsContainerView", loader)
+            install(appsClass.getDeclaredMethod("resetToMainPageWhenSupportCategory")) { chain ->
+                if (isPanelView(chain.thisObject)) null else chain.proceed()
+            }
             appsClass.declaredMethods.first { it.name == "getAppsList" }.let { method ->
                 install(method) { chain ->
                     if (api.creatingPanel.get() == true) chain.getArg(1)?.let { api.panelStores[it] = true }
@@ -601,6 +606,7 @@ internal object LauncherCategoryPageHooker {
         val createAnimation = stateManager.getDeclaredMethod("createAnimationToNewWorkspace", baseState, config)
         val goToState = stateManager.getDeclaredMethod("goToState", baseState, Boolean::class.javaPrimitiveType)
         val getState = stateManager.getDeclaredMethod("getState")
+        val reapply = LauncherCategoryStateReapply(stateManager)
         val setFraction = playback.getDeclaredMethod("setPlayFraction", Float::class.javaPrimitiveType)
         val dispatchStart = playback.getDeclaredMethod("dispatchOnStart")
         val dispatchCancel = playback.getDeclaredMethod("dispatchOnCancel")
@@ -611,6 +617,11 @@ internal object LauncherCategoryPageHooker {
                 .getDeclaredMethod("isAppClosing", ModernReflect.findClass("com.android.launcher3.Launcher", loader))
         }.onFailure { HookLog.w(TAG, "Category return animation query unavailable", it) }.getOrNull()
         private var touchQueryWarningShown = false
+        private val recentsGesture = ModernReflect.findClassIfExists("com.android.quickstep.views.OplusRecentsViewImpl", loader)
+            ?.methods?.firstOrNull { it.name == "isGustureActive" && it.parameterCount == 0 }
+        private val appAnimation = appClosing?.let { query ->
+            runCatching { query.declaringClass.getDeclaredMethod("isAppAnimRunning", query.parameterTypes[0]) }.getOrNull()
+        }
 
         fun isPanelTouch(activity: Activity): Boolean {
             if (!activity.hasWindowFocus()) return false
@@ -618,7 +629,8 @@ internal object LauncherCategoryPageHooker {
                 LauncherCategoryPageRules.isPanelTouch(true,
                     ModernReflect.callMethod(activity, "isResumed") as? Boolean,
                     appClosing?.invoke(null, activity) as? Boolean,
-                    ModernReflect.callMethod(ModernReflect.callMethod(activity, "getOverviewPanel"), "isGustureActive") as? Boolean,
+                    if (recentsGesture != null) recentsGesture.invoke(ModernReflect.callMethod(activity, "getOverviewPanel")) as? Boolean
+                    else appAnimation?.invoke(null, activity) as? Boolean,
                 )
             }.getOrElse {
                 // Retain the return target if a state query fails instead of closing the category page.
@@ -650,9 +662,7 @@ internal object LauncherCategoryPageHooker {
             }
             HookLog.d(TAG, "Standard loader prepared: apps=${installed.size}")
             val palette = ModernReflect.findClass("com.android.launcher3.allapps.colorfilter.DrawerIconPalette", loader)
-            val executors = ModernReflect.findClassIfExists("ej.a", loader)
-            val executor = (executors?.getDeclaredField("a")?.apply { isAccessible = true }
-                ?: LauncherDynamicTargets.executor(loader)).get(null) as Executor
+            val executor = LauncherDynamicTargets.executor(loader).get(null) as Executor
             pendingPaletteJobs.incrementAndGet()
             try {
                 executor.execute {
@@ -960,7 +970,7 @@ internal object LauncherCategoryPageHooker {
                 return Direction.Enter
             }
             if (state === allApps && openedFromEdge && !isSearching() &&
-                ModernReflect.callMethod(apps, "isShowingCategoryTab") == true
+                showingCategoryTab()
             ) {
                 val category = ModernReflect.callMethod(apps, "getCategoryRecyclerView") as? View ?: return null
                 if (category.contains(event) && !nestedTouchTarget(category, event, skipPager = true)) return Direction.Exit
@@ -981,8 +991,7 @@ internal object LauncherCategoryPageHooker {
             return api.getState.invoke(manager) === normal && atEntryEdge() &&
                 (LauncherCategoryPageRules.entryPage(page, next, count, panels, workspace.layoutDirection == View.LAYOUT_DIRECTION_RTL) >= 0 ||
                     LauncherCategoryPageRules.isRightmostPage(entryPage, count, panels, workspace.layoutDirection == View.LAYOUT_DIRECTION_RTL)) &&
-                ModernReflect.callMethod(drawer, "needShowCategoryTab") == true &&
-                ModernReflect.callMethod(drawer, "getCategoryRecyclerView") != null
+                ModernReflect.callMethod(drawer, "needShowCategoryTab") == true
         }
 
         private fun begin(pending: Direction) {
@@ -1076,7 +1085,7 @@ internal object LauncherCategoryPageHooker {
                     animator = null
                     runCatching { finish(active, complete) }.onFailure {
                         HookLog.w(TAG, "Failed to complete category transition", it)
-                        abort()
+                        abort(closeLibrary = true)
                     }
                     runCatching { completion?.onAnimationEnd(animation) }
                         .onFailure { HookLog.w(TAG, "Category home completion unavailable", it) }
@@ -1105,7 +1114,7 @@ internal object LauncherCategoryPageHooker {
                 api.dispatchEnd.invoke(playback)
                 playback = null
                 api.goToState.invoke(manager, if (showCategories) allApps else normal, false)
-                ModernReflect.callMethod(manager, "reapplyState")
+                api.reapply.invoke(manager)
                 check(api.getState.invoke(manager) === if (showCategories) allApps else normal) {
                     "Native launcher rejected category destination"
                 }
@@ -1139,7 +1148,7 @@ internal object LauncherCategoryPageHooker {
 
         fun handleBack(): Boolean {
             if (!openedFromEdge || ownsGesture || api.getState.invoke(manager) !== allApps || isSearching() ||
-                api.topView(activity) != null || ModernReflect.callMethod(apps, "isShowingCategoryTab") != true
+                api.topView(activity) != null || !showingCategoryTab()
             ) return false
             direction = Direction.Exit
             begin(Direction.Exit)
@@ -1171,7 +1180,7 @@ internal object LauncherCategoryPageHooker {
                 changingState = true
                 try {
                     api.goToState.invoke(manager, allApps, false)
-                    ModernReflect.callMethod(manager, "reapplyState")
+                    api.reapply.invoke(manager)
                     panel?.prepareIconReturn()
                 } finally { changingState = false }
                 return
@@ -1281,12 +1290,12 @@ internal object LauncherCategoryPageHooker {
                     api.dispatchEnd.invoke(playback)
                 }
                 playback = null
-                if (restoreState && (active != null || closeLibrary && openedFromEdge)) {
+                if (restoreState && (active != null || closeLibrary && (openedFromEdge || hasActivePanel))) {
                     val restoreDesktop = active == Direction.Enter || closeLibrary
                     api.goToState.invoke(manager, if (restoreDesktop) normal else allApps, false)
-                    ModernReflect.callMethod(manager, "reapplyState")
                     if (restoreDesktop) panel?.deactivate()
                     else ModernReflect.callMethod(apps, "switchToTab", 1)
+                    api.reapply.invoke(manager)
                 }
                 if (active == Direction.Enter || closeLibrary) {
                     panel?.deactivate()
@@ -1329,6 +1338,9 @@ internal object LauncherCategoryPageHooker {
         }
 
         private fun isSearching(): Boolean = ModernReflect.callMethod(apps, "hasEnterSearchMode") == true
+
+        private fun showingCategoryTab() = ModernReflect.callMethod(apps, "needShowCategoryTab") == true &&
+            ModernReflect.callMethod(apps, "isPersonalTab") == false
 
         private fun nativeView(name: String): View? {
             val id = apps.resources.getIdentifier(name, "id", "com.android.launcher")

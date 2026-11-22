@@ -1,5 +1,6 @@
 package com.mi.onextbox.lsp
 
+import android.view.MotionEvent
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernReflect
 import io.github.libxposed.api.XposedInterface
@@ -12,6 +13,7 @@ internal object SystemUiAodHooker {
         "com.android.systemui.keyguard.OplusBlackScreenGestureEvent"
     private const val BRIGHTNESS_MIN = 0
     private const val BRIGHTNESS_MAX = 255
+    private const val DOZE_SENSOR_SINGLE_TAP = 9
 
     private val brightnessArgs = ThreadLocal.withInitial<Array<Any?>> { arrayOfNulls(2) }
     private val singleClickCallbackClassNames = listOf(
@@ -224,13 +226,15 @@ internal object SystemUiAodHooker {
             installed++
         }
 
+        val transitionMethods = hookSingleTapWakePaths(classLoader)
+        installed += transitionMethods
         HookLog.i(
             TAG,
             if (installed > 0) {
                 "SystemUI AOD API102 hooks installed in $packageName: " +
                     "init=${dozeServiceMethods.size}, running=${runningMethods.size}, " +
                     "panoramic=${panoramicMethods.size}, panoramicInit=${panoramicInitMethods.size}, singleClick=$singleClickMethods, " +
-                    "doubleTapCompat=${doubleTapCompatibilityMethods.size}"
+                    "doubleTapCompat=${doubleTapCompatibilityMethods.size}, transitionTap=$transitionMethods"
             } else {
                 "SystemUI AOD hooks not matched in $packageName"
             },
@@ -238,4 +242,41 @@ internal object SystemUiAodHooker {
         return installed
     }
 
+    private fun hookSingleTapWakePaths(loader: ClassLoader?): Int {
+        var count = 0
+        fun install(owner: String, name: String, result: Class<*>, vararg args: Class<*>, hook: XposedInterface.Hooker) {
+            val type = ModernReflect.findClassIfExists(owner, loader) ?: return
+            val method = type.declaredMethods.firstOrNull {
+                it.name == name && it.returnType == result && it.parameterTypes.contentEquals(args)
+            } ?: return
+            runCatching { ModernHookRegistry.installFast("aod:tap:$owner#$name", method, hook) }
+                .onSuccess { count++ }
+                .onFailure { HookLog.w(TAG, "Cannot hook $owner#$name", it) }
+        }
+
+        val gesture = "com.oplus.systemui.keyguard.gesture.OplusDoubleClickSleep"
+        val noninteractive = ModernReflect.findClassIfExists(gesture, loader)?.declaredMethods?.firstOrNull {
+            it.name == "isNoninteractive" && it.parameterCount == 0 && it.returnType == Boolean::class.javaPrimitiveType &&
+                java.lang.reflect.Modifier.isStatic(it.modifiers)
+        }
+        if (noninteractive != null) {
+            install("$gesture\$OnDoubleClickListener", "onSingleTapConfirmed", java.lang.Boolean.TYPE, MotionEvent::class.java) { chain ->
+                val event = chain.getArg(0) as? MotionEvent
+                if (event != null && event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER &&
+                    LspConfig.isAodSingleClickBlockEnabledXposed() &&
+                    runCatching { noninteractive.invoke(null) == true }.getOrDefault(false)
+                ) true else chain.proceed()
+            }
+        }
+        install("com.android.systemui.power.domain.interactor.PowerInteractor", "wakeUpIfDozing", Void.TYPE,
+            String::class.java, Integer.TYPE) { chain ->
+            if (chain.getArg(0) == "PULSING_SINGLE_TAP" && LspConfig.isAodSingleClickBlockEnabledXposed()) null
+            else chain.proceed()
+        }
+        install("com.android.systemui.doze.DozeTriggers", "gentleWakeUp", Void.TYPE, Integer.TYPE) { chain ->
+            if (chain.getArg(0) == DOZE_SENSOR_SINGLE_TAP && LspConfig.isAodSingleClickBlockEnabledXposed()) null
+            else chain.proceed()
+        }
+        return count
+    }
 }

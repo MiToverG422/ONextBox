@@ -36,7 +36,7 @@ internal object SideVolumePercentageHooker {
                 it.parameterTypes.contentEquals(arrayOf(Canvas::class.java)) } } ?: return else type
         val observers = QsCornerViewObservers("volume:percentage-views",
             content = { drawing(it).style.refresh() },
-            configurationToken = SideVolumePercentageSettings::configurationTokenXposed,
+            configurationToken = { SideVolumePercentageSettings.configurationTokenXposed() },
         ) { it.invalidate(); true }
         type.declaredConstructors.forEach { constructor ->
             ModernHookRegistry.installCompat("$TAG:observe:${constructor.toGenericString()}", constructor,

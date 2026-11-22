@@ -13,7 +13,21 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.suqi8.coui.kmp.basic.CircularProgressIndicator
 import io.github.suqi8.coui.kmp.basic.Icon
+import io.github.suqi8.coui.kmp.icon.COUIIcons
+import io.github.suqi8.coui.kmp.icon.extended.Refresh
 import io.github.suqi8.coui.kmp.theme.COUITheme
+
+@Composable
+internal fun ColorOsRefreshIconButton(contentDescription: String, onClick: () -> Unit) {
+    ColorOsTopBarButton(onClick = onClick) {
+        Icon(
+            imageVector = COUIIcons.Refresh,
+            contentDescription = contentDescription,
+            tint = COUITheme.colorScheme.onSurface,
+            modifier = Modifier.size(24.dp),
+        )
+    }
+}
 
 @Composable
 internal fun ColorOsRefreshButton(refreshing: Boolean, label: String, onClick: () -> Unit) {

@@ -13,8 +13,12 @@ internal object PowerIndicatorSettings {
     const val TEMPERATURE_UNIT = "${PREFIX}temperature_unit"
     const val FOLLOW_FONT_WEIGHT = "${PREFIX}follow_font_weight"
     const val ONLY_CHARGING = "${PREFIX}only_charging"
+    const val SOURCE_ANDROID_UA = 0
+    const val SOURCE_SYSFS_MA = 1
+    const val SOURCE_SYSFS_UA = 2
+    const val SOURCE_ANDROID_MA = 3
     data class State(val enabled: Boolean = false, val interval: Int = 2000,
-        val decimals: Int = 1, val scale: Int = 0, val source: Int = 0,
+        val decimals: Int = 1, val scale: Int = 0, val source: Int = SOURCE_ANDROID_UA,
         val hideCharging: Boolean = true, val fontSize: Int = 10,
         val hideDischargeSign: Boolean = false, val showTemperature: Boolean = false,
         val temperatureUnit: Int = 0, val followFontWeight: Boolean = true,
@@ -22,7 +26,7 @@ internal object PowerIndicatorSettings {
     fun state(context: Context): State {
         val p = LspPreferenceStore.prefs(context)
         return normalize(State(p.getBoolean(ENABLED, false), p.getInt("${PREFIX}interval", 2000),
-            p.getInt("${PREFIX}decimals", 1), p.getInt("${PREFIX}scale", 0), p.getInt("${PREFIX}source", 0),
+            p.getInt("${PREFIX}decimals", 1), p.getInt("${PREFIX}scale", 0), p.getInt("${PREFIX}source", SOURCE_ANDROID_UA),
             p.getBoolean("${PREFIX}hide_charging", true), p.getInt("${PREFIX}font", 10),
             p.getBoolean(HIDE_DISCHARGE_SIGN, false), p.getBoolean(SHOW_TEMPERATURE, false),
             p.getInt(TEMPERATURE_UNIT, 0), p.getBoolean(FOLLOW_FONT_WEIGHT, true), p.getBoolean(ONLY_CHARGING, false)))
@@ -31,7 +35,7 @@ internal object PowerIndicatorSettings {
         HookConfigSnapshot.int("${PREFIX}interval", 2000) ?: 2000,
         HookConfigSnapshot.int("${PREFIX}decimals", 1) ?: 1,
         HookConfigSnapshot.int("${PREFIX}scale", 0) ?: 0,
-        HookConfigSnapshot.int("${PREFIX}source", 0) ?: 0,
+        HookConfigSnapshot.int("${PREFIX}source", SOURCE_ANDROID_UA) ?: SOURCE_ANDROID_UA,
         HookConfigSnapshot.boolean("${PREFIX}hide_charging", true) != false,
         HookConfigSnapshot.int("${PREFIX}font", 10) ?: 10,
         HookConfigSnapshot.boolean(HIDE_DISCHARGE_SIGN, false) == true,
@@ -40,7 +44,8 @@ internal object PowerIndicatorSettings {
         HookConfigSnapshot.boolean(FOLLOW_FONT_WEIGHT, true) != false,
         HookConfigSnapshot.boolean(ONLY_CHARGING, false) == true))
     fun normalize(s: State) = s.copy(interval = s.interval.coerceIn(500, 10000), decimals = s.decimals.coerceIn(0, 2),
-        scale = s.scale.coerceIn(0, 2), source = s.source.coerceIn(0, 2), fontSize = s.fontSize.coerceIn(8, 16),
+        scale = s.scale.coerceIn(0, 2), source = if (s.source == SOURCE_ANDROID_MA) SOURCE_ANDROID_MA
+            else s.source.coerceIn(SOURCE_ANDROID_UA, SOURCE_SYSFS_UA), fontSize = s.fontSize.coerceIn(8, 16),
         temperatureUnit = s.temperatureUnit.coerceIn(0, 1), hideCharging = s.hideCharging && !s.onlyCharging)
     fun setEnabled(context: Context, enabled: Boolean) {
         check(LspPreferenceStore.prefs(context).edit().putBoolean(ENABLED, enabled).commit())
@@ -61,14 +66,37 @@ internal object PowerIndicatorSettings {
 }
 
 internal object PowerIndicatorRules {
+    private val wholeVolts = 2L..20L
+    private val validMillivolts = 2000L..20000L
+
     fun visibleForPower(plugged: Boolean, hideCharging: Boolean, onlyCharging: Boolean): Boolean =
         if (onlyCharging) plugged else !hideCharging || !plugged
 
-    // API current: microamps; explicit vendor sysfs mode may be milliamps. Never guess from magnitude.
+    fun usesSysfs(source: Int): Boolean =
+        source == PowerIndicatorSettings.SOURCE_SYSFS_MA || source == PowerIndicatorSettings.SOURCE_SYSFS_UA
+
+    private fun normalizeVoltageMv(raw: Long): Long? = when (raw) {
+        in wholeVolts -> raw * 1000
+        in validMillivolts -> raw
+        else -> (raw / 1000).takeIf { it in validMillivolts }
+    }
+
+    fun voltageMillivolts(apiRaw: Long, source: Int, readSysfs: () -> Long?): Long? {
+        val apiMv = normalizeVoltageMv(apiRaw)
+        val useSysfs = usesSysfs(source)
+        if (!useSysfs && apiMv != null && apiRaw !in wholeVolts) return apiMv
+
+        // A whole-volt broadcast can use the more precise sysfs reading when they agree to within a volt.
+        return readSysfs()?.let(::normalizeVoltageMv)?.takeIf { sysfsMv ->
+            useSysfs || apiMv == null || abs(sysfsMv - apiMv) < 1000
+        } ?: apiMv
+    }
+
     fun watts(current: Long, voltageMv: Long, source: Int, scale: Int): Double? {
         if (current == Long.MIN_VALUE || current == Int.MIN_VALUE.toLong() || current == Long.MAX_VALUE ||
-            voltageMv !in 2000..20000) return null
-        val amps = abs(current.toDouble()) / if (source == 1) 1000.0 else 1_000_000.0
+            voltageMv !in validMillivolts) return null
+        val milliamps = source == PowerIndicatorSettings.SOURCE_SYSFS_MA || source == PowerIndicatorSettings.SOURCE_ANDROID_MA
+        val amps = abs(current.toDouble()) / if (milliamps) 1000.0 else 1_000_000.0
         val multiplier = when (scale) { 1 -> 2.0; 2 -> 0.5; else -> 1.0 }
         return (amps * voltageMv / 1000.0 * multiplier).takeIf { it.isFinite() && it in 0.0..200.0 }
     }

@@ -44,19 +44,28 @@ internal class SoftLightCouiPass(private val active: () -> Boolean, private val 
                 (SoftLightSelection.white(args[2] as Int) || SoftLightSelection.white(args[4] as Int))) return@Hooker chain.proceed()
             val strength = p[SoftLightGlassSettings.Parameter.STRENGTH]
             if (strength == 0f) return@Hooker chain.proceed()
-            args[1] = radius*(1f+strength*(.86f*p[SoftLightGlassSettings.Parameter.BLUR]-1f))
+            val density = view.resources.displayMetrics.density
+            val baseRadius = if (p.liquid) minOf(radius, 8f * density) else radius*.86f
+            val targetRadius = p.plugin?.let { it.blur(p.fallbackSurface) * density }
+                ?: (radius + strength*(baseRadius*p[SoftLightGlassSettings.Parameter.BLUR]-radius))
+            args[1] = p.blurRadius(targetRadius, density)
             for (index in listOf(2,4)) {
                 val color = args[index] as Int
                 val alpha = Color.alpha(color)
-                if (alpha in 1..254) args[index] = (color and 0x00ffffff) or ((alpha*(1f-.28f*strength)).roundToInt() shl 24)
+                val attenuation = if (p.liquid) .60f else .28f
+                if (alpha in 1..254) args[index] = (color and 0x00ffffff) or ((alpha*(1f-attenuation*strength)).roundToInt() shl 24)
             }
-            if (p.dimmingOverlay != 0f) {
+            if (p.plugin != null || p.dimmingOverlay != 0f) {
                 val index = when (BlendMode.SRC_OVER) {
                     args[5] -> 4
                     args[3] -> 2
                     else -> null
                 }
-                if (index != null) args[index] = p.adjustMixColor(args[index] as Int)
+                if (index != null) {
+                    val config = android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                    val dark = view.resources.configuration.uiMode and config == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                    args[index] = p.plugin?.nativeTint(p.fallbackSurface, dark) ?: p.adjustMixColor(args[index] as Int)
+                }
             }
             used()
             chain.proceed(args)

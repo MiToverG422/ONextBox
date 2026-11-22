@@ -92,7 +92,7 @@ class SoftwareUpdatePageContractTest {
         return (0 until nodes.length).associate { index ->
             val node = nodes.item(index)
             node.attributes.getNamedItem("name").nodeValue to node.textContent
-        }.filterKeys { it.startsWith("ota_") }
+        }.filterKeys { it.startsWith("ota_") && !it.startsWith("ota_art_") }
     }
 
     private fun file(path: String): File = listOf(File("src/$path"), File("app/src/$path")).first { it.isFile }

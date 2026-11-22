@@ -1,9 +1,11 @@
 package com.mi.onextbox.ui.layout
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
@@ -16,11 +18,20 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.viewinterop.AndroidView
 import com.mi.onextbox.ui.common.ColorOsAppBarBlurView
+import com.mi.onextbox.ui.common.ColorOsBottomBarMaterialView
+import com.mi.onextbox.ui.common.ColorOsToolbarGlass
+import com.mi.onextbox.ui.common.LocalAppVisualEffects
+import io.github.suqi8.coui.kmp.basic.NavigationBar
+import io.github.suqi8.coui.kmp.basic.NavigationBarDisplayMode
+import io.github.suqi8.coui.kmp.blur.BlendColorEntry
+import io.github.suqi8.coui.kmp.blur.BlurBlendMode
+import io.github.suqi8.coui.kmp.blur.BlurColors
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
 import io.github.suqi8.coui.kmp.blur.ProgressiveBlur
 import io.github.suqi8.coui.kmp.blur.isRuntimeShaderSupported
 import io.github.suqi8.coui.kmp.blur.rememberLayerBackdrop
 import io.github.suqi8.coui.kmp.blur.progressiveTextureBlur
+import io.github.suqi8.coui.kmp.blur.textureBlur
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -30,14 +41,74 @@ import kotlin.math.roundToInt
 internal val LocalChromeNativeBlurEnabled = compositionLocalOf { true }
 
 @Composable
-fun rememberChromeBlurBackdrop(enabled: Boolean): LayerBackdrop? {
-    if (!isRuntimeShaderSupported()) return null
+fun rememberChromeBlurBackdrop(): LayerBackdrop? {
+    if (!LocalAppVisualEffects.current.backgroundBlur || !isRuntimeShaderSupported()) return null
     val surfaceColor = COUITheme.colorScheme.surface
-    val backdrop = rememberLayerBackdrop {
+    return rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
     }
-    return if (enabled) backdrop else null
+}
+
+@Composable
+internal fun BlurredStandardNavigationBar(
+    backdrop: LayerBackdrop?,
+    mode: NavigationBarDisplayMode,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val color = COUITheme.colorScheme.background
+    val dark = color.luminance() < 0.5f
+    val effects = LocalAppVisualEffects.current
+    val nativeBlur = effects.backgroundBlur && LocalChromeNativeBlurEnabled.current &&
+        ColorOsBottomBarMaterialView.supportsNativeBlur()
+    val composeBackdrop = backdrop.takeIf { effects.backgroundBlur && !nativeBlur }
+
+    Box(modifier) {
+        if (nativeBlur) {
+            AndroidView(
+                factory = { context ->
+                    ColorOsBottomBarMaterialView(
+                        context = context,
+                        darkTheme = dark,
+                        fallbackColor = color.toArgb(),
+                        effects = effects,
+                        floating = false,
+                    )
+                },
+                modifier = Modifier.matchParentSize(),
+                update = { it.updateAppearance(dark, color.toArgb()) },
+            )
+        } else if (composeBackdrop != null) {
+            val density = LocalDensity.current.density
+            val tints = remember(dark) {
+                BlurColors(
+                    blendColors = listOf(
+                        BlendColorEntry(
+                            Color(ColorOsToolbarGlass.firstTint(dark)),
+                            if (dark) BlurBlendMode.Overlay else BlurBlendMode.ColorDodge,
+                        ),
+                        BlendColorEntry(
+                            Color(ColorOsToolbarGlass.luminosityTint(dark)),
+                            BlurBlendMode.Luminosity,
+                        ),
+                    ),
+                )
+            }
+            Box(Modifier.matchParentSize().textureBlur(
+                backdrop = composeBackdrop,
+                shape = RectangleShape,
+                blurRadius = ColorOsToolbarGlass.BlurRadiusPx / density,
+                noiseCoefficient = 0f,
+                colors = tints,
+            ))
+        }
+        NavigationBar(
+            color = if (nativeBlur || composeBackdrop != null) Color.Transparent else color,
+            mode = mode,
+            content = content,
+        )
+    }
 }
 
 @Composable

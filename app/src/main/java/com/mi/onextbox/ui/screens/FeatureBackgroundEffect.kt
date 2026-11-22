@@ -15,45 +15,52 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlin.math.*
+import kotlin.math.cos
+import kotlin.math.sin
 
-internal val FeatureBackgroundStyleIds = listOf(0, 1, 2)
+internal const val FeatureBackgroundOff = 0
+private const val FeatureBackgroundFlowing = 2
+private const val FeatureBackgroundPreference = "feature_background_style"
+
+internal val FeatureBackgroundStyleIds = listOf(FeatureBackgroundOff, FeatureBackgroundFlowing)
+
+internal fun resolveFeatureBackgroundStyle(stored: Int?): Int =
+    if (stored == FeatureBackgroundOff) FeatureBackgroundOff else FeatureBackgroundFlowing
 
 @Composable
 internal fun rememberFeatureBackgroundSelection(): Pair<Int, (Int) -> Unit> {
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("onextbox_prefs", Context.MODE_PRIVATE) }
-    fun readStyle() = prefs.getInt("feature_background_style", 1).takeIf { it in FeatureBackgroundStyleIds } ?: 1
+    fun readStyle() = resolveFeatureBackgroundStyle(runCatching {
+        prefs.getInt(FeatureBackgroundPreference, FeatureBackgroundFlowing)
+    }.getOrNull())
     var value by remember(prefs) { mutableIntStateOf(readStyle()) }
     DisposableEffect(prefs) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "feature_background_style" || key == null) value = readStyle()
+            if (key == FeatureBackgroundPreference || key == null) value = readStyle()
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
+        value = readStyle()
         onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
-    return value to { next -> prefs.edit().putInt("feature_background_style", next.takeIf { it in FeatureBackgroundStyleIds } ?: 1).apply() }
+    return value to { next ->
+        prefs.edit().putInt(FeatureBackgroundPreference, resolveFeatureBackgroundStyle(next)).apply()
+    }
 }
 
 @Composable
 internal fun FeatureBackgroundEffect(
-    style: Int,
     dark: Boolean,
     surface: Color,
     accent: Color,
     modifier: Modifier = Modifier,
     animationEnabled: Boolean = true,
 ) {
-    if (style == 0) return
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val lifecycleState by lifecycle.currentStateFlow.collectAsState()
     val animate = animationEnabled && lifecycleState.isAtLeast(Lifecycle.State.STARTED)
-    if (style == 1) {
-        FeaturePageAuroraBackground(dark, surface, modifier, animationEnabled = animate)
-        return
-    }
     val time = remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(style, lifecycle, animate) {
+    LaunchedEffect(lifecycle, animate) {
         if (!animate) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             var previous = System.nanoTime()
@@ -74,12 +81,10 @@ internal fun FeatureBackgroundEffect(
         fun glow(center: Offset, radius: Float, color: Color, alpha: Float) {
             drawCircle(Brush.radialGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = 0f)), center, radius), radius, center)
         }
-        when (style) {
-            2 -> repeat(3) { i ->
-                val phase = t * .12f + i * 2.1f
-                glow(Offset(w * (.5f + .36f * sin(phase)), h * (.42f + .3f * cos(phase * .7f))), w * .85f,
-                    if (i == 1) Color(0xFF9C78E8) else accent, intensity)
-            }
+        repeat(3) { i ->
+            val phase = t * .12f + i * 2.1f
+            glow(Offset(w * (.5f + .36f * sin(phase)), h * (.42f + .3f * cos(phase * .7f))), w * .85f,
+                if (i == 1) Color(0xFF9C78E8) else accent, intensity)
         }
     }
 }

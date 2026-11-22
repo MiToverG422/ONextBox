@@ -2,6 +2,7 @@ package com.mi.onextbox.lsp
 
 import android.graphics.drawable.Drawable
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
@@ -41,13 +42,14 @@ internal object QsTileCornerHooker {
             "com.oplus.systemui.qs.scenario.ui.template.ScenarioTileViewTwoXTwo",
             "com.oplus.systemui.qs.scenario.ui.template.ScenarioTileViewFourXOne")
         hierarchy = QsCornerHierarchyObservers("qs:tile-discovery") { view ->
+            QsDeviceCardCorners.discover(view)
             // Constructor calls can be inlined into native factories. Discover
             // actual subclasses (including the normal media panel) after layout.
             if (generateSequence(view.javaClass as Class<*>?) { it.superclass }.any { it.name in types }) {
                 observers.watch(view)
                 updateSafely(view, provider, refreshChildren = true)
             }
-        }
+        }.also { it.adoptPreviousRoots("qs:device-card-discovery") }
         var installed = 0
         types.forEach { name ->
             val type = Reflect.findClassIfExists(name, loader) ?: return@forEach
@@ -65,7 +67,7 @@ internal object QsTileCornerHooker {
                     ModernHookRegistry.installFast("$TAG:${type.name}:dispatchDraw", method) { chain ->
                         // Keep discovery for inlined constructors, without compatibility params
                         // and argument-array copies on every rendered frame.
-                        runCatching { (chain.thisObject as? View)?.let(observers::watch) }
+                        if (QsTileCornerSettings.enabledXposed()) runCatching { (chain.thisObject as? View)?.let(observers::watch) }
                             .onFailure { diagnose("Observe tile drawing", it) }
                         chain.proceed()
                     }
@@ -94,14 +96,15 @@ internal object QsTileCornerHooker {
             if (name.startsWith(RESIZEABLE) || name.endsWith("OplusQSResizeableThreeStageView") || name == MEDIA) {
                 val radiusMethods = if (name == MEDIA) setOf("getViewRadius", "getContainerCornerRadius") else setOf("getCornerRadius", "getTransitionRadius", "getCornerWeight")
                 type.declaredMethods.filter { it.name in radiusMethods && it.parameterCount == 0 }.forEach { method ->
+                    val captureOnly = method.name == "getCornerRadius" || method.name == "getCornerWeight"
                     runCatching {
                         ModernHookRegistry.installCompat("$TAG:${type.name}:${method.name}", method, object : ModernMethodHook() {
                             override fun afterHookedMethod(param: MethodHookParam) {
-                                if (param.throwable != null || HotReloadLifecycle.isRetiring) return
+                                if (param.throwable != null || HotReloadLifecycle.isRetiring || !QsTileCornerSettings.enabledXposed()) return
                                 val view = param.thisObject as? View ?: return
                                 runCatching {
                                     // Change the animation endpoints, never geometry getters used by layout.
-                                    if (method.name in setOf("getCornerRadius", "getCornerWeight") && animationCapture.get() != true) return@runCatching
+                                    if (captureOnly && animationCapture.get() != true) return@runCatching
                                     val size = QsCornerSizeResolver.resolve(view) ?: return@runCatching
                                     val percent = QsTileCornerSettings.radiusXposed(size) ?: return@runCatching
                                     if (method.name == "getCornerWeight") {
@@ -130,6 +133,7 @@ internal object QsTileCornerHooker {
             Reflect.findClassIfExists(name, loader)?.declaredMethods?.forEach { method ->
                 if (method.name == "captureValues") {
                     ModernHookRegistry.installFast("$TAG:capture:${method.toGenericString()}", method) { chain ->
+                        if (!QsTileCornerSettings.enabledXposed()) return@installFast chain.proceed()
                         val previous = animationCapture.get()
                         animationCapture.set(true)
                         try { chain.proceed() } finally {
@@ -145,12 +149,13 @@ internal object QsTileCornerHooker {
         Reflect.findClassIfExists("$STANDARD\$SpotLightIconFrame", loader)?.declaredMethods
             ?.filter { it.name == "dispatchDraw" }?.forEach { method ->
                 runCatching {
-                    ModernHookRegistry.installCompat("$TAG:standard-draw", method, object : ModernMethodHook() {
-                        override fun beforeHookedMethod(param: MethodHookParam) {
-                            runCatching { Reflect.getObjectField(requireNotNull(param.thisObject), "this\$0") as? View }
+                    ModernHookRegistry.installFast("$TAG:standard-draw", method) { chain ->
+                        if (QsTileCornerSettings.enabledXposed()) {
+                            runCatching { Reflect.getObjectField(requireNotNull(chain.thisObject), "this\$0") as? View }
                                 .onSuccess { it?.let(observers::watch) }.onFailure { diagnose("Standard tile owner", it) }
                         }
-                    })
+                        chain.proceed()
+                    }
                     ModernHookRuntime.requireModule().deoptimize(method)
                 }.onFailure { diagnose("Standard tile drawing", it) }
             }
@@ -188,11 +193,11 @@ internal object QsTileCornerHooker {
 
     private fun updateSafely(view: View?, provider: Class<*>, refreshChildren: Boolean = false): Boolean {
         if (view == null || HotReloadLifecycle.isRetiring) return false
-        val root = generateSequence(view as View?) { it.parent as? View }
-            .firstOrNull { it.javaClass.name == "com.oplus.systemui.plugins.qs.OplusQSRootView" }
-        (root as? android.view.ViewGroup)?.let { hierarchy?.watch(it) }
-        QsDeviceCardCorners.discover(view)
-        if (!QsTileCornerSettings.enabledXposed() && synchronized(owned) { owned.isEmpty() } &&
+        if (QsTileCornerSettings.enabledXposed()) {
+            val root = generateSequence(view) { it.parent as? View }
+                .firstOrNull { it.javaClass.name == "com.oplus.systemui.plugins.qs.OplusQSRootView" }
+            if (root is ViewGroup) hierarchy?.watch(root)
+        } else if (synchronized(owned) { owned.isEmpty() } &&
             synchronized(mediaClips) { mediaClips.isEmpty() }) return true
         return runCatching { update(view, provider, refreshChildren) }
             .onFailure { diagnose("Native tile corner update", it) }.getOrDefault(false)

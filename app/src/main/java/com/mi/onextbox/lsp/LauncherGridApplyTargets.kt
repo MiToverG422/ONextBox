@@ -8,6 +8,8 @@ import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import org.luckypray.dexkit.DexKitBridge
+import org.luckypray.dexkit.result.MethodData
 
 internal class LauncherGridApplyTargets(val values: Array<*>) {
     private val tracker = values[0] as Field
@@ -63,22 +65,39 @@ internal class LauncherGridApplyTargets(val values: Array<*>) {
                     !Modifier.isAbstract(it.modifiers))
             }
 
-        fun resolve(loader: ClassLoader): LauncherGridApplyTargets {
+        fun findInlinedApply(dex: DexKitBridge): MethodData = dex.findMethod {
+            matcher {
+                usingStrings("applyLayoutSettings, column = ", "LayoutSettingsHelper")
+                paramTypes("com.android.launcher.Launcher", "int", "int", "boolean")
+                returnType = "void"
+            }
+        }.single { Modifier.isStatic(it.modifiers) }
+
+        fun resolve(loader: ClassLoader, apkPath: String): LauncherGridApplyTargets {
             val launcher = ModernReflect.findClass("com.android.launcher.Launcher", loader)
             val base = ModernReflect.findClass("com.android.launcher3.Launcher", loader)
             val tracker = base.getDeclaredField("ACTIVITY_TRACKER")
             require(Modifier.isStatic(tracker.modifiers))
             val created = tracker.type.getMethod("getCreatedActivity")
             require(Activity::class.java.isAssignableFrom(created.returnType))
-            val helper = ModernReflect.findClass("com.android.launcher.togglebar.LayoutSettingsHelper", loader)
             val signature = arrayOf(launcher, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!,
                 Boolean::class.javaPrimitiveType!!)
-            val apply = helper.getDeclaredMethod("applyLayoutSettings", *signature)
-            require(Modifier.isStatic(apply.modifiers) && apply.returnType == Void.TYPE)
-            val task = helper.declaredClasses.flatMap { it.declaredConstructors.toList() }
-                .single { it.parameterTypes.contentEquals(signature) }
             val async = HostClassLookup.load("android.os.AsyncTask", false, loader)
-            require(async.isAssignableFrom(task.declaringClass))
+            val (apply, task) = if (LauncherGridTargets.usesInlinedMenu(loader)) {
+                ApkDexSession.withSession(apkPath, threadCount = 1) { open ->
+                    val data = findInlinedApply(open())
+                    val task = data.invokes.filter { it.isConstructor && it.paramCount == signature.size }
+                        .map { it.getConstructorInstance(loader) }.single {
+                            async.isAssignableFrom(it.declaringClass) && it.parameterTypes.contentEquals(signature)
+                        }
+                    data.getMethodInstance(loader) to task
+                }
+            } else {
+                val helper = ModernReflect.findClass("com.android.launcher.togglebar.LayoutSettingsHelper", loader)
+                helper.getDeclaredMethod("applyLayoutSettings", *signature) to helper.declaredClasses
+                    .flatMap { it.declaredConstructors.toList() }.single { it.parameterTypes.contentEquals(signature) }
+            }
+            require(Modifier.isStatic(apply.modifiers) && apply.returnType == Void.TYPE && async.isAssignableFrom(task.declaringClass))
             val completed = completionMethod(task.declaringClass)
             val workspace = launcher.getMethod("getWorkspace")
             require(ViewGroup::class.java.isAssignableFrom(workspace.returnType))

@@ -3,17 +3,12 @@ package com.mi.onextbox.ui
 import com.mi.onextbox.R
 import androidx.compose.runtime.setValue
 
-import android.os.Build
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -88,14 +83,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import com.mi.onextbox.ui.layout.BottomNavigationBar
-import com.mi.onextbox.ui.layout.LiquidGlassBottomNavigationBar
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mi.onextbox.ui.layout.Page
 import com.mi.onextbox.ui.layout.rememberChromeBlurBackdrop
 import com.mi.onextbox.ui.layout.rememberBottomBarStartupProgress
 import com.mi.onextbox.ui.layout.rememberBottomBarCollapseState
 import com.mi.onextbox.ui.layout.BottomBarHostHeight
+import com.mi.onextbox.ui.layout.FloatingBottomBarMode
 import com.mi.onextbox.ui.layout.BottomBarRouteHiddenOffset
+import com.mi.onextbox.ui.layout.AppBottomChrome
+import com.mi.onextbox.ui.layout.BottomBarAutoCollapse
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.mi.onextbox.ui.platform.findActivity
 import com.mi.onextbox.ui.screens.FeatureMainRoute
@@ -110,14 +108,14 @@ import com.mi.onextbox.ui.screens.LocalFeatureSpotlight
 import com.mi.onextbox.ui.settings.AboutMainRoute
 import com.mi.onextbox.ui.settings.AboutPageMode
 import com.mi.onextbox.ui.settings.AboutSubRoute
+import com.mi.onextbox.ui.settings.SoftwareUpdatePrompt
 import com.mi.onextbox.ui.settings.SoftwareUpdateUiState
+import com.mi.onextbox.ui.settings.UpdateNotificationScheduler
 import com.mi.onextbox.ui.settings.rememberSoftwareUpdateUiState
-import com.mi.onextbox.ui.common.appearanceChangeBottomBar
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.AppUiStyleAppTheme
 import com.mi.onextbox.ui.common.ColorOs17AppTheme
-import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.common.isMonet
 import com.mi.onextbox.ui.common.AssistantScreenOption
 import com.mi.onextbox.ui.common.BottomTab
@@ -127,8 +125,6 @@ import com.mi.onextbox.ui.common.rememberHapticClick
 import com.kyant.backdrop.backdrops.LayerBackdrop as LiquidLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop as liquidLayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop as rememberLiquidLayerBackdrop
-import io.github.suqi8.coui.kmp.basic.NavigationBarDisplayMode
-import io.github.suqi8.coui.kmp.basic.NavigationItem
 import io.github.suqi8.coui.kmp.basic.Scaffold
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
 import io.github.suqi8.coui.kmp.theme.COUITheme
@@ -270,6 +266,9 @@ private sealed interface RootRoute : NavKey {
     data object FeatureSoftLightGlass : RootRoute
 
     @Serializable
+    data object FeatureLiquidGlass : RootRoute
+
+    @Serializable
     data object FeatureTools : RootRoute
 
     @Serializable
@@ -404,6 +403,8 @@ private sealed interface RootRoute : NavKey {
 
     @Serializable
     data object FeatureAppMarket : RootRoute
+    @Serializable
+    data object FeatureWallet : RootRoute
 
     @Serializable
     data object FeatureBattery : RootRoute
@@ -574,6 +575,9 @@ private sealed interface RootRoute : NavKey {
     data object AppSettings : RootRoute
 
     @Serializable
+    data object DisplayTheme : RootRoute
+
+    @Serializable
     data object Logs : RootRoute
 
     @Serializable
@@ -606,6 +610,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Updates -> RootRoute.FeatureUpdates
     FeaturePageMode.Coui -> RootRoute.FeatureCoui
     FeaturePageMode.SoftLightGlass -> RootRoute.FeatureSoftLightGlass
+    FeaturePageMode.LiquidGlass -> RootRoute.FeatureLiquidGlass
     FeaturePageMode.Tools -> RootRoute.FeatureTools
     FeaturePageMode.GlobalLocalization -> RootRoute.FeatureGlobalLocalization
     FeaturePageMode.GlobalSpoofing -> RootRoute.FeatureGlobalSpoofing
@@ -653,6 +658,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
     FeaturePageMode.Esim -> RootRoute.FeatureEsim
     FeaturePageMode.EsimDiagnostics -> RootRoute.FeatureEsimDiagnostics
     FeaturePageMode.AppMarket -> RootRoute.FeatureAppMarket
+    FeaturePageMode.Wallet -> RootRoute.FeatureWallet
     FeaturePageMode.Battery -> RootRoute.FeatureBattery
     FeaturePageMode.TrafficManagement -> RootRoute.FeatureTrafficManagement
     FeaturePageMode.PhoneManager -> RootRoute.FeaturePhoneManager
@@ -712,6 +718,7 @@ private fun FeaturePageMode.toRootRoute(): RootRoute? = when (this) {
 private fun AboutPageMode.toRootRoute(): RootRoute? = when (this) {
     AboutPageMode.Main -> null
     AboutPageMode.AppSettings -> RootRoute.AppSettings
+    AboutPageMode.DisplayTheme -> RootRoute.DisplayTheme
     AboutPageMode.Logs -> RootRoute.Logs
     AboutPageMode.DeveloperOptions -> RootRoute.DeveloperOptions
     AboutPageMode.Update -> RootRoute.SoftwareUpdate
@@ -748,7 +755,7 @@ private fun RootFeatureEntry(
     // NavDisplay keeps both entries composed during predictive back. Each entry must
     // own its capture layer; sharing the main-page backdrop lets the two scenes
     // overwrite one another and leaves rectangular holes in the toolbar blur.
-    val entryBlurBackdrop = rememberChromeBlurBackdrop(ui.blurEffectEnabled)
+    val entryBlurBackdrop = rememberChromeBlurBackdrop()
     FeatureSpotlightPage(pageMode, ui.bottomNavigationHeight) {
     FeatureSubRoute(
         modifier = Modifier.fillMaxSize(),
@@ -833,107 +840,47 @@ private fun RootBottomChrome(visible: Boolean, liquidOnly: Boolean) {
     val ui = LocalRootUiState.current
     val actions = LocalRootActions.current
     val mainPagerState = LocalMainPagerState.current
-    val liquidBackdrop = ui.liquidBackdrop
-    val liquidGlassActive = ui.liquidGlassBottomBarEnabled && liquidBackdrop != null
-    val liquidGlassVisible = visible && liquidOnly && liquidGlassActive
-    AnimatedVisibility(
-        visible = liquidGlassVisible,
-        modifier = Modifier.appearanceChangeBottomBar(),
-        enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY = { it }),
-    ) {
-        liquidBackdrop?.let { backdrop ->
-            LiquidGlassBottomNavigationBar(
-                hideLabels = ui.bottomBarHideLabels,
-                startupRevealProgress = ui.bottomBarStartupProgress,
-                collapseState = ui.bottomBarCollapse,
-                tabs = ui.visibleTabs,
-                selectedIndex = ui.selectedIndex,
-                pagerState = mainPagerState.pagerState,
-                backdrop = backdrop,
-                onCapsuleBoundsChanged = { actions.onBottomChromeBoundsChange(true, it) },
-                onTabSelected = { index ->
-                    actions.onHapticClick()
-                    actions.popToMainRoute()
-                    mainPagerState.animateToPage(index)
-                    actions.onTabChange(ui.visibleTabs[index].screenIndex)
-                },
-                modifier = Modifier
-                    .onGloballyPositioned { coordinates ->
-                        actions.onBottomNavigationHeightChange(coordinates.size.height)
-                    },
-            )
-        }
-    }
-    AnimatedVisibility(
-        visible = visible && !liquidOnly && !liquidGlassActive,
-        modifier = Modifier.appearanceChangeBottomBar(),
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically(),
-    ) {
-        AnimatedVisibility(
-            visible = true,
-            enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
-        ) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                DisposableEffect(Unit) {
-                    onDispose { actions.onBottomChromeBoundsChange(false, Rect.Zero) }
-                }
-                BottomNavigationBar(
-                    hideLabels = ui.bottomBarHideLabels,
-                    startupRevealProgress = ui.bottomBarStartupProgress,
-                    collapseState = ui.bottomBarCollapse,
-                    onCapsuleBoundsChanged = { actions.onBottomChromeBoundsChange(false, it) },
-                    items = ui.visibleTabs.mapIndexed { index, tab ->
-                        NavigationItem(
-                            label = stringResource(tab.titleRes),
-                            icon = if (index == ui.selectedIndex) tab.selectedIcon else tab.unselectedIcon,
-                        )
-                    },
-                    selectedIndex = ui.selectedIndex,
-                    onItemSelected = { index ->
-                        actions.onHapticClick()
-                        actions.popToMainRoute()
-                        mainPagerState.animateToPage(index)
-                        actions.onTabChange(ui.visibleTabs[index].screenIndex)
-                    },
-                    color = Color.Transparent,
-                    showDivider = false,
-                    mode = NavigationBarDisplayMode.IconAndText,
-                    selectedIcons = ui.visibleTabs.map { it.selectedIcon },
-                    unselectedIcons = ui.visibleTabs.map { it.unselectedIcon },
-                    modifier = Modifier
-                        .onGloballyPositioned { coordinates ->
-                            actions.onBottomNavigationHeightChange(coordinates.size.height)
-                        },
-                )
-            }
-        }
-    }
+    AppBottomChrome(
+        mode = ui.floatingBottomBarMode,
+        tabs = ui.visibleTabs,
+        pagerState = mainPagerState.pagerState,
+        selectedIndex = ui.selectedIndex,
+        hideLabels = ui.bottomBarHideLabels,
+        collapseState = ui.bottomBarCollapse,
+        blurBackdrop = ui.blurBackdrop,
+        liquidBackdrop = ui.liquidBackdrop,
+        visible = visible,
+        liquidOnly = liquidOnly,
+        startupRevealProgress = ui.bottomBarStartupProgress,
+        onBoundsChange = actions.onBottomChromeBoundsChange,
+        onHeightChange = actions.onBottomNavigationHeightChange,
+        onTabSelected = { index ->
+            actions.onHapticClick()
+            actions.popToMainRoute()
+            mainPagerState.animateToPage(index)
+            actions.onTabChange(ui.visibleTabs[index].screenIndex)
+        },
+    )
 }
 
 @Composable
 private fun RootAboutEntry(pageMode: AboutPageMode) {
     val ui = LocalRootUiState.current
     val actions = LocalRootActions.current
-    val entryBlurBackdrop = rememberChromeBlurBackdrop(ui.blurEffectEnabled)
+    val entryBlurBackdrop = rememberChromeBlurBackdrop()
     AboutSubRoute(
         modifier = Modifier.fillMaxSize(),
         pageMode = pageMode,
+        rootGranted = ui.rootGranted,
         softwareUpdateState = ui.softwareUpdateState,
-        blurEffectEnabled = ui.blurEffectEnabled,
-        onBlurEffectEnabledChange = actions.onBlurEffectEnabledChange,
-        featurePageNewStyleEnabled = ui.featurePageNewStyleEnabled,
-        onFeaturePageNewStyleEnabledChange = actions.onFeaturePageNewStyleEnabledChange,
         popDirectionFollowsSwipeEdge = ui.popDirectionFollowsSwipeEdge,
         onPopDirectionFollowsSwipeEdgeChange = actions.onPopDirectionFollowsSwipeEdgeChange,
         showFpsMonitor = ui.showFpsMonitor,
         onShowFpsMonitorChange = actions.onShowFpsMonitorChange,
-        liquidGlassBottomBarEnabled = ui.liquidGlassBottomBarEnabled,
-        onLiquidGlassBottomBarEnabledChange = actions.onLiquidGlassBottomBarEnabledChange,
+        floatingBottomBarMode = ui.floatingBottomBarMode,
+        onFloatingBottomBarModeChange = actions.onFloatingBottomBarModeChange,
+        bottomBarAutoCollapse = ui.bottomBarCollapse.mode,
+        onBottomBarAutoCollapseChange = actions.onBottomBarAutoCollapseChange,
         bottomBarHideLabels = ui.bottomBarHideLabels,
         mainPageSwipeEnabled = ui.mainPageSwipeEnabled,
         subPageSwipeEnabled = ui.subPageSwipeEnabled,
@@ -944,7 +891,6 @@ private fun RootAboutEntry(pageMode: AboutPageMode) {
         onAppLanguageChange = actions.onAppLanguageChange,
         appThemeMode = ui.appThemeMode,
         onAppThemeModeChange = actions.onAppThemeModeChange,
-        appUiStyle = ui.appUiStyle,
         onAppUiStyleChange = actions.onAppUiStyleChange,
         appThemeKeyColor = ui.appThemeKeyColor,
         onAppThemeKeyColorChange = actions.onAppThemeKeyColorChange,
@@ -956,6 +902,7 @@ private fun RootAboutEntry(pageMode: AboutPageMode) {
         subPageBottomExtension = ui.bottomNavigationHeight,
         blurBackdrop = entryBlurBackdrop,
         onBack = actions.popRootRoute,
+        onOpenDisplayTheme = { actions.openAboutSubPage(AboutPageMode.DisplayTheme) },
         onOpenDeveloperOptions = { actions.openAboutSubPage(AboutPageMode.DeveloperOptions) },
         onOpenUpdateSettings = { actions.openAboutSubPage(AboutPageMode.UpdateSettings) },
         onOpenUpdateReleaseNotes = { actions.openAboutSubPage(AboutPageMode.UpdateReleaseNotes) },
@@ -971,16 +918,15 @@ fun Root(
     currentTab: Int,
     onTabChange: (Int) -> Unit,
     rootGranted: Boolean,
-    blurEffectEnabled: Boolean,
-    onBlurEffectEnabledChange: (Boolean) -> Unit,
     featurePageNewStyleEnabled: Boolean,
-    onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
     popDirectionFollowsSwipeEdge: Boolean,
     onPopDirectionFollowsSwipeEdgeChange: (Boolean) -> Unit,
     showFpsMonitor: Boolean,
     onShowFpsMonitorChange: (Boolean) -> Unit,
-    liquidGlassBottomBarEnabled: Boolean,
-    onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
+    floatingBottomBarMode: FloatingBottomBarMode,
+    onFloatingBottomBarModeChange: (FloatingBottomBarMode) -> Unit,
+    bottomBarAutoCollapse: BottomBarAutoCollapse,
+    onBottomBarAutoCollapseChange: (BottomBarAutoCollapse) -> Unit,
     bottomBarHideLabels: Boolean,
     mainPageSwipeEnabled: Boolean,
     subPageSwipeEnabled: Boolean,
@@ -1062,7 +1008,7 @@ fun Root(
         ready = bottomBarStartupReady,
         animate = animateBottomBarStartup,
     )
-    val bottomBarCollapse = rememberBottomBarCollapseState()
+    val bottomBarCollapse = rememberBottomBarCollapseState(bottomBarAutoCollapse.forBar(floatingBottomBarMode))
     val systemInDarkTheme = isSystemInDarkTheme()
     val resolvedKeyColor = com.mi.onextbox.ui.common.rememberMonetSeedColor(
         enabled = appThemeMode.isMonet,
@@ -1092,16 +1038,12 @@ fun Root(
     }
     COUITheme(controller = themeController) {
         ColorOs17AppTheme(nativeAccent = !appThemeMode.isMonet, monetColors = monet2026Colors) {
-        CompositionLocalProvider(
-            LocalAppUiStyle provides appUiStyle,
-        ) {
             AppUiStyleAppTheme(style = appUiStyle, mode = appThemeMode, keyColor = appThemeKeyColor,
                 paletteStyle = appThemePaletteStyle, colorSpec = appThemeColorSpec) {
         val (backgroundStyle, _) = com.mi.onextbox.ui.screens.rememberFeatureBackgroundSelection()
         val colors = COUITheme.colorScheme
-        val blurBackdrop = rememberChromeBlurBackdrop(blurEffectEnabled)
-        val liquidBottomBarSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        val liquidBackdrop = if (liquidBottomBarSupported && liquidGlassBottomBarEnabled) {
+        val blurBackdrop = rememberChromeBlurBackdrop()
+        val liquidBackdrop = if (floatingBottomBarMode == FloatingBottomBarMode.LiquidGlass) {
             rememberLiquidLayerBackdrop()
         } else {
             null
@@ -1156,6 +1098,7 @@ fun Root(
                     subclass(RootRoute.FeatureUpdates::class)
                     subclass(RootRoute.FeatureCoui::class)
                     subclass(RootRoute.FeatureSoftLightGlass::class)
+                    subclass(RootRoute.FeatureLiquidGlass::class)
                     subclass(RootRoute.FeatureTools::class)
                     subclass(RootRoute.FeatureGlobalLocalization::class)
                     subclass(RootRoute.FeatureGlobalSpoofing::class)
@@ -1201,6 +1144,7 @@ fun Root(
                     subclass(RootRoute.FeatureEsim::class)
                     subclass(RootRoute.FeatureEsimDiagnostics::class)
                     subclass(RootRoute.FeatureAppMarket::class)
+                    subclass(RootRoute.FeatureWallet::class)
                     subclass(RootRoute.FeatureBattery::class)
                     subclass(RootRoute.FeatureTrafficManagement::class)
                     subclass(RootRoute.FeaturePhoneManager::class)
@@ -1257,6 +1201,7 @@ fun Root(
                     subclass(RootRoute.FeaturePackageInstaller::class)
                     subclass(RootRoute.FeatureAssistant::class)
                     subclass(RootRoute.AppSettings::class)
+                    subclass(RootRoute.DisplayTheme::class)
                     subclass(RootRoute.Logs::class)
                     subclass(RootRoute.DeveloperOptions::class)
                     subclass(RootRoute.DeviceDetails::class)
@@ -1333,7 +1278,7 @@ fun Root(
             }
         }
         var rootViewportBounds by remember { mutableStateOf(Rect.Zero) }
-        val bottomChromeBounds = remember { mutableStateMapOf<Boolean, Rect>() }
+        val bottomChromeBounds = remember { mutableStateMapOf<FloatingBottomBarMode, Rect>() }
         val subPageActive = rootBackStack.size > 1
         val softwareUpdateState = rememberSoftwareUpdateUiState(aboutAutoCheckUpdateRequest)
         val currentRootRoute = navigator.current() as? RootRoute ?: RootRoute.Main
@@ -1348,7 +1293,8 @@ fun Root(
         val pagerLayoutDirection = LocalLayoutDirection.current
         val featurePageIsDark = colors.surface.luminance() < .5f
         var rootNavigationInMotion by remember { mutableStateOf(false) }
-        val featurePageDynamicBackgroundVisible = backgroundStyle != 0 && featurePageDynamicBackgroundActive
+        val featureBackgroundEnabled = backgroundStyle != com.mi.onextbox.ui.screens.FeatureBackgroundOff
+        val featurePageDynamicBackgroundVisible = featureBackgroundEnabled && featurePageDynamicBackgroundActive
         val featureBackgroundAnimating = featurePageDynamicBackgroundActive && (
             currentRootRoute == RootRoute.Main || rootNavigationInMotion ||
                 featureLaunchSession != null || featureLaunchAnimation != null || featurePredictiveBackMotion != null ||
@@ -1357,10 +1303,10 @@ fun Root(
         var bottomNavigationHeightPx by remember { mutableIntStateOf(0) }
         val density = LocalDensity.current
         val bottomNavigationHeight = with(density) {
-            if (bottomNavigationHeightPx > 0) {
-                bottomNavigationHeightPx.toDp()
-            } else {
-                BottomBarHostHeight
+            when {
+                !floatingBottomBarMode.visible -> 0.dp
+                bottomNavigationHeightPx > 0 -> bottomNavigationHeightPx.toDp()
+                else -> BottomBarHostHeight
             }
         }
 
@@ -2104,10 +2050,34 @@ fun Root(
             }
         }
 
+        val launchUpdate by UpdateNotificationScheduler.launchUpdate.collectAsStateWithLifecycle(
+            minActiveState = Lifecycle.State.RESUMED,
+        )
+        val onUpdatePage = currentRootRoute == RootRoute.SoftwareUpdate ||
+            currentRootRoute == RootRoute.SoftwareUpdateSettings ||
+            currentRootRoute == RootRoute.SoftwareUpdateReleaseNotes
+        LaunchedEffect(onUpdatePage, launchUpdate) {
+            if (onUpdatePage && launchUpdate != null) UpdateNotificationScheduler.dismissLaunchUpdatePrompt()
+        }
+        val promptVersion = launchUpdate?.takeIf { update ->
+            bottomBarStartupReady && !onUpdatePage && softwareUpdateState.launchUpdatePromptEnabled &&
+                (!update.isBeta || softwareUpdateState.betaPlanEnabled) &&
+                featureLaunchAnimation == null && featurePredictiveBackMotion == null
+        }?.versionName
+        SoftwareUpdatePrompt(
+            versionName = promptVersion,
+            onDismiss = UpdateNotificationScheduler::dismissLaunchUpdatePrompt,
+            onOpenSoftwareUpdate = {
+                if (promptVersion != null) {
+                    UpdateNotificationScheduler.dismissLaunchUpdatePrompt()
+                    openAboutSubPage(AboutPageMode.Update)
+                }
+            },
+        )
+
         val rootUiState = RootUiState(
             currentTab = currentTab,
             rootGranted = rootGranted,
-            blurEffectEnabled = blurEffectEnabled,
             featurePageNewStyleEnabled = featurePageNewStyleEnabled,
             featurePageDynamicBackgroundActive = featurePageDynamicBackgroundVisible,
             bottomBarStartupProgress = bottomBarStartupProgress,
@@ -2119,7 +2089,7 @@ fun Root(
             featureExternalIconScales = featureExternalIconScaleProviders,
             popDirectionFollowsSwipeEdge = popDirectionFollowsSwipeEdge,
             showFpsMonitor = showFpsMonitor,
-            liquidGlassBottomBarEnabled = liquidGlassBottomBarEnabled && liquidBackdrop != null,
+            floatingBottomBarMode = floatingBottomBarMode,
             bottomBarHideLabels = bottomBarHideLabels,
             mainPageSwipeEnabled = mainPageSwipeEnabled,
             subPageSwipeEnabled = subPageSwipeEnabled,
@@ -2170,11 +2140,10 @@ fun Root(
         )
         val rootActions = RootActions(
             onTabChange = onTabChange,
-            onBlurEffectEnabledChange = onBlurEffectEnabledChange,
-            onFeaturePageNewStyleEnabledChange = onFeaturePageNewStyleEnabledChange,
             onPopDirectionFollowsSwipeEdgeChange = onPopDirectionFollowsSwipeEdgeChange,
             onShowFpsMonitorChange = onShowFpsMonitorChange,
-            onLiquidGlassBottomBarEnabledChange = onLiquidGlassBottomBarEnabledChange,
+            onFloatingBottomBarModeChange = onFloatingBottomBarModeChange,
+            onBottomBarAutoCollapseChange = onBottomBarAutoCollapseChange,
             onBottomBarHideLabelsChange = onBottomBarHideLabelsChange,
             onMainPageSwipeEnabledChange = onMainPageSwipeEnabledChange,
             onSubPageSwipeEnabledChange = onSubPageSwipeEnabledChange,
@@ -2218,7 +2187,7 @@ fun Root(
             onAssistantNativePowerEnabledChange = onAssistantNativePowerEnabledChange,
             onAssistantNativeCircleEnabledChange = onAssistantNativeCircleEnabledChange,
             onBottomNavigationHeightChange = { bottomNavigationHeightPx = it },
-            onBottomChromeBoundsChange = { liquid, bounds -> bottomChromeBounds[liquid] = bounds },
+            onBottomChromeBoundsChange = { mode, bounds -> bottomChromeBounds[mode] = bounds },
             onHapticClick = hapticClick,
             popRootRoute = { popRootRoute() },
             popToMainRoute = ::popToMainRoute,
@@ -2287,7 +2256,7 @@ fun Root(
                             containerColor = mainSceneContainerColor,
                             popupHost = {},
                             bottomBar = {
-                                if (!ui.liquidGlassBottomBarEnabled || ui.liquidBackdrop == null) {
+                                if (ui.floatingBottomBarMode.visible && ui.liquidBackdrop == null) {
                                     Box(Modifier.fillMaxWidth().height(ui.bottomNavigationHeight))
                                 }
                             },
@@ -2295,9 +2264,13 @@ fun Root(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 HorizontalPager(
                                     state = mainPagerState.pagerState,
-                                    userScrollEnabled = ui.mainPageSwipeEnabled,
+                                    userScrollEnabled = ui.floatingBottomBarMode.allowsMainPageSwipe(ui.mainPageSwipeEnabled),
                                     verticalAlignment = Alignment.Top,
-                                    modifier = Modifier.fillMaxSize().nestedScroll(ui.bottomBarCollapse.nestedScrollConnection),
+                                    modifier = if (ui.bottomBarCollapse.mode != BottomBarAutoCollapse.Off) {
+                                        Modifier.fillMaxSize().nestedScroll(ui.bottomBarCollapse.nestedScrollConnection)
+                                    } else {
+                                        Modifier.fillMaxSize()
+                                    },
                                 ) { pageIndex ->
                                     val targetTab = ui.visibleTabs.getOrNull(pageIndex)?.screenIndex ?: ui.currentTab
                                     when (targetTab) {
@@ -2401,6 +2374,9 @@ fun Root(
             }
             entry<RootRoute.FeatureCoui> {
                 featureEntryContent(FeaturePageMode.Coui)
+            }
+            entry<RootRoute.FeatureLiquidGlass> {
+                featureEntryContent(FeaturePageMode.LiquidGlass)
             }
             entry<RootRoute.FeatureSoftLightGlass> {
                 featureEntryContent(FeaturePageMode.SoftLightGlass)
@@ -2540,6 +2516,9 @@ fun Root(
             entry<RootRoute.FeatureAppMarket> {
                 featureEntryContent(FeaturePageMode.AppMarket)
             }
+            entry<RootRoute.FeatureWallet> {
+                featureEntryContent(FeaturePageMode.Wallet)
+            }
             entry<RootRoute.FeatureBattery> {
                 featureEntryContent(FeaturePageMode.Battery)
             }
@@ -2601,7 +2580,7 @@ fun Root(
                 val actions = LocalRootActions.current
                 com.mi.onextbox.ui.screens.AppErrorTrackingRoute(
                     modifier = Modifier.fillMaxSize(),
-                    blurBackdrop = rememberChromeBlurBackdrop(ui.blurEffectEnabled),
+                    blurBackdrop = rememberChromeBlurBackdrop(),
                     onBack = actions.popRootRoute,
                     onOpenDetail = actions.openAppErrorDetail,
                     detailId = route.id,
@@ -2704,6 +2683,7 @@ fun Root(
                 featureEntryContent(FeaturePageMode.Assistant)
             }
             entry<RootRoute.AppSettings> { RootAboutEntry(AboutPageMode.AppSettings) }
+            entry<RootRoute.DisplayTheme> { RootAboutEntry(AboutPageMode.DisplayTheme) }
             entry<RootRoute.Logs> { RootAboutEntry(AboutPageMode.Logs) }
             entry<RootRoute.DeveloperOptions> { RootAboutEntry(AboutPageMode.DeveloperOptions) }
             entry<RootRoute.DeviceDetails> {
@@ -2712,7 +2692,7 @@ fun Root(
                 com.mi.onextbox.ui.settings.SettingsPageSurface(
                     title = stringResource(R.string.feature_updates_device), modifier = Modifier.fillMaxSize(),
                     showBack = true, onBack = actions.popRootRoute,
-                    blurBackdrop = rememberChromeBlurBackdrop(ui.blurEffectEnabled),
+                    blurBackdrop = rememberChromeBlurBackdrop(),
                 ) {
                     com.mi.onextbox.ui.home.HomeHardwareInfo(rootGranted = ui.rootGranted, refreshKey = 0)
                 }
@@ -2789,10 +2769,9 @@ fun Root(
                             .fillMaxSize()
                             .background(colors.surface),
                     ) {
-                        if (backgroundStyle != 0) {
+                        if (featureBackgroundEnabled) {
                             Box(Modifier.matchParentSize().clipToBounds()) {
                                 com.mi.onextbox.ui.screens.FeatureBackgroundEffect(
-                                    style = backgroundStyle,
                                     dark = featurePageIsDark,
                                     surface = colors.surface,
                                     accent = colors.primary,
@@ -2814,10 +2793,7 @@ fun Root(
                                 .fillMaxSize()
                                 .imePadding()
                                 .then(
-                                    if (
-                                        rootUiState.liquidGlassBottomBarEnabled &&
-                                        rootUiState.liquidBackdrop != null
-                                    ) {
+                                    if (rootUiState.liquidBackdrop != null) {
                                         Modifier.liquidLayerBackdrop(rootUiState.liquidBackdrop)
                                     } else {
                                         Modifier
@@ -2875,29 +2851,34 @@ fun Root(
                         surface = FeatureWindowSurface.Icon,
                     ) {}
                 }
-                val chromeRouteVisibility by rememberBottomChromeRouteVisibility(currentRootRoute == RootRoute.Main)
-                val bottomChromeHideDistancePx = with(density) {
-                    BottomBarRouteHiddenOffset.toPx()
-                }
-                C17StableChromeSceneLayer(
-                    transformActive = activeAnimation != null || handFollowMotion != null,
-                    workspaceScaleProgress = launchWorkspaceScaleProgress,
-                    workspaceAlphaProgress = launchWorkspaceAlphaProgress,
-                    hidden = currentRootRoute != RootRoute.Main && chromeRouteVisibility == 0f,
-                    routeVisibility = chromeRouteVisibility,
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().imePadding().graphicsLayer {
-                            alpha = 1f
-                            translationY = (1f - chromeRouteVisibility) * bottomChromeHideDistancePx
-                            compositingStrategy = CompositingStrategy.ModulateAlpha
-                        },
-                        contentAlignment = Alignment.BottomCenter,
+                if (floatingBottomBarMode.visible) {
+                    val showBottomChrome = currentRootRoute == RootRoute.Main && !bottomBarCollapse.hiddenBelowScreen
+                    val chromeRouteVisibility by rememberBottomChromeRouteVisibility(showBottomChrome)
+                    val bottomChromeHideDistancePx = with(density) {
+                        val offset = if (floatingBottomBarMode == FloatingBottomBarMode.Standard) {
+                            bottomNavigationHeight
+                        } else {
+                            BottomBarRouteHiddenOffset
+                        }
+                        offset.toPx()
+                    }
+                    C17StableChromeSceneLayer(
+                        transformActive = activeAnimation != null || handFollowMotion != null,
+                        workspaceScaleProgress = launchWorkspaceScaleProgress,
+                        workspaceAlphaProgress = launchWorkspaceAlphaProgress,
+                        hidden = !showBottomChrome && chromeRouteVisibility == 0f,
+                        routeVisibility = chromeRouteVisibility,
                     ) {
-                        bottomChrome(
-                            true,
-                            rootUiState.liquidGlassBottomBarEnabled && rootUiState.liquidBackdrop != null,
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize().imePadding().graphicsLayer {
+                                alpha = 1f
+                                translationY = (1f - chromeRouteVisibility) * bottomChromeHideDistancePx
+                                compositingStrategy = CompositingStrategy.ModulateAlpha
+                            },
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            bottomChrome(true, rootUiState.liquidBackdrop != null)
+                        }
                     }
                 }
                 closingWindows.forEach { outgoingAnimation ->
@@ -2938,10 +2919,10 @@ fun Root(
                         gridPosition = featureLauncherGridPosition,
                         scrollState = featureLauncherScrollState,
                         topAppBarState = featurePageScroll.appBar,
-                        excludedBounds = bottomChromeBounds[
-                            rootUiState.liquidGlassBottomBarEnabled && rootUiState.liquidBackdrop != null
-                        ]?.takeIf {
-                            currentRootRoute == RootRoute.Main && it.width > 0f && it.height > 0f
+                        excludedBounds = bottomChromeBounds[floatingBottomBarMode]?.takeIf {
+                            floatingBottomBarMode.visible && !bottomBarCollapse.hiddenBelowScreen &&
+                                currentRootRoute == RootRoute.Main &&
+                                it.width > 0f && it.height > 0f
                         },
                         onPressStart = { mode ->
                             // Monotonic ownership prevents a completed old leash
@@ -3061,6 +3042,5 @@ fun Root(
         }
             }
         }
-    }
     }
 }

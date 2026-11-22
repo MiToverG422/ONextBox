@@ -1,12 +1,14 @@
 package com.mi.onextbox.ui.screens
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
 import com.mi.onextbox.lsp.SystemCustomizationSettings as Settings
-import com.mi.onextbox.ui.settings.SettingsToggleRow
+import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsGroup
+import com.mi.onextbox.ui.settings.SettingsToggleRow
 import kotlin.math.roundToInt
 
 @Composable
@@ -25,7 +27,8 @@ internal fun SystemCustomizationRows(
     val values = when (feature) {
         Settings.Feature.FolderLayout -> listOf(Settings.folderColumns to R.string.custom_folder_columns,
             Settings.folderRows to R.string.custom_folder_rows)
-        Settings.Feature.DesktopIconSize -> listOf(Settings.iconPercent to R.string.custom_icon_size)
+        Settings.Feature.DesktopIconSize -> listOf(Settings.iconAdjustment to R.string.custom_icon_size)
+        Settings.Feature.FolderIconSize -> listOf(Settings.folderIconPercent to R.string.launcher_folder_icon_size)
         Settings.Feature.NotificationClearSize -> listOf(Settings.clearPercent to R.string.custom_clear_size)
         Settings.Feature.VolumeSteps -> listOf(Settings.mediaSteps to R.string.custom_volume_media,
             Settings.ringSteps to R.string.custom_volume_ring, Settings.notificationSteps to R.string.custom_volume_notification,
@@ -37,34 +40,44 @@ internal fun SystemCustomizationRows(
         Settings.state(it, feature, values.map { pair -> pair.first })
     }
     val state = editor.state
-    FeatureAnimatedRows(hasDividerAbove = hasDividerAbove, hasDividerBelow = hasDividerBelow) {
-        row(feature.key) { above, below ->
-            SettingsToggleRow(title = stringResource(definition.title),
-                summary = if (showSummary && definition.summary != 0) stringResource(definition.summary) else "",
-                checked = state.enabled, interactionEnabled = editor.savingKey == null,
-                onCheckedChange = { enabled -> editor.save(feature.key, state.copy(enabled = enabled)) {
-                    Settings.set(context, feature, enabled)
-                } }, hasDividerAbove = above, hasDividerBelow = below)
-        }
-        values.forEach { (number, title) ->
-            row(number.key, visible = state.enabled) { above, below ->
-                val selected = state.values.getValue(number.key)
-                fun save(value: Int) = editor.save(number.key,
-                    editor.state.copy(values = editor.state.values + (number.key to value))) {
-                    Settings.set(context, number, value)
+    SettingsToggleRow(
+        title = stringResource(definition.title),
+        summary = if (showSummary && definition.summary != 0) stringResource(definition.summary) else "",
+        checked = state.enabled,
+        interactionEnabled = editor.savingKey == null,
+        onCheckedChange = { enabled ->
+            editor.save(feature.key, state.copy(enabled = enabled)) { Settings.set(context, feature, enabled) }
+        },
+        hasDividerAbove = hasDividerAbove,
+        hasDividerBelow = hasDividerBelow || (state.enabled && values.isNotEmpty()),
+    )
+    if (hasDividerBelow) SettingsDivider()
+    if (values.isNotEmpty()) {
+        FeatureExpandableVisibility(visible = state.enabled) {
+            Column {
+                if (!hasDividerBelow) SettingsDivider()
+                values.forEachIndexed { index, (number, title) ->
+                    val selected = state.values.getValue(number.key)
+                    fun save(value: Int) = editor.save(number.key,
+                        editor.state.copy(values = editor.state.values + (number.key to value))) {
+                        Settings.set(context, number, value)
+                    }
+                    val label = when {
+                        number == Settings.iconAdjustment -> "$selected (${(com.mi.onextbox.lsp.SystemCustomizationRules.iconScale(selected) * 100).roundToInt()}%)"
+                        number == Settings.folderIconPercent || number == Settings.clearPercent -> "$selected%"
+                        feature == Settings.Feature.VolumeSteps && selected == 0 -> stringResource(R.string.custom_system_default)
+                        else -> selected.toString()
+                    }
+                    FeatureSliderRow(heading = stringResource(title), currentValue = label,
+                        value = selected.toFloat(), valueRange = number.min.toFloat()..number.max.toFloat(),
+                        steps = number.max - number.min - 1, interactionEnabled = state.enabled && editor.savingKey == null,
+                        onValueChange = { editor.state = editor.state.copy(values = editor.state.values +
+                            (number.key to it.roundToInt())) },
+                        onValueChangeFinished = { save(editor.state.values.getValue(number.key)) },
+                        onReset = { save(number.default) }, hasDividerAbove = true,
+                        hasDividerBelow = index < values.lastIndex || hasDividerBelow)
+                    if (index < values.lastIndex || hasDividerBelow) SettingsDivider()
                 }
-                val label = when {
-                    number == Settings.iconPercent || number == Settings.clearPercent -> "$selected%"
-                    feature == Settings.Feature.VolumeSteps && selected == 0 -> stringResource(R.string.custom_system_default)
-                    else -> selected.toString()
-                }
-                FeatureSliderRow(heading = stringResource(title), currentValue = label,
-                    value = selected.toFloat(), valueRange = number.min.toFloat()..number.max.toFloat(),
-                    steps = number.max - number.min - 1, interactionEnabled = editor.savingKey == null,
-                    onValueChange = { editor.state = editor.state.copy(values = editor.state.values +
-                        (number.key to it.roundToInt())) },
-                    onValueChangeFinished = { save(editor.state.values.getValue(number.key)) },
-                    onReset = { save(number.default) }, hasDividerAbove = above, hasDividerBelow = below)
             }
         }
     }
@@ -87,6 +100,7 @@ private fun createSystemCustomizationDefinition(feature: Settings.Feature): Shar
             R.string.custom_folder_layout_summary, FeaturePageMode.DesktopIcons)
         Settings.Feature.DesktopIconSize -> Triple(R.string.custom_desktop_icon_size,
             R.string.custom_desktop_icon_size_summary, FeaturePageMode.DesktopIcons)
+        Settings.Feature.FolderIconSize -> Triple(R.string.launcher_folder_icon_size, 0, FeaturePageMode.DesktopIcons)
         Settings.Feature.VolumeSteps -> Triple(R.string.custom_volume_steps,
             R.string.custom_volume_steps_summary, FeaturePageMode.SystemUiVolume)
         Settings.Feature.NotificationClearSize -> Triple(R.string.custom_notification_clear_size,

@@ -221,6 +221,7 @@ internal fun SystemUiFeaturesPage(
             }
         }
         FeaturePageMode.SystemUiNotificationCenter -> {
+            SystemUiAppearanceGroup(statusBar = false)
             SettingsSection(title = stringResource(R.string.custom_group_notification_display))
             SettingsGroup {
                 SettingsToggleRow(

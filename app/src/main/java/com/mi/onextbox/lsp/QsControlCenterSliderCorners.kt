@@ -82,7 +82,7 @@ internal object QsControlCenterSliderCorners {
             it.name == "updateSpotLightPath" && it.parameterCount == 2 && it.parameterTypes[0] == Path::class.java
         }?.forEach { method ->
             ModernHookRegistry.installFast("$TAG:spotlight-path", method, XposedInterface.Hooker { chain ->
-                if (HotReloadLifecycle.isRetiring) return@Hooker chain.proceed()
+                if (HotReloadLifecycle.isRetiring || !QsTileCornerSettings.enabledXposed()) return@Hooker chain.proceed()
                 val seek = chain.thisObject as? View ?: return@Hooker chain.proceed()
                 val radius = sliderOwner(seek)?.let(::paintRadius) ?: return@Hooker chain.proceed()
                 val path = chain.getArg(0) as? Path ?: return@Hooker chain.proceed()

@@ -15,9 +15,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.mi.onextbox.R
+import com.mi.onextbox.ui.common.AppUiStyle
+import com.mi.onextbox.ui.common.LocalAppUiStyle
 import io.github.suqi8.coui.kmp.preference.RecommendedItem
 import io.github.suqi8.coui.kmp.preference.RecommendedPreference
 import io.github.suqi8.coui.kmp.preference.RecommendedPreferenceColors
+import io.github.suqi8.coui.kmp.preference.RecommendedPreferenceDefaults
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
 @Composable
@@ -34,7 +37,7 @@ internal fun SettingsRecommendedLinks(items: List<RecommendedItem>) {
         title = stringResource(R.string.settings_recommended_title),
         items = items,
         modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp),
-        cornerRadius = 24.dp,
+        cornerRadius = if (LocalAppUiStyle.current == AppUiStyle.ColorOs16) RecommendedPreferenceDefaults.CornerRadius else 24.dp,
         colors = RecommendedPreferenceColors(
             containerColor = neutral.copy(alpha = (if (dark) 0x1A else 0x0A) / 255f),
             titleColor = neutral.copy(alpha = 0x8A / 255f),

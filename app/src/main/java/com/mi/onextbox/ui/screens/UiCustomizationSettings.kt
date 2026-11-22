@@ -311,9 +311,11 @@ internal fun CouiSystemMaterialSettingsGroup(onOpen: (FeaturePageMode) -> Unit) 
 }
 
 @Composable
-internal fun SoftLightGlassPage() {
+internal fun SoftLightGlassPage(onOpen: (FeaturePageMode) -> Unit) {
     val context = LocalContext.current.applicationContext
     val glass = rememberCustomization(setOf(SoftLightGlassSettings.ENABLED), SoftLightGlassSettings::enabled)
+    val settings = SoftLightGlassSettings
+    val editor = rememberCustomization(settings.keys, settings::read)
     LaunchedEffect(context) {
         if (SoftLightGlassSettings.enabled(context)) SoftLightGlassSettings.requestInstalledScopes(context)
     }
@@ -327,15 +329,47 @@ internal fun SoftLightGlassPage() {
                 glass.save(SoftLightGlassSettings.ENABLED, next) { SoftLightGlassSettings.setEnabled(context, next) }
             },
         ) }
+        row(settings.STYLE, visible = glass.state) { _, _ ->
+            SettingsWindowDropdownPreference(title = stringResource(R.string.glass_style),
+                items = listOf(stringResource(R.string.glass_style_soft), stringResource(R.string.glass_style_liquid), "LiquidGlass"),
+                selectedIndex = editor.state.getValue(settings.STYLE), interactionEnabled = editor.savingKey == null,
+                onSelectedIndexChange = { mode ->
+                    editor.save(settings.STYLE, editor.state + (settings.STYLE to mode)) { settings.save(context, settings.STYLE, mode) }
+                })
+        }
+        row(settings.LOW_POWER, visible = glass.state) { above, below ->
+            SettingsToggleRow(title = stringResource(R.string.glass_low_power), summary = stringResource(R.string.glass_low_power_summary),
+                checked = editor.state[settings.LOW_POWER] == 1, interactionEnabled = editor.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { enabled ->
+                    val value = if (enabled) 1 else 0
+                    editor.save(settings.LOW_POWER, editor.state + (settings.LOW_POWER to value)) {
+                        settings.save(context, settings.LOW_POWER, value)
+                    }
+                })
+        }
+        row("rimLight", visible = glass.state) { above, below ->
+            val key = settings.rimLightKey(editor.state[settings.STYLE])
+            SettingsToggleRow(title = stringResource(R.string.glass_rim_light), summary = "",
+                checked = editor.state.getValue(key) != 0, interactionEnabled = editor.savingKey == null,
+                hasDividerAbove = above, hasDividerBelow = below,
+                onCheckedChange = { enabled ->
+                    val value = if (enabled) 1 else 0
+                    editor.save(key, editor.state + (key to value)) { settings.save(context, key, value) }
+                })
+        }
+        row("liquidGlassPanel", visible = glass.state && editor.state[settings.STYLE] == settings.LIQUID) { above, below ->
+            SettingsCardRow(title = stringResource(R.string.lg_settings), summary = stringResource(R.string.lg_beta_notice), showArrow = true,
+                onClick = { onOpen(FeaturePageMode.LiquidGlass) }, hasDividerAbove = above, hasDividerBelow = below)
+        }
     }
-    if (glass.state) SoftLightGlassControls()
+    if (glass.state) SoftLightGlassControls(editor)
 }
 
 @Composable
-private fun SoftLightGlassControls() {
+private fun SoftLightGlassControls(editor: CustomizationEditor<Map<String, Int>>) {
     val context = LocalContext.current.applicationContext
     val settings = SoftLightGlassSettings
-    val editor = rememberCustomization(settings.keys, settings::read)
     val state = editor.state
     val custom = state[settings.CUSTOM] == 1
     val selected = state.getValue(settings.SELECTION)
@@ -368,15 +402,15 @@ private fun SoftLightGlassControls() {
                 hasDividerAbove = above, hasDividerBelow = below,
                 onCheckedChange = { save(settings.KEEP_WHITE, if (it) 1 else 0) })
         }
-        SoftLightGlassSettings.Parameter.entries.forEach { p ->
+        if (state[settings.STYLE] != settings.LIQUID) SoftLightGlassSettings.Parameter.entries.forEach { p ->
             val response = p == SoftLightGlassSettings.Parameter.RESPONSE
-            if (response) row(settings.GYRO) { above, below ->
+            if (response) row(settings.GYRO, visible = state[settings.LOW_POWER] != 1) { above, below ->
                 SettingsToggleRow(title = stringResource(R.string.glass_gyro), summary = "",
                     checked = state[settings.GYRO] == 1, interactionEnabled = editor.savingKey == null,
                     hasDividerAbove = above, hasDividerBelow = below,
                     onCheckedChange = { save(settings.GYRO, if (it) 1 else 0) })
             }
-            row(p.key, visible = !response || state[settings.GYRO] == 1) { above, below ->
+            row(p.key, visible = !response || (state[settings.GYRO] == 1 && state[settings.LOW_POWER] != 1)) { above, below ->
                 val value = state.getValue(p.key)
                 val unit = if (p == SoftLightGlassSettings.Parameter.ANGLE) "°" else "%"
                 FeatureSliderRow(heading = stringResource(p.title), currentValue = "$value$unit", value = value.toFloat(),
@@ -550,14 +584,28 @@ internal fun SideVolumePercentageSettingsGroup(onOpenProperties: () -> Unit) {
 internal fun QsTileCornerSettingsPage() {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(QsTileCornerSettings.keys, QsTileCornerSettings::state)
+    QsCornerSliderGroup(R.string.qs_tile_corner_radius, QsTileCornerSettings.Size.entries, editor, context)
+    QsCornerSliderGroup(R.string.qs_corner_device_space, QsTileCornerSettings.DeviceCard.entries, editor, context)
+}
+
+@Composable
+private fun QsCornerSliderGroup(
+    title: Int,
+    targets: List<QsTileCornerSettings.Target>,
+    editor: CustomizationEditor<QsTileCornerSettings.State>,
+    context: Context,
+) {
     val value = editor.state
-    SettingsSection(title = stringResource(R.string.qs_tile_corner_radius))
+    SettingsSection(title = stringResource(title))
     FeatureAnimatedGroup(animateChanges = true) {
-        QsTileCornerSettings.Size.entries.forEach { size ->
+        targets.forEach { size ->
             row(size.key) { above, below ->
                 val radius = value.radius(size)
                 FeatureSliderRow(
-                    heading = stringResource(R.string.qs_tile_corner_size_radius, size.label),
+                    heading = when (size) {
+                        is QsTileCornerSettings.Size -> stringResource(R.string.qs_tile_corner_size_radius, size.label)
+                        is QsTileCornerSettings.DeviceCard -> stringResource(size.title, size.size.label)
+                    },
                     currentValue = if (radius == QsTileCornerRules.SYSTEM_DEFAULT)
                         stringResource(R.string.feature_slider_current_default)
                         else stringResource(R.string.feature_slider_current_value, "$radius%"),
@@ -565,7 +613,7 @@ internal fun QsTileCornerSettingsPage() {
                     valueRange = QsTileCornerRules.SYSTEM_DEFAULT.toFloat()..QsTileCornerRules.MAX_PERCENT.toFloat(),
                     steps = QsTileCornerRules.MAX_PERCENT,
                     enabled = value.enabled,
-                    interactionEnabled = editor.savingKey != size.key,
+                    interactionEnabled = editor.savingKey == null,
                     onValueChange = { editor.state = editor.state.withRadius(size, it.roundToInt()) },
                     onValueChangeFinished = {
                         val selected = editor.state
@@ -586,7 +634,7 @@ internal fun QsTileCornerSettingsPage() {
 }
 
 @Composable
-internal fun StatusBarLayoutSettingsGroup(onOpenOrder: () -> Unit) {
+internal fun StatusBarLayoutSettingsGroup(legacyMargins: Boolean = false, onOpenOrder: () -> Unit) {
     val context = LocalContext.current.applicationContext
     val editor = rememberCustomization(setOf(StatusBarLayoutSettings.ORDER_ENABLED, StatusBarLayoutSettings.ORDER,
         StatusBarLayoutSettings.MARGINS_ENABLED, StatusBarLayoutSettings.LEFT, StatusBarLayoutSettings.RIGHT,
@@ -594,7 +642,9 @@ internal fun StatusBarLayoutSettingsGroup(onOpenOrder: () -> Unit) {
         StatusBarLayoutSettings.SIM_ENABLED, StatusBarLayoutSettings.SIM_ORDER), StatusBarLayoutSettings::state)
     val value = editor.state
     fun save(key: String, next: StatusBarLayoutSettings.State) = editor.save(key, next) { StatusBarLayoutSettings.save(context, next) }
-    SettingsSection(title = stringResource(R.string.statusbar_layout_group))
+    val mirror = SystemUiAppearance.Mirror
+    val mirrorEditor = if (legacyMargins) null else rememberCustomization(setOf(mirror.key)) { mirror.read(it) != 0 }
+    SettingsSection(title = stringResource(if (legacyMargins) R.string.statusbar_layout_group else R.string.statusbar_arrangement_group))
     FeatureAnimatedGroup(animateChanges = true) {
         row("order") { above, below ->
             SettingsToggleRow(title = stringResource(R.string.statusbar_order_title), summary = "",
@@ -608,6 +658,16 @@ internal fun StatusBarLayoutSettingsGroup(onOpenOrder: () -> Unit) {
             SettingsCardRow(title = stringResource(R.string.statusbar_order_settings_title),
                 summary = "", showArrow = true,
                 hasDividerAbove = above, hasDividerBelow = below, onClick = onOpenOrder)
+        }
+        if (mirrorEditor != null) {
+            row(mirror.key) { above, below ->
+                SettingsToggleRow(title = stringResource(mirror.title), summary = "", checked = mirrorEditor.state,
+                    interactionEnabled = mirrorEditor.savingKey == null, hasDividerAbove = above, hasDividerBelow = below,
+                    onCheckedChange = { enabled -> mirrorEditor.save(mirror.key, enabled) {
+                        mirror.save(context, if (enabled) 1 else 0)
+                    } })
+            }
+            return@FeatureAnimatedGroup
         }
         row("margins") { above, below ->
             SettingsToggleRow(title = stringResource(R.string.statusbar_margins_title), summary = "",
@@ -649,6 +709,7 @@ internal fun StatusBarLayoutSettingsGroup(onOpenOrder: () -> Unit) {
             }
         }
     }
+    if (!legacyMargins) SystemUiAppearanceGroup(statusBar = true)
 }
 
 @Composable

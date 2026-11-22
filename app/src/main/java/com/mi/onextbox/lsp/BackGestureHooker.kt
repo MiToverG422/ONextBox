@@ -57,6 +57,8 @@ internal object BackGestureHooker {
         val configuration = field(detector, "mSideGestureConfiguration")
         val size = field(detector, "mDisplaySize")
         val allowed = field(detector, "mAllowGesture")
+        val leftNav by lazy { field(manager, "navLeftView") }
+        val rightNav by lazy { field(manager, "navRightView") }
         val input = detector.getDeclaredMethod("onMotionEventImpl", MotionEvent::class.java, Map::class.java)
         val finished = manager.getDeclaredMethod("onGestureFinished", point)
         pointState = point.getDeclaredMethod("getState")
@@ -103,12 +105,12 @@ internal object BackGestureHooker {
                 try {
                     if (completed && BackGestureRules.releaseHaptic(session.settings.release, event.actionMasked,
                         session.accepted, event.pointerCount)) {
-                        val view = field(manager, if (session.side == 0) "navLeftView" else "navRightView").get(session.manager) as View
+                        val view = (if (session.side == 0) leftNav else rightNav).get(session.manager) as View
                         emit(view, session.settings.selectedHaptics, release = true)
                     }
                 } catch (error: Exception) { HookLog.w(TAG, "Release feedback unavailable", error) }
                 finally {
-                    if (event.actionMasked in listOf(MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL) || event.pointerCount != 1)
+                    if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL || event.pointerCount != 1)
                         synchronized(lock) { sessions.remove(host) }
                     if (previous == null) frames.remove() else frames.set(previous)
                 }
@@ -118,7 +120,7 @@ internal object BackGestureHooker {
             canReload = { synchronized(lock) {
                 sessions.keys.none { runCatching { allowed.getBoolean(it) }.getOrDefault(true) } &&
                     SystemClock.uptimeMillis() - lastInput >= 700
-            } }, detach = { synchronized(lock) { sessions.clear() } })
+            } }, waitForGesture = true, detach = { synchronized(lock) { sessions.clear() } })
         HookLog.i(TAG, "Native gesture area and release adapters installed")
     }
 

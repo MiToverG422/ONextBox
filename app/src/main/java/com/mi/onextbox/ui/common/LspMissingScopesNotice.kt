@@ -116,7 +116,7 @@ internal fun LspMissingScopesNotice(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !opening,
                     minHeight = 48.dp,
-                    cornerRadius = AppUiTokens.CardCornerRadius,
+                    cornerRadius = 20.dp,
                     insideMargin = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     Text(

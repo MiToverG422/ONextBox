@@ -63,8 +63,11 @@ internal fun MediaUnlockSettingsPage(mode: FeaturePageMode) {
         }
         options.forEachIndexed { index, option ->
             if (index > 0) SettingsDivider()
-            SettingsToggleRow(title = stringResource(option.title), summary = "",
-                checked = editor.state[option.key] == true, interactionEnabled = editor.savingKey == null,
+            val missingScene = option.key == com.mi.onextbox.lsp.CameraAiCompositionHooker.SCENE &&
+                com.mi.onextbox.lsp.CameraCompositionSupport.missingSceneEngine
+            SettingsToggleRow(title = stringResource(option.title),
+                summary = if (missingScene) stringResource(R.string.camera_composition_scene_missing) else "",
+                checked = editor.state[option.key] == true, interactionEnabled = editor.savingKey == null && !missingScene,
                 hasDividerAbove = aiRetouch || index > 0, hasDividerBelow = index < options.lastIndex,
                 onCheckedChange = { enabled ->
                     if (enabled && option.key in com.mi.onextbox.lsp.CameraPaletteSupport.options && !com.mi.onextbox.lsp.CameraPaletteSupport.available())

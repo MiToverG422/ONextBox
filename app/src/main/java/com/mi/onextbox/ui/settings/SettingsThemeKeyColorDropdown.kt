@@ -2,8 +2,11 @@ package com.mi.onextbox.ui.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.mi.onextbox.R
+import com.mi.onextbox.ui.common.CouiAccentPreset
+import com.mi.onextbox.ui.common.LocalCouiAccentPreset
 
 private data class ThemeKeyColorOption(
     val argb: Long?,
@@ -46,6 +49,20 @@ fun SettingsThemeKeyColorDropdown(
         title = title,
         onSelectedIndexChange = { index ->
             onKeyColorChange(options.getOrNull(index)?.argb)
+        },
+    )
+}
+
+@Composable
+internal fun SettingsCouiAccentDropdown() {
+    val context = LocalContext.current
+    val presets = CouiAccentPreset.entries
+    SettingsWindowDropdownPreference(
+        items = presets.map { stringResource(it.label) },
+        selectedIndex = LocalCouiAccentPreset.current.ordinal,
+        title = stringResource(R.string.setting_coui_accent),
+        onSelectedIndexChange = { index ->
+            presets.getOrNull(index)?.let { CouiAccentPreset.save(context, it) }
         },
     )
 }

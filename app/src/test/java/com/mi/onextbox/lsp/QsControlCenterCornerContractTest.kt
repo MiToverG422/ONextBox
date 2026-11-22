@@ -57,7 +57,7 @@ class QsControlCenterCornerContractTest {
         val settings = source("QsTileCornerSettings")
         assertTrue(settings.contains("const val ENABLED = \"systemui_qs_tile_corner_enabled\""))
         assertFalse(settings.contains("const val RADIUS = \"systemui_qs_tile_corner_radius\""))
-        assertTrue(settings.contains("fun radiusXposed(size: Size)"))
+        assertTrue(settings.contains("fun radiusXposed(size: Target)"))
         assertTrue(settings.contains("const val SYSTEM_DEFAULT = -1"))
         assertTrue(settings.contains("const val MAX_PERCENT = 100"))
         assertTrue(settings.contains("systemui_qs_tile_corner_radius_percent_"))

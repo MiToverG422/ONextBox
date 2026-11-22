@@ -1,76 +1,58 @@
 package com.mi.onextbox.ui.onboarding
 
 import java.io.File
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.double
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.*
 import org.junit.Test
 
 class AnimationHapticPatternTest {
-    private fun source(name: String): String = listOf(
-        File("src/main/res/raw/c17_$name.he"), File("app/src/main/res/raw/c17_$name.he"),
-    ).first { it.isFile }.readText()
+    private fun track(name: String): AnimationHapticPattern {
+        val resource = "src/main/res/raw/c17_$name.he"
+        val source = listOf(File(resource), File("app/$resource")).first { it.isFile }.readText()
+        return AnimationHapticPattern(source)
+    }
 
-    private fun root(pattern: String) = Json.parseToJsonElement(pattern).jsonObject
-    private fun firstEvent(pattern: String): JsonObject = root(pattern).getValue("PatternList")
-        .jsonArray.first().jsonObject.getValue("Pattern").jsonArray.first().jsonObject.getValue("Event").jsonObject
-
-    @Test fun originalTracksKeepEveryEventAndCurveAtTheBeginning() {
-        for ((name, count) in listOf("welcome_startup_haptic" to 9, "guide_next_morph_haptic" to 46,
-                "vibration_res_of_complete_page" to 15)) {
-            val raw = source(name)
-            val replay = AnimationHapticPattern(raw).fromPosition(0)!!
-            assertEquals(root(raw), root(replay))
-            assertEquals(count, root(replay).getValue("PatternList").jsonArray.sumOf {
-                it.jsonObject.getValue("Pattern").jsonArray.size
-            })
+    @Test fun originalTracksKeepTheirTimingAsPublicWaveforms() {
+        for ((name, start, end) in listOf(
+            Triple("welcome_startup_haptic", 560L, 6_248L),
+            Triple("guide_next_morph_haptic", 1_133L, 15_856L),
+            Triple("vibration_res_of_complete_page", 437L, 4_188L),
+        )) {
+            val waveform = track(name).fromPosition(0)!!
+            assertEquals(name, start, waveform.timings.first())
+            assertEquals(name, end, waveform.timings.sum())
+            assertEquals(name, 0, waveform.amplitudes.first())
+            // Very short low-amplitude opening segments may add to the initial silence.
+            assertTrue(name, waveform.amplitudes[1] > 0)
+            assertEquals(name, waveform.timings.size, waveform.amplitudes.size)
+            assertTrue(name, waveform.timings.all { it > 0 })
+            assertTrue(name, waveform.amplitudes.all { it in 0..255 })
         }
     }
 
-    @Test fun firstRenderedFramePreservesTheRemainingDelayBeforeTheFirstPulse() {
-        val track = AnimationHapticPattern(source("welcome_startup_haptic"))
-        val output = root(track.fromPosition(120)!!)
-        assertEquals(440, output.getValue("PatternList").jsonArray.first().jsonObject
-            .getValue("AbsoluteTime").jsonPrimitive.int)
-        assertEquals(300, firstEvent(output.toString()).getValue("Duration").jsonPrimitive.int)
+    @Test fun aLateFirstFrameKeepsOnlyTheRemainingDelayBeforeTheFirstPulse() {
+        val waveform = track("welcome_startup_haptic").fromPosition(120)!!
+        assertEquals(440L, waveform.timings.first())
+        assertEquals(0, waveform.amplitudes.first())
+        assertEquals(6_128L, waveform.timings.sum())
     }
 
-    @Test fun resumingInsideAnEnvelopeInterpolatesIntensityAndFrequency() {
-        val output = AnimationHapticPattern(source("welcome_startup_haptic")).fromPosition(611)!!
-        val event = firstEvent(output)
-        assertEquals(0, event.getValue("RelativeTime").jsonPrimitive.int)
-        assertEquals(249, event.getValue("Duration").jsonPrimitive.int)
-        val curve = event.getValue("Parameters").jsonObject.getValue("Curve").jsonArray
-        assertEquals(0, curve.first().jsonObject.getValue("Time").jsonPrimitive.int)
-        assertEquals(0.175, curve.first().jsonObject.getValue("Intensity").jsonPrimitive.double, 0.00001)
-        assertEquals(-40, curve.first().jsonObject.getValue("Frequency").jsonPrimitive.int)
-        assertEquals(249, curve.last().jsonObject.getValue("Time").jsonPrimitive.int)
+    @Test fun resumingInsideAnEnvelopeContinuesFromItsCurrentAmplitude() {
+        val waveform = track("welcome_startup_haptic").fromPosition(611)!!
+        assertEquals(9L, waveform.timings.first())
+        assertTrue(waveform.amplitudes.first() in 27..37)
+        assertEquals(5_637L, waveform.timings.sum())
     }
 
-    @Test fun resumingDropsExpiredEventsInsteadOfReplayingThemInABurst() {
-        val raw = root(source("guide_next_morph_haptic"))
-        val position = 10_000L
-        val originalEvents = raw.getValue("PatternList").jsonArray.sumOf { it.jsonObject.getValue("Pattern").jsonArray.size }
-        val output = root(AnimationHapticPattern(raw.toString()).fromPosition(position)!!)
-        val patterns = output.getValue("PatternList").jsonArray
-        assertTrue(patterns.sumOf { it.jsonObject.getValue("Pattern").jsonArray.size } < originalEvents)
-        for (pattern in patterns) {
-            assertTrue(pattern.jsonObject.getValue("AbsoluteTime").jsonPrimitive.int >= 0)
-            for (event in pattern.jsonObject.getValue("Pattern").jsonArray) {
-                assertTrue(event.jsonObject.getValue("Event").jsonObject.getValue("RelativeTime").jsonPrimitive.int >= 0)
-            }
-        }
+    @Test fun resumingBetweenTransientsDoesNotReplayAnExpiredPulse() {
+        val waveform = track("welcome_startup_haptic").fromPosition(900)!!
+        assertEquals(0, waveform.amplitudes.first())
+        assertTrue(waveform.timings.first() >= 687L)
+        assertEquals(5_348L, waveform.timings.sum())
     }
 
     @Test fun aFinishedTrackHasNothingToReplayAndNegativePositionsClampToZero() {
-        val raw = source("vibration_res_of_complete_page")
-        val track = AnimationHapticPattern(raw)
+        val track = track("vibration_res_of_complete_page")
         assertNull(track.fromPosition(60_000))
-        assertEquals(root(raw), root(track.fromPosition(-100)!!))
+        assertSame(track.fromPosition(0), track.fromPosition(-100))
     }
 }

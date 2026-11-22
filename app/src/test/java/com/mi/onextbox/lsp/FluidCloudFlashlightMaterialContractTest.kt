@@ -10,7 +10,7 @@ class FluidCloudFlashlightMaterialContractTest {
     private val adapter = File("src/main/java/com/mi/onextbox/lsp/FluidCloudFlashlightMaterial.kt").readText()
 
     @Test fun flashlightFactoryKeepsNativeDrawableIdentity() {
-        assertTrue(hooks.contains("flashlight.apply(original)"))
+        assertTrue(hooks.contains("flashlight.apply(original, view.context)"))
         assertFalse(hooks.contains("material.background("))
         assertFalse(hooks.contains("qs_detail_bg_corner_radius"))
         assertTrue(hooks.lineSequence().any { it.trim() == "original" })
@@ -29,6 +29,8 @@ class FluidCloudFlashlightMaterialContractTest {
         assertTrue(adapter.contains("MixColorTileDrawable"))
         assertTrue(adapter.contains("states.putIfAbsent(tile, original)"))
         assertTrue(adapter.contains("mask.setColor(savedMask)"))
-        assertTrue(adapter.contains("val shader = mix() ?: return false"))
+        assertTrue(adapter.contains("val shader = mix(context) ?: return false"))
+        assertTrue(adapter.contains("detach = ::releaseAll"))
+        assertTrue(adapter.contains("apply(bg, context)"))
     }
 }

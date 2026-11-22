@@ -96,11 +96,10 @@ internal object ModernHookBridge {
         }
 
         param.beginAfter(result, throwable)
-        val originalOutcome = param.snapshotOutcome()
         val afterSucceeded = runCallback("after", chain.executable) {
             callback.afterHookedMethod(param)
         }
-        if (!afterSucceeded) param.restoreOutcome(originalOutcome)
+        if (!afterSucceeded) param.beginAfter(result, throwable)
         return param.resultOrThrow()
     }
 

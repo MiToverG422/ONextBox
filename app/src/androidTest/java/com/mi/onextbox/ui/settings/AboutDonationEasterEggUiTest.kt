@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
@@ -23,6 +24,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.mi.onextbox.R
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import java.io.File
+import java.time.LocalDate
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
@@ -117,7 +119,9 @@ class AboutDonationEasterEggUiTest {
     }
 
     @Test fun donationPageShowsTheFullRecordAndAllSortOptionsWork() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
         var instructions = ""; var sort = ""; var labels = emptyList<String>()
+        val record = DonationRecord("Test supporter", 2000, LocalDate.of(2026, 10, 20))
         compose.setContent {
             instructions = stringResource(R.string.about_donation_instructions)
             sort = stringResource(R.string.about_donation_sort)
@@ -125,20 +129,25 @@ class AboutDonationEasterEggUiTest {
             labels = listOf(R.string.about_donation_sort_amount_desc, R.string.about_donation_sort_amount_asc,
                 R.string.about_donation_sort_time_desc, R.string.about_donation_sort_time_asc).map(resources::getString)
             COUITheme {
-                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { AboutDonationPage() }
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    AboutDonationPage(listOf(record), refreshFailed = false)
+                }
             }
         }
-        compose.onNodeWithText(instructions).assertIsDisplayed()
-        compose.onNodeWithText("Coolapk@超级无敌牛批暴龙战士").assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.about_donation_responsible)).assertIsDisplayed()
+        compose.onNodeWithContentDescription(context.getString(R.string.about_donation_wechat_code)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.about_donation_wechat_note)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(instructions).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(record.name).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("20 CNY").assertIsDisplayed()
         compose.onNodeWithText("2026/10/20").assertIsDisplayed()
         labels.forEach { label ->
-            compose.onNodeWithText(sort).performClick()
+            compose.onNodeWithText(sort).performScrollTo().performClick()
             val options = compose.onAllNodesWithText(label)
             options[options.fetchSemanticsNodes().lastIndex].performClick()
             compose.waitForIdle()
             compose.onNodeWithText(label).assertIsDisplayed()
-            compose.onNodeWithText("Coolapk@超级无敌牛批暴龙战士").assertIsDisplayed()
+            compose.onNodeWithText(record.name).performScrollTo().assertIsDisplayed()
         }
     }
 }

@@ -24,9 +24,10 @@ class LauncherGridApplyTargetsTest {
         val paths = listOf(installed.sourceDir) + installed.splitSourceDirs.orEmpty() +
             installed.sharedLibraryFiles.orEmpty()
         val loader = PathClassLoader(paths.joinToString(File.pathSeparator), ClassLoader.getSystemClassLoader())
-        val resolved = LauncherGridApplyTargets.resolve(loader)
+        val resolved = LauncherGridApplyTargets.resolve(loader, installed.sourceDir)
         assertEquals(LauncherGridApplyTargets.SCHEMA_SIZE, resolved.values.size)
-        assertEquals("applyLayoutSettings", resolved.apply.name)
+        assertEquals(listOf("com.android.launcher.Launcher", "int", "int", "boolean"),
+            resolved.apply.parameterTypes.map { it.name })
         assertSame(resolved.taskConstructor.declaringClass, resolved.completed.declaringClass)
         assertArrayEquals(arrayOf(Any::class.java), resolved.completed.parameterTypes)
         assertEquals(Void.TYPE, resolved.completed.returnType)

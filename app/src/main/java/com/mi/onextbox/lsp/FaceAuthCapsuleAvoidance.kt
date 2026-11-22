@@ -25,7 +25,7 @@ internal class FaceAuthCapsuleAvoidance {
         val locationType = Reflect.findClass("com.android.systemui.statusbar.phone.StatusBarLocation", loader)
         val target = Reflect.findClass("com.oplus.systemui.statusbar.seeding.HiddenIconDispatcherImpl", loader)
         val method = Reflect.findDeclaredMethodExact(target, "setHiddenIconAreas", locationType, List::class.java)
-        locations = listOf("HOME", "KEYGUARD").map { locationType.getDeclaredField(it).get(null)!! }
+        locations = listOf(locationType.getDeclaredField("KEYGUARD").get(null)!!)
         type = target; setter = method
         target.declaredConstructors.forEachIndexed { index, constructor ->
             ModernHookRegistry.installCompat("FaceCapsule:avoidance:init:$index", constructor, object : ModernMethodHook() {
@@ -63,6 +63,11 @@ internal class FaceAuthCapsuleAvoidance {
     @Synchronized fun reserve(bounds: FaceAuthCapsuleBounds): Boolean = runCatching {
         if (dispatcher.get() == null) bootstrap()
         if (dispatcher.get() == null || setter == null) return false
+        // A late bootstrap can discover a native reservation after this frame's pre-draw.
+        if (blockedByNative()) {
+            release()
+            return false
+        }
         val next = Rect(kotlin.math.floor(bounds.left).toInt() - 2, 0,
             kotlin.math.ceil(bounds.right).toInt() + 2, kotlin.math.ceil(bounds.bottom).toInt())
         if (occupied == next) return true
@@ -100,7 +105,7 @@ internal class FaceAuthCapsuleAvoidance {
 
     private fun merged(location: Any) = ArrayList<Rect>().apply {
         addAll(nativeAreas[location].orEmpty())
-        occupied?.let(::add)
+        if (!blockedByNative()) occupied?.let(::add)
     }
 
     private fun publish() {
@@ -110,11 +115,18 @@ internal class FaceAuthCapsuleAvoidance {
         finally { publishing = false }
     }
 
-    @Synchronized fun clear() {
+    @Synchronized fun blockedByNative() = nativeAreas.values.any { areas -> areas.any { !it.isEmpty } }
+    @Synchronized fun ownsArea() = occupied != null && !blockedByNative()
+
+    @Synchronized fun release() {
         if (occupied != null) {
             occupied = null
             runCatching(::publish).onFailure { HookLog.w("FaceCapsule", "Native icon areas could not be restored", it) }
         }
+    }
+
+    @Synchronized fun clear() {
+        release()
         dispatcher.clear(); nativeAreas.clear()
     }
 }

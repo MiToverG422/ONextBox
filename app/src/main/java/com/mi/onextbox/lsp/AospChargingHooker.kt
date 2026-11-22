@@ -12,10 +12,14 @@ import com.mi.onextbox.lsp.compat.ModernMethodHook
 import com.mi.onextbox.lsp.compat.ModernReflect
 import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 internal object AospChargingHooker {
+    private const val RIPPLE_STATE = "aosp-charging-ripple"
+
     fun hook(loader: ClassLoader) {
-        if (AospUiSettings.enabledXposed(AospUiSettings.CHARGING_EFFECT)) runCatching { ripple(loader) }
+        if (AospUiSettings.enabledXposed(AospUiSettings.CHARGING_EFFECT) || HotReloadLifecycle.restoredState(RIPPLE_STATE) != null) runCatching { ripple(loader) }
             .onFailure { HookLog.w("ONextBox-AospCharging", "Native charging ripple unavailable", it) }
         if (AospUiSettings.enabledXposed(AospUiSettings.CHARGING_SOUND)) runCatching { sound(loader) }
             .onFailure { HookLog.w("ONextBox-AospCharging", "Native charging sound unavailable", it) }
@@ -24,9 +28,10 @@ internal object AospChargingHooker {
     private fun ripple(loader: ClassLoader) {
         val type = HostClassLookup.load("com.android.systemui.charging.WiredChargingRippleController", false, loader)
         val callbacks = type.getMethod("registerCallbacks")
-        val originals = IdentityHashMap<Any, Boolean>()
-        val registered = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
-        var ready = false
+        val originals = Collections.synchronizedMap(IdentityHashMap<Any, Boolean>())
+        val registered = Collections.synchronizedSet(Collections.newSetFromMap(IdentityHashMap<Any, Boolean>()))
+        val ready = AtomicBoolean(false)
+        val pending = AtomicInteger()
         ModernHookBridge.hookAllMethods(type, "registerCallbacks", object : ModernMethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
                 val owner = param.thisObject ?: return
@@ -42,7 +47,7 @@ internal object AospChargingHooker {
             override fun afterHookedMethod(param: MethodHookParam) {
                 val failure = param.throwable ?: return
                 if (param.thisObject !in originals) return
-                ready = false
+                ready.set(false)
                 HookLog.w("ONextBox-AospCharging", "Ripple failed; retaining OEM animation", failure)
                 param.result = null
             }
@@ -53,14 +58,23 @@ internal object AospChargingHooker {
                 if (!AospUiSettings.enabledXposed(AospUiSettings.CHARGING_EFFECT)) return
                 originals[owner] = ModernReflect.getObjectField(owner, "rippleEnabled") == true
                 ModernReflect.setObjectField(owner, "rippleEnabled", true)
-                Handler(Looper.getMainLooper()).post {
-                    runCatching { callbacks.invoke(owner) }
-                        .onSuccess { ready = true; HookLog.i("ONextBox-AospCharging", "Native charging ripple callbacks ready") }
-                        .onFailure {
-                            registered.remove(owner)
-                            ModernReflect.setObjectField(owner, "rippleEnabled", originals.remove(owner) == true)
-                            HookLog.w("ONextBox-AospCharging", "Ripple callback registration failed", it)
-                        }
+                pending.incrementAndGet()
+                val posted = Handler(Looper.getMainLooper()).post {
+                    try {
+                        callbacks.invoke(owner)
+                        ready.set(true)
+                        HookLog.i("ONextBox-AospCharging", "Native charging ripple callbacks ready")
+                    } catch (error: Exception) {
+                        registered.remove(owner)
+                        ModernReflect.setObjectField(owner, "rippleEnabled", originals.remove(owner) == true)
+                        HookLog.w("ONextBox-AospCharging", "Ripple callback registration failed", error)
+                    } finally {
+                        pending.decrementAndGet()
+                    }
+                }
+                if (!posted) {
+                    pending.decrementAndGet()
+                    ModernReflect.setObjectField(owner, "rippleEnabled", originals.remove(owner) == true)
                 }
             }
         })
@@ -69,12 +83,25 @@ internal object AospChargingHooker {
             stock.declaredMethods.filter { it.name.contains("createChargeAnim") }.forEach { method ->
                 ModernHookBridge.hookMethod(method, object : ModernMethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        if (ready && AospUiSettings.enabledXposed(AospUiSettings.CHARGING_EFFECT)) param.result = null
+                        if (ready.get() && AospUiSettings.enabledXposed(AospUiSettings.CHARGING_EFFECT)) param.result = null
                     }
                 })
             }
         }.onFailure { HookLog.w("ONextBox-AospCharging", "OEM animation adapter unavailable", it) }
-        HotReloadLifecycle.register("aosp-charging-ripple", canPrepare = { registered.isEmpty() }, canReload = { registered.isEmpty() })
+        // registerCallbacks installs two SystemUI-owned listeners. Keep them attached across generations.
+        HotReloadLifecycle.register(RIPPLE_STATE,
+            canPrepare = { pending.get() == 0 }, canReload = { pending.get() == 0 },
+            capture = { arrayOf(registered.toTypedArray(), synchronized(originals) { IdentityHashMap(originals) }, ready.get()) },
+            detach = { registered.clear(); originals.clear(); ready.set(false) },
+            restore = { saved ->
+                if (saved is Array<*>) {
+                    (saved[0] as Array<*>).filterNotNullTo(registered)
+                    (saved[1] as Map<*, *>).forEach { (owner, original) ->
+                        if (owner != null && original is Boolean) originals[owner] = original
+                    }
+                    ready.set(saved[2] == true)
+                }
+            })
     }
 
     private fun sound(loader: ClassLoader) {

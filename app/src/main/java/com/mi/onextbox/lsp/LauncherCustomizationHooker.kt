@@ -55,9 +55,23 @@ internal object LauncherCustomizationHooker {
         val cellDimensions = cell.getDeclaredMethod("setCellDimensions", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
         val cellGrid = cell.getDeclaredMethod("setGridSize", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
         val cellSizes = listOf("mCellWidth", "mCellHeight").map { cell.getDeclaredField(it).apply { isAccessible = true } }
+        val cellColumns = cell.getDeclaredField("mCountX").apply { isAccessible = true }
+        val cellRows = cell.getDeclaredField("mCountY").apply { isAccessible = true }
+        private val folderExt = runCatching { loader.loadClass("com.android.launcher3.folder.FolderPagedViewExtImpV2") }.getOrNull()
+        val pageArranger = folderExt?.let { type ->
+            runCatching { type.getDeclaredMethod("arrangeChildren", List::class.java, Boolean::class.javaPrimitiveType) }.getOrNull()
+        }
+        val arrangerHost = folderExt?.let { type ->
+            runCatching { type.getDeclaredField("mHostView").apply { isAccessible = true } }.getOrNull()
+        }
         val folderCallers = (listOf(paged, loader.loadClass("com.android.launcher3.folder.OplusFolderPagedView")) +
-            listOfNotNull(runCatching { loader.loadClass("com.android.launcher3.folder.FolderPagedViewExtImpV2") }.getOrNull()))
+            listOfNotNull(folderExt))
             .flatMap { it.declaredMethods.filter { method -> method.name in setOf("arrangeChildren", "bindItems", "createAndAddNewPage", "setupContentDimensions") } }
+        val arrangerCallers = if (pageArranger != null && arrangerHost != null) {
+            val folder = loader.loadClass("com.android.launcher3.folder.Folder")
+            folder.declaredMethods.filter { it.name == "rearrangeChildren" || it.name == "onDropCompleted" } +
+                paged.declaredMethods.filter { it.name == "createAndAddViewForRank" }
+        } else emptyList()
         val animation = runCatching { LauncherFolderAnimationGeometry(loader) }.getOrNull()
     }
 
@@ -71,6 +85,7 @@ internal object LauncherCustomizationHooker {
         private var loggedIcons = false
         private var loggedFolder = false
         private var loggedFolderIcon = false
+        private var loggedFolderPageReuse = false
         private var restoring = false
 
         private fun parentCell(view: View): View? {
@@ -90,18 +105,22 @@ internal object LauncherCustomizationHooker {
             val current = target.iconSize.getInt(view)
             if (current <= 0) return
             val native = if (previous != null && previous[1] == current) previous[0] else current
-            val folderEnabled = display == 2 && target.animation != null &&
-                SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.FolderLayout)
+            val customFolderIcon = display == 2 && SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.FolderIconSize)
+            val folderEnabled = display == 2 && (customFolderIcon || (target.animation != null &&
+                SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.FolderLayout)))
             val box = if (folderEnabled) folderSize.get() ?: parentCell(view)?.let { page ->
                 IntArray(2) { target.cellSizes[it].getInt(page) }
             } ?: previous?.takeIf { it.size >= 4 }?.copyOfRange(2, 4) else null
             val text = view as? TextView
             val labelHeight = text?.paint?.fontMetrics?.let { ceil(it.bottom - it.top).toInt() } ?: 0
             val applied = if (display == 2) {
-                if (box == null) native else LauncherFolderSizing.fitIcon(native, box[0], box[1],
+                val preferred = if (customFolderIcon) {
+                    (native * (SystemCustomizationSettings.value(SystemCustomizationSettings.folderIconPercent) / 100f)).roundToInt().coerceAtLeast(1)
+                } else native
+                if (box == null) preferred else LauncherFolderSizing.fitIcon(preferred, box[0], box[1],
                     labelHeight, text?.compoundDrawablePadding ?: 0, (4 * view.resources.displayMetrics.density).roundToInt())
             } else if (SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.DesktopIconSize)) {
-                SystemCustomizationRules.scaled(native, SystemCustomizationSettings.value(SystemCustomizationSettings.iconPercent))
+                SystemCustomizationSettings.desktopIconPixels(native)
             } else native
             target.iconSize.setInt(view, applied)
             if (applied == native && !folderEnabled) icons.remove(view)
@@ -141,6 +160,40 @@ internal object LauncherCustomizationHooker {
             }
         }
 
+        fun arrangeFolderPages(view: ViewGroup, arrange: () -> Any?): Any? {
+            if (!SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.FolderLayout)) return arrange()
+            val grid = pages[view]?.let { grids[it] } ?: return arrange()
+            val (nativeColumns, nativeRows) = grid.original
+            val (columns, rows) = grid.applied
+            if (columns == nativeColumns && rows == nativeRows) return arrange()
+
+            // The native reuse check compares page counts against the device profile before
+            // clearing and rebinding the children. Keep customized pages in that reuse pass.
+            val adjusted = (0 until view.childCount).map(view::getChildAt).filter { page ->
+                page in cells && target.cellColumns.getInt(page) == columns && target.cellRows.getInt(page) == rows
+            }
+            try {
+                for (page in adjusted) {
+                    target.cellColumns.setInt(page, nativeColumns)
+                    target.cellRows.setInt(page, nativeRows)
+                }
+                if (adjusted.isNotEmpty() && !loggedFolderPageReuse) {
+                    loggedFolderPageReuse = true
+                    HookLog.i(TAG, "Preserving ${adjusted.size} custom folder pages during native rearrangement")
+                }
+                return arrange()
+            } finally {
+                // setupContentDimensions reapplies the custom grid before icons are reinserted.
+                // Restore the counts here as well if the native call exits before that step.
+                for (page in adjusted) {
+                    if (target.cellColumns.getInt(page) == nativeColumns && target.cellRows.getInt(page) == nativeRows) {
+                        target.cellColumns.setInt(page, columns)
+                        target.cellRows.setInt(page, rows)
+                    }
+                }
+            }
+        }
+
         fun resizePage(view: View, page: View) {
             val grid = target.organizer.get(view)?.let { grids[it] } ?: return
             if (!SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.FolderLayout)) return
@@ -151,7 +204,9 @@ internal object LauncherCustomizationHooker {
             val width = (native[0].toFloat() * grid.original[0] / grid.applied[0]).roundToInt().coerceAtLeast(1)
             val height = (native[1] * minOf(1f, grid.original[1].toFloat() / grid.applied[1])).roundToInt().coerceAtLeast(1)
             target.cellDimensions.invoke(page, width, height)
-            target.cellGrid.invoke(page, grid.applied[0], grid.applied[1])
+            if (target.cellColumns.getInt(page) != grid.applied[0] || target.cellRows.getInt(page) != grid.applied[1]) {
+                target.cellGrid.invoke(page, grid.applied[0], grid.applied[1])
+            }
             cells[page] = intArrayOf(native[0], native[1], width, height)
             if (!loggedFolder) {
                 loggedFolder = true
@@ -252,6 +307,14 @@ internal object LauncherCustomizationHooker {
                 }
             }
             targets.animation?.install("$key:animation") { view -> owner.pages.containsKey(view) }
+            val pageArranger = targets.pageArranger
+            val arrangerHost = targets.arrangerHost
+            if (pageArranger != null && arrangerHost != null) {
+                ModernHookRegistry.installFast("$key:arrange", pageArranger) { chain ->
+                    val host = arrangerHost.get(chain.thisObject) as? ViewGroup ?: return@installFast chain.proceed()
+                    owner.arrangeFolderPages(host) { chain.proceed() }
+                }
+            }
             targets.creators.forEachIndexed { index, method ->
                 ModernHookRegistry.installFast("$key:page:$index", method) { chain ->
                     val view = chain.thisObject as View
@@ -264,7 +327,8 @@ internal object LauncherCustomizationHooker {
                     }
                 }
             }
-            (targets.iconCallers + targets.folderCallers).distinct().forEach { ModernHookRuntime.requireModule().deoptimize(it) }
+            (targets.iconCallers + targets.folderCallers + targets.arrangerCallers).distinct()
+                .forEach { ModernHookRuntime.requireModule().deoptimize(it) }
             HotReloadLifecycle.register(key, capture = owner::capture, detach = owner::detach,
                 restore = owner::restore, canReload = { owner.pages.keys.none(View::isShown) })
             HookLog.i(TAG, "Native icon binding and folder page adapters installed")

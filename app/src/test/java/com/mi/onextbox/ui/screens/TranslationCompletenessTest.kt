@@ -51,6 +51,35 @@ class TranslationCompletenessTest {
         }
     }
 
+    @Test fun libraryNamesStayRecognizableInTranslatedCredits() {
+        val names = listOf("jetpack_compose", "espresso", "gaze_capsule", "hidden_api_bypass", "libsu", "xposed_api")
+            .map { "about_reference_${it}_title" }
+        val canonical = strings(File(resources, "values"))
+        resources.listFiles { file -> file.name.startsWith("values-") && File(file, "strings.xml").isFile }
+            .orEmpty().forEach { locale ->
+                val translated = strings(locale)
+                for (key in names) assertEquals("${locale.name}/$key", canonical.getValue(key), translated.getValue(key))
+            }
+    }
+
+    @Test fun everyAppLanguageIncludesTheAgreementsAndAttributionLinks() {
+        val agreements = File(resources, "raw").listFiles { file -> file.name.startsWith("onboarding_agreement_") }
+            .orEmpty()
+        val url = Regex("""https?://[^\s]+""")
+        resources.listFiles { file -> file.name.startsWith("values-") && File(file, "strings.xml").isFile }
+            .orEmpty().forEach { locale ->
+                val localized = File(resources, "raw" + locale.name.removePrefix("values"))
+                for (source in agreements) {
+                    val file = File(localized, source.name)
+                    assertTrue("Missing $file", file.isFile)
+                    val text = file.readText()
+                    assertTrue("Empty $file", text.isNotBlank())
+                    assertEquals(file.path, url.findAll(source.readText()).map { it.value }.toSet(),
+                        url.findAll(text).map { it.value }.toSet())
+                }
+            }
+    }
+
     @Test fun everyLocaleHasEveryPluralWithMatchingArgumentsAndAnOtherForm() {
         fun plurals(directory: File): Map<String, List<String>> = buildMap {
             directory.listFiles { file -> file.extension == "xml" }.orEmpty().forEach { file ->

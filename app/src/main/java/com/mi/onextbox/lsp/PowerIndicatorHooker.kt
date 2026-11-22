@@ -29,6 +29,8 @@ import java.util.IdentityHashMap
 /** An independent view beside the clock; does not replace the native network-speed slot. */
 internal object PowerIndicatorHooker {
     private const val TAG = "ONextBox-PowerIndicator"
+    private val batteryCurrent = File("/sys/class/power_supply/battery/current_now")
+    private val batteryVoltage = File("/sys/class/power_supply/battery/voltage_now")
     private val owners = IdentityHashMap<ViewGroup, Owner>()
     fun hook(loader: ClassLoader) {
         runCatching {
@@ -180,11 +182,14 @@ internal object PowerIndicatorHooker {
             val plugged = battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
             if (!PowerIndicatorRules.visibleForPower(plugged, s.hideCharging, s.onlyCharging)) return null
             val charging = status == BatteryManager.BATTERY_STATUS_CHARGING
-            val current = if (s.source == 0) context.getSystemService(BatteryManager::class.java)
-                .getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
-                else File("/sys/class/power_supply/battery/current_now").readText().trim().toLong()
-            val voltage = if (s.source == 0) battery.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0).toLong()
-                else File("/sys/class/power_supply/battery/voltage_now").readText().trim().toLong() / 1000
+            val current = if (PowerIndicatorRules.usesSysfs(s.source)) {
+                batteryCurrent.readText().trim().toLongOrNull() ?: return null
+            } else {
+                context.getSystemService(BatteryManager::class.java).getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+            }
+            val voltage = PowerIndicatorRules.voltageMillivolts(
+                battery.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0).toLong(), s.source,
+            ) { runCatching { batteryVoltage.readText().trim().toLongOrNull() }.getOrNull() } ?: return null
             val watts = PowerIndicatorRules.watts(current, voltage, s.source, s.scale) ?: return null
             val temperature = if (s.showTemperature) {
                 battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)

@@ -15,7 +15,6 @@ import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
-import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
 import androidx.core.graphics.ColorUtils
@@ -29,6 +28,7 @@ internal class ColorOsDialogMaterialView(
     private val darkTheme: Boolean,
     private val kind: Kind,
     private val accent: Int = Color.BLUE,
+    private val effects: AppVisualEffects,
 ) : View(context) {
     enum class Kind { Panel, Primary, Secondary }
 
@@ -41,7 +41,7 @@ internal class ColorOsDialogMaterialView(
     private val edgeShader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         runCatching { RuntimeShader(ColorOs17ShadowEdgeShader) }.getOrNull()
     } else null
-    private val spotlight = if (kind == Kind.Panel) null else ColorOsSpotlightRenderer(
+    private val spotlight = if (kind == Kind.Panel || !effects.backgroundBlur) null else ColorOsSpotlightRenderer(
         this, if (kind == Kind.Primary) ColorOsSpotlightRenderer.Style.DialogPrimary else ColorOsSpotlightRenderer.Style.DialogSecondary, darkTheme,
     )
     private val fallbackColor: Int = when (kind) {
@@ -83,16 +83,15 @@ internal class ColorOsDialogMaterialView(
 
     private fun materialEnabled(): Boolean = runCatching {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return@runCatching false
-        Settings.System.getInt(context.contentResolver, "system_material_blur_enable", 0) == 1 &&
+        effects.backgroundBlur &&
             context.getSystemService(WindowManager::class.java).isCrossWindowBlurEnabled
     }.getOrDefault(false)
 
     private fun applyMaterial() {
         if (!isAttachedToWindow || width <= 0 || height <= 0) return
-        val enabled = materialEnabled()
-        var panelBlurApplied = false
+        val enabled = kind != Kind.Panel && effects.backgroundBlur || materialEnabled()
         if (kind == Kind.Panel) {
-            panelBlurApplied = enabled && applyPanelBlur()
+            val panelBlurApplied = enabled && applyPanelBlur()
             if (!panelBlurApplied) background = ColorDrawable(fallbackColor)
         } else {
             background = ColorDrawable(Color.TRANSPARENT)
@@ -101,10 +100,10 @@ internal class ColorOsDialogMaterialView(
                 setBackgroundEffect(null)
                 background = ColorDrawable(fallbackColor)
             }
-            buttonNativeStroke = blurApplied && applyButtonStroke()
+            buttonNativeStroke = effects.outline && blurApplied && applyButtonStroke()
             if (!buttonNativeStroke) clearButtonStroke()
         }
-        nativeStroke = edgeShader != null && if (kind == Kind.Panel) panelBlurApplied else !buttonNativeStroke
+        nativeStroke = effects.outline && edgeShader != null && (kind == Kind.Panel || !buttonNativeStroke)
         invalidate()
     }
 

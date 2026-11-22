@@ -25,6 +25,9 @@ internal open class HookPreferenceSnapshot(private val systemVersion: () -> Syst
     val isAvailable: Boolean
         get() = values != null
 
+    /** Replaced together with the immutable settings map, including when availability changes. */
+    val identity: Any? get() = values
+
     val isListening: Boolean
         get() = attachedPreferences != null
 

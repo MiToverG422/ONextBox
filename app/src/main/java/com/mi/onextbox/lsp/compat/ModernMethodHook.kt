@@ -49,18 +49,11 @@ internal abstract class ModernMethodHook {
             returnEarly = false
         }
 
-        internal fun snapshotOutcome(): Outcome = Outcome(resultValue, throwableValue)
-
-        internal fun restoreOutcome(outcome: Outcome) {
-            resultValue = outcome.result
-            throwableValue = outcome.throwable
-        }
 
         internal fun resultOrThrow(): Any? {
             throwableValue?.let { throw it }
             return resultValue
         }
 
-        internal data class Outcome(val result: Any?, val throwable: Throwable?)
     }
 }

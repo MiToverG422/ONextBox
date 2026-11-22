@@ -36,7 +36,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Twemoji country and region flag graphics are copyright Twitter, Inc. and other contributors, licensed under Creative Commons Attribution 4.0 International.
+Twemoji 국가 및 지역 깃발 그림의 저작권은 Twitter, Inc.와 기타 기여자에게 있으며, 크리에이티브 커먼즈 저작자표시 4.0 국제 라이선스(CC BY 4.0)로 제공됩니다.
 https://github.com/discord/twemoji
 https://creativecommons.org/licenses/by/4.0/
-ONextBox converts the 259 country and region flag SVGs into a flags-only color font; the original flag artwork is retained.
+ONextBox는 국가 및 지역 깃발 SVG 259개를 원래 그림 그대로 깃발 전용 컬러 글꼴로 변환합니다.

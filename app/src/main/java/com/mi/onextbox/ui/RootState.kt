@@ -12,6 +12,8 @@ import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.AssistantScreenOption
 import com.mi.onextbox.ui.common.BottomTab
 import com.mi.onextbox.ui.layout.BottomBarCollapseState
+import com.mi.onextbox.ui.layout.BottomBarAutoCollapse
+import com.mi.onextbox.ui.layout.FloatingBottomBarMode
 import com.kyant.backdrop.backdrops.LayerBackdrop as LiquidLayerBackdrop
 import io.github.suqi8.coui.kmp.blur.LayerBackdrop
 
@@ -19,7 +21,6 @@ import io.github.suqi8.coui.kmp.blur.LayerBackdrop
 internal data class RootUiState(
     val currentTab: Int,
     val rootGranted: Boolean,
-    val blurEffectEnabled: Boolean,
     val featurePageNewStyleEnabled: Boolean,
     val featurePageDynamicBackgroundActive: Boolean,
     val bottomBarStartupProgress: () -> Float,
@@ -28,7 +29,7 @@ internal data class RootUiState(
     val featureExternalIconScales: Map<FeaturePageMode, () -> Float>,
     val popDirectionFollowsSwipeEdge: Boolean,
     val showFpsMonitor: Boolean,
-    val liquidGlassBottomBarEnabled: Boolean,
+    val floatingBottomBarMode: FloatingBottomBarMode,
     val bottomBarHideLabels: Boolean,
     val mainPageSwipeEnabled: Boolean,
     val subPageSwipeEnabled: Boolean,
@@ -78,11 +79,10 @@ internal data class RootUiState(
 @Stable
 internal data class RootActions(
     val onTabChange: (Int) -> Unit,
-    val onBlurEffectEnabledChange: (Boolean) -> Unit,
-    val onFeaturePageNewStyleEnabledChange: (Boolean) -> Unit,
     val onPopDirectionFollowsSwipeEdgeChange: (Boolean) -> Unit,
     val onShowFpsMonitorChange: (Boolean) -> Unit,
-    val onLiquidGlassBottomBarEnabledChange: (Boolean) -> Unit,
+    val onFloatingBottomBarModeChange: (FloatingBottomBarMode) -> Unit,
+    val onBottomBarAutoCollapseChange: (BottomBarAutoCollapse) -> Unit,
     val onBottomBarHideLabelsChange: (Boolean) -> Unit,
     val onMainPageSwipeEnabledChange: (Boolean) -> Unit,
     val onSubPageSwipeEnabledChange: (Boolean) -> Unit,
@@ -122,7 +122,7 @@ internal data class RootActions(
     val onAssistantNativePowerEnabledChange: (Boolean) -> Unit,
     val onAssistantNativeCircleEnabledChange: (Boolean) -> Unit,
     val onBottomNavigationHeightChange: (Int) -> Unit,
-    val onBottomChromeBoundsChange: (Boolean, Rect) -> Unit,
+    val onBottomChromeBoundsChange: (FloatingBottomBarMode, Rect) -> Unit,
     val onHapticClick: () -> Unit,
     val popRootRoute: () -> Unit,
     val popToMainRoute: () -> Unit,

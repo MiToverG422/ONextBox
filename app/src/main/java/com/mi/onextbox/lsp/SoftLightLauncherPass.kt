@@ -18,12 +18,15 @@ internal class SoftLightLauncherPass(
     private val owns: (RuntimeShader) -> Boolean,
     private val snapshotProgram: (RenderEffect) -> RuntimeShader?,
     private val rememberSnapshot: (RenderEffect, RuntimeShader) -> Unit,
+    private val profile: () -> SoftLightGlassSettings.Profile,
     private val active: () -> Boolean,
     private val report: (String) -> Unit,
 ) {
     private val role = WeakHashMap<RuntimeShader, Int>()
     private val installed = mutableSetOf<Class<*>>()
     private val refreshers = mutableListOf<(List<Drawable>, Boolean) -> Unit>()
+
+    fun isDock(program: RuntimeShader) = synchronized(role) { role[program] == DOCK }
 
     private fun field(type: Class<*>, test: (Field) -> Boolean): Field? =
         generateSequence(type) { it.superclass }.flatMap { it.declaredFields.asSequence() }
@@ -33,7 +36,10 @@ internal class SoftLightLauncherPass(
         if (program == null || !owns(program)) return false
         synchronized(role) {
             if (role[program] != kind) {
-                if (runCatching { program.setFloatUniform("onbPreviewFolder", kind.toFloat()) }.isFailure) return false
+                if (runCatching {
+                    program.setFloatUniform("onbPreviewFolder", kind.toFloat())
+                    program.setFloatUniform("onbScenes", if (kind == DOCK) profile().dockChannels else profile().channels)
+                }.isFailure) return false
                 role[program] = kind
             }
         }
@@ -59,7 +65,8 @@ internal class SoftLightLauncherPass(
                 if (folder) FOLDER else when (materialType?.getInt(owner)) {
                     5, 6, 8 -> CARD
                     7 -> WIDGET
-                    3, 4 -> WORKSPACE_BAR
+                    3 -> WORKSPACE_BAR
+                    4 -> DOCK
                     else -> OTHER
                 }
             fun reportKind(kind: Int) {
@@ -69,6 +76,7 @@ internal class SoftLightLauncherPass(
                     CARD -> report("workspace card material / $name")
                     WIDGET -> report("workspace widget material / $name")
                     WORKSPACE_BAR -> report("workspace bar material / $name")
+                    DOCK -> report("hotseat dock material / $name")
                 }
             }
             fun program(source: Any?): RuntimeShader? = source?.let(shader::get)?.let(runtime::get) as? RuntimeShader
@@ -100,6 +108,8 @@ internal class SoftLightLauncherPass(
             val current = field(type) { it.name == "mRenderEffect" } ?: continue
             val mode = field(type) { it.name == "mBackdropMode" } ?: continue
             val view = field(type) { it.name == "view" && View::class.java.isAssignableFrom(it.type) }
+            val hotseat = ModernReflect.findClassIfExists("com.android.launcher3.OplusHotseat", loader)
+            val dockBackground = hotseat?.let { field(it) { f -> f.name == "mDockerBackgroundDrawable" } }
             val radius = type.declaredMethods.singleOrNull { it.name == "setCornerRadius" &&
                 it.parameterCount == 3 && it.parameterTypes[1] == java.lang.Boolean.TYPE } ?: continue
             val sources = Collections.synchronizedMap(WeakHashMap<Any, Int>())
@@ -139,8 +149,12 @@ internal class SoftLightLauncherPass(
                     val before = program(source) ?: continue
                     // Drag previews may borrow a different owner's snapshot and transform.
                     val recorded = snapshotProgram(effect)
-                    val attachedBackground = newGeneration && recorded == null && (view?.get(owner) as? View)?.background === owner
-                    if (selected == OTHER || (recorded !== before && !attachedBackground) || !owns(before)) continue
+                    val hostView = view?.get(owner) as? View
+                    val attachedDock = newGeneration && selected == DOCK && dockBackground != null &&
+                        hostView?.parent?.let { dockBackground.declaringClass.isInstance(it) && dockBackground.get(it) === owner } == true
+                    val attachedBackground = newGeneration && recorded == null && hostView?.background === owner
+                    if (selected == OTHER || (recorded !== before && !attachedBackground && !attachedDock) ||
+                        (!owns(before) && !attachedDock)) continue
                     if (newGeneration && rebuild != null) rebuild.invoke(shader.get(source), true)
                     val live = program(source) ?: continue
                     if (!mark(live, selected)) continue
@@ -165,5 +179,6 @@ internal class SoftLightLauncherPass(
         const val CARD = 2
         const val WIDGET = 3
         const val WORKSPACE_BAR = 4
+        const val DOCK = 5
     }
 }

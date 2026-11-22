@@ -7,6 +7,25 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LauncherFeatureRulesTest {
+    @Test fun `horizontal dock uses semicircular ends for round icons and the folder curve for other shapes`() {
+        assertEquals(.5f, LauncherDockCorners.folderFraction(.5f) { error("Round ends use the short side") }!!, 0f)
+        assertEquals(.28f, LauncherDockCorners.folderFraction(.2f) { .28f }!!, 0f)
+        assertEquals(.31f, LauncherDockCorners.folderFraction(.31f) { Float.NaN }!!, 0f)
+        assertNull(LauncherDockCorners.folderFraction(null) { null })
+    }
+
+    @Test fun `dock follows radius changes within the same icon theme`() {
+        val circle = 21136393424076832L
+        val base = circle and (4095L shl 48).inv()
+        fun fraction(radius: Int) = LauncherDockCorners.iconCornerFraction(base or (radius.toLong() shl 48))
+        assertEquals(0.5f, fraction(75)!!, 0.0001f)
+        assertEquals(0.2f, fraction(30)!!, 0.0001f)
+        assertEquals(0f, fraction(0)!!, 0.0001f)
+        assertEquals(0.31f, fraction(0x100)!!, 0.0001f)
+        assertNull(LauncherDockCorners.iconCornerFraction(-1L))
+        assertNull(LauncherDockCorners.iconCornerFraction(circle or (1L shl 12)))
+    }
+
     @Test fun `clear button hiding takes priority over the old style`() {
         assertEquals(LauncherFeatureRules.ClearButton.Hidden, LauncherFeatureRules.clearButton(true, true))
         assertEquals(LauncherFeatureRules.ClearButton.Hidden, LauncherFeatureRules.clearButton(false, true))

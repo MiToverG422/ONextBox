@@ -39,6 +39,20 @@ class QsCornerSizeSettingsTest {
         }
     }
 
+    @Test fun deviceShapesHaveIndependentSettingsEvenWhenTheyOccupyTheSameGridSize() {
+        val devices = QsTileCornerSettings.DeviceCard.entries
+        val settings = QsTileCornerSettings
+        val grid = QsTileCornerSettings.Size.OneXOne
+        val defaults = QsTileCornerSettings.State(enabled = true).withRadius(grid, 35)
+        assertEquals(5, devices.map { it.key }.toSet().size)
+        assertTrue(devices.all { it.key in settings.keys && defaults.radius(it) == -1 })
+        val custom = devices.foldIndexed(defaults) { index, state, card -> state.withRadius(card, index * 20) }
+        val reset = custom.withRadius(devices.first(), -1)
+        assertEquals(35, reset.radius(grid))
+        assertEquals(-1, reset.radius(devices.first()))
+        devices.drop(1).forEachIndexed { index, card -> assertEquals((index + 1) * 20, reset.radius(card)) }
+    }
+
     @Test fun unsupportedSpansAndUnrelatedViewsRetainNativeShapes() {
         assertNull(QsTileCornerSettings.Size.fromSpan(3, 1))
         assertNull(QsTileCornerSettings.Size.fromSpan(0, 0))

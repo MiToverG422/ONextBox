@@ -16,6 +16,18 @@ import io.github.suqi8.coui.kmp.preference.RecommendedItem
 internal object FeatureRecommendations {
     private val titlesByPage = mapOf(
         FeaturePageMode.SystemUiStatusBarNetwork to listOf(R.string.native_5ga_title),
+        FeaturePageMode.GlobalNetwork to listOf(R.string.network_identity_title),
+        FeaturePageMode.MobileNetwork to listOf(R.string.native_5ga_title),
+        FeaturePageMode.SystemUiNavigationBar to listOf(R.string.keyguard_gesture_handle_title),
+        FeaturePageMode.SystemUiBackGesture to listOf(
+            R.string.keyguard_gesture_handle_title,
+            R.string.feature_navigation_handle_length_title,
+        ),
+        FeaturePageMode.SystemUiLockScreen to listOf(
+            R.string.feature_navigation_handle_length_title,
+            R.string.retain_lockscreen_notifications_title,
+            R.string.keyguard_aod_screenshot_title,
+        ),
         FeaturePageMode.Screenshot to listOf(R.string.feature_screen_capture_title),
         FeaturePageMode.ScreenRecording to listOf(R.string.feature_screen_capture_title),
         FeaturePageMode.SystemUiSmallWindow to listOf(
@@ -30,8 +42,22 @@ internal object FeatureRecommendations {
         FeaturePageMode.SystemUiNotificationCenter to listOf(
             R.string.clock_period_shade,
             R.string.notification_batch_title,
+            R.string.soft_light_glass_title,
         ),
-        FeaturePageMode.Aod to listOf(R.string.keyguard_aod_screenshot_title),
+        FeaturePageMode.SystemUiControlCenter to listOf(
+            R.string.soft_light_glass_title,
+            R.string.side_volume_percentage_title,
+        ),
+        FeaturePageMode.SystemUiVolume to listOf(R.string.qs_slider_percentage_title),
+        FeaturePageMode.DesktopLayout to listOf(R.string.soft_light_glass_title),
+        FeaturePageMode.SoftLightGlass to listOf(
+            R.string.launcher_dock,
+            R.string.qs_tile_corner_title,
+        ),
+        FeaturePageMode.Aod to listOf(
+            R.string.keyguard_gesture_handle_title,
+            R.string.keyguard_aod_screenshot_title,
+        ),
         FeaturePageMode.AppInstaller to listOf(
             R.string.installer_native_ui_title,
             R.string.installer_title,

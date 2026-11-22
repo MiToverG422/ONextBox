@@ -2,6 +2,7 @@ package com.mi.onextbox.ui.screens
 
 import com.mi.onextbox.lsp.SystemAdaptationVersion
 import com.mi.onextbox.lsp.LspConfig
+import com.mi.onextbox.lsp.StatusBarLayoutSettings
 import com.mi.onextbox.R
 
 internal object ColorOs16FeaturePolicy {
@@ -90,6 +91,12 @@ internal fun featureSearchEntries(version: SystemAdaptationVersion): List<Featur
 
 internal fun visibleFeatureSearchEntries(version: SystemAdaptationVersion): List<FeatureSearchIndex.Entry> =
     (FeatureSearchIndex.entries + if (version == SystemAdaptationVersion.ColorOs16) listOf(
+        FeatureSearchIndex.Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_margins_title),
+        FeatureSearchIndex.Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_vertical_margins_title),
+        FeatureSearchIndex.Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_margin_left),
+        FeatureSearchIndex.Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_margin_right),
+        FeatureSearchIndex.Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_margin_top),
+        FeatureSearchIndex.Entry(FeaturePageMode.SystemUiStatusBarLayout, R.string.statusbar_margin_bottom),
         FeatureSearchIndex.Entry(FeaturePageMode.MobileNetwork, R.string.feature_mobile_network_hide_smart_cloud_acceleration_title,
             R.string.feature_mobile_network_hide_smart_cloud_acceleration_summary)) else emptyList())
 
@@ -98,6 +105,12 @@ internal fun enabledFeatureEntries(version: SystemAdaptationVersion): List<Enabl
         .filter { ColorOs16FeaturePolicy.isFeatureAvailable(version, it.page, it.title) }
 
 internal val colorOs16AdditionalCatalogEntries = listOf(
+    EnabledFeatureCatalog.Entry(R.string.statusbar_margins_title, FeaturePageMode.SystemUiStatusBarLayout) {
+        StatusBarLayoutSettings.state(it).marginsEnabled
+    },
+    EnabledFeatureCatalog.Entry(R.string.statusbar_vertical_margins_title, FeaturePageMode.SystemUiStatusBarLayout) {
+        StatusBarLayoutSettings.state(it).verticalMarginsEnabled
+    },
     EnabledFeatureCatalog.Entry(R.string.feature_mobile_network_hide_smart_cloud_acceleration_title, FeaturePageMode.MobileNetwork) {
         LspConfig.isMobileNetworkHideSmartCloudAccelerationEnabled(it)
     },

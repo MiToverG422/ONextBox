@@ -14,6 +14,14 @@ internal class QsCornerHierarchyObservers(key: String, private val found: (View)
         HotReloadLifecycle.register(key,
             detach = { synchronized(roots) { roots.values.toList() }.forEach { it.dispose() } },
             restore = { synchronized(roots) { roots.values.toList() }.forEach { it.attach() } })
+        registerRoots(key)
+    }
+    // Older generations tracked device cards with a second observer on the same QS root.
+    fun adoptPreviousRoots(key: String) {
+        HotReloadLifecycle.register(key)
+        registerRoots(key)
+    }
+    private fun registerRoots(key: String) {
         HotReloadLifecycle.registerReplay("$key:roots",
             capture = { synchronized(roots) { roots.keys.toTypedArray() } },
             replay = { saved -> (saved as? Array<*>)?.filterIsInstance<ViewGroup>()?.forEach(::watch) })
@@ -59,7 +67,7 @@ internal class QsCornerHierarchyObservers(key: String, private val found: (View)
         override fun onViewAttachedToWindow(view: View) { (view as? ViewGroup)?.let(::arm); onGlobalLayout() }
         override fun onViewDetachedFromWindow(view: View) { disarm() }
         override fun onGlobalLayout() = HotReloadLifecycle.withHook(fallback = {}) {
-            if (!HotReloadLifecycle.isRetiring) target.get()?.let(::scan)
+            if (!HotReloadLifecycle.isRetiring && QsTileCornerSettings.enabledXposed()) target.get()?.let(::scan)
             Unit
         }
     }

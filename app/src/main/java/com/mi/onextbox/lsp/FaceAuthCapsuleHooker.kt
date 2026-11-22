@@ -32,15 +32,17 @@ internal object FaceAuthCapsuleHooker {
     private val state = FaceAuthCapsuleState()
     private var prefs: SharedPreferences? = null
     private val native by lazy {
-        FaceAuthCapsuleNativeIndicators(::enabled, { locked() || state.phase != FaceAuthCapsuleState.Phase.Hidden }) { owner ->
+        FaceAuthCapsuleNativeIndicators(::enabled, { (locked() || state.phase != FaceAuthCapsuleState.Phase.Hidden) &&
+            avoidance.ownsArea() }) { owner ->
             onMain { remember(owner); reconcile() }
         }
     }
     private val avoidance = FaceAuthCapsuleAvoidance()
     private val window by lazy {
-        FaceAuthCapsuleWindow(native::capsuleLayout, native::protectedContentTop, {
+        FaceAuthCapsuleHost(native::keyguardHost, native::inflateShell, native::capsuleLayout, native::protectedContentTop,
+            { native.pluginShowing() || avoidance.blockedByNative() }, {
             onMain { state.animationFinished(); reconcile() }
-        }, avoidance::reserve, avoidance::clear) { error ->
+        }, avoidance::reserve, avoidance::release) { error ->
             main.post { guarded { throw error } }
         }
     }
@@ -253,7 +255,7 @@ internal object FaceAuthCapsuleHooker {
         native.reconcile()
         if (context != null && interactive() &&
             (!flag("mGoingToSleep") || state.phase == FaceAuthCapsuleState.Phase.Success)) {
-            window.show(context, state.phase)
+            window.show(state.phase)
         } else window.remove()
         // The idle lock is static; only authentication transitions need frame-rate reconciliation.
         if (state.phase != FaceAuthCapsuleState.Phase.Hidden) main.postDelayed(tick,

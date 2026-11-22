@@ -24,6 +24,10 @@ internal fun ColorOs16AdvancedFeatureGroups(mode: FeaturePageMode, onOpen: (Feat
     val supported = ColorOs16FeatureRegistry.titlesForPage(mode)
     val handled = mutableSetOf<Int>()
     when (mode) {
+        FeaturePageMode.AndroidSystem -> {
+            DisplayDensitySettingsGroup()
+            handled += R.string.display_density_title
+        }
         FeaturePageMode.SystemUiNative -> {
             if (R.string.feature_aosp_volume_title in supported) {
                 SettingsGroup { AospVolumeSettingsRow() }
@@ -75,9 +79,10 @@ internal fun ColorOs16AdvancedFeatureGroups(mode: FeaturePageMode, onOpen: (Feat
         FeaturePageMode.SystemUiStatusBarLayout -> {
             if (R.string.statusbar_order_title in supported && R.string.statusbar_margins_title in supported &&
                 R.string.statusbar_vertical_margins_title in supported) {
-                StatusBarLayoutSettingsGroup { onOpen(FeaturePageMode.SystemUiIconOrder) }
+                StatusBarLayoutSettingsGroup(legacyMargins = true) { onOpen(FeaturePageMode.SystemUiIconOrder) }
                 handled += setOf(R.string.statusbar_order_title, R.string.statusbar_margins_title,
-                    R.string.statusbar_vertical_margins_title)
+                    R.string.statusbar_vertical_margins_title, R.string.statusbar_margin_left, R.string.statusbar_margin_right,
+                    R.string.statusbar_margin_top, R.string.statusbar_margin_bottom)
             }
         }
         FeaturePageMode.SystemUiStatusBarNetwork -> {

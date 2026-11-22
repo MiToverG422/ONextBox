@@ -19,7 +19,6 @@ object OnboardingPreferences {
         Welcome("welcome"),
         Language("language"),
         Appearance("appearance"),
-        Personalization("personalization"),
         Migration("migration"),
         Agreements("agreements"),
         RootAccess("root_access"),
@@ -29,7 +28,10 @@ object OnboardingPreferences {
 
         companion object {
             internal fun fromPersistedValue(value: String?): DraftStep =
-                entries.firstOrNull { it.persistedValue == value } ?: Welcome
+                when (value) {
+                    "personalization" -> Migration
+                    else -> entries.firstOrNull { it.persistedValue == value } ?: Welcome
+                }
         }
     }
 

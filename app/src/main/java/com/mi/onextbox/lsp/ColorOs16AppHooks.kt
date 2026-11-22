@@ -22,9 +22,10 @@ internal object ColorOs16AppHooks {
                 EuiccRegionRestrictionHooker.hook(loader, apkPath)
                 EuiccDiagnosticsHooker.hook(loader, apkPath = apkPath)
             }
-            "com.heytap.market" -> AppMarketHooker.hook(loader)
+            "com.heytap.market" -> AppMarketHooker.hook(loader, colorOs16 = true)
             TrafficManagementRules.PACKAGE_NAME -> TrafficManagementHooker.hook(loader, apkPath, colorOs16 = true)
             "com.oplus.battery" -> {
+                LowBatteryAutoSwitch.hook(loader, colorOs16 = true)
                 BatteryCycleCountHooker.hook(loader)
                 BatteryOptimizationHooker.hookBattery(loader, apkPath)
             }

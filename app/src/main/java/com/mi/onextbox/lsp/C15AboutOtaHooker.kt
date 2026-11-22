@@ -153,7 +153,9 @@ object C15AboutOtaHooker {
 
     private fun clearOverlay(root: ViewGroup) {
         val card = findCard(root) ?: return
+        OtaCardDecoration.clear(card)
         val overlay = findOverlay(card) ?: return
+        OtaCardDecoration.clear(overlay)
         val state = overlay.tag as CardState
         overlay.tag = null
         card.removeView(overlay)
@@ -183,9 +185,11 @@ object C15AboutOtaHooker {
             isFocusable = false
         }
         renderOverlay(replacement, modelName, description, version, updateAvailable)
+        OtaCardDecoration.clear(overlay)
         card.addView(replacement, ViewGroup.LayoutParams(-1, -1))
         overlay.tag = null
         card.removeView(overlay)
+        OtaCardDecoration.bind(root, card, replacement)
         findView(root, "update_find")?.visibility = View.GONE
         findView(root, "update_text")?.visibility = View.GONE
     }
@@ -193,9 +197,12 @@ object C15AboutOtaHooker {
     private fun bindCard(root: ViewGroup, classLoader: ClassLoader, enabled: Boolean) {
         if (HotReloadLifecycle.isRetiring) return
         boundRoots[root] = classLoader
-        if (!enabled) return
         val card = findCard(root) ?: return
         clearOverlay(root)
+        if (!enabled) {
+            OtaCardDecoration.bind(root, card, null)
+            return
+        }
 
         val context = root.context
         val updateAvailable = findView(root, "update_find")?.visibility == View.VISIBLE
@@ -247,6 +254,7 @@ object C15AboutOtaHooker {
             }
             // COUICardView supplies the existing ColorOS 17 outline and corner radius.
             card.clipToOutline = true
+            OtaCardDecoration.bind(root, card, overlay)
         } catch (error: Throwable) {
             overlay.tag = null
             card.removeView(overlay)

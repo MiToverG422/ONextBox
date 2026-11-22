@@ -41,7 +41,7 @@ class LauncherGridHookContractTest {
         assertTrue(session.contains("unregisterOnSharedPreferenceChangeListener(listener)"))
         assertTrue(session.contains("main.removeCallbacks(update)"))
         assertTrue(text.contains("isAttachedToWindow"))
-        assertTrue(text.contains("targets.busy.none"))
+        assertTrue(text.contains("targets.idle()"))
         assertTrue(text.contains("intArrayOf(pinned.grid.columns, pinned.grid.rows"))
         assertFalse(text.contains("arrayOf(adapter, pinned)"))
     }

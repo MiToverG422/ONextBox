@@ -5,9 +5,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AppUiStyleTest {
-    @Test fun onlyCouiIsAvailable() {
-        assertEquals(listOf("ColorOs"), AppUiStyle.entries.map { it.name })
-        assertEquals(AppUiStyle.ColorOs, AppUiStyle.entries[0])
+    @Test fun colorOs17RemainsDefaultAndBothGenerationsAreSelectable() {
+        assertEquals(listOf("ColorOS 17", "ColorOS 16"), AppUiStyle.entries.map { it.label })
+        assertEquals(AppUiStyle.ColorOs, AppUiStyle.fromName("ColorOs"))
     }
 
     @Test fun everyStyleRoundTripsThroughTheStoredName() {

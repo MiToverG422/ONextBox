@@ -13,4 +13,11 @@ internal object CameraXpanFilterRules {
 
     fun selected(index: Int, available: List<String>, legacy: Boolean): String =
         available.getOrNull(index) ?: resolve(if (index == -1 && legacy) LEGACY_MONO else "default", available)
+
+    fun canApply(lensAlgorithms: Array<*>?, apsVersion: Int, capturing: Boolean): Boolean =
+        apsVersion < 5 || (lensAlgorithms?.contains("aps_algo_filter") ?: !capturing)
+
+    fun hasValidEntries(types: List<*>?, names: List<*>?): Boolean =
+        types != null && names != null && types.size == names.size &&
+            types.all { it is String && it.isNotEmpty() } && names.all { it is Int && it > 0 }
 }

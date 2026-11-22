@@ -23,10 +23,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
@@ -35,8 +37,10 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.width
 import androidx.compose.ui.unit.height
+import androidx.test.platform.app.InstrumentationRegistry
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.bottomTabs
 import io.github.suqi8.coui.kmp.basic.NavigationItem
 import io.github.suqi8.coui.kmp.theme.COUITheme
@@ -57,7 +61,7 @@ class BottomBarCollapseUiTest {
         liquidMode.value = liquid
         compose.setContent {
             COUITheme {
-                state = rememberBottomBarCollapseState()
+                state = rememberBottomBarCollapseState(BottomBarAutoCollapse.Left)
                 selected = remember { mutableIntStateOf(1) }
                 val backdrop = rememberLayerBackdrop()
                 val pager = rememberPagerState(initialPage = 1) { 3 }
@@ -124,6 +128,53 @@ class BottomBarCollapseUiTest {
         compose.onNodeWithTag("scroll").performTouchInput { swipeDown() }
         compose.waitForIdle()
         assertFalse(state.collapsed)
+    }
+
+    @Test fun heldVerticalDragMovesTheStandardBarAndFolderWithoutFoldingOrUnfolding() {
+        verifyHeldDrag(liquid = false)
+    }
+
+    @Test fun heldVerticalDragMovesTheLiquidBarAndFolderWithoutFoldingOrUnfolding() {
+        verifyHeldDrag(liquid = true)
+    }
+
+    private fun verifyHeldDrag(liquid: Boolean) {
+        start(liquid)
+        val bar = compose.onNodeWithTag(if (liquid) "liquidBottomBarSurface" else "standardBottomBarSurface")
+        val tab = if (liquid) {
+            compose.onAllNodesWithTag("liquidBottomBarIcon-1", useUnmergedTree = true)[0]
+        } else {
+            compose.onNodeWithContentDescription("Tab 1")
+        }
+        assertHeldVerticalMotion(bar, tab, direction = 1f)
+        assertFalse(state.collapsed)
+
+        compose.runOnIdle { state.collapse() }
+        compose.waitForIdle()
+        val folderLabel = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.bottom_bar_expand)
+        val folderIcon = compose.onNodeWithContentDescription(folderLabel, useUnmergedTree = true)
+        assertHeldVerticalMotion(bar, folderIcon, direction = -1f)
+        assertTrue(state.collapsed)
+    }
+
+    private fun assertHeldVerticalMotion(
+        surface: SemanticsNodeInteraction,
+        content: SemanticsNodeInteraction,
+        direction: Float,
+    ) {
+        fun centerY() = content.getUnclippedBoundsInRoot().let { (it.top.value + it.bottom.value) / 2f }
+        val restY = centerY()
+        surface.performTouchInput {
+            down(center)
+            moveTo(center + Offset(0f, height * .8f * direction), delayMillis = 1500)
+        }
+        compose.waitUntil(timeoutMillis = 3000) {
+            (centerY() - restY) * direction > .5f
+        }
+        surface.performTouchInput { up() }
+        compose.waitUntil(timeoutMillis = 3000) {
+            kotlin.math.abs(centerY() - restY) < .5f
+        }
     }
 
     @Test fun reversingAnAnimationStartsFromItsCurrentGeometry() {

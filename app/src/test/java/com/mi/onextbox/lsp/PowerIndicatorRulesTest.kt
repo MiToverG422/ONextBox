@@ -50,6 +50,33 @@ class PowerIndicatorRulesTest {
         assertEquals(8.0, PowerIndicatorRules.watts(1_000_000, 4000, 2, 1)!!, 0.0001)
         assertEquals(2.0, PowerIndicatorRules.watts(1_000_000, 4000, 0, 2)!!, 0.0001)
         assertEquals(0.004, PowerIndicatorRules.watts(1000, 4000, 0, 0)!!, 0.0001)
+        val androidMa = PowerIndicatorSettings.SOURCE_ANDROID_MA
+        assertFalse(PowerIndicatorRules.usesSysfs(androidMa))
+        assertEquals(2.48704, PowerIndicatorRules.watts(-580, 4288, androidMa, 0)!!, 0.0001)
+    }
+
+    @Test fun wholeVoltBroadcastPrefersMatchingPreciseSysfsVoltage() {
+        val api = PowerIndicatorSettings.SOURCE_ANDROID_UA
+        assertEquals(4288L, PowerIndicatorRules.voltageMillivolts(4, api) { 4288L })
+        assertEquals(4288L, PowerIndicatorRules.voltageMillivolts(4, api) { 4_288_000L })
+        assertEquals(4000L, PowerIndicatorRules.voltageMillivolts(4, api) { null })
+        assertEquals(4000L, PowerIndicatorRules.voltageMillivolts(4, api) { 8500L })
+    }
+
+    @Test fun voltageNormalizationPreservesPreferredSourceAndHandlesInvalidReadings() {
+        for (api in listOf(PowerIndicatorSettings.SOURCE_ANDROID_UA, PowerIndicatorSettings.SOURCE_ANDROID_MA)) {
+            assertEquals(4458L, PowerIndicatorRules.voltageMillivolts(4458, api) { error("Unexpected sysfs read") })
+            assertEquals(4458L, PowerIndicatorRules.voltageMillivolts(4_458_000, api) { error("Unexpected sysfs read") })
+            assertEquals(4288L, PowerIndicatorRules.voltageMillivolts(0, api) { 4288L })
+            assertNull(PowerIndicatorRules.voltageMillivolts(0, api) { 1999L })
+        }
+        for (sysfs in listOf(PowerIndicatorSettings.SOURCE_SYSFS_MA, PowerIndicatorSettings.SOURCE_SYSFS_UA)) {
+            assertTrue(PowerIndicatorRules.usesSysfs(sysfs))
+            assertEquals(4288L, PowerIndicatorRules.voltageMillivolts(4, sysfs) { 4288L })
+            assertEquals(4288L, PowerIndicatorRules.voltageMillivolts(4458, sysfs) { 4_288_000L })
+            assertEquals(4000L, PowerIndicatorRules.voltageMillivolts(4, sysfs) { -1L })
+            assertNull(PowerIndicatorRules.voltageMillivolts(Long.MIN_VALUE, sysfs) { Long.MAX_VALUE })
+        }
     }
     @Test fun invalidAndUnsupportedReadingsAreNotDisplayed() {
         assertNull(PowerIndicatorRules.watts(Long.MIN_VALUE, 4000, 0, 0))
@@ -67,6 +94,8 @@ class PowerIndicatorRulesTest {
         assertFalse(defaults.showTemperature)
         assertEquals(0, defaults.temperatureUnit)
         assertEquals(0, defaults.scale)
+        val androidMa = PowerIndicatorSettings.SOURCE_ANDROID_MA
+        assertEquals(androidMa, PowerIndicatorSettings.normalize(defaults.copy(source = androidMa)).source)
         val s = PowerIndicatorSettings.normalize(defaults.copy(interval = -1, decimals = 10, scale = -1, source = 99, fontSize = 99,
             temperatureUnit = 99))
         assertEquals(500, s.interval)

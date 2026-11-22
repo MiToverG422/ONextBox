@@ -24,19 +24,13 @@ import androidx.core.view.WindowCompat
 import com.mi.onextbox.ui.common.AppLocale
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
+import com.mi.onextbox.ui.common.LocalAppUiStyle
 import com.mi.onextbox.ui.onboarding.OnboardingAppearance
 import com.mi.onextbox.ui.onboarding.OnboardingPreferences
 import com.mi.onextbox.ui.onboarding.OnboardingScreen
-import com.mi.onextbox.ui.settings.AppUpdatePreferences
-import com.mi.onextbox.ui.settings.UpdateNotificationScheduler
 
 /** Onboarding activity with a prepared destination for its exit transition. */
 class OnboardingActivity : ComponentActivity() {
-    private companion object {
-        const val APP_PREFS_NAME = "onextbox_prefs"
-        const val PREF_FEATURE_PAGE_NEW_STYLE = "feature_page_new_style"
-    }
-
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppLocale.wrapContext(newBase))
     }
@@ -50,9 +44,6 @@ class OnboardingActivity : ComponentActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
-            val prefs = remember {
-                getSharedPreferences(APP_PREFS_NAME, MODE_PRIVATE)
-            }
             var appLanguageTag by remember {
                 mutableStateOf(AppLocale.getSelectedLanguageTag(this@OnboardingActivity))
             }
@@ -62,14 +53,12 @@ class OnboardingActivity : ComponentActivity() {
             var appThemeMode by rememberSaveable {
                 mutableStateOf(AppThemeMode.get(this@OnboardingActivity))
             }
-            var featurePageNewStyleEnabled by rememberSaveable {
-                mutableStateOf(prefs.getBoolean(PREF_FEATURE_PAGE_NEW_STYLE, true))
-            }
             val localizedContext = remember(appLanguageTag) {
                 createOnboardingContext(appLanguageTag)
             }
 
             CompositionLocalProvider(
+                LocalAppUiStyle provides appUiStyle,
                 LocalContext provides localizedContext,
                 LocalConfiguration provides localizedContext.resources.configuration,
                 LocalResources provides localizedContext.resources,
@@ -99,26 +88,8 @@ class OnboardingActivity : ComponentActivity() {
                         OnboardingAppearance.apply(this@OnboardingActivity, appUiStyle, mode)
                             ?.let { effectiveMode -> appThemeMode = effectiveMode }
                     },
-                    featurePageNewStyleEnabled = featurePageNewStyleEnabled,
-                    onFeaturePageNewStyleEnabledChange = { enabled ->
-                        featurePageNewStyleEnabled = enabled
-                        prefs.edit()
-                            .putBoolean(PREF_FEATURE_PAGE_NEW_STYLE, enabled)
-                            .apply()
-                    },
                     onDestinationPreparationRequested = {},
-                    onActivationCommitted = {
-                        val allowBackgroundUpdates =
-                            OnboardingPreferences.isBackgroundNetworkAllowed(this@OnboardingActivity)
-                        AppUpdatePreferences.setUpdateNotificationsEnabled(
-                            this@OnboardingActivity,
-                            allowBackgroundUpdates,
-                        )
-                        if (allowBackgroundUpdates) {
-                            UpdateNotificationScheduler.schedule(this@OnboardingActivity)
-                            UpdateNotificationScheduler.checkNow(this@OnboardingActivity)
-                        }
-                    },
+                    onActivationCommitted = {},
                     onExitFinished = {
                         openMainAndFinish()
                     },

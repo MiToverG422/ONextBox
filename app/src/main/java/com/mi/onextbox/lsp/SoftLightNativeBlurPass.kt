@@ -35,14 +35,17 @@ internal class SoftLightNativeBlurPass(
     private fun spread(value: Float, density: Float): Float {
         if (value <= 0f) return value
         val p = profile()
-        val target = (value + min(value*.16f,12f*density))*p[SoftLightGlassSettings.Parameter.BLUR]
-        return value + (target-value)*p[SoftLightGlassSettings.Parameter.STRENGTH]
+        p.plugin?.let {
+            val surface = if (keyguardTransition.get() == true) LiquidGlassTuning.Surface.LOCK else p.fallbackSurface
+            return p.blurRadius(it.blur(surface) * density, density)
+        }
+        val base = if (p.liquid) min(value,8f*density) else value + min(value*.16f,12f*density)
+        val target = base*p[SoftLightGlassSettings.Parameter.BLUR]
+        return p.blurRadius(value + (target-value)*p[SoftLightGlassSettings.Parameter.STRENGTH], density)
     }
 
     fun install(loader: ClassLoader) {
         val systemUi = packageName == "com.android.systemui"
-        val shelf = packageName == "com.coloros.assistantscreen"
-        if (shelf) installShelfWindowFallback(loader)
         if (systemUi) {
             val lock = ModernReflect.findClassIfExists("com.oplus.systemui.keyguard.anim.transition.OplusMultiLayerBlurManager", loader)
             val method = lock?.declaredMethods?.singleOrNull { it.name == "applyBlur" &&
@@ -60,6 +63,8 @@ internal class SoftLightNativeBlurPass(
             it.parameterTypes.last() == RenderEffect::class.java }?.let { method ->
             ModernHookRegistry.installFast("soft-light:gradient-blur", method, XposedInterface.Hooker { chain ->
                 if (!enabled()) return@Hooker chain.proceed()
+                // SystemUI also creates these gradients for panel transitions with animated tint and radius.
+                if (systemUi && profile().plugin != null && keyguardTransition.get() != true) return@Hooker chain.proceed()
                 val context = app() ?: return@Hooker chain.proceed()
                 val first = chain.getArg(0) as Float
                 val last = chain.getArg(1) as Float
@@ -71,11 +76,12 @@ internal class SoftLightNativeBlurPass(
                 val mix = args[6] as? Int
                 if (mix != null) {
                     val p = profile()
-                    val base = if (shelf) {
-                        val alpha = Color.alpha(mix) * (1f - .52f * p[SoftLightGlassSettings.Parameter.STRENGTH])
+                    val base = if (p.liquid && Color.alpha(mix) in 1..254) {
+                        val alpha = Color.alpha(mix) * (1f - .60f * p[SoftLightGlassSettings.Parameter.STRENGTH])
                         (mix and 0xffffff) or (alpha.roundToInt() shl 24)
                     } else mix
-                    args[6] = p.adjustMixColor(base)
+                    val dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+                    args[6] = p.plugin?.nativeTint(p.fallbackSurface, dark) ?: p.adjustMixColor(base)
                 }
                 report("native gradient background")
                 chain.proceed(args)
@@ -105,6 +111,7 @@ internal class SoftLightNativeBlurPass(
         val read = param.getMethod("toFloatArray")
         val write = param.getMethod("fromFloatArray",FloatArray::class.java)
         val constructor = param.getDeclaredConstructor()
+        val launcher = packageName == "com.android.launcher"
         ModernHookRegistry.installFast("soft-light:surface-radius",method,XposedInterface.Hooker { chain ->
             if (systemUi && keyguardTransition.get() != true) return@Hooker chain.proceed()
             val radius = chain.getArg(2) as Int
@@ -114,18 +121,22 @@ internal class SoftLightNativeBlurPass(
             val args = runCatching {
                 val data = read.invoke(original) as FloatArray
                 if (data.size != 18) return@runCatching null
+                val p = profile()
+                // The launcher animates blur and tint together on its mirrored transition surfaces.
+                if (launcher && p.plugin != null && data[1] == BLUR_TILE_MODE_MIRROR) return@runCatching null
                 if (data[0] == 2f) data[0] = 3f
                 // Entries 8..11 are the OEM mix color. Preserve progress, mirror, zoom, crop and corner parameters.
                 if (data[3] == 1f && data[11] > 0f && data[11] < 1f) {
                     val dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
                     val neutral = if (dark) .30f else .62f
-                    val amount = .30f*profile()[SoftLightGlassSettings.Parameter.STRENGTH]
+                    val amount = if (p.liquid) 0f else .30f*p[SoftLightGlassSettings.Parameter.STRENGTH]
                     for (channel in 8..10) data[channel] += amount*(neutral-data[channel])
-                    if (shelf) data[11] *= 1f - .52f * profile()[SoftLightGlassSettings.Parameter.STRENGTH]
+                    if (p.liquid) data[11] *= 1f - .60f * p[SoftLightGlassSettings.Parameter.STRENGTH]
                 }
-                val p = profile()
-                if (data[3] == 1f && p.dimmingOverlay != 0f && (8..11).all { data[it] in 0f..1f }) {
-                    val tint = p.adjustMixColor(Color.argb(data[11], data[8], data[9], data[10]))
+                if (data[3] == 1f && (p.plugin != null || p.dimmingOverlay != 0f) && (8..11).all { data[it] in 0f..1f }) {
+                    val dark = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+                    val tint = p.plugin?.nativeTint(if (keyguardTransition.get() == true) LiquidGlassTuning.Surface.LOCK else p.fallbackSurface, dark)
+                        ?: p.adjustMixColor(Color.argb(data[11], data[8], data[9], data[10]))
                     data[8] = Color.red(tint) / 255f
                     data[9] = Color.green(tint) / 255f
                     data[10] = Color.blue(tint) / 255f
@@ -143,21 +154,6 @@ internal class SoftLightNativeBlurPass(
         })
     }
 
-    private fun installShelfWindowFallback(loader: ClassLoader) {
-        val helper = ModernReflect.findClassIfExists("com.oplus.assistantscreen.common.helper.g", loader) ?: return
-        val signature = arrayOf(SurfaceControl.Transaction::class.java, SurfaceControl::class.java, Integer.TYPE)
-        val method = helper.declaredMethods.singleOrNull {
-            it.returnType == Void.TYPE && it.parameterTypes.contentEquals(signature)
-        } ?: return
-        ModernHookRegistry.installFast("soft-light:shelf-surface", method, XposedInterface.Hooker { chain ->
-            val radius = chain.getArg(2) as Int
-            if (radius <= 0 || !enabled()) return@Hooker chain.proceed()
-            val density = app()?.resources?.displayMetrics?.density ?: return@Hooker chain.proceed()
-            report("shelf window backdrop")
-            chain.proceed(chain.args.toTypedArray().also { it[2] = spread(radius.toFloat(), density).roundToInt() })
-        })
-    }
-
     fun refresh() {
         val setter = setRadius ?: return
         val activeDrawables = synchronized(radii) { radii.map { it.key to it.value } }
@@ -168,5 +164,9 @@ internal class SoftLightNativeBlurPass(
         } finally {
             if (previous == null) keyguardTransition.remove() else keyguardTransition.set(previous)
         }
+    }
+
+    private companion object {
+        const val BLUR_TILE_MODE_MIRROR = 2f
     }
 }

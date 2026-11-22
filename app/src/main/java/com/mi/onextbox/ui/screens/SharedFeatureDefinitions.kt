@@ -146,7 +146,13 @@ internal object SharedFeatureDefinitions {
     val nativeLiveUpdate = Toggle(R.string.native_live_update_title, R.string.native_live_update_summary,
         FeaturePageMode.SystemUiNative, { com.mi.onextbox.lsp.NativeLiveUpdateSettings.enabled(it) },
         { context, enabled -> com.mi.onextbox.lsp.NativeLiveUpdateSettings.set(context, enabled) }, preferenceKey = com.mi.onextbox.lsp.NativeLiveUpdateSettings.KEY)
+    val wallet = com.mi.onextbox.lsp.WalletOptions.entries.map { option ->
+        Toggle(option.title, option.summary, FeaturePageMode.Wallet,
+            { context -> com.mi.onextbox.lsp.LspPreferenceStore.prefs(context).getBoolean(option.key, false) },
+            option::set, option.key)
+    }
     val all = listOf(
+        *wallet.toTypedArray(),
         networkIdentity,
         qsCorner,
         qsPercentage,

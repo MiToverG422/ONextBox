@@ -5,23 +5,25 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ImmersiveNavigationRulesTest {
-    @Test fun immersiveNavigationRequiresTheCustomHandleSwitch() {
-        assertEquals(false, ImmersiveNavigationRules.isHandleOptionActive(false, false))
-        assertEquals(false, ImmersiveNavigationRules.isHandleOptionActive(false, true))
-        assertEquals(false, ImmersiveNavigationRules.isHandleOptionActive(true, false))
-        assertEquals(true, ImmersiveNavigationRules.isHandleOptionActive(true, true))
+    @Test fun resettingCustomGeometryPreservesTheNativeResourceWithImmersiveInsets() {
+        for (field in ImmersiveNavigationRules.Geometry.entries) {
+            fun value(gesture: Boolean, dp: Int) = ImmersiveNavigationRules.dimension(
+                "com.android.systemui", field.resource, 360, gesture, immersiveEnabled = true,
+                customLengthEnabled = true, geometryDp = { dp },
+            )
+            assertNull(value(true, ImmersiveNavigationRules.SYSTEM_DEFAULT))
+            assertNull(value(false, field.range.first))
+            assertEquals(ImmersiveNavigationRules.Dimension(field.range.first.toFloat()), value(true, field.range.first))
+        }
     }
 
-    @Test fun disablingParentLeavesNativeResourcesEvenWithImmersivePreferenceOn() {
-        val active = ImmersiveNavigationRules.isHandleOptionActive(false, true)
-        for ((pkg, name) in listOf(
-            "android" to "navigation_bar_height",
-            "com.android.systemui" to "navigation_handle_height",
-            "oplus" to "navigation_gesture_view_width",
-        )) {
-            assertNull(ImmersiveNavigationRules.dimension(
-                pkg, name, 360, true, immersiveEnabled = active, customLengthEnabled = false,
-            ))
+    @Test fun immersiveNavigationWorksWithCustomGeometryOff() {
+        assertEquals(ImmersiveNavigationRules.Dimension(1f, true),
+            ImmersiveNavigationRules.dimension("android", "navigation_bar_height", 360, true,
+                immersiveEnabled = true, customLengthEnabled = false))
+        for (option in ImmersiveNavigationRules.Geometry.entries) {
+            assertEquals(-1, option.normalize(-1))
+            assertEquals(option.range.last, option.normalize(999))
         }
     }
 
@@ -54,13 +56,6 @@ class ImmersiveNavigationRulesTest {
             assertNull(ImmersiveNavigationRules.fadedHandleColor("com.android.systemui", name, true, false))
             assertNull(ImmersiveNavigationRules.fadedHandleColor("com.android.systemui", name, false, true))
         }
-    }
-
-    @Test fun autoHideCannotRunWhenCustomHandleIsDisabled() {
-        assertNull(ImmersiveNavigationRules.fadedHandleColor(
-            "com.android.systemui", "navigation_bar_home_handle_dark_color_faded", true,
-            autoHideEnabled = ImmersiveNavigationRules.isHandleOptionActive(false, true),
-        ))
     }
 
     @Test fun autoHideComposesWithCustomOpacityWithoutLosingNativeFade() {

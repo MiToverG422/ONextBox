@@ -25,14 +25,14 @@ class OnboardingAnimationHapticsTest {
     @get:Rule val compose = createComposeRule()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    private fun requireNativeHaptics() {
-        assumeTrue(NativeAnimationHapticOutput(context).isSupported())
+    private fun requireHaptics() {
+        assumeTrue(AnimationHapticOutput(context).isSupported())
         assumeTrue(Settings.System.getInt(context.contentResolver, "haptic_feedback_enabled", 1) != 0)
     }
 
-    @Test fun nativePlayerAcceptsAllThreeOriginalTracksAndCancelsEachOne() {
-        requireNativeHaptics()
-        val output = NativeAnimationHapticOutput(context)
+    @Test fun waveformPlayerAcceptsAllThreeOriginalTracksAndCancelsEachOne() {
+        requireHaptics()
+        val output = AnimationHapticOutput(context)
         try {
             for (resId in listOf(R.raw.c17_welcome_startup_haptic, R.raw.c17_guide_next_morph_haptic,
                     R.raw.c17_vibration_res_of_complete_page)) {
@@ -49,7 +49,7 @@ class OnboardingAnimationHapticsTest {
     }
 
     @Test fun welcomeTrackFollowsRealFramesAndSurvivesPauseResumeAndDisposal() {
-        requireNativeHaptics()
+        requireHaptics()
         val owner = object : LifecycleOwner {
             override val lifecycle = LifecycleRegistry(this)
         }
@@ -80,7 +80,7 @@ class OnboardingAnimationHapticsTest {
     }
 
     @Test fun smileTrackRestartsWithItsVideoLoopAndCompletionUsesTheMattePlayer() {
-        requireNativeHaptics()
+        requireHaptics()
         val smile = mutableStateOf(true)
         val firstFrames = AtomicInteger()
         val complete = AtomicBoolean()

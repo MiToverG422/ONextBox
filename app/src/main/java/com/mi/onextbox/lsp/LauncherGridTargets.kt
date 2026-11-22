@@ -12,11 +12,11 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
 internal class LauncherGridTargets(val values: Array<*>) {
-    val constructor = values[0] as Constructor<*>
+    val initializer = values[0] as Executable
     val options = values[1] as Method
     val currentGrid = values[2] as Method
     val refresh = values[3] as Method
-    val itemConstructor = values[4] as Constructor<*>
+    private val itemConstructor = values[4] as Constructor<*>?
     val columns = values[5] as Field
     val textRows = values[6] as Field
     val wordlessRows = values[7] as Field
@@ -25,15 +25,17 @@ internal class LauncherGridTargets(val values: Array<*>) {
     val all = values[10] as Field
     val index = values[11] as Field
     val wordless = values[12] as Method
-    val recycler = values[13] as Method
+    private val recycler = values[13] as AccessibleObject
     val simple = values[14] as Method
     val mode = values[15] as Method
     val largeStyle = values[16] as Field
-    val draw = values[17] as Method
+    val draw = values[17] as Method?
     val preview = (values[18] as Array<*>).filterIsInstance<Field>()
-    val busy = (values[19] as Array<*>).filterIsInstance<Method>()
+    private val busy = (values[19] as Array<*>).filterIsInstance<AccessibleObject>()
     val callers = (values[20] as Array<*>).filterIsInstance<Executable>()
     val supported = values[21] as Method
+    private val adapterField = values.getOrNull(22) as? Field
+    val nativeItems = adapterField != null
 
     init {
         (values.filterIsInstance<AccessibleObject>() + preview + busy + callers).forEach { it.isAccessible = true }
@@ -41,12 +43,26 @@ internal class LauncherGridTargets(val values: Array<*>) {
 
     fun allowed() = !largeStyle.getBoolean(null) && simple.invoke(mode.invoke(null)) != true
     fun wordless() = wordless.invoke(null) == true
+    fun adapter(owner: Any): Any? = if (adapterField == null) owner else adapterField.get(owner)
+    fun isAdapter(value: Any) = visible.declaringClass.isInstance(value)
+    fun recyclerView(adapter: Any): View? = when (recycler) {
+        is Method -> recycler.invoke(adapter) as? View
+        is Field -> recycler.get(adapter) as? View
+        else -> error("Unsupported native recycler target")
+    }
+    fun idle() = busy.none {
+        when (it) {
+            is Method -> it.invoke(null) == true
+            is Field -> it.getBoolean(null)
+            else -> error("Unsupported native layout state target")
+        }
+    }
     fun grid(item: Any, withoutWords: Boolean) =
         LauncherGrid(columns.getInt(item), (if (withoutWords) wordlessRows else textRows).getInt(item))
 
     fun option(item: Any) = LauncherGridOption(columns.getInt(item), textRows.getInt(item), wordlessRows.getInt(item))
 
-    fun item(option: LauncherGridOption): Any = itemConstructor.newInstance().also {
+    fun item(option: LauncherGridOption): Any = requireNotNull(itemConstructor).newInstance().also {
         columns.setInt(it, option.columns)
         textRows.setInt(it, option.textRows)
         wordlessRows.setInt(it, option.wordlessRows)
@@ -54,21 +70,36 @@ internal class LauncherGridTargets(val values: Array<*>) {
     }
 
     companion object {
-        const val SCHEMA_SIZE = 22
+        const val SCHEMA_SIZE = 23
         private const val ADAPTER = "com.android.launcher.togglebar.adapter.ToggleBarDialogLayoutAdapter"
         private const val ITEM = "com.android.launcher.togglebar.item.ToggleBarLayoutConfigItem"
+        private const val HELPER = "com.android.launcher.togglebar.LayoutSettingsHelper"
+
+        fun usesInlinedMenu(loader: ClassLoader): Boolean = try {
+            HostClassLookup.load(ADAPTER, false, loader)
+            false
+        } catch (_: ClassNotFoundException) {
+            true
+        }
 
         fun resolve(loader: ClassLoader, apkPath: String): LauncherGridTargets {
             if (SystemAdaptationDetector.current() == SystemAdaptationVersion.ColorOs16) return resolveColorOs16(loader)
             return ApkDexSession.withSession(apkPath, threadCount = 1) { open ->
                 val dex = open()
-                val adapter = ModernReflect.findClass(ADAPTER, loader)
                 val item = ModernReflect.findClass(ITEM, loader)
-                val init = dex.findMethod {
+                val inlined = usesInlinedMenu(loader)
+                val init = if (inlined) dex.findMethod {
+                    matcher {
+                        usingStrings("initToggleBarLayoutConfigs: can not find selected item for current layout[",
+                            "showBottomDialog : wordless desktop opened = ")
+                        paramTypes(); returnType = "void"
+                    }
+                }.single() else dex.findMethod {
                     matcher { declaredClass = ADAPTER; usingStrings("selectionStateInfo") }
                 }.single { it.isConstructor }
-                val constructor = init.getConstructorInstance(loader)
-                require(constructor.parameterCount == 2 && Context::class.java.isAssignableFrom(constructor.parameterTypes[0]))
+                val initializer = if (inlined) init.getMethodInstance(loader) else init.getConstructorInstance(loader).also {
+                    require(it.parameterCount == 2 && Context::class.java.isAssignableFrom(it.parameterTypes[0]))
+                }
                 val read = dex.findMethod {
                     matcher { usingStrings("layout_cellcount_x", "layout_cellcount_y"); paramTypes(Context::class.java.name); returnType = "int[]" }
                 }.single()
@@ -80,10 +111,16 @@ internal class LauncherGridTargets(val values: Array<*>) {
                 }
                 val refresh = dex.findMethod {
                     matcher {
-                        declaredClass = ADAPTER; usingStrings("updateLayoutConfigs : inoperable update, mAllLayoutConfigs.isEmpty()")
+                        if (!inlined) declaredClass = ADAPTER
+                        usingStrings("updateLayoutConfigs : inoperable update, mAllLayoutConfigs.isEmpty()")
                         paramTypes("boolean"); returnType = "void"
                     }
                 }.single()
+                val refreshMethod = refresh.getMethodInstance(loader)
+                val adapter = refreshMethod.declaringClass
+                val adapterField = if (inlined) init.usingFields.map { it.field }.distinctBy { it.descriptor }.single {
+                    it.className == init.className && it.typeName == adapter.name && !Modifier.isStatic(it.modifiers)
+                }.getFieldInstance(loader) else null
                 val row = dex.findMethod {
                     matcher { declaredClass = ITEM; paramTypes(); returnType = "int" }
                 }.single { candidate -> candidate.invokes.any { it.returnTypeName == "boolean" && it.paramCount == 0 } }
@@ -100,50 +137,64 @@ internal class LauncherGridTargets(val values: Array<*>) {
                     .filter { it.typeName == "int" && !Modifier.isStatic(it.modifiers) }
                     .map { it.getFieldInstance(loader).apply { isAccessible = true } }
                 require(rowFields.size == 2)
-                val itemConstructor = item.getDeclaredConstructor().apply { isAccessible = true }
-                val probe = itemConstructor.newInstance()
-                rowFields[0].setInt(probe, 701)
-                rowFields[1].setInt(probe, 702)
-                val selectedRow = row.getMethodInstance(loader).invoke(probe)
-                require(selectedRow == 701 || selectedRow == 702)
-                val active = rowFields[if (selectedRow == 701) 0 else 1]
-                val inactive = rowFields.single { it != active }
-                val withoutWords = wordless.invoke(null) == true
-                val textRows = if (withoutWords) inactive else active
-                val wordlessRows = if (withoutWords) active else inactive
+                val itemConstructor = if (inlined) null else item.getDeclaredConstructor().apply { isAccessible = true }
+                val (textRows, wordlessRows) = if (itemConstructor == null) {
+                    rowFields.single { it.name == "q" } to rowFields.single { it.name == "r" }
+                } else {
+                    val probe = itemConstructor.newInstance()
+                    rowFields[0].setInt(probe, 701)
+                    rowFields[1].setInt(probe, 702)
+                    val selectedRow = row.getMethodInstance(loader).invoke(probe)
+                    require(selectedRow == 701 || selectedRow == 702)
+                    val active = rowFields[if (selectedRow == 701) 0 else 1]
+                    val inactive = rowFields.single { it != active }
+                    if (wordless.invoke(null) == true) inactive to active else active to inactive
+                }
                 val columns = item.declaredFields.single { it.type == Int::class.javaPrimitiveType && !Modifier.isStatic(it.modifiers) && it !in rowFields }
                 val selected = item.declaredFields.single { it.type == Boolean::class.javaPrimitiveType && !Modifier.isStatic(it.modifiers) }
-                val count = dex.findMethod { matcher { declaredClass = ADAPTER; name = "getItemCount"; paramTypes(); returnType = "int" } }.single()
+                val count = dex.findMethod { matcher { declaredClass = adapter.name; name = "getItemCount"; paramTypes(); returnType = "int" } }.single()
                 val visible = count.usingFields.map { it.field }.distinctBy { it.descriptor }
                     .single { it.typeName == "java.util.ArrayList" }.getFieldInstance(loader)
                 val all = adapter.declaredFields.single { it.type == ArrayList::class.java && it != visible && !Modifier.isStatic(it.modifiers) }
                 val index = adapter.declaredFields.single { it.type == Int::class.javaPrimitiveType && !Modifier.isStatic(it.modifiers) }
                 val largeStyle = adapter.declaredFields.single { it.type == Boolean::class.javaPrimitiveType && Modifier.isStatic(it.modifiers) }
-                val recycler = adapter.getMethod("getMRecyclerView")
-                require(View::class.java.isAssignableFrom(recycler.returnType))
+                val recycler = if (inlined) requireNotNull(adapter.superclass).declaredFields.single {
+                    it.type.name == "androidx.recyclerview.widget.RecyclerView" && !Modifier.isStatic(it.modifiers)
+                } else adapter.getMethod("getMRecyclerView").also {
+                    require(View::class.java.isAssignableFrom(it.returnType))
+                }
                 val modes = LauncherModeApi(loader)
                 val mode = modes.instance
                 val simple = modes.simple
-                val previewType = ModernReflect.findClass("com.android.launcher.togglebar.views.ToggleBarLayoutItemPreview", loader)
-                val drawData = dex.findMethod {
-                    matcher {
-                        declaredClass = previewType.name; name = "onDraw"
-                        paramTypes(Canvas::class.java.name); returnType = "void"
-                    }
-                }.single()
-                val draw = drawData.getMethodInstance(loader)
-                val preview = LauncherGridPreviewFields.resolve(previewType,
-                    drawData.usingFields.map { it.field.getFieldInstance(loader) })
-                val helper = ModernReflect.findClass("com.android.launcher.togglebar.LayoutSettingsHelper", loader)
-                val busy = listOf("getSIsSwitchingCurrentCellLayout", "isInApplySwitchLayout", "isCurrentCellLayoutInAdjustment")
-                    .map { name -> helper.getDeclaredMethod(name).also { require(it.returnType == Boolean::class.javaPrimitiveType && Modifier.isStatic(it.modifiers)) } }
+                val (draw, preview) = if (inlined) null to emptyArray<Field>() else {
+                    val previewType = ModernReflect.findClass("com.android.launcher.togglebar.views.ToggleBarLayoutItemPreview", loader)
+                    val drawData = dex.findMethod {
+                        matcher {
+                            declaredClass = previewType.name; name = "onDraw"
+                            paramTypes(Canvas::class.java.name); returnType = "void"
+                        }
+                    }.single()
+                    drawData.getMethodInstance(loader) to LauncherGridPreviewFields.resolve(previewType,
+                        drawData.usingFields.map { it.field.getFieldInstance(loader) })
+                }
+                val busy = if (inlined) {
+                    val apply = LauncherGridApplyTargets.findInlinedApply(dex)
+                    val helper = ModernReflect.findClass(apply.className, loader)
+                    listOf("h", "i", "j").map { name -> helper.getDeclaredField(name).also {
+                        require(it.type == Boolean::class.javaPrimitiveType && Modifier.isStatic(it.modifiers))
+                    } }
+                } else {
+                    val helper = ModernReflect.findClass(HELPER, loader)
+                    listOf("getSIsSwitchingCurrentCellLayout", "isInApplySwitchLayout", "isCurrentCellLayoutInAdjustment")
+                        .map { name -> helper.getDeclaredMethod(name).also { require(it.returnType == Boolean::class.javaPrimitiveType && Modifier.isStatic(it.modifiers)) } }
+                }
                 val callers = (refresh.callers + options.callers + supported.callers).distinctBy { it.descriptor }.map {
                     if (it.isConstructor) it.getConstructorInstance(loader) else it.getMethodInstance(loader)
                 }
-                LauncherGridTargets(arrayOf(constructor, options.getMethodInstance(loader), current.getMethodInstance(loader),
-                    refresh.getMethodInstance(loader), itemConstructor, columns, textRows, wordlessRows, selected, visible,
+                LauncherGridTargets(arrayOf(initializer, options.getMethodInstance(loader), current.getMethodInstance(loader),
+                    refreshMethod, itemConstructor, columns, textRows, wordlessRows, selected, visible,
                     all, index, wordless, recycler, simple, mode, largeStyle, draw, preview,
-                    busy.toTypedArray(), (callers + constructor).distinct().toTypedArray(), supported.getMethodInstance(loader)))
+                    busy.toTypedArray(), (callers + initializer).distinct().toTypedArray(), supported.getMethodInstance(loader), adapterField))
             }
         }
 
@@ -180,7 +231,7 @@ internal class LauncherGridTargets(val values: Array<*>) {
                 modeType.getDeclaredMethod("isInSimpleMode"), modeType.getDeclaredMethod("getInstance"),
                 adapter.getDeclaredField("isWordlessOnlyDevice"), draw,
                 LauncherGridPreviewFields.resolve(preview, preview.declaredFields.toList(), colorOs16 = true),
-                busy.toTypedArray(), (callers + constructor).toTypedArray(), supported,
+                busy.toTypedArray(), (callers + constructor).toTypedArray(), supported, null,
             ))
         }
     }

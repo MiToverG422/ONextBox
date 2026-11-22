@@ -10,7 +10,7 @@ CorePatch N（LSPosed）依上流声明採用 GNU GPL v2.0，其許可不因統�
 
 Android、ColorOS/OPlus 軟体、Root 管理器及 LSPosed 屬於相容目標或執行平台，不因 ONextBox 而改変其許可。本頁為簡要說明，各専案附帶之著作権声明和完整許可文字具有優先效力；原始碼与署名連結可在「紹介」頁面続行查看。
 
-浏览器净化功能移植并改良自 Roy（fentia）的 oppo-browser-purify，采用 MIT 许可。
+瀏覽器浄化機能移植及改良自 Roy（fentia）之 oppo-browser-purify，依 MIT 許可提供。
 https://github.com/fentia/oppo-browser-purify
 Upstream: adb32d0aa7c7f34cbd030316258fb3828fb5be2b
 
@@ -36,7 +36,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Twemoji country and region flag graphics are copyright Twitter, Inc. and other contributors, licensed under Creative Commons Attribution 4.0 International.
+Twemoji 国家及地区旗章之著作権帰属 Twitter, Inc. 及其他貢献者，依姓名表示 4.0 国際許諾（CC BY 4.0）提供。
 https://github.com/discord/twemoji
 https://creativecommons.org/licenses/by/4.0/
-ONextBox converts the 259 country and region flag SVGs into a flags-only color font; the original flag artwork is retained.
+ONextBox 將 259 件国家及地区旗章 SVG 転換為旗章専用彩色字体，原図案保持。

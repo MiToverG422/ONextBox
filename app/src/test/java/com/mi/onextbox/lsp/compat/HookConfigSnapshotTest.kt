@@ -13,6 +13,16 @@ import org.junit.Test
 class HookConfigSnapshotTest {
     private val stores = mutableListOf<FakePreferences>()
 
+    @Test fun desktopIconsKeepExactLegacyPixelsUntilTheNewScaleIsEdited() {
+        val preferences = store(ready = true)
+        preferences.data["launcher_icon_size_percent"] = 62
+        assertTrue(HookConfigSnapshot.attach(preferences))
+        assertEquals(64, com.mi.onextbox.lsp.SystemCustomizationSettings.desktopIconPixels(104))
+        preferences.putAndNotify("launcher_icon_size_adjustment", -61)
+        assertEquals(65, com.mi.onextbox.lsp.SystemCustomizationSettings.desktopIconPixels(104))
+        assertEquals(62, preferences.data["launcher_icon_size_percent"])
+    }
+
     @Test fun onePublicationRefreshesTheWholeSnapshotOnlyOnce() {
         val preferences = store(ready = true, enabled = false)
         preferences.data[MODERN_PREFERENCES_REVISION_KEY] = 1L

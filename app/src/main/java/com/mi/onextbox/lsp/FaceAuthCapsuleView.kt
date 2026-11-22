@@ -14,11 +14,13 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.view.View
 import android.view.WindowInsets
+import android.widget.FrameLayout
 import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import kotlin.math.roundToLong
+import kotlin.math.roundToInt
 
-internal class FaceAuthCapsuleView(context: Context) : View(context) {
+internal class FaceAuthCapsuleView(context: Context, private val shell: View) : FrameLayout(context) {
     private companion object { var rendererReported = false }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val colorEvaluator = android.animation.ArgbEvaluator()
@@ -64,6 +66,7 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
     }
 
     init {
+        addView(shell)
         isClickable = false
         isFocusable = false
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
@@ -165,8 +168,7 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
         }
     }
 
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
+    override fun dispatchDraw(canvas: Canvas) {
         val save = canvas.save()
         try { drawCapsule(canvas) }
         catch (error: Throwable) { onRenderFailure?.invoke(error) }
@@ -176,6 +178,8 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
     private fun resetPosition() {
         compactLayout = null; hasNativeLayout = false; placement = null; reservedBounds = null
     }
+
+    fun forgetReservation() { reservedBounds = null }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -256,9 +260,7 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
         if (reservedBounds == null) {
             val half = (compactWidth + 32f * d) * 1.025f / 2f
             val reserved = FaceAuthCapsuleBounds(cx - half, 0f, cx + half, maxOf(statusHeight, top + layout.expandedHeight))
-            check(reserveIcons?.invoke(reserved.offset(position[0].toFloat(), position[1].toFloat())) != false) {
-                "Native capsule icon avoidance is not ready"
-            }
+            if (reserveIcons?.invoke(reserved.offset(position[0].toFloat(), position[1].toFloat())) != true) return
             reservedBounds = reserved
         }
         val w = (compactWidth + 32f * d * expansion) * shapeStretch
@@ -268,10 +270,13 @@ internal class FaceAuthCapsuleView(context: Context) : View(context) {
         box.set(bounds.left, bounds.top, bounds.right, bounds.bottom)
         val expandedRadius = if (layout.vertical) compactRadius + (30f * d - compactRadius) * expansion else compactRadius
         val radius = expandedRadius + (minOf(hole.width, hole.height) / 2f - expandedRadius) * retraction
-        paint.style = Paint.Style.FILL
-        paint.color = Color.BLACK
-        paint.alpha = (255 * opacity).toInt().coerceIn(0, 255)
-        canvas.drawRoundRect(box, radius, radius, paint)
+        val shellWidth = box.width().roundToInt().coerceAtLeast(1)
+        val shellHeight = box.height().roundToInt().coerceAtLeast(1)
+        if (shell.width != shellWidth || shell.height != shellHeight) shell.layout(0, 0, shellWidth, shellHeight)
+        val shellSave = if (opacity >= 1f) canvas.save() else canvas.saveLayerAlpha(box, (255 * opacity).toInt().coerceIn(0, 255))
+        canvas.translate(box.left, box.top)
+        shell.draw(canvas)
+        canvas.restoreToCount(shellSave)
         capsuleClip.reset()
         capsuleClip.addRoundRect(box, radius, radius, Path.Direction.CW)
         canvas.clipPath(capsuleClip)

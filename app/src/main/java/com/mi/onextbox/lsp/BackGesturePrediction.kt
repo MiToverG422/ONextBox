@@ -130,7 +130,7 @@ internal object BackGesturePrediction {
             native.deoptimizeCallers()
         }
         BackGesturePredictionRoutes.hook(loader, adapters.any { !it.task }, adapters.any { it.task })
-        HotReloadLifecycle.register("$TAG:prediction", canReload = { synchronized(sessions) { sessions.isEmpty() } })
+        HotReloadLifecycle.register("$TAG:prediction", canReload = { synchronized(sessions) { sessions.isEmpty() } }, waitForGesture = true)
         HookLog.i(TAG, "Predictive style adapters installed; native progress and completion retained")
     }
 

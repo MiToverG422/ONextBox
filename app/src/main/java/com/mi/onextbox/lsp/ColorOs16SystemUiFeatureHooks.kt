@@ -21,6 +21,7 @@ internal object ColorOs16SystemUiFeatureHooks {
         install("volume-safety") { VolumeSafetyWarningHooker.hook(loader) }
         install("native-volume") { ColorOs16AospVolumeHooker.hook(loader) }
         install("navigation") { ImmersiveNavigationHooker.hook(loader) }
+        install("keyguard-gesture-handle") { KeyguardGestureHandle.hook(loader) }
         install("assistant-power") { AssistantHooker.hook("com.android.systemui", loader) }
         install("presentation") { SystemUiHooker.hookColorOs16(loader) }
         install("fluid-battery") { FluidCloudBatteryHooker.hook(loader) }
