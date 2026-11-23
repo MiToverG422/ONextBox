@@ -1,4 +1,5 @@
 name: Build
+run-name: ONextBox ${{ inputs.channel == 'ci' && 'CI' || 'Release' }} build
 
 on:
   workflow_dispatch:
@@ -18,6 +19,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:

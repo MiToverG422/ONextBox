@@ -9,6 +9,9 @@ permissions:
 
 jobs:
   build:
+    permissions:
+      actions: read
+      contents: write
     uses: ./.github/workflows/android-build.yml
     with:
       channel: release

@@ -44,11 +44,58 @@ import re
 import sys
 from html import escape, unescape
 from pathlib import Path
-from subprocess import check_output
+from subprocess import CalledProcessError, TimeoutExpired, check_output, run
 
 
 def git(*args):
     return check_output(("git", *args), encoding="utf-8", errors="replace").rstrip("\n")
+
+
+def github_items(endpoint, key, **filters):
+    fields = [arg for name, value in filters.items() for arg in ("-f", f"{name}={value}")]
+    response = check_output(
+        ("gh", "api", "--method", "GET", "--paginate", "--slurp", endpoint, "-F", "per_page=100", *fields),
+        timeout=30,
+    )
+    return [item for page in json.loads(response) for item in page[key]]
+
+
+def previous_ci_commit(env):
+    if env["GITHUB_REF_TYPE"] != "branch" or not env.get("GITHUB_RUN_NUMBER"):
+        return None
+    repository = f"repos/{env['GITHUB_REPOSITORY']}"
+    current_number = int(env["GITHUB_RUN_NUMBER"])
+    try:
+        builds = github_items(
+            f"{repository}/actions/workflows/android-build.yml/runs", "workflow_runs",
+            branch=env["GITHUB_REF_NAME"], status="success", event="workflow_dispatch",
+        )
+        for build in sorted(builds, key=lambda item: item["run_number"], reverse=True):
+            sha = build["head_sha"]
+            if build["run_number"] >= current_number or not re.fullmatch(r"[0-9a-f]{40}", sha):
+                continue
+            title = build["display_title"]
+            is_ci = title == "ONextBox CI build"
+            if title == "Build":
+                # Runs from before channel-specific names can be identified by their CI artifacts.
+                artifacts = github_items(f"{repository}/actions/runs/{build['id']}/artifacts", "artifacts")
+                is_ci = any(item["name"].startswith("onextbox-") and "-CI-" in item["name"] for item in artifacts)
+            if is_ci and run(("git", "merge-base", "--is-ancestor", sha, "HEAD"), capture_output=True).returncode == 0:
+                return sha
+    except (CalledProcessError, TimeoutExpired, json.JSONDecodeError):
+        print("::warning::Unable to read previous CI build history. Using the default commit summary.", file=sys.stderr)
+    return None
+
+
+def commits_since(base):
+    history = git("log", "--reverse", "-z", "--format=%B%x00%an", f"{base}..HEAD")
+    if not history:
+        return []
+    fields = history.removesuffix("\0").split("\0")
+    return [
+        {"message": message, "author": {"name": author}}
+        for message, author in zip(fields[::2], fields[1::2], strict=True)
+    ]
 
 
 def commits_for_build(event):
@@ -131,8 +178,10 @@ if channel == "CI":
     event_path = env.get("GITHUB_EVENT_PATH")
     event = json.loads(Path(event_path).read_text(encoding="utf-8")) if event_path else {}
     header.extend(("#ci_" + git("rev-list", "--count", "HEAD"), version))
-    summary = escape(commit_summary(commits_for_build(event)))
-    compare_url = event.get("compare") or ""
+    base = previous_ci_commit(env)
+    commits = commits_since(base) if base else commits_for_build(event)
+    summary = escape(commit_summary(commits)) if commits else "No new commits since the previous CI build."
+    compare_url = f"{repository}/compare/{base}...{env['GITHUB_SHA']}" if base else event.get("compare") or ""
     if compare_url.startswith(f"{repository}/compare/"):
         changes_url, changes_label = compare_url, "Compare"
     else:
