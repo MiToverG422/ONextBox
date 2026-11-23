@@ -16,11 +16,6 @@ on:
       channel:
         required: true
         type: string
-    outputs:
-      version_name:
-        value: ${{ jobs.build.outputs.version_name }}
-      version_code:
-        value: ${{ jobs.build.outputs.version_code }}
 
 permissions:
   contents: write
@@ -33,9 +28,6 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     environment: telegram_bot
-    outputs:
-      version_name: ${{ steps.apks.outputs.version_name }}
-      version_code: ${{ steps.apks.outputs.version_code }}
 
     steps:
       - name: Checkout
@@ -134,7 +126,7 @@ jobs:
 
       - name: Upload validation reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: validation-reports
           path: |
@@ -175,8 +167,13 @@ jobs:
           debug = entries["debug"]
           if (debug["versionName"], debug["versionCode"]) != (version, code):
               raise SystemExit("Debug and Release APK version metadata differ.")
-          if os.environ["GITHUB_REF_TYPE"] == "tag" and os.environ["GITHUB_REF_NAME"][1:] != version:
-              raise SystemExit(f"Expected tag V{version} for this commit.")
+          if os.environ["GITHUB_REF_TYPE"] == "tag":
+              if os.environ["GITHUB_REF_NAME"][1:] != version:
+                  raise SystemExit(f"Expected tag V{version} for this commit.")
+              (dist / "apk-metadata.json").write_text(
+                  json.dumps({"versionName": version, "versionCode": code}) + "\n",
+                  encoding="utf-8",
+              )
           for variant, entry in entries.items():
               source = Path("app/build/outputs/apk") / variant / entry["outputFile"]
               shutil.copy2(source, dist / f"onextbox-{version}-EX01-{variant}.apk")
@@ -205,7 +202,6 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Debug APK
-        id: debug_apk
         uses: actions/upload-artifact@v7
         with:
           path: dist/onextbox-${{ steps.apks.outputs.version_name }}-EX01-debug.apk
@@ -216,6 +212,14 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           path: dist/SHA256SUMS
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload tagged release metadata
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v7
+        with:
+          path: dist/apk-metadata.json
           archive: false
           if-no-files-found: error
 
@@ -248,8 +252,8 @@ jobs:
             gh release create "$tag" dist/*.apk --target "$GITHUB_SHA" --title "$title" --notes "$notes" --prerelease --latest=false
           fi
 
-      - name: Send APKs to Telegram
-        if: ${{ !cancelled() && steps.release_apk.outcome == 'success' && steps.debug_apk.outcome == 'success' && github.ref_type != 'tag' && github.repository == 'MiToverG422/ONextBox' }}
+      - name: Send Release APK to Telegram
+        if: ${{ !cancelled() && steps.release_apk.outcome == 'success' && github.ref_type != 'tag' && github.repository == 'MiToverG422/ONextBox' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

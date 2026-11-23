@@ -21,12 +21,9 @@ else
 fi
 
 release_json=
-changelog=
 if [[ "$channel" == Release ]]; then
-    notes_dir=$(mktemp -d)
-    release_json="$notes_dir/release.json"
-    changelog="$notes_dir/ONextBox-$VERSION_NAME-changelog.md"
-    trap 'rm -f -- "$release_json" "$changelog"; rmdir -- "$notes_dir"' EXIT
+    release_json=$(mktemp)
+    trap 'rm -f -- "$release_json"' EXIT
 
     read_release() {
         gh release view "$1" --repo "$GITHUB_REPOSITORY" --json body,url,isDraft
@@ -40,7 +37,7 @@ if [[ "$channel" == Release ]]; then
     fi
 fi
 
-media=$(python3 - "$channel" "$release_json" "$changelog" <<'PY'
+caption=$(python3 - "$channel" "$release_json" <<'PY'
 import json
 import os
 import re
@@ -93,7 +90,7 @@ def caption_length(markup):
     return len(text.encode("utf-16-le")) // 2
 
 
-def release_caption(header, release, run_link, changelog_path):
+def release_caption(header, release, run_link):
     if release.get("isDraft"):
         release = {}
     release_url = release.get("url")
@@ -114,8 +111,7 @@ def release_caption(header, release, run_link, changelog_path):
     if caption_length(full_caption) <= 1024:
         return full_caption
 
-    Path(changelog_path).write_bytes(body.encode("utf-8"))
-    suffix = "…</blockquote>\n\nFull notes attached." + footer
+    suffix = "…</blockquote>" + footer
     available = 1024 - caption_length(prefix + suffix)
     preview = notes.encode("utf-16-le")[:2 * available].decode("utf-16-le", errors="ignore")
     return prefix + escape(preview.rstrip()) + suffix
@@ -145,36 +141,21 @@ if channel == "CI":
     caption = "\n".join((*header, f"\n<pre>{summary}</pre>\n", f"{changes_link} · {run_link}"))
 else:
     release = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-    caption = release_caption("\n".join((*header, version)), release, run_link, sys.argv[3])
+    caption = release_caption("\n".join((*header, version)), release, run_link)
 
-media = [
-    {
-        "type": "document",
-        "media": "attach://release",
-        "caption": caption,
-        "parse_mode": "HTML",
-    },
-    {"type": "document", "media": "attach://debug"},
-]
-if sys.argv[3] and Path(sys.argv[3]).is_file():
-    media.append({"type": "document", "media": "attach://changelog"})
-print(json.dumps(media))
+sys.stdout.buffer.write(caption.encode("utf-8"))
 PY
 )
-notes_upload=()
-expected_files=2
-if [[ -f "$changelog" ]]; then
-    notes_upload=(--form "changelog=@$changelog;type=text/markdown")
-    expected_files=3
-fi
+
+apk="dist/onextbox-$VERSION_NAME-EX01-release.apk"
 response=$(curl --silent --show-error --max-time 240 \
     "${destination[@]}" \
-    --form-string "media=$media" \
-    --form "release=@dist/onextbox-$VERSION_NAME-EX01-release.apk" \
-    --form "debug=@dist/onextbox-$VERSION_NAME-EX01-debug.apk" \
-    "${notes_upload[@]}" \
-    "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMediaGroup")
-if ! jq -e --argjson expected "$expected_files" '.ok and (.result | length == $expected)' > /dev/null <<<"$response"; then
-    jq -r '"::error::Telegram upload failed: " + (.description // "invalid response")' <<<"$response"
+    --form-string "caption=$caption" \
+    --form-string "parse_mode=HTML" \
+    --form "document=@$apk" \
+    "https://api.telegram.org/bot$TG_BOT_TOKEN/sendDocument")
+if ! jq -e '.ok == true' >/dev/null 2>&1 <<<"$response"; then
+    description=$(jq -r '.description // empty' 2>/dev/null <<<"$response") || description=
+    printf '::error::Telegram upload failed for %s: %s\n' "${apk##*/}" "${description:-invalid response}"
     exit 1
 fi

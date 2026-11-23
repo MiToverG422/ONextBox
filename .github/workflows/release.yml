@@ -26,10 +26,30 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Download tagged release metadata
+        uses: actions/download-artifact@v8
+        with:
+          name: apk-metadata.json
+          path: dist
+          skip-decompress: true
+
+      - name: Read release APK version
+        id: apks
+        shell: bash
+        run: |
+          set -euo pipefail
+          version_name=$(jq -er '.versionName' dist/apk-metadata.json)
+          version_code=$(jq -er '.versionCode' dist/apk-metadata.json)
+          if [[ "$version_name" != "${GITHUB_REF_NAME:1}" || ! "$version_code" =~ ^[0-9]+$ ]]; then
+            echo "::error::The APK metadata does not match the release tag."
+            exit 1
+          fi
+          printf 'version_name=%s\nversion_code=%s\n' "$version_name" "$version_code" >> "$GITHUB_OUTPUT"
+
       - name: Download verified APKs
         uses: actions/download-artifact@v8
         with:
-          pattern: onextbox-${{ needs.build.outputs.version_name }}-EX01-*.apk
+          pattern: onextbox-${{ steps.apks.outputs.version_name }}-EX01-*.apk
           path: dist
           merge-multiple: true
           skip-decompress: true
@@ -38,7 +58,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION_NAME: ${{ needs.build.outputs.version_name }}
+          VERSION_NAME: ${{ steps.apks.outputs.version_name }}
         run: |
           set -euo pipefail
           apks=(
@@ -63,7 +83,7 @@ jobs:
             gh release create "$GITHUB_REF_NAME" "${apks[@]}" --verify-tag --notes-from-tag
           fi
 
-      - name: Send Release APKs to Telegram
+      - name: Send Release APK to Telegram
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -72,6 +92,6 @@ jobs:
           TG_RELEASE_CHAT_ID: ${{ secrets.TELEGRAM_RELEASE_CHAT_ID }}
           TG_RELEASE_THREAD_ID: ${{ secrets.TELEGRAM_RELEASE_THREAD_ID }}
           BUILD_CHANNEL: release
-          VERSION_NAME: ${{ needs.build.outputs.version_name }}
-          VERSION_CODE: ${{ needs.build.outputs.version_code }}
+          VERSION_NAME: ${{ steps.apks.outputs.version_name }}
+          VERSION_CODE: ${{ steps.apks.outputs.version_code }}
         run: bash .github/scripts/send-telegram-apks.sh
