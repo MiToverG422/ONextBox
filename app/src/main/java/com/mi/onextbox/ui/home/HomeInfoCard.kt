@@ -36,7 +36,11 @@ import java.util.Locale
 fun HomeInfoCard() {
     if (LocalPreviewTextPlaceholders.current) {
         val colors = COUITheme.colorScheme
-        Card(modifier = Modifier.fillMaxWidth(), cornerRadius = AppUiTokens.CardCornerRadius) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            cornerRadius = AppUiTokens.PreferenceCardCornerRadius,
+            preferenceGroup = true,
+        ) {
             repeat(7) { row ->
                 if (row > 0) SettingsDivider()
                 BasicComponent {
@@ -66,7 +70,8 @@ fun HomeInfoCard() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        cornerRadius = AppUiTokens.CardCornerRadius,
+        cornerRadius = AppUiTokens.PreferenceCardCornerRadius,
+        preferenceGroup = true,
     ) {
         Column {
             HomeRegionRow(

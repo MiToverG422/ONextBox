@@ -18,6 +18,7 @@
     <string name="section_about">Giới thiệu</string>
     <string name="setting_theme_mode">Chế độ chủ đề</string>
     <string name="setting_ui_style">Kiểu giao diện</string>
+    <string name="setting_smoother_card_corners">Góc bo mượt hơn</string>
     <string name="ui_style_coloros">COUI 17.0</string>
     <string name="setting_dynamic_color">Màu sắc năng động</string>
     <string name="setting_dynamic_color_on_summary">Sử dụng màu từ hình nền hệ thống</string>

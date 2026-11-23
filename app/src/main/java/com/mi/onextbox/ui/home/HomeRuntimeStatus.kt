@@ -119,7 +119,8 @@ private fun RuntimeStatusCard(
 
     Card(
         modifier = modifier,
-        cornerRadius = AppUiTokens.CardCornerRadius,
+        cornerRadius = AppUiTokens.PreferenceCardCornerRadius,
+        preferenceGroup = true,
         insideMargin = PaddingValues(14.dp),
         onClick = onClick?.let {
             {

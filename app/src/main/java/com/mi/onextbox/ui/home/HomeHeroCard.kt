@@ -45,7 +45,7 @@ import com.mi.onextbox.ui.common.ONextBoxLogo
 import com.mi.onextbox.ui.common.PreviewTextLine
 import com.mi.onextbox.ui.common.rememberHapticLongPress
 import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.squircle.squircleSurface
+import io.github.suqi8.coui.kmp.basic.couiCardSurface
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -87,9 +87,10 @@ fun HomeHeroCard(
                 scaleX = scale
                 scaleY = scale
             }
-            .squircleSurface(
+            .couiCardSurface(
                 color = heroColor,
-                cornerRadius = AppUiTokens.CardCornerRadius,
+                cornerRadius = AppUiTokens.PreferenceCardCornerRadius,
+                preferenceGroup = true,
             )
             .pointerInput(onLongPress) {
                 awaitEachGesture {

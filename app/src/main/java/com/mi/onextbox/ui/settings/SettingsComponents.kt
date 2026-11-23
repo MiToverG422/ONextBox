@@ -77,7 +77,8 @@ fun SettingsGroup(
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .padding(bottom = bottomPadding),
-        cornerRadius = AppUiTokens.CardCornerRadius,
+        cornerRadius = AppUiTokens.PreferenceCardCornerRadius,
+        preferenceGroup = true,
     ) {
         content()
     }

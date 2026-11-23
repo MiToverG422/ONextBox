@@ -58,7 +58,7 @@ import com.mi.onextbox.ui.common.AppThemeKeyColor
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppThemePaletteStyle
 import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
+import com.mi.onextbox.ui.common.rememberAppUiStyleValues
 import com.mi.onextbox.ui.common.pageDensityScale
 import com.mi.onextbox.ui.common.AssistantScreenOption
 import com.mi.onextbox.ui.common.RootAccessState
@@ -787,7 +787,10 @@ class MainActivity : ComponentActivity() {
                     if (onboardingVisible) {
                         // Alternative UI styles use a smaller density. Activation always keeps
                         // the same C17 sizing while its choices configure only the destination.
-                        CompositionLocalProvider(LocalDensity provides systemDensity, LocalAppUiStyle provides appUiStyle) {
+                        CompositionLocalProvider(
+                            LocalDensity provides systemDensity,
+                            *rememberAppUiStyleValues(appUiStyle),
+                        ) {
                         OnboardingScreen(
                         appLanguageTag = appLanguageTag,
                         onAppLanguageChange = { languageTag ->

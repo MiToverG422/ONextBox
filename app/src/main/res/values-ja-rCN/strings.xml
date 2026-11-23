@@ -18,6 +18,7 @@
     <string name="section_about">紹介</string>
     <string name="setting_theme_mode">主題方式</string>
     <string name="setting_ui_style">画面様式</string>
+    <string name="setting_smoother_card_corners">より滑らかな角丸</string>
     <string name="ui_style_coloros">COUI 17.0</string>
     <string name="setting_dynamic_color">動態取色</string>
     <string name="setting_dynamic_color_on_summary">使用系統桌布配色</string>

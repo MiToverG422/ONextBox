@@ -69,7 +69,8 @@ fun HomePage(
     HomeInfoCard()
     io.github.suqi8.coui.kmp.basic.Card(
         modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
-        cornerRadius = com.mi.onextbox.ui.common.AppUiTokens.CardCornerRadius,
+        cornerRadius = com.mi.onextbox.ui.common.AppUiTokens.PreferenceCardCornerRadius,
+        preferenceGroup = true,
     ) {
         com.mi.onextbox.ui.settings.SettingsCardRow(stringResource(R.string.feature_updates_device), stringResource(R.string.device_details_summary), showArrow = true,
             onClick = onOpenDeviceDetails)

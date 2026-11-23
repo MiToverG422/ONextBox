@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.mi.onextbox.ui.common.AppUiTokens
 import com.mi.onextbox.ui.common.colorOsScrollEntrance
 import io.github.suqi8.coui.kmp.basic.CardDefaults
-import io.github.suqi8.coui.kmp.squircle.squircleSurface
+import io.github.suqi8.coui.kmp.basic.couiCardSurface
 import io.github.suqi8.coui.kmp.theme.LocalContentColor
 
 @Composable
@@ -43,7 +43,7 @@ internal fun SettingsLazyGroupItem(
         .padding(bottom = if (last) groupBottom else 0.dp)
 
     val colors = CardDefaults.defaultColors()
-    val cornerRadius = AppUiTokens.CardCornerRadius
+    val cornerRadius = AppUiTokens.PreferenceCardCornerRadius
     val top by animateDpAsState(
         targetValue = if (index == 0) cornerRadius else 0.dp,
         animationSpec = spring(dampingRatio = 1f, stiffness = 800f),
@@ -55,7 +55,7 @@ internal fun SettingsLazyGroupItem(
         label = "settingsLazyGroupBottomCorner",
     )
     CompositionLocalProvider(LocalContentColor provides colors.contentColor) {
-        Column(modifier = rowModifier.squircleSurface(colors.color, top, top, bottom, bottom)) {
+        Column(modifier = rowModifier.couiCardSurface(colors.color, top, bottom, preferenceGroup = true)) {
             content()
             if (!last) SettingsDivider()
         }
@@ -75,6 +75,7 @@ internal fun <T> SettingsListGroup(
 
     val groupIdentity = remember { Any() }
     val colors = CardDefaults.defaultColors()
+    val cornerRadius = AppUiTokens.PreferenceCardCornerRadius
     CompositionLocalProvider(LocalContentColor provides colors.contentColor) {
         Column(
             modifier = Modifier
@@ -87,13 +88,13 @@ internal fun <T> SettingsListGroup(
                 val itemKey = key(item)
                 contentKey(itemKey) {
                     val entranceKey = remember(groupIdentity, itemKey) { groupIdentity to itemKey }
-                    val top = if (index == 0) AppUiTokens.CardCornerRadius else 0.dp
-                    val bottom = if (index == items.lastIndex) AppUiTokens.CardCornerRadius else 0.dp
+                    val top = if (index == 0) cornerRadius else 0.dp
+                    val bottom = if (index == items.lastIndex) cornerRadius else 0.dp
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .colorOsScrollEntrance(key = entranceKey)
-                            .squircleSurface(colors.color, top, top, bottom, bottom),
+                            .couiCardSurface(colors.color, top, bottom, preferenceGroup = true),
                     ) {
                         content(index, item)
                         if (index < items.lastIndex) SettingsDivider()

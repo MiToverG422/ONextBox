@@ -113,7 +113,7 @@ import com.mi.onextbox.ui.common.colorOsScrollEntrance
 import com.mi.onextbox.ui.common.rememberColorOsScrollEntrance
 import com.mi.onextbox.ui.settings.SettingsDivider
 import io.github.suqi8.coui.kmp.basic.Text as CouiText
-import io.github.suqi8.coui.kmp.squircle.squircleSurface
+import io.github.suqi8.coui.kmp.basic.couiCardSurface
 import io.github.suqi8.coui.kmp.theme.COUITheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -478,16 +478,16 @@ private fun PushMonitorRow(
 
     run {
         val top by animateDpAsState(
-            if (index == 0) AppUiTokens.CardCornerRadius else 0.dp,
+            if (index == 0) AppUiTokens.PreferenceCardCornerRadius else 0.dp,
             spring(dampingRatio = 0.9f, stiffness = 800f), label = "pushCardTop",
         )
         val bottom by animateDpAsState(
-            if (index == count - 1) AppUiTokens.CardCornerRadius else 0.dp,
+            if (index == count - 1) AppUiTokens.PreferenceCardCornerRadius else 0.dp,
             spring(dampingRatio = 0.9f, stiffness = 800f), label = "pushCardBottom",
         )
         Column(
             modifier.fillMaxWidth().animateContentSize().colorOsScrollEntrance(key = app.packageName)
-                .squircleSurface(COUITheme.colorScheme.surfaceContainer, top, top, bottom, bottom)
+                .couiCardSurface(COUITheme.colorScheme.surfaceContainer, top, bottom, preferenceGroup = true)
                 .semantics(mergeDescendants = true) {},
         ) {
             PushMonitorRowContent(

@@ -18,6 +18,7 @@
     <string name="section_about">このアプリについて</string>
     <string name="setting_theme_mode">テーマモード</string>
     <string name="setting_ui_style">インターフェーススタイル</string>
+    <string name="setting_smoother_card_corners">より滑らかな角丸</string>
     <string name="ui_style_coloros">COUI 17.0</string>
     <string name="setting_dynamic_color">ダイナミックカラー</string>
     <string name="setting_dynamic_color_on_summary">システムの壁紙の色を使用します</string>

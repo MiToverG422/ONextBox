@@ -24,7 +24,7 @@ import androidx.core.view.WindowCompat
 import com.mi.onextbox.ui.common.AppLocale
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
-import com.mi.onextbox.ui.common.LocalAppUiStyle
+import com.mi.onextbox.ui.common.rememberAppUiStyleValues
 import com.mi.onextbox.ui.onboarding.OnboardingAppearance
 import com.mi.onextbox.ui.onboarding.OnboardingPreferences
 import com.mi.onextbox.ui.onboarding.OnboardingScreen
@@ -58,7 +58,7 @@ class OnboardingActivity : ComponentActivity() {
             }
 
             CompositionLocalProvider(
-                LocalAppUiStyle provides appUiStyle,
+                *rememberAppUiStyleValues(appUiStyle),
                 LocalContext provides localizedContext,
                 LocalConfiguration provides localizedContext.resources.configuration,
                 LocalResources provides localizedContext.resources,

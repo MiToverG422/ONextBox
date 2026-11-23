@@ -22,7 +22,7 @@ class AppUiDensityTest {
         assertTrue(activity.contains("Density(systemDensity.density * scale, systemDensity.fontScale)"))
         val onboarding = activity.substringAfter("if (onboardingVisible) {", "")
         assertTrue(Regex(
-            """CompositionLocalProvider\([^)]*\bLocalDensity provides systemDensity\b[^)]*\)\s*\{\s*OnboardingScreen\(""",
+            """CompositionLocalProvider\(\s*LocalDensity provides systemDensity,\s*\*rememberAppUiStyleValues\(appUiStyle\),?\s*\)\s*\{\s*OnboardingScreen\(""",
         ).containsMatchIn(onboarding))
         assertFalse(activity.contains("wm density"))
         assertFalse(activity.contains("fontScale = 1f"))

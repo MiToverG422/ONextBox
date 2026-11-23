@@ -18,6 +18,7 @@
     <string name="section_about">앱 정보</string>
     <string name="setting_theme_mode">테마 모드</string>
     <string name="setting_ui_style">인터페이스 스타일</string>
+    <string name="setting_smoother_card_corners">더 부드러운 둥근 모서리</string>
     <string name="ui_style_coloros">COUI 17.0</string>
     <string name="setting_dynamic_color">동적 색상</string>
     <string name="setting_dynamic_color_on_summary">시스템 배경화면의 색상 사용</string>

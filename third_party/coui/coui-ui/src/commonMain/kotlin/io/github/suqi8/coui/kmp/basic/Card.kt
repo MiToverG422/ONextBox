@@ -5,6 +5,7 @@ package io.github.suqi8.coui.kmp.basic
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -19,11 +20,14 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
@@ -39,6 +43,24 @@ import io.github.suqi8.coui.kmp.utils.SinkFeedback
 import io.github.suqi8.coui.kmp.utils.TiltFeedback
 import io.github.suqi8.coui.kmp.utils.pressable
 import kotlin.coroutines.cancellation.CancellationException
+
+/** Optional outline factory for the top radius, bottom radius and preference-group style. */
+val LocalCouiCardShape = compositionLocalOf<((Dp, Dp, Boolean) -> Shape)?> { null }
+
+@Composable
+fun Modifier.couiCardSurface(
+    color: Color,
+    cornerRadius: Dp,
+    bottomCornerRadius: Dp = cornerRadius,
+    preferenceGroup: Boolean = false,
+): Modifier {
+    val shape = LocalCouiCardShape.current?.invoke(cornerRadius, bottomCornerRadius, preferenceGroup)
+    return if (shape == null) {
+        squircleSurface(color, cornerRadius, cornerRadius, bottomCornerRadius, bottomCornerRadius)
+    } else {
+        clip(shape).background(color)
+    }
+}
 
 /**
  * A [Card] component with COUI style.
@@ -60,12 +82,24 @@ fun Card(
     insideMargin: PaddingValues = CardDefaults.InsideMargin,
     colors: CardColors = CardDefaults.defaultColors(),
     content: @Composable ColumnScope.() -> Unit,
+) = Card(modifier, cornerRadius, insideMargin, colors, preferenceGroup = false, content = content)
+
+@Composable
+@NonRestartableComposable
+fun Card(
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = CardDefaults.CornerRadius,
+    insideMargin: PaddingValues = CardDefaults.InsideMargin,
+    colors: CardColors = CardDefaults.defaultColors(),
+    preferenceGroup: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     BasicCard(
         color = colors.color,
         contentColor = colors.contentColor,
         modifier = modifier,
         cornerRadius = cornerRadius,
+        preferenceGroup = preferenceGroup,
     ) {
         Column(
             modifier = Modifier.padding(insideMargin),
@@ -103,6 +137,25 @@ fun Card(
     holdDownState: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongPress: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) = Card(
+    modifier, cornerRadius, insideMargin, colors, pressFeedbackType, showIndication, holdDownState,
+    onClick, onLongPress, preferenceGroup = false, content = content,
+)
+
+/** An interactive [Card] with an explicitly selected card outline. */
+@Composable
+fun Card(
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = CardDefaults.CornerRadius,
+    insideMargin: PaddingValues = CardDefaults.InsideMargin,
+    colors: CardColors = CardDefaults.defaultColors(),
+    pressFeedbackType: PressFeedbackType = PressFeedbackType.Tint,
+    showIndication: Boolean = false,
+    holdDownState: Boolean = false,
+    onClick: (() -> Unit)?,
+    onLongPress: (() -> Unit)? = null,
+    preferenceGroup: Boolean,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -181,6 +234,7 @@ fun Card(
             delay = null,
         ),
         cornerRadius = cornerRadius,
+        preferenceGroup = preferenceGroup,
     ) {
         Column(
             modifier = Modifier
@@ -206,6 +260,7 @@ private fun BasicCard(
     contentColor: Color,
     modifier: Modifier = Modifier,
     cornerRadius: Dp = CardDefaults.CornerRadius,
+    preferenceGroup: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(
@@ -216,7 +271,7 @@ private fun BasicCard(
                 .semantics(mergeDescendants = false) {
                     isTraversalGroup = true
                 }
-                .squircleSurface(color = color, cornerRadius = cornerRadius),
+                .couiCardSurface(color = color, cornerRadius = cornerRadius, preferenceGroup = preferenceGroup),
             propagateMinConstraints = true,
         ) {
             content()

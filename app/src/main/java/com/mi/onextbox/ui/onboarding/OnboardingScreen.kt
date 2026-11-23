@@ -145,6 +145,7 @@ import com.mi.onextbox.ui.settings.SettingsDivider
 import com.mi.onextbox.ui.settings.SettingsTokens
 import io.github.suqi8.coui.kmp.basic.BasicComponent
 import io.github.suqi8.coui.kmp.basic.Card
+import io.github.suqi8.coui.kmp.basic.LocalCouiCardShape
 import io.github.suqi8.coui.kmp.basic.Checkbox
 import io.github.suqi8.coui.kmp.basic.Text
 import io.github.suqi8.coui.kmp.icon.COUIIcons
@@ -965,7 +966,8 @@ private fun LanguagePage(
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                cornerRadius = AppUiTokens.CardCornerRadius,
+                cornerRadius = AppUiTokens.PreferenceCardCornerRadius,
+                preferenceGroup = true,
             ) {
                 languageOptions.forEachIndexed { index, (tag, label) ->
                     if (index > 0) SettingsDivider()
@@ -1044,7 +1046,8 @@ private fun AppearancePage(
             )
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                cornerRadius = AppUiTokens.CardCornerRadius,
+                cornerRadius = AppUiTokens.PreferenceCardCornerRadius,
+                preferenceGroup = true,
             ) {
                 themeModes.forEachIndexed { index, (mode, label) ->
                     if (index > 0) SettingsDivider()
@@ -1456,10 +1459,12 @@ private fun MigrationPage(
         Spacer(modifier = Modifier.height(18.dp))
         MigrationTransferPreview(importState = importState)
         Spacer(modifier = Modifier.height(16.dp))
+        val cardRadius = AppUiTokens.CardCornerRadius
+        val cardShape = LocalCouiCardShape.current?.invoke(cardRadius, cardRadius, false) ?: RoundedCornerShape(cardRadius)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(AppUiTokens.CardCornerRadius))
+                .clip(cardShape)
                 .background(Color.White.copy(alpha = 0.72f))
                 .clickable(enabled = importState !is MigrationImportState.Importing) {
                     importLauncher.launch(arrayOf(ConfigBackup.MIME_TYPE, "text/*"))

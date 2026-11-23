@@ -22,6 +22,7 @@ import com.mi.onextbox.R
 import com.mi.onextbox.ui.common.AppThemeMode
 import com.mi.onextbox.ui.common.AppUiStyle
 import com.mi.onextbox.ui.common.LocalAppUiStyle
+import com.mi.onextbox.ui.common.LocalSmootherCardCorners
 import com.mi.onextbox.ui.common.SwitchHaptics
 import com.mi.onextbox.ui.common.CouiColorSpec as ThemeColorSpec
 import com.mi.onextbox.ui.common.isMonet
@@ -54,6 +55,8 @@ internal fun DisplayThemeSettingsPage(
     onMainPageSwipeEnabledChange: (Boolean) -> Unit,
     onSubPageSwipeEnabledChange: (Boolean) -> Unit,
 ) {
+    val context = LocalContext.current
+    val uiStyle = LocalAppUiStyle.current
     val (backgroundStyle, setBackgroundStyle) = rememberFeatureBackgroundSelection()
     DisplayThemePreview(
         rootGranted = rootGranted,
@@ -65,11 +68,32 @@ internal fun DisplayThemeSettingsPage(
         SettingsThemeTextDropdown(
             title = stringResource(R.string.setting_ui_style),
             labels = AppUiStyle.entries.map { it.label },
-            selectedIndex = LocalAppUiStyle.current.ordinal,
+            selectedIndex = uiStyle.ordinal,
             onSelectedIndexChange = { onAppUiStyleChange(AppUiStyle.entries[it]) },
             hasDividerBelow = true,
         )
         SettingsDivider()
+        AnimatedVisibility(
+            visible = uiStyle == AppUiStyle.ColorOs,
+            enter = expandVertically(tween(260, easing = FastOutSlowInEasing)) + fadeIn(tween(180)),
+            exit = shrinkVertically(tween(220, easing = FastOutSlowInEasing)) + fadeOut(tween(160)),
+        ) {
+            Column {
+                SettingsToggleRow(
+                    title = stringResource(R.string.setting_smoother_card_corners),
+                    summary = "",
+                    checked = LocalSmootherCardCorners.current,
+                    onCheckedChange = { enabled ->
+                        AppUiStyle.preferences(context).edit()
+                            .putBoolean(AppUiStyle.SmootherCardCornersKey, enabled)
+                            .apply()
+                    },
+                    hasDividerAbove = true,
+                    hasDividerBelow = true,
+                )
+                SettingsDivider()
+            }
+        }
         SettingsThemeModeDropdown(
             title = stringResource(R.string.setting_theme_mode),
             selectedMode = appThemeMode,
@@ -189,7 +213,6 @@ internal fun DisplayThemeSettingsPage(
             hasDividerBelow = true,
         )
         SettingsDivider()
-        val context = LocalContext.current
         var switchHaptics by remember(context) { mutableStateOf(SwitchHaptics.enabled(context)) }
         SettingsToggleRow(
             title = stringResource(R.string.setting_switch_haptics),

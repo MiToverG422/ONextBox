@@ -33,6 +33,7 @@
 
     <string name="setting_theme_mode">Theme mode</string>
     <string name="setting_ui_style">Interface style</string>
+    <string name="setting_smoother_card_corners">Smoother corners</string>
     <string name="ui_style_coloros">COUI 17.0</string>
     <string name="setting_dynamic_color">Dynamic colors</string>
     <string name="setting_dynamic_color_on_summary">Use colors from the system wallpaper</string>

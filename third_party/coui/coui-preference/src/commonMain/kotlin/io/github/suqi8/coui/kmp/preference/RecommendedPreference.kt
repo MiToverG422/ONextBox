@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.suqi8.coui.kmp.basic.Text
-import io.github.suqi8.coui.kmp.squircle.squircleSurface
+import io.github.suqi8.coui.kmp.basic.couiCardSurface
 import io.github.suqi8.coui.kmp.theme.COUITheme
 
 /**
@@ -58,8 +58,7 @@ fun RecommendedPreference(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            // squircleSurface also masks the children, clipping the row press overlays to the card corners.
-            .squircleSurface(color = colors.containerColor, cornerRadius = cornerRadius),
+            .couiCardSurface(color = colors.containerColor, cornerRadius = cornerRadius, preferenceGroup = true),
     ) {
         Box(
             modifier = Modifier

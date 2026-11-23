@@ -44,7 +44,8 @@ internal fun HomeSupportNotice() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        cornerRadius = AppUiTokens.CardCornerRadius,
+        cornerRadius = AppUiTokens.PreferenceCardCornerRadius,
+        preferenceGroup = true,
         insideMargin = PaddingValues(0.dp),
     ) {
         Row(
