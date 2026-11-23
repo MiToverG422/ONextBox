@@ -4,16 +4,13 @@ import java.util.Locale
 
 internal object AppUpdateRules {
     const val MAIN_REPOSITORY = "MiToverG422/ONextBox"
-    const val BETA_REPOSITORY = "MiToverG422/ONextBox_BetaTesting"
-
-    fun repository(betaPlanEnabled: Boolean): String = if (betaPlanEnabled) BETA_REPOSITORY else MAIN_REPOSITORY
-
-    fun releaseSources(includeBeta: Boolean): List<Boolean> = if (includeBeta) listOf(false, true) else listOf(false)
+    const val CI_RELEASE_TAG = "ci-latest"
 
     val versionNameRegex = Regex(
         """\d+(?:\.\d+)+(?:[-_]?BETA(?:[.-]?\d+(?:\.\d+)*)?|-CI-[A-Za-z0-9]+)?""",
         RegexOption.IGNORE_CASE,
     )
+    private val legacyBeta = Regex("(?:[-_]|\\d)BETA", RegexOption.IGNORE_CASE)
 
     fun buildType(installedBuildType: String): UpdateBuildType =
         if (installedBuildType.startsWith("debug", ignoreCase = true)) UpdateBuildType.Debug else UpdateBuildType.Release
@@ -30,31 +27,43 @@ internal object AppUpdateRules {
         tag: String,
         draft: Boolean,
         prerelease: Boolean,
-        includeBeta: Boolean,
+        channel: UpdateChannel,
         releaseName: String = "",
         assetName: String = "",
     ): Boolean {
-        if (draft || tag.equals("ci-latest", ignoreCase = true) || tag.contains("-CI-", ignoreCase = true)) return false
-        val beta = listOf(tag, releaseName, assetName).any(::isBetaVersion)
-        return if (includeBeta) beta else !prerelease && !beta
+        if (draft) return false
+        val isCiRelease = tag.equals(CI_RELEASE_TAG, ignoreCase = true)
+        return when (channel) {
+            UpdateChannel.Ci -> isCiRelease
+            UpdateChannel.Release -> !isCiRelease && !prerelease &&
+                listOf(tag, releaseName, assetName).none { isCiVersion(it) || isLegacyBeta(it) }
+        }
     }
 
-    fun isBetaVersion(version: String): Boolean =
-        Regex("(?:[-_]|\\d)BETA", RegexOption.IGNORE_CASE).containsMatchIn(version)
+    fun isCiVersion(version: String): Boolean = version.contains("-CI-", ignoreCase = true)
+    fun isLegacyBeta(version: String): Boolean = legacyBeta.containsMatchIn(version)
 
-    fun releaseVersionName(tag: String, releaseName: String, assetName: String, requireBeta: Boolean = false): String? {
-        val versions = listOf(tag, releaseName, assetName).mapNotNull { versionNameRegex.find(it)?.value }
-        return versions.firstOrNull { !requireBeta || isBetaVersion(it) }
+    fun releaseVersionName(tag: String, releaseName: String, assetName: String): String? {
+        if (tag.equals(CI_RELEASE_TAG, ignoreCase = true)) {
+            val published = versionNameRegex.find(releaseName)?.value?.takeIf(::isCiVersion)
+            val assetVersion = versionNameRegex.find(assetName)?.value?.takeIf(::isCiVersion)
+            return assetVersion?.takeIf { published == null || it.equals(published, ignoreCase = true) }
+        }
+        return listOf(tag, releaseName, assetName).firstNotNullOfOrNull { versionNameRegex.find(it)?.value }
     }
 
-    fun isNewerBetaVersion(remote: String, current: String): Boolean {
-        if (!isBetaVersion(remote)) return false
-        val a = parse(remote) ?: return false
-        val b = parse(current) ?: return false
-        val baseComparison = compareParts(a.parts, b.parts)
-        if (baseComparison != 0) return baseComparison > 0
-        // Only an installed beta can receive a later beta of the same base version.
-        return b.rank == 2 && compareParts(a.qualifierParts, b.qualifierParts) > 0
+    private val versionCodeMarker = Regex("<!-- onextbox-version-code: (\\d+) -->")
+
+    fun releaseVersionCode(body: String): Long? =
+        versionCodeMarker.find(body)?.groupValues?.get(1)?.toLongOrNull()?.takeIf { it > 0 }
+
+    fun releaseNotesText(body: String): String = versionCodeMarker.replace(body, "").trim()
+
+    fun isNewerInstallableVersion(remote: String, current: String, remoteCode: Long?, currentCode: Long): Boolean {
+        if (remoteCode == null) return isNewerVersion(remote, current)
+        if (remoteCode < currentCode) return false
+        val comparison = compareVersions(remote, current)
+        return comparison > 0 || (comparison == 0 && remoteCode > currentCode)
     }
 
     fun compareVersions(first: String, second: String): Int {

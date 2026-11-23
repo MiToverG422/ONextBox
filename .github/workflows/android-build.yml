@@ -11,22 +11,38 @@ on:
         options:
           - ci
           - release
-      version_name:
-        description: "Optional base version name override"
-        required: false
+  workflow_call:
+    inputs:
+      channel:
+        required: true
         type: string
+    outputs:
+      version_name:
+        value: ${{ jobs.build.outputs.version_name }}
+      version_code:
+        value: ${{ jobs.build.outputs.version_code }}
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: onextbox-${{ github.ref_type == 'tag' && github.ref || inputs.channel || 'ci' }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-24.04
     environment: telegram_bot
+    outputs:
+      version_name: ${{ steps.apks.outputs.version_name }}
+      version_code: ${{ steps.apks.outputs.version_code }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup JDK 21
         uses: actions/setup-java@v5
@@ -38,94 +54,24 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Resolve channel and version
-        id: version
+      - name: Resolve build channel
+        id: channel
         shell: bash
         env:
           INPUT_CHANNEL: ${{ inputs.channel }}
-          INPUT_VERSION: ${{ inputs.version_name }}
         run: |
           set -euo pipefail
-
-          DEFAULT_BASE_VERSION="17.0"
-          VERSION_CODE="1"
-          VERSION_CODE_LABEL="EX01"
-          CI_CODE="${GITHUB_SHA:0:8}"
-
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            CHANNEL="${INPUT_CHANNEL:-ci}"
-
-            if [[ -n "${INPUT_VERSION}" && ! "${INPUT_VERSION}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?([._-][A-Za-z0-9]+)*$ ]]; then
-              echo "::error::Version must start with X.Y or X.Y.Z and contain only a safe alphanumeric suffix."
-              exit 1
-            fi
-
-            if [[ -z "${CHANNEL}" ]]; then
-              CHANNEL="ci"
-            fi
-
-            case "${CHANNEL}" in
-              ci)
-                CI_BASE_VERSION="${INPUT_VERSION:-${DEFAULT_BASE_VERSION}}"
-                VERSION_NAME="${CI_BASE_VERSION}-CI-${CI_CODE}"
-                BUILD_VARIANT="both"
-                ;;
-              release)
-                VERSION_NAME="${INPUT_VERSION:-${DEFAULT_BASE_VERSION}}"
-                BUILD_VARIANT="both"
-                ;;
-              *)
-                echo "Unsupported manual channel: ${CHANNEL}"
-                exit 1
-                ;;
-            esac
-          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            TAG="${GITHUB_REF#refs/tags/}"
-
-            if [[ "${TAG}" =~ ^v([0-9]+\.[0-9]+(\.[0-9]+)?)$ ]]; then
-              CHANNEL="release"
-              VERSION_NAME="${BASH_REMATCH[1]}"
-              BUILD_VARIANT="both"
-            else
-              echo "Unsupported tag format: ${TAG}"
-              echo "Use vX.Y or vX.Y.Z"
-              exit 1
-            fi
-          else
-            CHANNEL="ci"
-            VERSION_NAME="${DEFAULT_BASE_VERSION}-CI-${CI_CODE}"
-            BUILD_VARIANT="both"
+          channel="${INPUT_CHANNEL:-ci}"
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            channel=release
           fi
-
-          if [[ "${BUILD_VARIANT}" == "both" ]]; then
-            APK_PATH_GLOB="app/build/outputs/apk/debug/*.apk,app/build/outputs/apk/release/*.apk"
-          elif [[ "${BUILD_VARIANT}" == "debug" ]]; then
-            APK_PATH_GLOB="app/build/outputs/apk/debug/*.apk"
-          else
-            APK_PATH_GLOB="app/build/outputs/apk/release/*.apk"
-          fi
-
-          echo "channel=${CHANNEL}" >> "${GITHUB_OUTPUT}"
-          echo "version_name=${VERSION_NAME}" >> "${GITHUB_OUTPUT}"
-          echo "version_code=${VERSION_CODE}" >> "${GITHUB_OUTPUT}"
-          echo "version_code_label=${VERSION_CODE_LABEL}" >> "${GITHUB_OUTPUT}"
-          echo "ci_code=${CI_CODE}" >> "${GITHUB_OUTPUT}"
-          echo "build_variant=${BUILD_VARIANT}" >> "${GITHUB_OUTPUT}"
-          echo "apk_path_glob=${APK_PATH_GLOB}" >> "${GITHUB_OUTPUT}"
-
-          echo "Resolved channel=${CHANNEL}"
-          echo "Resolved version_name=${VERSION_NAME}"
-          echo "Resolved version_code=${VERSION_CODE}"
-          echo "Resolved version_code_label=${VERSION_CODE_LABEL}"
-          echo "Resolved ci_code=${CI_CODE}"
-          echo "Resolved build_variant=${BUILD_VARIANT}"
-          echo "Resolved apk_path_glob=${APK_PATH_GLOB}"
+          echo "name=$channel" >> "$GITHUB_OUTPUT"
 
       - name: Prepare signing config
         id: signing
         shell: bash
         env:
-          BUILD_CHANNEL: ${{ steps.version.outputs.channel }}
+          BUILD_CHANNEL: ${{ steps.channel.outputs.name }}
           ONEXTBOX_RELEASE_KEYSTORE_B64: ${{ secrets.ONEXTBOX_RELEASE_KEYSTORE_B64 }}
           ONEXTBOX_RELEASE_STORE_PASSWORD: ${{ secrets.ONEXTBOX_RELEASE_STORE_PASSWORD }}
           ONEXTBOX_RELEASE_KEY_ALIAS: ${{ secrets.ONEXTBOX_RELEASE_KEY_ALIAS }}
@@ -168,15 +114,7 @@ jobs:
           ORG_GRADLE_PROJECT_ONEXTBOX_RELEASE_STORE_FILE: ${{ steps.signing.outputs.keystore_path }}
         run: |
           set -euo pipefail
-          if [ "${{ steps.version.outputs.build_variant }}" = "both" ]; then
-            TASKS=(":app:assembleDebug" ":app:assembleRelease")
-          elif [ "${{ steps.version.outputs.build_variant }}" = "debug" ]; then
-            TASKS=(":app:assembleDebug")
-          else
-            TASKS=(":app:assembleRelease")
-          fi
-
-          if [ "${{ steps.signing.outputs.has_release_signing }}" != "true" ] && [ "${{ steps.version.outputs.channel }}" != "ci" ]; then
+          if [ "${{ steps.signing.outputs.has_release_signing }}" != "true" ] && [ "${{ steps.channel.outputs.name }}" != "ci" ]; then
             echo "::error::Release signing is required for release channel."
             exit 1
           fi
@@ -187,12 +125,12 @@ jobs:
           fi
 
           GRADLE_ARGS=(
-            "-PONEXTBOX_VERSION_NAME=${{ steps.version.outputs.version_name }}"
+            "-PONEXTBOX_BUILD_CHANNEL=${{ steps.channel.outputs.name }}"
             "-PONEXTBOX_BUILD_TIMESTAMP=$(date +%s000)"
             "-PONEXTBOX_CI_SIGN_RELEASE_WITH_DEBUG=${SIGN_RELEASE_WITH_DEBUG}"
           )
 
-          ./gradlew :app:testDebugUnitTest :app:lintDebug "${TASKS[@]}" "${GRADLE_ARGS[@]}" --max-workers=1 --no-daemon --console=plain
+          ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease "${GRADLE_ARGS[@]}" --max-workers=1 --no-daemon --console=plain
 
       - name: Upload validation reports
         if: always()
@@ -214,41 +152,37 @@ jobs:
           set -euo pipefail
           rm -f -- "${GITHUB_WORKSPACE}/.ci-signing/release.jks"
 
-      - name: Prepare APK files
+      - name: Read APK versions and prepare files
         id: apks
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist
+          python3 - <<'PY'
+          import json
+          import os
+          import shutil
+          from pathlib import Path
 
-          VERSION_NAME="${{ steps.version.outputs.version_name }}"
-          VERSION_CODE_LABEL="${{ steps.version.outputs.version_code_label }}"
-          SAFE_VERSION_NAME="$(echo "${VERSION_NAME}" | sed 's/[^A-Za-z0-9._()-]/_/g')"
-
-          if [[ "${{ steps.version.outputs.build_variant }}" == "both" ]]; then
-            DEBUG_APK="$(ls -1 app/build/outputs/apk/debug/*.apk | head -n 1)"
-            RELEASE_APK="$(ls -1 app/build/outputs/apk/release/*.apk | head -n 1)"
-            DEBUG_OUT="dist/onextbox-${SAFE_VERSION_NAME}-${VERSION_CODE_LABEL}-debug.apk"
-            RELEASE_OUT="dist/onextbox-${SAFE_VERSION_NAME}-${VERSION_CODE_LABEL}-release.apk"
-            cp "${DEBUG_APK}" "${DEBUG_OUT}"
-            cp "${RELEASE_APK}" "${RELEASE_OUT}"
-            {
-              echo "files<<EOF"
-              echo "${DEBUG_OUT}"
-              echo "${RELEASE_OUT}"
-              echo "EOF"
-            } >> "${GITHUB_OUTPUT}"
-          elif [[ "${{ steps.version.outputs.build_variant }}" == "debug" ]]; then
-            DEBUG_APK="$(ls -1 app/build/outputs/apk/debug/*.apk | head -n 1)"
-            DEBUG_OUT="dist/onextbox-${SAFE_VERSION_NAME}-${VERSION_CODE_LABEL}-debug.apk"
-            cp "${DEBUG_APK}" "${DEBUG_OUT}"
-            echo "files=${DEBUG_OUT}" >> "${GITHUB_OUTPUT}"
-          else
-            RELEASE_APK="$(ls -1 app/build/outputs/apk/release/*.apk | head -n 1)"
-            RELEASE_OUT="dist/onextbox-${SAFE_VERSION_NAME}-${VERSION_CODE_LABEL}-release.apk"
-            cp "${RELEASE_APK}" "${RELEASE_OUT}"
-            echo "files=${RELEASE_OUT}" >> "${GITHUB_OUTPUT}"
-          fi
+          dist = Path("dist")
+          dist.mkdir(exist_ok=True)
+          entries = {}
+          for variant in ("debug", "release"):
+              directory = Path("app/build/outputs/apk") / variant
+              entry, = json.loads((directory / "output-metadata.json").read_text())["elements"]
+              entries[variant] = entry
+          version = entries["release"]["versionName"]
+          code = entries["release"]["versionCode"]
+          debug = entries["debug"]
+          if (debug["versionName"], debug["versionCode"]) != (version, code):
+              raise SystemExit("Debug and Release APK version metadata differ.")
+          if os.environ["GITHUB_REF_TYPE"] == "tag" and os.environ["GITHUB_REF_NAME"][1:] != version:
+              raise SystemExit(f"Expected tag V{version} for this commit.")
+          for variant, entry in entries.items():
+              source = Path("app/build/outputs/apk") / variant / entry["outputFile"]
+              shutil.copy2(source, dist / f"onextbox-{version}-EX01-{variant}.apk")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print(f"version_name={version}", f"version_code={code}", sep="\n", file=output)
+          PY
 
       - name: Verify APK signatures and checksums
         shell: bash
@@ -262,11 +196,70 @@ jobs:
           done
           (cd dist && sha256sum -- *.apk > SHA256SUMS)
 
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v5
+      - name: Upload Release APK
+        id: release_apk
+        uses: actions/upload-artifact@v7
         with:
-          name: onextbox-${{ steps.version.outputs.version_name }}-${{ steps.version.outputs.version_code_label }}
-          path: |
-            dist/*.apk
-            dist/SHA256SUMS
+          path: dist/onextbox-${{ steps.apks.outputs.version_name }}-EX01-release.apk
+          archive: false
           if-no-files-found: error
+
+      - name: Upload Debug APK
+        id: debug_apk
+        uses: actions/upload-artifact@v7
+        with:
+          path: dist/onextbox-${{ steps.apks.outputs.version_name }}-EX01-debug.apk
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload APK checksums
+        uses: actions/upload-artifact@v7
+        with:
+          path: dist/SHA256SUMS
+          archive: false
+          if-no-files-found: error
+
+      - name: Publish signed CI APKs for in-app updates
+        if: ${{ github.repository == 'MiToverG422/ONextBox' && github.ref == 'refs/heads/main' && steps.channel.outputs.name == 'ci' && steps.signing.outputs.has_release_signing == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.apks.outputs.version_name }}
+          VERSION_CODE: ${{ steps.apks.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          tag=ci-latest
+          title="ONextBox $VERSION_NAME"
+          notes="$(printf 'CI build from %s.\n\n<!-- onextbox-version-code: %s -->\n' "$GITHUB_SHA" "$VERSION_CODE")"
+          if existing=$(gh release view "$tag" --json body --jq .body 2>/dev/null); then
+            current_code=$(sed -n 's/^<!-- onextbox-version-code: \([0-9][0-9]*\) -->$/\1/p' <<<"$existing" | head -n 1)
+            if [[ -n "$current_code" ]] && (( current_code > VERSION_CODE )); then
+              echo "ci-latest already points to a newer build."
+              exit 0
+            fi
+            gh release upload "$tag" dist/*.apk --clobber
+            gh release edit "$tag" --title "$title" --notes "$notes" --prerelease --latest=false
+            while IFS= read -r asset; do
+              if [[ "$asset" =~ ^onextbox-[0-9.]+-CI-[0-9a-fA-F]+-EX01-(debug|release)\.apk$ && ! -f "dist/$asset" ]]; then
+                gh release delete-asset "$tag" "$asset" --yes
+              fi
+            done < <(gh release view "$tag" --json assets --jq '.assets[].name')
+          else
+            gh release create "$tag" dist/*.apk --target "$GITHUB_SHA" --title "$title" --notes "$notes" --prerelease --latest=false
+          fi
+
+      - name: Send APKs to Telegram
+        if: ${{ !cancelled() && steps.release_apk.outcome == 'success' && steps.debug_apk.outcome == 'success' && github.ref_type != 'tag' && github.repository == 'MiToverG422/ONextBox' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TG_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TG_CI_CHAT_ID: ${{ secrets.TELEGRAM_CI_CHAT_ID }}
+          TG_RELEASE_CHAT_ID: ${{ secrets.TELEGRAM_RELEASE_CHAT_ID }}
+          TG_CI_THREAD_ID: ${{ secrets.TELEGRAM_CI_THREAD_ID }}
+          TG_RELEASE_THREAD_ID: ${{ secrets.TELEGRAM_RELEASE_THREAD_ID }}
+          BUILD_CHANNEL: ${{ steps.channel.outputs.name }}
+          VERSION_NAME: ${{ steps.apks.outputs.version_name }}
+          VERSION_CODE: ${{ steps.apks.outputs.version_code }}
+        run: bash .github/scripts/send-telegram-apks.sh

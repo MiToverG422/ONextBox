@@ -647,6 +647,7 @@ object LspConfig {
         FolderReturnHome("launcher_folder_return_home"),
         HideFolderBackground("launcher_hide_folder_background"),
         HideFolderIndicator("launcher_hide_folder_indicator"),
+        BlockFolderIndicatorTouch("launcher_block_folder_indicator_touch"),
         ForceBlur("launcher_force_blur"),
         Dock("launcher_dock"),
         DockBlur("launcher_dock_blur");
@@ -725,6 +726,7 @@ object LspConfig {
         AutoUnlockRestrictedSettings("permission_auto_unlock_restricted_settings"),
         DisableMaliciousAppIntercept("permission_disable_malicious_app_intercept"),
         ExportPermissionPages("permission_export_pages"),
+        ExportPermissionToolbarFix("permission_export_toolbar_fix"),
         NativePermissionDialogs("permission_native_dialogs");
 
         val propertyKey: String get() = "oost.$key"

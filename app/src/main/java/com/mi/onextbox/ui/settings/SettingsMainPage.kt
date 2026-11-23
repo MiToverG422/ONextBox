@@ -146,7 +146,9 @@ private const val FISHCPY_PROFILE_URL = "https://github.com/fishcpy"
 private const val HEHEJUICE_PROFILE_URL = "https://github.com/HeheJuice"
 private const val XIEFEI_PROFILE_URL = "https://github.com/xiefei-github"
 private const val GITHUB_REPOSITORY_URL = "https://github.com/MiToverG422/ONextBox"
-private const val TELEGRAM_CHANNEL_URL = "https://t.me/ONextBox"
+private const val TELEGRAM_NEWS_URL = "https://t.me/ONextBox"
+private const val TELEGRAM_CI_URL = "https://t.me/ONextBox_CI"
+private const val TELEGRAM_CHAT_URL = "https://t.me/ONextBox_Chat"
 private const val SOFTWARE_UPDATE_CHECK_DELAY_MS = 2_000L
 private val SoftwareUpdateContentHorizontalPadding = 16.dp
 private val SoftwareUpdateVersionInfoExtraHorizontalPadding = 20.dp
@@ -320,6 +322,29 @@ fun AboutMainPage(
         onOpenReferences = onOpenReferences,
         onOpenDonation = onOpenDonation,
     )
+    AboutGroupSpacer()
+    AboutLinkGroup(
+        items = listOf(
+            AboutLinkItem(
+                titleRes = R.string.about_telegram_news_title,
+                summaryRes = R.string.about_telegram_news_summary,
+                url = TELEGRAM_NEWS_URL,
+                leadingContent = { AboutVectorIcon(AppIcons.TelegramChannelSolidC17) },
+            ),
+            AboutLinkItem(
+                titleRes = R.string.about_telegram_ci_title,
+                summaryRes = R.string.about_telegram_ci_summary,
+                url = TELEGRAM_CI_URL,
+                leadingContent = { AboutVectorIcon(AppIcons.TelegramChannelSolidC17) },
+            ),
+            AboutLinkItem(
+                titleRes = R.string.about_telegram_chat_title,
+                summaryRes = R.string.about_telegram_chat_summary,
+                url = TELEGRAM_CHAT_URL,
+                leadingContent = { AboutVectorIcon(AppIcons.TelegramChannelSolidC17) },
+            ),
+        ),
+    )
 }
 
 @Composable
@@ -490,14 +515,14 @@ data class SoftwareUpdateUiState(
     val updateNotificationsEnabled: Boolean,
     val launchUpdatePromptEnabled: Boolean,
     val buildType: UpdateBuildType,
-    val betaPlanEnabled: Boolean,
+    val updateChannel: UpdateChannel,
     val statusText: String,
     val onCheckUpdates: () -> Unit,
     val onDownloadUpdate: () -> Unit,
     val onAutomaticSilentUpdateChange: (Boolean) -> Unit,
     val onUpdateNotificationsEnabledChange: (Boolean) -> Unit,
     val onLaunchUpdatePromptEnabledChange: (Boolean) -> Unit,
-    val onBetaPlanEnabledChange: (Boolean) -> Unit,
+    val onUpdateChannelChange: (UpdateChannel) -> Unit,
 )
 
 @Composable
@@ -521,8 +546,8 @@ fun rememberSoftwareUpdateUiState(
         mutableStateOf(AppUpdatePreferences.getLaunchUpdatePromptEnabled(context))
     }
     val buildType = AppUpdatePreferences.currentBuildType
-    var betaPlanEnabled by remember {
-        mutableStateOf(AppUpdatePreferences.getBetaPlanEnabled(context))
+    var updateChannel by remember {
+        mutableStateOf(AppUpdatePreferences.getUpdateChannel(context))
     }
     var statusText by remember { mutableStateOf<String?>(null) }
     val checkingText = stringResource(R.string.update_checking)
@@ -541,7 +566,7 @@ fun rememberSoftwareUpdateUiState(
                 statusText = checkingText
                 delay(SOFTWARE_UPDATE_CHECK_DELAY_MS)
                 runCatching {
-                    AppUpdater.checkForUpdate(betaPlanEnabled)
+                    AppUpdater.checkForUpdate(updateChannel)
                 }.fold(
                     onSuccess = { update ->
                         availableUpdate = update
@@ -622,7 +647,7 @@ fun rememberSoftwareUpdateUiState(
         updateNotificationsEnabled = updateNotificationsEnabled,
         launchUpdatePromptEnabled = launchUpdatePromptEnabled,
         buildType = buildType,
-        betaPlanEnabled = betaPlanEnabled,
+        updateChannel = updateChannel,
         statusText = statusText ?: noUpdateText,
         onCheckUpdates = checkUpdates,
         onDownloadUpdate = downloadUpdate,
@@ -648,14 +673,14 @@ fun rememberSoftwareUpdateUiState(
             AppUpdatePreferences.setLaunchUpdatePromptEnabled(context, enabled)
             if (!enabled) UpdateNotificationScheduler.dismissLaunchUpdatePrompt()
         },
-        onBetaPlanEnabledChange = { enabled ->
-            if (checkingUpdates || downloadingUpdate) return@SoftwareUpdateUiState
-            betaPlanEnabled = AppUpdatePreferences.BETA_PLAN_AVAILABLE && enabled
+        onUpdateChannelChange = { channel ->
+            if (checkingUpdates || downloadingUpdate || channel == updateChannel) return@SoftwareUpdateUiState
+            updateChannel = channel
             availableUpdate = null
             downloadedApk = null
             downloadProgress = null
             statusText = null
-            AppUpdatePreferences.setBetaPlanEnabled(context, enabled)
+            AppUpdatePreferences.setUpdateChannel(context, channel)
             UpdateNotificationScheduler.cancelAvailableUpdateNotification(context)
             UpdateNotificationScheduler.dismissLaunchUpdatePrompt()
         },
@@ -1120,7 +1145,7 @@ fun SoftwareUpdateReleaseNotesPage(state: SoftwareUpdateUiState, onOpenFeatureUp
                         .clickable(
                             indication = null,
                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            onClick = { openUrl(context, TELEGRAM_CHANNEL_URL) },
+                            onClick = { openUrl(context, TELEGRAM_NEWS_URL) },
                         ),
                 )
             }
@@ -1289,7 +1314,6 @@ fun SoftwareUpdateAutoSettingsPage(
     state: SoftwareUpdateUiState,
 ) {
     val context = LocalContext.current
-    var showBetaConfirmation by rememberSaveable { mutableStateOf(false) }
     val settingsEditable = !state.checkingUpdates && !state.downloadingUpdate
     var notificationPermissionGranted by remember {
         mutableStateOf(
@@ -1346,42 +1370,24 @@ fun SoftwareUpdateAutoSettingsPage(
             hasDividerBelow = true,
         )
         SettingsDivider()
-        run {SettingsCardRow(
-                title = stringResource(R.string.update_build_type_title),
-                summary = stringResource(if (state.buildType == UpdateBuildType.Debug)
-                    R.string.update_build_type_debug else R.string.update_build_type_release),
-                hasDividerAbove = true,
-                hasDividerBelow = true,
-            )}
+        SettingsCardRow(
+            title = stringResource(R.string.update_build_type_title),
+            summary = stringResource(
+                if (state.buildType == UpdateBuildType.Debug) R.string.update_build_type_debug
+                else R.string.update_build_type_release,
+            ),
+            hasDividerAbove = true,
+            hasDividerBelow = true,
+        )
         SettingsDivider()
-        run {SettingsToggleRow(
-                title = stringResource(R.string.update_beta_plan_title),
-                summary = stringResource(R.string.update_beta_plan_summary),
-                checked = state.betaPlanEnabled,
-                enabled = settingsEditable && AppUpdatePreferences.BETA_PLAN_AVAILABLE,
-                hasDividerAbove = true,
-                onCheckedChange = { enabled ->
-                    if (enabled) showBetaConfirmation = true else state.onBetaPlanEnabledChange(false)
-                },
-            )}
+        SettingsWindowDropdownPreference(
+            title = stringResource(R.string.update_channel_title),
+            items = listOf("Release", "CI"),
+            selectedIndex = state.updateChannel.ordinal,
+            interactionEnabled = settingsEditable,
+            onSelectedIndexChange = { state.onUpdateChannelChange(UpdateChannel.entries[it]) },
+        )
     }
-    ColorOs17ConfirmDialog(
-        show = showBetaConfirmation,
-        title = stringResource(R.string.update_beta_join_title),
-        summary = stringResource(R.string.update_beta_join_summary),
-        negativeText = stringResource(R.string.update_beta_join_cancel),
-        positiveText = stringResource(R.string.update_beta_join_confirm),
-        onDismissRequest = { showBetaConfirmation = false },
-        onNegative = { showBetaConfirmation = false },
-        onPositive = {
-            if (settingsEditable) {
-                state.onBetaPlanEnabledChange(true)
-                showBetaConfirmation = false
-            }
-        },
-        onDismissFinished = null,
-        content = null,
-    )
 }
 
 @Composable
@@ -1515,18 +1521,8 @@ private fun AboutAuthorGroup(
             summary = stringResource(R.string.about_github_summary),
             showArrow = true,
             hasDividerAbove = true,
-            hasDividerBelow = true,
             onClick = { openUrl(context, GITHUB_REPOSITORY_URL) },
             leadingContent = { AboutRowIcon(R.drawable.ic_github) },
-        )
-        SettingsDivider()
-        SettingsCardRow(
-            title = stringResource(R.string.about_telegram_title),
-            summary = stringResource(R.string.about_telegram_summary),
-            showArrow = true,
-            hasDividerAbove = true,
-            onClick = { openUrl(context, TELEGRAM_CHANNEL_URL) },
-            leadingContent = { AboutVectorIcon(AppIcons.TelegramChannelSolidC17) },
         )
     }
 }

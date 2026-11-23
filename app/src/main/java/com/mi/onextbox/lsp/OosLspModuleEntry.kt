@@ -122,6 +122,7 @@ class OosLspModuleEntry : XposedModule() {
         SystemAdaptationDetector.initialize(PACKAGE_SYSTEM, loader)
         val profile = AdaptationHookGate.bind()
         if (!AdaptationHookGate.isActive(profile) || !AdaptationRuntimePolicy.allowsSystemServer(profile)) return
+        DisplayDensityHooker.hook(loader)
         if (profile == SystemAdaptationVersion.ColorOs16) {
             com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ColorOs16FrameworkHooks.hook") { ColorOs16FrameworkHooks.hook(loader) }
             return

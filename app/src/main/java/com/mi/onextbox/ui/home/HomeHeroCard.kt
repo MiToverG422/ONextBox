@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.sp
 import com.mi.onextbox.R
+import com.mi.onextbox.ui.settings.AppUpdateRules
 import com.mi.onextbox.lsp.LspStatus
 import com.mi.onextbox.ui.common.AppUiTokens
 import com.mi.onextbox.ui.common.LocalColorOsMonetEnabled
@@ -122,7 +123,7 @@ internal fun HomeHeroCardContent(appVersionName: String, deviceMarketName: Strin
         }
         return
     }
-    val beta = appVersionName.contains("beta", ignoreCase = true)
+    val ci = AppUpdateRules.isCiVersion(appVersionName)
     val detailColor = Color.White.copy(alpha = 0.92f)
     Layout(
         modifier = Modifier.fillMaxSize(),
@@ -156,7 +157,7 @@ internal fun HomeHeroCardContent(appVersionName: String, deviceMarketName: Strin
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (beta) HomeBetaBadge()
+            if (ci) HomeCiBadge()
         },
     ) { measurables, constraints ->
         val contentInset = 22.dp.roundToPx()

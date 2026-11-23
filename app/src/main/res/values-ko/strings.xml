@@ -87,8 +87,9 @@
     <string name="about_author_info_summary">작가</string>
     <string name="about_github_title">GitHub 저장소</string>
     <string name="about_github_summary">소스 코드, 릴리스, 이슈 및 개발 진행 상황 보기</string>
-    <string name="about_telegram_title">텔레그램 채널</string>
-    <string name="about_telegram_summary">CI 빌드, 업데이트 공지 및 테스트 피드백을 따르세요</string>
+    <string name="about_telegram_news_summary">정식 버전 및 공지</string>
+    <string name="about_telegram_ci_summary">CI 테스트 빌드 다운로드</string>
+    <string name="about_telegram_chat_summary">사용자 토론 및 지원</string>
     <string name="feature_native_notify_icon_title">기본 알림 아이콘</string>
     <string name="feature_native_notify_icon_summary">기본 아이콘 스타일을 활성화합니다. 이 기능은 모든 경우를 완전히 다룰 수는 없으며 여전히 앱 측 적응이 필요합니다. 시스템을 다시 시작해야 합니다</string>
     <string name="feature_native_notification_bubbles_title">기본 알림 버블</string>
@@ -555,6 +556,8 @@
     <string name="feature_permission_ui_group">인터페이스 스타일</string>
     <string name="feature_permission_export_pages_title">국제 버전 권한 관리 화면</string>
     <string name="feature_permission_export_pages_summary">국제 버전의 권한 분류와 앱 권한 상세 화면 사용</string>
+    <string name="feature_permission_export_toolbar_fix_title">중국판 상단 바 수정</string>
+    <string name="feature_permission_export_toolbar_fix_summary">스크롤 중 목록이 상단 바에 비치지 않도록 하고 뒤로 가기 화살표 색상을 테마에 맞춤</string>
     <string name="feature_permission_native_dialogs_title">기본 권한 요청 대화상자</string>
     <string name="feature_permission_native_dialogs_summary">Android 기본 권한 요청 대화상자 사용</string>
     <string name="feature_settings_restore_domestic_auxiliary_functions_title">중국 내수용 추가 설정 항목 복원</string>
@@ -1115,12 +1118,8 @@
     <string name="ota_block_files_title">시스템 파일 업데이트 차단</string>
     <string name="ota_block_files_summary">시스템 파일 업데이트 확인을 차단</string>
 
-    <string name="update_beta_plan_title">Beta 프로그램 참여</string>
-    <string name="update_beta_plan_summary">베타 테스트 업데이트 받기</string>
-    <string name="update_beta_join_title">Beta 프로그램에 참여할까요?</string>
-    <string name="update_beta_join_summary">참여하면 ONextBox_BetaTesting에서 현재 빌드 유형에 맞는 Beta 업데이트를 받습니다, 테스트 버전은 불안정하거나 기능 오류가 발생할 수 있습니다, 계속할까요</string>
-    <string name="update_beta_join_cancel">나중에</string>
-    <string name="update_beta_join_confirm">참여</string>
+    <string name="update_channel_title">업데이트 채널</string>
+    <string name="update_channel_summary">Release 정식 버전 또는 CI 빌드 선택</string>
     <string name="oshare_title">Share</string>
     <string name="oshare_unlimited_title">10분 제한 해제</string>
     <string name="oshare_unlimited_summary">직접 변경할 때까지 모든 사용자에게 공개 상태를 유지합니다. 주변 기기에서 계속 이 기기를 검색할 수 있습니다</string>
@@ -2393,6 +2392,8 @@
     <string name="launcher_folder_return_home">폴더에서 실행한 앱 종료 시 홈 화면으로 돌아가기</string>
     <string name="launcher_hide_folder_background">폴더 배경 숨기기</string>
     <string name="launcher_hide_folder_indicator">폴더 페이지 표시기 숨기기</string>
+    <string name="launcher_block_folder_indicator_touch">표시기 터치 끄기</string>
+    <string name="launcher_block_folder_indicator_touch_summary">숨겨진 표시기 영역의 터치를 폴더에서 처리</string>
 
     <string name="nav_geometry_thickness">제스처 바 두께</string>
     <string name="nav_geometry_bottom">하단 여백</string>

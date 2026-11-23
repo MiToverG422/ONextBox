@@ -92,9 +92,11 @@ internal object SoftLightGlassHooker {
     }.getOrDefault(false)
 
     private class Session(private val packageName: String) {
+        private val systemUi = packageName == "com.android.systemui"
         private val main = Handler(Looper.getMainLooper())
         private val lock = Any()
         private val programs = WeakHashMap<RuntimeShader, Boolean>()
+        private val nativePrograms = WeakHashMap<RuntimeShader, Boolean>()
         private val directional = WeakHashMap<RuntimeShader, Boolean>()
         private val dimmable = WeakHashMap<RuntimeShader, Boolean>()
         private val aodPrograms = WeakHashMap<RuntimeShader, Boolean>()
@@ -186,7 +188,7 @@ internal object SoftLightGlassHooker {
             "com.heytap.quicksearchbox","com.oplus.aod")) SoftLightPanelPass(packageName, ::preserveControlWhite, {
                 profile.keepWhite && profile.selected(SoftLightGlassSettings.Scene.VOLUME) &&
                     profile[SoftLightGlassSettings.Parameter.STRENGTH] > 0f && active()
-            }, { profile.plugin != null }) { logOnce(it) } else null
+            }, { profile.plugin != null }, ::active) { logOnce(it) } else null
 
         private class NodeBinding(val program: RuntimeShader, val setter: Method, val mode: Int?)
 
@@ -309,6 +311,7 @@ internal object SoftLightGlassHooker {
                 install("drawable:$name:${System.identityHashCode(type)}", draw, XposedInterface.Hooker { chain ->
                     val drawable = chain.thisObject as Drawable
                     synchronized(lock) { drawables[drawable] = true }
+                    if (systemUi && !active()) return@Hooker chain.proceed()
                     if (followTilt && drawable.isVisible) {
                         lastDraw = SystemClock.uptimeMillis()
                         tilt.request()
@@ -332,7 +335,7 @@ internal object SoftLightGlassHooker {
             if (getters.isEmpty()) return
             rebuild.isAccessible = true
             val shaderField = shaderType.declaredFields.singleOrNull { it.type == RuntimeShader::class.java }?.also { it.isAccessible = true } ?: return
-            val panel = packageName == "com.android.systemui" && !lockscreen
+            val panel = systemUi && !lockscreen
             if (panel) {
                 val wrap = XposedInterface.Hooker { chain ->
                     val previous = buildingPanel.get()
@@ -355,10 +358,12 @@ internal object SoftLightGlassHooker {
             val attempted = WeakHashMap<RuntimeShader, Int>()
             fun upgrade(owner: Any, result: RuntimeShader): RuntimeShader {
                 val desired = profile.panelProgram
+                if (!active()) return result
                 if (synchronized(lock) {
                     (result in pluginPrograms && (!panel || panelModes[result] == desired)) ||
-                        (!lockscreen && result !in programs) || (!panel && !profile.needsCurrentShader && result in programs)
-                } || (!lockscreen && !active())) return result
+                        (!lockscreen && result !in programs && result !in nativePrograms) ||
+                        (!panel && !profile.needsCurrentShader && result in programs)
+                }) return result
                 val attempt = if (panel) desired.ordinal else -1
                 if (synchronized(attempted) { attempted.put(result, attempt) } == attempt) return result
                 return runCatching {
@@ -383,6 +388,7 @@ internal object SoftLightGlassHooker {
                 val key = if (getter.name == "getShaderOrNull") "keyguard-existing" else "cached-material:${getter.name}"
                 install("$key:${System.identityHashCode(shaderType)}", getter, XposedInterface.Hooker { chain ->
                     val result = chain.proceed() as? RuntimeShader ?: return@Hooker null
+                    if (!active()) return@Hooker result
                     if (panel && buildingPanel.get() != null) return@Hooker result
                     if ((!hasLegacyPrograms || (!panel && !profile.needsCurrentShader)) && !lockscreen) return@Hooker result
                     upgrade(chain.thisObject ?: return@Hooker result, result)
@@ -407,12 +413,13 @@ internal object SoftLightGlassHooker {
             }
         }
 
-        private fun variant(source: String): GlassShaderVariant? {
-            val marker = when {
-                source.startsWith(MATERIAL_REQUEST) -> MATERIAL_REQUEST
-                source.startsWith(KEYGUARD_REQUEST) -> KEYGUARD_REQUEST
-                else -> return null
-            }
+        private fun materialMarker(source: String): String? = when {
+            source.startsWith(MATERIAL_REQUEST) -> MATERIAL_REQUEST
+            source.startsWith(KEYGUARD_REQUEST) -> KEYGUARD_REQUEST
+            else -> null
+        }
+
+        private fun variant(source: String, marker: String): GlassShaderVariant {
             val key = SourceKey(source, if (marker == MATERIAL_REQUEST) buildingPanel.get() else null)
             return synchronized(sources) {
                 sources.get(key) ?: run {
@@ -421,6 +428,12 @@ internal object SoftLightGlassHooker {
                         panels != null, marker == KEYGUARD_REQUEST, key.mode)).also { sources.put(key, it) }
                 }
             }
+        }
+
+        private fun rememberNative(shader: RuntimeShader) = synchronized(lock) {
+            // Keep the native effect eligible for replacement if glass is enabled in this process.
+            nativePrograms[shader] = true
+            hasLegacyPrograms = true
         }
 
         private fun validate(source: String) {
@@ -432,9 +445,16 @@ internal object SoftLightGlassHooker {
             val ctor = RuntimeShader::class.java.getDeclaredConstructor(String::class.java)
             install("program", ctor, XposedInterface.Hooker { chain ->
                 val input = chain.getArg(0) as? String ?: return@Hooker chain.proceed()
-                val source = variant(input)?.constructorSource(::validate) { logOnce("unsupported material shader", it) } ?: input
+                val marker = materialMarker(input)
+                val useNative = marker != null && systemUi && !active()
+                val source = when {
+                    marker == null -> input
+                    useNative -> input.substring(marker.length)
+                    else -> variant(input, marker).constructorSource(::validate) { logOnce("unsupported material shader", it) }
+                }
                 val result = if (source === input) chain.proceed() else chain.proceed(arrayOf(source))
-                if (SoftLightGlassShader.isMaterial(source) && validating.get() != true)
+                if (useNative) (chain.thisObject as? RuntimeShader)?.let(::rememberNative)
+                else if (SoftLightGlassShader.isMaterial(source) && validating.get() != true)
                     (chain.thisObject as? RuntimeShader)?.let { register(it, source) }
                 result
             })
@@ -445,8 +465,13 @@ internal object SoftLightGlassHooker {
             }?.forEach { method ->
                 install("cached:${method.toGenericString()}", method, XposedInterface.Hooker { chain ->
                     var source = chain.getArg(0) as? String ?: return@Hooker chain.proceed()
-                    val variant = variant(source)
-                    val result = if (variant == null) chain.proceed() else variant.createCached({ candidate ->
+                    val marker = materialMarker(source)
+                    if (marker != null && systemUi && !active()) {
+                        val args = chain.args.toTypedArray()
+                        args[0] = source.substring(marker.length)
+                        return@Hooker chain.proceed(args).also { if (it is RuntimeShader) rememberNative(it) }
+                    }
+                    val result = if (marker == null) chain.proceed() else variant(source, marker).createCached({ candidate ->
                         source = candidate
                         val args = chain.args.toTypedArray()
                         args[0] = candidate
@@ -460,7 +485,7 @@ internal object SoftLightGlassHooker {
             install("bind", factory, XposedInterface.Hooker { chain ->
                 val shader = chain.getArg(0) as? RuntimeShader
                 if (shader == null || chain.getArg(1) != SoftLightGlassShader.INPUT) return@Hooker chain.proceed()
-                val known = synchronized(lock) { shader in programs }
+                val known = synchronized(lock) { shader in programs || shader in nativePrograms }
                 if (!known) return@Hooker chain.proceed()
                 val result = chain.proceed()
                 if (result is RenderEffect) {
@@ -559,13 +584,13 @@ internal object SoftLightGlassHooker {
                 profile[Parameter.RESPONSE] > 0f && profile[Parameter.SHINE] > 0f &&
                 profile[Parameter.WIDTH] > 0f && profile[Parameter.STRENGTH] > 0f
             if (!followTilt) tilt.stop()
-            val systemUi = packageName == "com.android.systemui"
             if (systemUi && previousMode != profile.panelProgram) hasLegacyPrograms = true
             if (enabled && hasLegacyPrograms && (systemUi || profile.needsCurrentShader)) {
                 val (readers, surfaces) = synchronized(lock) { cachedMaterialReaders.toList() to drawables.keys.toList() }
                 readers.forEach { reader -> runCatching { reader(surfaces) }.onFailure { logOnce("cached drawable refresh", it) } }
                 hasLegacyPrograms = synchronized(lock) {
-                    programs.keys.any { it !in pluginPrograms } || panelModes.values.any { it != profile.panelProgram }
+                    nativePrograms.isNotEmpty() || programs.keys.any { it !in pluginPrograms } ||
+                        panelModes.values.any { it != profile.panelProgram }
                 }
             }
             val shaders: List<Pair<RuntimeShader, Boolean>>
@@ -573,7 +598,7 @@ internal object SoftLightGlassHooker {
             val surfaces: List<Drawable>
             synchronized(lock) {
                 shaders = programs.map { it.key to it.value }
-                bound = nodes.map { it.key to it.value }
+                bound = nodes.mapNotNull { (node, binding) -> if (binding.program in programs) node to binding else null }
                 surfaces = drawables.keys.toList()
             }
             shaders.forEach { (shader, customizable) -> runCatching { configure(shader, enabled, customizable) }.onFailure { e -> logOnce("material uniform refresh", e) } }
@@ -604,7 +629,8 @@ internal object SoftLightGlassHooker {
                 panels?.capture(), coui.capture(), programs.filterValues { it }.keys.toTypedArray(),
                 directional.keys.toTypedArray(), dimmable.keys.toTypedArray(), aodPrograms.keys.toTypedArray(), stylePrograms.keys.toTypedArray(),
                 arrayOf(LiquidGlassShader.DECLARATION, pluginPrograms.keys.toTypedArray()),
-                panelModes.map { (shader, mode) -> arrayOf(shader, mode.ordinal) }.toTypedArray(), panelOwners.keys.toTypedArray())
+                panelModes.map { (shader, mode) -> arrayOf(shader, mode.ordinal) }.toTypedArray(), panelOwners.keys.toTypedArray(),
+                nativePrograms.keys.toTypedArray())
         }
 
         fun detach() {
@@ -636,8 +662,9 @@ internal object SoftLightGlassHooker {
                     panelModes[it[0] as RuntimeShader] = PanelProgram.entries[it[1] as Int]
                 }
                 (parts.getOrNull(13) as? Array<*>)?.filterNotNull()?.forEach { panelOwners[it] = true }
-                hasLegacyPrograms = programs.keys.any { it !in pluginPrograms } ||
-                    (packageName == "com.android.systemui" && (parts.size <= 12 || panelModes.values.any { it != profile.panelProgram }))
+                (parts.getOrNull(14) as? Array<*>)?.filterIsInstance<RuntimeShader>()?.forEach { nativePrograms[it] = true }
+                hasLegacyPrograms = nativePrograms.isNotEmpty() || programs.keys.any { it !in pluginPrograms } ||
+                    (systemUi && (parts.size <= 12 || panelModes.values.any { it != profile.panelProgram }))
                 (parts[1] as? Array<*>)?.filterIsInstance<Array<*>>()?.forEach { effects[it[0] as RenderEffect] = it[1] as RuntimeShader }
                 (parts[2] as? Array<*>)?.filterIsInstance<Array<*>>()?.forEach {
                     nodes[it[0] as RenderNode] = NodeBinding(it[1] as RuntimeShader, it[2] as Method, it[3] as? Int)

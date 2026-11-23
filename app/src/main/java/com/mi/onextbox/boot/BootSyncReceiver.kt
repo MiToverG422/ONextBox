@@ -11,6 +11,7 @@ import com.mi.onextbox.ui.onboarding.ActivationGate
 import com.mi.onextbox.ui.settings.AppUpdater
 import com.mi.onextbox.ui.settings.UpdateNotificationScheduler
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class BootSyncReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
@@ -30,10 +31,6 @@ class BootSyncReceiver : BroadcastReceiver() {
         val appContext = context.applicationContext
         worker.execute {
             try {
-                if (action == Intent.ACTION_BOOT_COMPLETED || action == Intent.ACTION_LOCKED_BOOT_COMPLETED) {
-                    runCatching { DisplayDensity.onBoot(appContext) }
-                        .onFailure { android.util.Log.w("ONextBox-DPI", "Boot density adjustment unavailable", it) }
-                }
                 if (!unlocked) return@execute
                 runCatching {
                     AppLogStore.initialize(appContext)
@@ -68,8 +65,22 @@ class BootSyncReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private val worker = Executors.newSingleThreadExecutor { runnable ->
+        private val worker = Executors.newSingleThreadScheduledExecutor { runnable ->
             Thread(runnable, "ONextBox-BootSync").apply { isDaemon = true }
+        }
+
+        internal fun migrateDisplayDensity(context: Context) {
+            val appContext = context.applicationContext
+            if (DisplayDensity.hasLegacyConfiguration(appContext)) scheduleDensityMigration(appContext, 20)
+        }
+
+        private fun scheduleDensityMigration(context: Context, attempts: Int) {
+            worker.schedule({
+                val result = runCatching { DisplayDensity.migrateLegacy(context) }
+                if (result.getOrDefault(false)) return@schedule
+                if (attempts > 1) scheduleDensityMigration(context, attempts - 1)
+                else result.exceptionOrNull()?.let { android.util.Log.w("ONextBox-DPI", "DPI migration deferred", it) }
+            }, 250, TimeUnit.MILLISECONDS)
         }
     }
 }

@@ -87,8 +87,9 @@
     <string name="about_author_info_summary">作成者</string>
     <string name="about_github_title">GitHub リポジトリ</string>
     <string name="about_github_summary">ソース コード、リリース、問題、開発の進捗状況を表示する</string>
-    <string name="about_telegram_title">電報チャネル</string>
-    <string name="about_telegram_summary">CI ビルド、アップデートのお知らせ、テストのフィードバックをフォローします</string>
+    <string name="about_telegram_news_summary">正式版とお知らせ</string>
+    <string name="about_telegram_ci_summary">CI ビルドをダウンロード</string>
+    <string name="about_telegram_chat_summary">ユーザー交流とサポート</string>
     <string name="feature_native_notify_icon_title">ネイティブ通知アイコン</string>
     <string name="feature_native_notify_icon_summary">ネイティブ アイコン スタイルを有効にします。この機能はすべてのケースを完全にカバーできるわけではなく、依然としてアプリ側の適応が必要です。システムの再起動が必要です</string>
     <string name="feature_native_notification_bubbles_title">ネイティブ通知バブル</string>
@@ -555,6 +556,8 @@
     <string name="feature_permission_ui_group">インターフェース</string>
     <string name="feature_permission_export_pages_title">国際版の権限管理画面</string>
     <string name="feature_permission_export_pages_summary">国際版の権限カテゴリとアプリの権限詳細画面を使用</string>
+    <string name="feature_permission_export_toolbar_fix_title">中国版の上部バーを修正</string>
+    <string name="feature_permission_export_toolbar_fix_summary">スクロール中のリストが上部バーに透ける問題を修正し、戻る矢印の色をテーマに合わせる</string>
     <string name="feature_permission_native_dialogs_title">標準の権限リクエストダイアログ</string>
     <string name="feature_permission_native_dialogs_summary">Android 標準の権限リクエストダイアログを使用</string>
     <string name="feature_settings_restore_domestic_auxiliary_functions_title">中国版の補助機能の項目を復元</string>
@@ -1115,12 +1118,8 @@
     <string name="ota_block_files_title">システムファイル更新をブロック</string>
     <string name="ota_block_files_summary">システムファイル更新の確認を停止</string>
 
-    <string name="update_beta_plan_title">Beta プログラムに参加</string>
-    <string name="update_beta_plan_summary">ベータテスト版のアップデートを受け取る</string>
-    <string name="update_beta_join_title">Beta プログラムに参加しますか？</string>
-    <string name="update_beta_join_summary">参加すると ONextBox_BetaTesting から現在のビルド種類に合った Beta 更新を取得します、テスト版は不安定になったり機能に不具合が発生したりする可能性があります、続行しますか</string>
-    <string name="update_beta_join_cancel">今は参加しない</string>
-    <string name="update_beta_join_confirm">参加</string>
+    <string name="update_channel_title">更新チャンネル</string>
+    <string name="update_channel_summary">Release の正式版と CI ビルドから選択</string>
     <string name="oshare_title">Share</string>
     <string name="oshare_unlimited_title">10 分間の制限を解除</string>
     <string name="oshare_unlimited_summary">「すべてのユーザー」の公開範囲を手動で変更するまで維持します。付近のデバイスから引き続き検出されます</string>
@@ -2393,6 +2392,8 @@
     <string name="launcher_folder_return_home">フォルダ内のアプリを閉じたらホームに戻る</string>
     <string name="launcher_hide_folder_background">フォルダの背景を非表示</string>
     <string name="launcher_hide_folder_indicator">フォルダのページインジケーターを非表示</string>
+    <string name="launcher_block_folder_indicator_touch">インジケーターのタッチ操作を無効化</string>
+    <string name="launcher_block_folder_indicator_touch_summary">非表示のインジケーター領域へのタッチをフォルダで処理</string>
 
     <string name="nav_geometry_thickness">ジェスチャーバーの太さ</string>
     <string name="nav_geometry_bottom">下端の余白</string>

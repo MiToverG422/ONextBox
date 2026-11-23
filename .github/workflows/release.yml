@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags: ["V[0-9]*", "v[0-9]*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/android-build.yml
+    with:
+      channel: release
+    secrets: inherit
+
+  publish:
+    if: github.repository == 'MiToverG422/ONextBox'
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: telegram_bot
+
+    steps:
+      - name: Checkout release sources
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Download verified APKs
+        uses: actions/download-artifact@v8
+        with:
+          pattern: onextbox-${{ needs.build.outputs.version_name }}-EX01-*.apk
+          path: dist
+          merge-multiple: true
+          skip-decompress: true
+
+      - name: Publish tagged release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ needs.build.outputs.version_name }}
+        run: |
+          set -euo pipefail
+          apks=(
+            "dist/onextbox-$VERSION_NAME-EX01-release.apk"
+            "dist/onextbox-$VERSION_NAME-EX01-debug.apk"
+          )
+          for apk in "${apks[@]}"; do
+            test -s "$apk"
+          done
+
+          if assets=$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name'); then
+            missing_apks=()
+            for apk in "${apks[@]}"; do
+              if ! grep -Fxq -- "$(basename "$apk")" <<<"$assets"; then
+                missing_apks+=("$apk")
+              fi
+            done
+            if (( ${#missing_apks[@]} )); then
+              gh release upload "$GITHUB_REF_NAME" "${missing_apks[@]}"
+            fi
+          else
+            gh release create "$GITHUB_REF_NAME" "${apks[@]}" --verify-tag --notes-from-tag
+          fi
+
+      - name: Send Release APKs to Telegram
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TG_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TG_RELEASE_CHAT_ID: ${{ secrets.TELEGRAM_RELEASE_CHAT_ID }}
+          TG_RELEASE_THREAD_ID: ${{ secrets.TELEGRAM_RELEASE_THREAD_ID }}
+          BUILD_CHANNEL: release
+          VERSION_NAME: ${{ needs.build.outputs.version_name }}
+          VERSION_CODE: ${{ needs.build.outputs.version_code }}
+        run: bash .github/scripts/send-telegram-apks.sh

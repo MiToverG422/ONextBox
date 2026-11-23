@@ -2061,7 +2061,7 @@ fun Root(
         }
         val promptVersion = launchUpdate?.takeIf { update ->
             bottomBarStartupReady && !onUpdatePage && softwareUpdateState.launchUpdatePromptEnabled &&
-                (!update.isBeta || softwareUpdateState.betaPlanEnabled) &&
+                update.channel == softwareUpdateState.updateChannel &&
                 featureLaunchAnimation == null && featurePredictiveBackMotion == null
         }?.versionName
         SoftwareUpdatePrompt(

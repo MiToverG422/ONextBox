@@ -5,6 +5,29 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class LauncherIosMotionProfileTest {
+    @Test fun fullscreenDeformationAcceptsBothDisplayOrientations() {
+        for ((width, height) in listOf(1080 to 2400, 2400 to 1080, 2800 to 2000)) {
+            assertTrue(LauncherIosMotionProfile.supportsFullscreenFrame(
+                width, height, fullscreen = true, widget = false, rotating = false,
+            ))
+        }
+    }
+
+    @Test fun unsupportedLandscapeFramesUseTheNativeTransform() {
+        assertFalse(LauncherIosMotionProfile.supportsFullscreenFrame(
+            2400, 1080, fullscreen = true, widget = false, rotating = true,
+        ))
+        assertFalse(LauncherIosMotionProfile.supportsFullscreenFrame(
+            2400, 1080, fullscreen = false, widget = false, rotating = false,
+        ))
+        assertFalse(LauncherIosMotionProfile.supportsFullscreenFrame(
+            2400, 1080, fullscreen = true, widget = true, rotating = false,
+        ))
+        assertFalse(LauncherIosMotionProfile.supportsFullscreenFrame(
+            2400, 0, fullscreen = true, widget = false, rotating = false,
+        ))
+    }
+
     @Test fun nativeSpringsMatchSuppliedPluginAtFullBounce() {
         val config = LauncherIosMotionProfile.Config(bounceStrength = 100)
         val open = LauncherIosMotionProfile.spring("LAUNCH_FROM_HOME", config)!!

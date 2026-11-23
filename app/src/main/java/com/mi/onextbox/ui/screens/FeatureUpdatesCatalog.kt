@@ -62,7 +62,7 @@ internal object FeatureUpdatesCatalog {
         Overview(R.string.feature_updates_controls, R.string.feature_updates_controls_note),
         Overview(R.string.setting_feature_background, R.string.feature_updates_background_note),
         Overview(R.string.feature_updates_organization, R.string.feature_updates_organization_note),
-        Overview(R.string.update_beta_plan_title, R.string.update_beta_plan_summary),
+        Overview(R.string.update_channel_title, R.string.update_channel_summary),
     )
 
     fun items(version: SystemAdaptationVersion): List<Item> {

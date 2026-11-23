@@ -49,6 +49,7 @@ internal object QsSliderPercentageHooker {
             "qs:percentage-views",
             content = { view -> style(view).refresh() },
             configurationToken = { QsSliderPercentageSettings.configurationTokenXposed() },
+            settingsKeys = QsSliderPercentageSettings.keys,
         ) { view -> view.invalidate(); true }
         type.declaredConstructors.forEach { constructor ->
             ModernHookRegistry.installCompat("$TAG:observe:${constructor.toGenericString()}", constructor,

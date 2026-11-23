@@ -56,6 +56,9 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
     private var writingRadius = false
     private var corners: NotificationCorners? = null
     private var failedNotificationUpdate = false
+    private var watchedBar = false
+    private var watchedHeader = false
+    private var watchedCorners = false
     private val sideLayout = View.OnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
         if (!HotReloadLifecycle.isRetiring && transforms.containsKey(view)) applySide(view)
     }
@@ -66,13 +69,13 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
                 HookLog.w("ONextBox-Appearance", "Notification corner adapter unavailable", it)
             }
         }
-        after(barClass, setOf("onAttachedToWindow", "updateLayout"))
-        after(headerClass, setOf("onAttachedToWindow", "onInit", "updateClickAbilities"))
+        after(barClass, setOf("onAttachedToWindow", "updateLayout"), ::barEnabled)
+        after(headerClass, setOf("onAttachedToWindow", "onInit", "updateClickAbilities"), ::headerEnabled)
         if (corners != null) after(rowClass, setOf("onAttachedToWindow", "setOnKeyguard", "setHeadsUp",
-            "setHeadsUpAnimatingAway", "setPinnedStatus", "initialize", "onDensityOrFontScaleChanged", "reInflateViews"))
+            "setHeadsUpAnimatingAway", "setPinnedStatus", "initialize", "onDensityOrFontScaleChanged", "reInflateViews"), ::cornersEnabled)
         if (customCards != null && corners != null) {
             runCatching { customCards?.install() }.onFailure(::reportCornerFailure)
-            after(customClass, setOf("onAttachedToWindow", "onConfigurationChanged", "setExpandAnimationRunning", "applyLaunchAnimationParams", "updateBaseRoundness"))
+            after(customClass, setOf("onAttachedToWindow", "onConfigurationChanged", "setExpandAnimationRunning", "applyLaunchAnimationParams", "updateBaseRoundness"), ::cornersEnabled)
             val controller = Reflect.findClassIfExists("com.android.systemui.statusbar.StatusBarStateControllerImpl", loader)
             controller?.declaredMethods?.firstOrNull { it.name == "setState" && it.parameterCount == 2 }?.let { method ->
                 ModernHookRegistry.installCompat("appearance:custom-notification-scene", method, object : ModernMethodHook() {
@@ -87,7 +90,7 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
         }
         if (banners != null) {
             runCatching { banners?.installTransitions() }.onFailure(::reportCornerFailure)
-            after(bannerClass, setOf("onViewAttachedToWindow", "onConfigurationChanged"))
+            after(bannerClass, setOf("onViewAttachedToWindow", "onConfigurationChanged"), ::cornersEnabled)
         }
         HotReloadLifecycle.register("systemui-appearance",
             capture = { views.keys.toTypedArray() }, detach = ::detach,
@@ -100,33 +103,64 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
         if (prefs == null) prefs = ModernHookRuntime.remotePreferences("lsp_features")?.also {
             it.registerOnSharedPreferenceChangeListener(listener)
         }
-        val global = runCatching { Reflect.callStaticMethod(Reflect.findClass("android.view.WindowManagerGlobal", loader), "getInstance") }.getOrNull()
-        val roots = global?.let { runCatching { Reflect.getObjectField(it, "mViews") as? List<*> }.getOrNull() }
-        fun visit(v: View) {
-            if (barClass?.isInstance(v) == true || headerClass?.isInstance(v) == true || rowClass?.isInstance(v) == true ||
-                customClass?.isInstance(v) == true || bannerClass?.isInstance(v) == true)
-                views[v] = Unit
-            if (v is ViewGroup) for (i in 0 until v.childCount) visit(v.getChildAt(i))
-        }
-        roots?.filterIsInstance<View>()?.forEach(::visit)
         refresh()
     }
 
-    private fun after(type: Class<*>?, methods: Set<String>) {
+    private fun barEnabled() = Option.Mirror.current() != 0 || StatusBarIconLayout.current().enabled
+    private fun headerEnabled() = Option.HideSettings.current() != 0
+    private fun cornersEnabled() = Option.Corners.current() != 0
+
+    private fun requested(view: View, bar: Boolean, header: Boolean, notifications: Boolean) =
+        (bar && barClass?.isInstance(view) == true) || (header && headerClass?.isInstance(view) == true) ||
+            (notifications && (rowClass?.isInstance(view) == true || customClass?.isInstance(view) == true ||
+                bannerClass?.isInstance(view) == true))
+
+    private fun discover(bar: Boolean, header: Boolean, notifications: Boolean) {
+        val global = runCatching { Reflect.callStaticMethod(Reflect.findClass("android.view.WindowManagerGlobal", loader), "getInstance") }.getOrNull()
+        val roots = global?.let { runCatching { Reflect.getObjectField(it, "mViews") as? List<*> }.getOrNull() }
+        fun visit(v: View) {
+            if (requested(v, bar, header, notifications)) views[v] = Unit
+            if (v is ViewGroup) for (i in 0 until v.childCount) visit(v.getChildAt(i))
+        }
+        roots?.filterIsInstance<View>()?.forEach(::visit)
+    }
+
+    private fun after(type: Class<*>?, methods: Set<String>, enabled: () -> Boolean) {
         type?.declaredMethods?.filter { it.name in methods }?.forEach { method ->
-            ModernHookRegistry.installCompat("appearance:${method.toGenericString()}", method, object : ModernMethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    val view = param.thisObject as? View ?: return
-                    if (param.throwable != null || HotReloadLifecycle.isRetiring || !view.isAttachedToWindow) return
-                    if (method.name == "applyLaunchAnimationParams" && param.args.firstOrNull() != null) return
-                    views[view] = Unit
-                    update(view)
-                }
-            })
+            val launchAnimation = method.name == "applyLaunchAnimationParams"
+            ModernHookRegistry.installFast("appearance:${method.toGenericString()}", method) { chain ->
+                val result = chain.proceed()
+                if (HotReloadLifecycle.isRetiring) return@installFast result
+                val configured = enabled()
+                if (!configured && views.isEmpty()) return@installFast result
+                val view = chain.thisObject as? View ?: return@installFast result
+                if (!view.isAttachedToWindow || (launchAnimation && chain.args.firstOrNull() != null)) return@installFast result
+                if (configured) views[view] = Unit else if (view !in views) return@installFast result
+                update(view)
+                if (!configured) views.remove(view)
+                result
+            }
         }
     }
 
-    private fun refresh() = views.keys.toList().filter(View::isAttachedToWindow).forEach(::update)
+    private fun refresh() {
+        val bar = barEnabled()
+        val header = headerEnabled()
+        val notifications = cornersEnabled()
+        val newBar = bar && !watchedBar
+        val newHeader = header && !watchedHeader
+        val newCorners = notifications && !watchedCorners
+        if (newCorners) corners?.prepareAnimations()
+        if (newBar || newHeader || newCorners) discover(newBar, newHeader, newCorners)
+        watchedBar = bar
+        watchedHeader = header
+        watchedCorners = notifications
+        if (views.isEmpty()) return
+        views.keys.toList().filter(View::isAttachedToWindow).forEach { view ->
+            update(view)
+            if (!requested(view, bar, header, notifications)) views.remove(view)
+        }
+    }
 
     private fun update(view: View) {
         when {
@@ -145,9 +179,11 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
     }
 
     private fun updateSettingsButton(header: View) {
+        val hide = headerEnabled()
+        if (!hide && buttonVisibility.isEmpty()) return
         val button = settingsButtonGetter?.invoke(header) as? View ?: header.named("settings_button") ?: return
         val visibility = button.visibility
-        if (Option.HideSettings.current() != 0) {
+        if (hide) {
             // Panel expansion and power-mode changes write the current OEM visibility again.
             if (visibility != View.GONE || button !in buttonVisibility) buttonVisibility[button] = visibility
             if (visibility != View.GONE) button.visibility = View.GONE
@@ -163,15 +199,16 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
     }
 
     private fun updateBar(bar: View) {
-        val contents = bar.named("status_bar_contents") ?: return
         val layout = StatusBarIconLayout.current()
         val mirror = Option.Mirror.current() != 0
+        if (!layout.enabled && !mirror && bar !in nativeInsets) return
+        val contents = bar.named("status_bar_contents") ?: return
         val mirrorChanged = mirror != (contents in forcedRtl)
         if (mirror) {
             if (forcedRtl.put(contents, Unit) == null || contents.layoutDirection != View.LAYOUT_DIRECTION_RTL)
                 contents.layoutDirection = View.LAYOUT_DIRECTION_RTL
         } else if (forcedRtl.remove(contents) != null) contents.layoutDirection = View.LAYOUT_DIRECTION_INHERIT
-        val previous = nativeInsets.put(bar, layout)
+        val previous = if (layout.enabled || mirror) nativeInsets.put(bar, layout) else nativeInsets.remove(bar)
         if (previous == null || previous.nativeX != layout.nativeX || previous.nativeY != layout.nativeY ||
             (layout.nativeX || layout.nativeY) && (mirrorChanged || previous !== layout)) {
             runCatching { barExtension?.invoke(bar)?.let { refreshPadding?.invoke(it) } }
@@ -233,6 +270,7 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
         private val bundle = runCatching { type.getDeclaredField("mIsBundle").apply { isAccessible = true } }.getOrNull()
         private val keyguard = generateSequence(type as Class<*>?) { it.superclass }
             .firstNotNullOf { runCatching { it.getDeclaredField("mOnKeyguard") }.getOrNull() }.apply { isAccessible = true }
+        private var animationsPrepared = false
         fun scope(view: View): Option {
             if (customCards?.type?.isInstance(view) == true) return customCards.scope(view)
             val locked = keyguard.getBoolean(view)
@@ -241,16 +279,19 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
         }
 
         fun observeNativeChanges() {
-            ModernHookRegistry.installCompat("appearance:notification-native-radius", setMax, object : ModernMethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    if (writingRadius || changedRows.isEmpty() || HotReloadLifecycle.isRetiring) return
-                    val view = stateView.get(param.thisObject) as? View ?: return
-                    val tracked = changedRows[view] ?: return
-                    tracked.native = param.args[0] as Float
-                    param.args[0] = tracked.resolved()
-                    customCards?.nativeWrite(view, tracked.atRest())
-                }
-            })
+            ModernHookRegistry.installFast("appearance:notification-native-radius", setMax) { chain ->
+                if (writingRadius || changedRows.isEmpty() || HotReloadLifecycle.isRetiring) return@installFast chain.proceed()
+                val view = stateView.get(chain.thisObject) as? View ?: return@installFast chain.proceed()
+                val tracked = changedRows[view] ?: return@installFast chain.proceed()
+                tracked.native = chain.getArg(0) as Float
+                customCards?.nativeWrite(view, tracked.atRest())
+                chain.proceed(arrayOf(tracked.resolved()))
+            }
+        }
+
+        fun prepareAnimations() {
+            if (animationsPrepared) return
+            animationsPrepared = true
             // ColorOS writes this property again as stacked lockscreen cards morph or settle.
             val extension = Reflect.findClassIfExists("com.oplus.systemui.statusbar.notification.row.OplusExpandableViewExImpl", loader)
             extension?.declaredMethods?.filter { it.name == "setAnimationCornerRadius" }?.forEach {
@@ -310,5 +351,8 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
         changedRows.keys.toList().forEach { runCatching { corners?.restore(it) } }
         runCatching { banners?.clear() }.onFailure(::reportCornerFailure)
         nativeInsets.clear(); forcedRtl.clear(); buttonVisibility.clear(); changedRows.clear(); views.clear()
+        watchedBar = false
+        watchedHeader = false
+        watchedCorners = false
     }
 }

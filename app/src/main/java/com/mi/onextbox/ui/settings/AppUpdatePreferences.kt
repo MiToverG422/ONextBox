@@ -8,10 +8,14 @@ enum class UpdateBuildType {
     Debug,
 }
 
+enum class UpdateChannel {
+    Release,
+    Ci,
+}
+
 object AppUpdatePreferences {
-    const val BETA_PLAN_AVAILABLE = true
     private const val PREFS_NAME = "onextbox_prefs"
-    private const val KEY_BETA_PLAN = "update_beta_plan"
+    private const val KEY_UPDATE_CHANNEL = "update_channel"
     private const val KEY_FEATURE_UPDATES_SEEN = "feature_updates_seen"
     private const val KEY_UPDATE_NOTIFICATIONS = "update_notifications"
     private const val KEY_LAUNCH_UPDATE_PROMPT = "launch_update_prompt"
@@ -31,21 +35,14 @@ object AppUpdatePreferences {
         preferences(context).edit().putString(KEY_FEATURE_UPDATES_SEEN, edition).apply()
     }
 
-    fun getBetaPlanEnabled(context: Context): Boolean {
-        val prefs = preferences(context)
-        val enabled = prefs.getBoolean(KEY_BETA_PLAN, false)
-        if (!BETA_PLAN_AVAILABLE && enabled) {
-            prefs.edit().putBoolean(KEY_BETA_PLAN, false).apply()
+    fun getUpdateChannel(context: Context): UpdateChannel =
+        when (preferences(context).getString(KEY_UPDATE_CHANNEL, null)) {
+            UpdateChannel.Ci.name, "GitHubCi" -> UpdateChannel.Ci
+            else -> UpdateChannel.Release
         }
-        return BETA_PLAN_AVAILABLE && enabled
-    }
 
-    fun setBetaPlanEnabled(context: Context, enabled: Boolean) {
-        context
-            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_BETA_PLAN, BETA_PLAN_AVAILABLE && enabled)
-            .apply()
+    fun setUpdateChannel(context: Context, channel: UpdateChannel) {
+        preferences(context).edit().putString(KEY_UPDATE_CHANNEL, channel.name).apply()
     }
 
     fun getUpdateNotificationsEnabled(context: Context): Boolean {

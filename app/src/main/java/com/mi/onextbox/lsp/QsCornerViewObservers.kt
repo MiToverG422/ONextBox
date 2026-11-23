@@ -1,8 +1,13 @@
 package com.mi.onextbox.lsp
 
+import android.content.SharedPreferences
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.ViewTreeObserver
+import com.mi.onextbox.diagnostics.SafeModePolicy
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
+import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import java.lang.ref.WeakReference
 import java.util.WeakHashMap
 
@@ -12,17 +17,47 @@ internal class QsCornerViewObservers(
     private val onLayout: ((View) -> Boolean)? = null,
     private val content: (View) -> List<Any?>? = { emptyList() },
     private val configurationToken: (View) -> Int? = { QsTileCornerSettings.configurationTokenXposed() },
+    settingsKeys: Set<String> = QsTileCornerSettings.keys,
     private val update: (View) -> Boolean,
 ) {
     private val guards = WeakHashMap<View, Guard>()
+    private val main = Handler(Looper.getMainLooper())
+    private var preferences: SharedPreferences? = null
+    private val refresh = Runnable {
+        if (!HotReloadLifecycle.isRetiring) {
+            synchronized(guards) { guards.values.toList() }.forEach {
+                it.attach()
+                it.markDirty()
+            }
+        }
+    }
+    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == null || key in settingsKeys || key == SafeModePolicy.MANUAL || key == SafeModePolicy.AUTOMATIC) {
+            main.removeCallbacks(refresh)
+            main.post(refresh)
+        }
+    }
+
     init {
-        HotReloadLifecycle.register(key,
-            detach = { synchronized(guards) { guards.values.toList() }.forEach { it.dispose() } },
-            restore = { synchronized(guards) { guards.values.toList() }.forEach { it.attach() } })
+        HotReloadLifecycle.register(key, detach = {
+            preferences?.unregisterOnSharedPreferenceChangeListener(listener)
+            preferences = null
+            main.removeCallbacks(refresh)
+            synchronized(guards) { guards.values.toList() }.forEach { it.dispose() }
+        }, resumeAfterRejection = ::activate)
         HotReloadLifecycle.registerReplay("$key:views",
             capture = { synchronized(guards) { guards.keys.toTypedArray() } },
             replay = { saved -> (saved as? Array<*>)?.filterIsInstance<View>()?.forEach(::watch) })
+        HotReloadLifecycle.afterCommit(::activate)
     }
+
+    private fun activate() {
+        if (preferences == null) preferences = ModernHookRuntime.remotePreferences("lsp_features")?.also {
+            it.registerOnSharedPreferenceChangeListener(listener)
+        }
+        refresh.run()
+    }
+
     fun watch(view: View) {
         val guard = synchronized(guards) { guards.getOrPut(view) { Guard(view) } }
         guard.attach()
@@ -37,15 +72,14 @@ internal class QsCornerViewObservers(
         private var listening = false
         private val gate = QsCornerRefreshGate()
         private val schedule = QsCornerProbeSchedule()
-        private var restoredWhileDisabled = false
         private fun resetProbe() {
-            restoredWhileDisabled = false
             schedule.invalidate()
             gate.invalidate()
             retryAt = 0L
             retries = 0
         }
         fun markDirty() {
+            if (!listening) return
             resetProbe()
             target.get()?.invalidate()
         }
@@ -68,7 +102,7 @@ internal class QsCornerViewObservers(
         }
         fun attach() {
             val view = target.get() ?: return
-            if (!listening) {
+            if (!listening && configurationToken(view) != null) {
                 listening = true
                 resetProbe()
                 layoutPending = true
@@ -115,8 +149,6 @@ internal class QsCornerViewObservers(
         override fun onPreDraw(): Boolean = HotReloadLifecycle.withHook(fallback = { true }) {
             if (!HotReloadLifecycle.isRetiring) target.get()?.let { view ->
                 val dp = configurationToken(view)
-                if (dp == null && restoredWhileDisabled) return@let
-                if (dp != null) restoredWhileDisabled = false
                 val now = android.os.SystemClock.uptimeMillis()
                 if (now < retryAt) return@let
                 if (!schedule.shouldProbe(now, view.isShown, dp, view.width, view.height,
@@ -141,10 +173,10 @@ internal class QsCornerViewObservers(
                         val after = runCatching { if (enabled) content(view) else emptyList() }.getOrNull()
                         if (after != null) {
                             gate.applied(state.copy(content = after))
-                            restoredWhileDisabled = !enabled
                             layoutPending = false
                             retries = 0
                             view.removeCallbacks(retry)
+                            if (!enabled) dispose()
                         } else defer(view, now)
                     } else defer(view, now)
                 }

@@ -128,11 +128,9 @@ object UpdateNotificationScheduler {
             val shouldNotify = mayPostUpdateNotification(appContext)
             val shouldPrompt = fromLaunch && mayShowLaunchUpdatePrompt(appContext)
             if (!shouldNotify && !shouldPrompt) return
-            val includeBeta = AppUpdatePreferences.getBetaPlanEnabled(appContext)
-            val update = AppUpdater.checkForUpdate(
-                includeBeta = includeBeta,
-            )
-            if (includeBeta != AppUpdatePreferences.getBetaPlanEnabled(appContext)) return
+            val channel = AppUpdatePreferences.getUpdateChannel(appContext)
+            val update = AppUpdater.checkForUpdate(channel)
+            if (channel != AppUpdatePreferences.getUpdateChannel(appContext)) return
             if (shouldPrompt && mayShowLaunchUpdatePrompt(appContext)) detectedLaunchUpdate.value = update
             if (update == null || !shouldNotify || !mayPostUpdateNotification(appContext)) return
             val prefs = appContext.getSharedPreferences(RUNTIME_PREFS, Context.MODE_PRIVATE)

@@ -111,8 +111,12 @@
     <string name="about_author_info_summary">Author</string>
     <string name="about_github_title">GitHub repository</string>
     <string name="about_github_summary">View source code, releases, issues, and development progress</string>
-    <string name="about_telegram_title">Telegram channel</string>
-    <string name="about_telegram_summary">Follow CI builds, update announcements, and testing feedback</string>
+    <string name="about_telegram_news_title" translatable="false">Telegram News</string>
+    <string name="about_telegram_news_summary">Official releases and announcements</string>
+    <string name="about_telegram_ci_title" translatable="false">Telegram CI</string>
+    <string name="about_telegram_ci_summary">Download CI builds</string>
+    <string name="about_telegram_chat_title" translatable="false">Telegram Chat</string>
+    <string name="about_telegram_chat_summary">Discussion and support</string>
 
     <string name="feature_native_notify_icon_title">Native notification icon</string>
     <string name="feature_native_notify_icon_summary">Enable native icon style, This feature cannot fully cover all cases and still requires app-side adaptation, Requires a system restart</string>
@@ -618,6 +622,8 @@
     <string name="feature_permission_ui_group">Interface style</string>
     <string name="feature_permission_export_pages_title">International permission pages</string>
     <string name="feature_permission_export_pages_summary">Use international permission categories and app permission details</string>
+    <string name="feature_permission_export_toolbar_fix_title">Fix top bar on China ROMs</string>
+    <string name="feature_permission_export_toolbar_fix_summary">Keep scrolling content from showing through the top bar and match the back arrow to the theme</string>
     <string name="feature_permission_native_dialogs_title">Native permission request dialogs</string>
     <string name="feature_permission_native_dialogs_summary">Use the Android permission request dialogs</string>
     <string name="feature_settings_restore_domestic_auxiliary_functions_title">Restore CN additional settings options</string>
@@ -1169,12 +1175,8 @@
     <string name="ota_block_files_title">Block system file updates</string>
     <string name="ota_block_files_summary">Block system file update queries</string>
 
-    <string name="update_beta_plan_title">Join the Beta program</string>
-    <string name="update_beta_plan_summary">Receive Beta test updates</string>
-    <string name="update_beta_join_title">Join the Beta program?</string>
-    <string name="update_beta_join_summary">Beta updates come from ONextBox_BetaTesting and match your installed build type, test builds may be unstable or contain bugs, do you want to join?</string>
-    <string name="update_beta_join_cancel">Not now</string>
-    <string name="update_beta_join_confirm">Join</string>
+    <string name="update_channel_title">Update channel</string>
+    <string name="update_channel_summary">Choose which builds to receive from Release or CI</string>
     <string name="oshare_title">Share</string>
     <string name="oshare_unlimited_title">Remove the 10-minute limit</string>
     <string name="oshare_unlimited_summary">Keep Everyone visibility enabled until you manually change it; nearby devices can continue to discover this device</string>
@@ -2467,6 +2469,8 @@
     <string name="launcher_folder_return_home">Return to the home screen after leaving a folder app</string>
     <string name="launcher_hide_folder_background">Hide folder backgrounds</string>
     <string name="launcher_hide_folder_indicator">Hide folder page indicators</string>
+    <string name="launcher_block_folder_indicator_touch">Disable indicator touches</string>
+    <string name="launcher_block_folder_indicator_touch_summary">Let the folder handle touches in the hidden indicator area</string>
 
     <string name="nav_geometry_thickness">Handle thickness</string>
     <string name="nav_geometry_bottom">Bottom spacing</string>

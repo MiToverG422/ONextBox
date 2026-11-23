@@ -4,4 +4,8 @@
         <attr name="android:layout_width" />
         <attr name="android:layout_height" />
     </declare-styleable>
+    <declare-styleable name="ONextBoxPermissionToolbar">
+        <attr name="android:colorBackground" />
+        <attr name="android:textColorPrimary" />
+    </declare-styleable>
 </resources>

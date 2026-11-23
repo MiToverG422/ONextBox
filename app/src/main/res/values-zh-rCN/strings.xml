@@ -74,8 +74,9 @@
     <string name="about_author_info_summary">作者</string>
     <string name="about_github_title">GitHub 仓库</string>
     <string name="about_github_summary">查看源码、版本发布、问题反馈与开发进度</string>
-    <string name="about_telegram_title">Telegram 频道</string>
-    <string name="about_telegram_summary">获取 CI 构建、更新动态与测试反馈</string>
+    <string name="about_telegram_news_summary">正式发布与公告</string>
+    <string name="about_telegram_ci_summary">下载 CI 测试版本</string>
+    <string name="about_telegram_chat_summary">交流与使用支持</string>
 
     <string name="feature_native_notify_icon_title">原生通知图标</string>
     <string name="feature_native_notify_icon_summary">启用原生图标样式，此功能并不能完全覆盖，需要 App 适配，需要重启系统</string>
@@ -616,6 +617,8 @@
     <string name="feature_permission_ui_group">界面样式</string>
     <string name="feature_permission_export_pages_title">国际版权限管理页面</string>
     <string name="feature_permission_export_pages_summary">使用国际版的权限分类和应用权限详情页面</string>
+    <string name="feature_permission_export_toolbar_fix_title">修复中国版顶栏</string>
+    <string name="feature_permission_export_toolbar_fix_summary">避免滚动时权限列表透出顶栏，返回箭头跟随明暗主题</string>
     <string name="feature_permission_native_dialogs_title">原生权限申请弹窗</string>
     <string name="feature_permission_native_dialogs_summary">使用 Android 原生的权限申请弹窗</string>
     <string name="feature_settings_restore_domestic_auxiliary_functions_title">恢复国行辅助功能选项</string>
@@ -1165,12 +1168,8 @@
     <string name="ota_block_files_title">屏蔽系统文件更新</string>
     <string name="ota_block_files_summary">屏蔽系统文件更新查询</string>
 
-    <string name="update_beta_plan_title">加入 Beta 计划</string>
-    <string name="update_beta_plan_summary">接收 Beta 测试版本更新</string>
-    <string name="update_beta_join_title">是否加入 Beta 计划？</string>
-    <string name="update_beta_join_summary">加入后从 ONextBox_BetaTesting 获取 Beta 更新，仍匹配当前构建类型，测试版可能不稳定或出现功能异常，是否继续</string>
-    <string name="update_beta_join_cancel">暂不加入</string>
-    <string name="update_beta_join_confirm">加入</string>
+    <string name="update_channel_title">更新渠道</string>
+    <string name="update_channel_summary">选择接收 Release 正式版或 CI 构建</string>
     <string name="oshare_title">互传</string>
     <string name="oshare_unlimited_title">解除所有人 10 分钟限制</string>
     <string name="oshare_unlimited_summary">选择“所有人”后不再自动切换接收范围，附近设备可持续发现此设备，直到手动更改</string>
@@ -2442,6 +2441,8 @@
     <string name="launcher_folder_return_home">退出文件夹内应用后返回桌面</string>
     <string name="launcher_hide_folder_background">隐藏文件夹背景</string>
     <string name="launcher_hide_folder_indicator">隐藏文件夹分页指示器</string>
+    <string name="launcher_block_folder_indicator_touch">停用指示器触控</string>
+    <string name="launcher_block_folder_indicator_touch_summary">让文件夹接管隐藏指示器所在区域的触控</string>
 
     <string name="nav_geometry_thickness">小横条粗细</string>
     <string name="nav_geometry_bottom">底部边距</string>

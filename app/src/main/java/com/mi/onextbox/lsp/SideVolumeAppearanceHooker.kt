@@ -20,6 +20,7 @@ internal object SideVolumeAppearanceHooker {
         val seekType = Reflect.findClassIfExists(SEEK, loader) ?: return
         val observers = QsCornerViewObservers("volume:appearance-views",
             configurationToken = { SideVolumeAppearanceSettings.configurationTokenXposed() },
+            settingsKeys = SideVolumeAppearanceSettings.keys,
         ) { view ->
             if (SideVolumeAppearanceSettings.stateXposed().keepWide &&
                 ((Reflect.getObjectField(view, "mThickType") as Number).toInt() != 0 ||

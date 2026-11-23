@@ -284,9 +284,8 @@ internal object EnabledFeatureCatalog {
         FeaturePageMode.DesktopLayout to (LauncherFeatureItems.dock + LauncherFeatureItems.effects),
     ).flatMap { (page, items) ->
         items.map { item ->
-            Entry(item.title, page,
-                parents = if (item.feature == LspConfig.LauncherFeature.DockBlur) setOf(R.string.launcher_dock) else emptySet(),
-            ) { LspConfig.isLauncherFeatureEnabled(it, item.feature) }
+            val parents = item.parent?.let { parent -> setOf(items.first { it.feature == parent }.title) }.orEmpty()
+            Entry(item.title, page, parents = parents) { LspConfig.isLauncherFeatureEnabled(it, item.feature) }
         }
     } + TrafficFeatureItems.all.map { item ->
         Entry(item.title, FeaturePageMode.TrafficManagement) { LspConfig.isTrafficFeatureEnabled(it, item.feature) }

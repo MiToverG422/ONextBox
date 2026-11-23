@@ -29,6 +29,7 @@ internal data class LauncherFeatureItem(
     val feature: LauncherFeature,
     @param:StringRes val title: Int,
     @param:StringRes val summary: Int = 0,
+    val parent: LauncherFeature? = null,
 )
 
 internal object LauncherFeatureItems {
@@ -54,11 +55,14 @@ internal object LauncherFeatureItems {
         LauncherFeatureItem(LauncherFeature.FolderReturnHome, R.string.launcher_folder_return_home),
         LauncherFeatureItem(LauncherFeature.HideFolderBackground, R.string.launcher_hide_folder_background),
         LauncherFeatureItem(LauncherFeature.HideFolderIndicator, R.string.launcher_hide_folder_indicator),
+        LauncherFeatureItem(LauncherFeature.BlockFolderIndicatorTouch, R.string.launcher_block_folder_indicator_touch,
+            R.string.launcher_block_folder_indicator_touch_summary, parent = LauncherFeature.HideFolderIndicator),
         LauncherFeatureItem(LauncherFeature.UnlimitedFolderInput, R.string.launcher_unlimited_folder_input, R.string.launcher_unlimited_folder_input_summary),
     )
     val dock = listOf(
         LauncherFeatureItem(LauncherFeature.Dock, R.string.launcher_dock, R.string.launcher_dock_summary),
-        LauncherFeatureItem(LauncherFeature.DockBlur, R.string.launcher_dock_blur, R.string.launcher_dock_blur_summary),
+        LauncherFeatureItem(LauncherFeature.DockBlur, R.string.launcher_dock_blur, R.string.launcher_dock_blur_summary,
+            parent = LauncherFeature.Dock),
     )
     val effects = listOf(
         LauncherFeatureItem(LauncherFeature.ForceBlur, R.string.launcher_force_blur_title, R.string.launcher_force_blur_summary),
@@ -91,10 +95,10 @@ internal fun LauncherFeatureRows(items: List<LauncherFeatureItem>, hasDividerBel
     FeatureAnimatedRows(
         hasDividerAbove = hasDividerAbove,
         hasDividerBelow = hasDividerBelow,
-        animateChanges = additionalRows != null || items.any { it.feature == LauncherFeature.DockBlur },
+        animateChanges = additionalRows != null || items.any { it.parent != null },
     ) {
         items.forEach { item ->
-            val rowEnabled = item.feature != LauncherFeature.DockBlur || states[LauncherFeature.Dock] == true
+            val rowEnabled = item.parent == null || states[item.parent] == true
             row(item.feature, visible = rowEnabled) { above, below ->
                 SettingsToggleRow(
                     title = stringResource(item.title),

@@ -3,6 +3,7 @@ package com.mi.onextbox.lsp
 import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.drawable.GradientDrawable
+import android.view.MotionEvent
 import android.view.View
 import com.mi.onextbox.lsp.LspConfig.LauncherFeature
 import com.mi.onextbox.lsp.compat.HookConfigSnapshot
@@ -15,6 +16,8 @@ internal object LauncherFolderOptions {
 
     fun hook(loader: ClassLoader) {
         runCatching { hookReturn(loader) }.onFailure { HookLog.w(TAG, "Folder return unavailable", it) }
+        runCatching { hookExpandedIndicator(loader) }
+            .onFailure { HookLog.w(TAG, "Expanded folder indicator unavailable", it) }
         runCatching { hookAppearance(loader) }.onFailure { HookLog.w(TAG, "Folder appearance unavailable", it) }
     }
 
@@ -52,6 +55,23 @@ internal object LauncherFolderOptions {
         }
     }
 
+    private fun hookExpandedIndicator(loader: ClassLoader) {
+        val folder = loader.loadClass("com.android.launcher3.folder.OplusFolder")
+        val indicator = folder.getDeclaredField("mIndicator").apply { isAccessible = true }
+        val isFolderIndicator = { view: View ->
+            view.hasAncestor { parent -> folder.isInstance(parent) && indicator.get(parent) === view }
+        }
+        val draw = indicator.type.getDeclaredMethod("dispatchDraw", Canvas::class.java)
+        ModernHookRegistry.installFast("$TAG:expanded-indicator", draw) { chain ->
+            if (!enabled(LauncherFeature.HideFolderIndicator)) return@installFast chain.proceed()
+            val view = chain.thisObject as? View ?: return@installFast chain.proceed()
+            // Paging invalidates the indicator's own display list, separately from the folder.
+            // Its renderer is also used by the workspace, so check the actual owning folder.
+            if (isFolderIndicator(view)) null else chain.proceed()
+        }
+        hookIndicatorTouch(indicator.type, "dispatchTouchEvent", isFolderIndicator)
+    }
+
     private fun hookAppearance(loader: ClassLoader) {
         val preview = loader.loadClass("com.android.launcher3.folder.OplusPreviewBackground")
         val background = preview.getDeclaredField("mBgView").apply { isAccessible = true }
@@ -66,22 +86,22 @@ internal object LauncherFolderOptions {
         val expandedLayers = listOf("mContentBackground", "mContentAnimationBackground").map {
             expanded.getDeclaredField(it).apply { isAccessible = true }
         }
-        val expandedIndicator = expanded.getDeclaredField("mIndicator").apply { isAccessible = true }
         val folder = loader.loadClass("com.android.launcher3.folder.Folder")
         val folderBackground = folder.getDeclaredField("mBackground").apply { isAccessible = true }
         val emptyBackground = GradientDrawable()
+        val isFolderIndicator = { view: View ->
+            view.hasAncestor { parent ->
+                (marker.isInstance(parent) && indicator.invoke(parent) === view) ||
+                    (group.isInstance(parent) && extraIndicator.invoke(parent) === view &&
+                        marker.isInstance(visibleChild.invoke(parent, false)))
+            }
+        }
         ModernHookRegistry.installFast("$TAG:indicator", indicator.returnType.getDeclaredMethod("onDraw", Canvas::class.java)) { chain ->
             if (!enabled(LauncherFeature.HideFolderIndicator)) return@installFast chain.proceed()
             val view = chain.thisObject as? View ?: return@installFast chain.proceed()
-            var parent = view.parent as? View
-            while (parent != null) {
-                if (marker.isInstance(parent) && indicator.invoke(parent) === view) return@installFast null
-                if (group.isInstance(parent) && extraIndicator.invoke(parent) === view &&
-                    marker.isInstance(visibleChild.invoke(parent, false))) return@installFast null
-                parent = parent.parent as? View
-            }
-            chain.proceed()
+            if (isFolderIndicator(view)) null else chain.proceed()
         }
+        hookIndicatorTouch(indicator.returnType, "onTouchEvent", isFolderIndicator)
         preview.declaredMethods.filter { it.name == "drawBackground" && it.returnType == Void.TYPE }.forEach { draw ->
             ModernHookRegistry.installFast("$TAG:${draw.toGenericString()}", draw) { chain ->
                 if (enabled(LauncherFeature.HideFolderBackground)) null else chain.proceed()
@@ -89,13 +109,11 @@ internal object LauncherFolderOptions {
         }
         for (type in listOf(folder, icon, marker)) {
             ModernHookRegistry.installFast("$TAG:draw:${type.name}", type.getDeclaredMethod("dispatchDraw", Canvas::class.java)) { chain ->
-                val hideBackground = enabled(LauncherFeature.HideFolderBackground)
-                val hideIndicator = enabled(LauncherFeature.HideFolderIndicator)
-                if (!hideBackground && !hideIndicator) return@installFast chain.proceed()
+                if (!enabled(LauncherFeature.HideFolderBackground)) return@installFast chain.proceed()
                 val host = chain.thisObject
                 // Folder paints this drawable itself, in both its clipped and unclipped passes.
-                val nativeBackground = if (type == folder && hideBackground) folderBackground.get(host) else null
-                val hidden = ArrayList<View>(3)
+                val nativeBackground = if (type == folder) folderBackground.get(host) else null
+                val hidden = ArrayList<View>(2)
                 fun hide(view: Any?) {
                     if (view is View && view.visibility == View.VISIBLE) {
                         hidden.add(view)
@@ -105,10 +123,9 @@ internal object LauncherFolderOptions {
                 try {
                     if (nativeBackground != null) folderBackground.set(host, emptyBackground)
                     if (expanded.isInstance(host)) {
-                        if (hideBackground) expandedLayers.forEach { hide(it.get(host)) }
-                        if (hideIndicator) hide(expandedIndicator.get(host))
+                        expandedLayers.forEach { hide(it.get(host)) }
                     } else if (icon.isInstance(host)) {
-                        if (hideBackground) getPreview.invoke(host)?.let { hide(background.get(it)) }
+                        getPreview.invoke(host)?.let { hide(background.get(it)) }
                     }
                     chain.proceed()
                 } finally {
@@ -118,6 +135,32 @@ internal object LauncherFolderOptions {
                 }
             }
         }
+    }
+
+    private fun hookIndicatorTouch(
+        type: Class<*>, methodName: String, isFolderIndicator: (View) -> Boolean,
+    ) {
+        runCatching {
+            val method = type.getDeclaredMethod(methodName, MotionEvent::class.java)
+            ModernHookRegistry.installFast("$TAG:touch:${type.name}", method) { chain ->
+                val event = chain.getArg(0) as? MotionEvent
+                if (event?.actionMasked != MotionEvent.ACTION_DOWN ||
+                    !enabled(LauncherFeature.BlockFolderIndicatorTouch) ||
+                    !enabled(LauncherFeature.HideFolderIndicator)) return@installFast chain.proceed()
+                val view = chain.thisObject as? View ?: return@installFast chain.proceed()
+                // Decline a new gesture so the parent can route it to another target.
+                if (isFolderIndicator(view)) false else chain.proceed()
+            }
+        }.onFailure { HookLog.w(TAG, "Folder indicator touch hook unavailable for ${type.name}", it) }
+    }
+
+    private inline fun View.hasAncestor(matches: (View) -> Boolean): Boolean {
+        var ancestor = parent as? View
+        while (ancestor != null) {
+            if (matches(ancestor)) return true
+            ancestor = ancestor.parent as? View
+        }
+        return false
     }
 
     private fun enabled(feature: LauncherFeature) = HookConfigSnapshot.boolean(feature.key, false)

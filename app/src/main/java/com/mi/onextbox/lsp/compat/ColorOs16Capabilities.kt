@@ -2,6 +2,7 @@ package com.mi.onextbox.lsp.compat
 
 internal object ColorOs16Capabilities {
     val featureKeys = setOf(
+        "system_display_density",
         "systemui_aosp_volume",
         "systemui_aosp_volume_scale",
         "systemui_aosp_volume_hide_in_qs",
@@ -167,6 +168,7 @@ internal object ColorOs16Capabilities {
         "permission_auto_unlock_restricted_settings",
         "permission_disable_malicious_app_intercept",
         "permission_export_pages",
+        "permission_export_toolbar_fix",
         "permission_native_dialogs",
         "permission_old_app_start_dialog",
         "phonemanager_hide_risk_app_cloud",

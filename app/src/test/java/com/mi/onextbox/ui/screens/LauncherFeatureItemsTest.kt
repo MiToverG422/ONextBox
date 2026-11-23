@@ -2,6 +2,7 @@ package com.mi.onextbox.ui.screens
 
 import com.mi.onextbox.lsp.LspConfig
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -54,6 +55,16 @@ class LauncherFeatureItemsTest {
                 it.page in pages && it.title == item.title && it.description == item.summary
             })
         }
+    }
+
+    @Test fun `indicator touch setting depends on hiding folder indicators`() {
+        val rows = LauncherFeatureItems.folder
+        val parent = rows.single { it.feature == LspConfig.LauncherFeature.HideFolderIndicator }
+        val child = rows[rows.indexOf(parent) + 1]
+        assertEquals(LspConfig.LauncherFeature.BlockFolderIndicatorTouch, child.feature)
+        assertEquals(parent.feature, child.parent)
+        assertFalse(EnabledFeatureCatalog.isActive(child.title, setOf(child.title)))
+        assertTrue(EnabledFeatureCatalog.isActive(child.title, setOf(parent.title, child.title)))
     }
 
     @Test fun `launcher preference keys are unique and property names fit Android limits`() {

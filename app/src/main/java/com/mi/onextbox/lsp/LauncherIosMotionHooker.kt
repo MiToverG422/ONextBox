@@ -321,8 +321,9 @@ internal class LauncherIosPerspectiveRenderer(
         val window = targets.fullWindowMethod.invoke(helper) as? Rect
         val taskId = (targets.taskInfoField.get(target) as? ActivityManager.RunningTaskInfo)?.taskId ?: -1
         val input = if (binding?.lease?.active == true && kind != null && LauncherIosMotionHooker.allowed(kind) &&
-            fullscreen && !widget && !targets.needsRotationField.getBoolean(params) && window != null &&
-            !window.isEmpty && window.height() > window.width() && !rect.isEmpty
+            window != null && !rect.isEmpty && LauncherIosMotionProfile.supportsFullscreenFrame(
+                window.width(), window.height(), fullscreen, widget, targets.needsRotationField.getBoolean(params),
+            )
         ) {
             val rawAnchor = targets.originHeightField.getFloat(params) / window.height()
             val anchor = rawAnchor.takeIf { it in .015f.. .30f } ?: .065f

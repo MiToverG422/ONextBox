@@ -87,8 +87,9 @@
     <string name="about_author_info_summary">Автор</string>
     <string name="about_github_title">GitHub репозиторий</string>
     <string name="about_github_summary">Просмотр исходного кода, выпусков, проблем и хода разработки</string>
-    <string name="about_telegram_title">Телеграм-канал</string>
-    <string name="about_telegram_summary">Следите за сборками CI, объявлениями об обновлениях и отзывами о тестировании</string>
+    <string name="about_telegram_news_summary">Официальные релизы и объявления</string>
+    <string name="about_telegram_ci_summary">Скачать тестовые сборки CI</string>
+    <string name="about_telegram_chat_summary">Общение и помощь</string>
     <string name="feature_native_notify_icon_title">Собственный значок уведомления</string>
     <string name="feature_native_notify_icon_summary">Включить собственный стиль значков. Эта функция не может полностью охватить все случаи и по-прежнему требует адаптации на стороне приложения. Требуется перезагрузка системы</string>
     <string name="feature_native_notification_bubbles_title">Встроенные всплывающие уведомления</string>
@@ -555,6 +556,8 @@
     <string name="feature_permission_ui_group">Стиль интерфейса</string>
     <string name="feature_permission_export_pages_title">Международные страницы разрешений</string>
     <string name="feature_permission_export_pages_summary">Категории и сведения о разрешениях приложений из международной версии</string>
+    <string name="feature_permission_export_toolbar_fix_title">Исправить верхнюю панель в китайской версии</string>
+    <string name="feature_permission_export_toolbar_fix_summary">Скрыть прокручиваемый список под верхней панелью и подобрать цвет стрелки назад под тему</string>
     <string name="feature_permission_native_dialogs_title">Стандартные диалоги разрешений</string>
     <string name="feature_permission_native_dialogs_summary">Использовать стандартные диалоги запросов разрешений Android</string>
     <string name="feature_settings_restore_domestic_auxiliary_functions_title">Вернуть пункты дополнительных настроек для Китая</string>
@@ -1115,12 +1118,8 @@
     <string name="ota_block_files_title">Блокировать обновления системных файлов</string>
     <string name="ota_block_files_summary">Запретить проверку обновлений системных файлов</string>
 
-    <string name="update_beta_plan_title">Участвовать в Beta-программе</string>
-    <string name="update_beta_plan_summary">Получать тестовые Beta-обновления</string>
-    <string name="update_beta_join_title">Присоединиться к Beta-программе?</string>
-    <string name="update_beta_join_summary">После вступления Beta-обновления будут загружаться из ONextBox_BetaTesting с учётом текущего типа сборки, тестовые версии могут быть нестабильными или содержать ошибки, продолжить</string>
-    <string name="update_beta_join_cancel">Не сейчас</string>
-    <string name="update_beta_join_confirm">Присоединиться</string>
+    <string name="update_channel_title">Канал обновлений</string>
+    <string name="update_channel_summary">Выберите стабильные версии Release или сборки CI</string>
     <string name="oshare_title">Share</string>
     <string name="oshare_unlimited_title">Снять ограничение в 10 минут</string>
     <string name="oshare_unlimited_summary">Режим видимости для всех действует до ручного изменения; устройства поблизости смогут обнаруживать это устройство</string>
@@ -2398,6 +2397,8 @@
     <string name="launcher_folder_return_home">Возвращаться на главный экран при выходе из приложения в папке</string>
     <string name="launcher_hide_folder_background">Скрывать фон папок</string>
     <string name="launcher_hide_folder_indicator">Скрывать индикаторы страниц папок</string>
+    <string name="launcher_block_folder_indicator_touch">Отключить касания индикатора</string>
+    <string name="launcher_block_folder_indicator_touch_summary">Передавать касания в области скрытого индикатора папке</string>
 
     <string name="nav_geometry_thickness">Толщина полоски</string>
     <string name="nav_geometry_bottom">Нижний отступ</string>

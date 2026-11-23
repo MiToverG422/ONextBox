@@ -30,7 +30,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-class HomeBetaBadgeUiTest {
+class HomeCiBadgeUiTest {
     @get:Rule val compose = createComposeRule()
 
     @Composable
@@ -47,13 +47,13 @@ class HomeBetaBadgeUiTest {
     @Test fun diagonalRibbonMeetsBothCardEdgesWithoutMovingTheHeroText() {
         val version = mutableStateOf("17.0")
         compose.setContent { Hero(version.value) }
-        compose.onNodeWithTag("homeBetaBadge").assertDoesNotExist()
+        compose.onNodeWithTag("homeCiBadge").assertDoesNotExist()
         val before = compose.onNodeWithTag("homeHeroTitle").getUnclippedBoundsInRoot()
         val beforeDetails = compose.onNodeWithTag("homeHeroDetails").getUnclippedBoundsInRoot()
-        compose.runOnIdle { version.value = "17.0_Beta2" }
+        compose.runOnIdle { version.value = "17.0.3.94-CI-66624d2b" }
         val title = compose.onNodeWithTag("homeHeroTitle").getUnclippedBoundsInRoot()
         val details = compose.onNodeWithTag("homeHeroDetails").getUnclippedBoundsInRoot()
-        val badge = compose.onNodeWithTag("homeBetaBadge").getUnclippedBoundsInRoot()
+        val badge = compose.onNodeWithTag("homeCiBadge").getUnclippedBoundsInRoot()
         val card = compose.onNodeWithTag("hero").getUnclippedBoundsInRoot()
         assertEquals(before.top.value, title.top.value, .5f)
         assertEquals(before.bottom.value, title.bottom.value, .5f)
@@ -61,7 +61,7 @@ class HomeBetaBadgeUiTest {
         assertEquals(card.top.value, badge.top.value, .5f)
         assertEquals(card.right.value, badge.right.value, .5f)
         assertTrue(title.right + 10.dp <= badge.left)
-        compose.onNodeWithText("BETA").assertExists()
+        compose.onNodeWithText("CI").assertExists()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         compose.onNodeWithTag("hero").captureToImage().asAndroidBitmap().let { image ->
             fun gold(x: Int, y: Int): Boolean {
@@ -73,20 +73,20 @@ class HomeBetaBadgeUiTest {
             }
             assertTrue("Ribbon must meet the top edge", (image.width * 2 / 3 until image.width - 4).any { gold(it, 2) })
             assertTrue("Ribbon must meet the right edge", (4 until image.height * 3 / 4).any { gold(image.width - 3, it) })
-            File(context.cacheDir, "home-beta-gold.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            File(context.cacheDir, "home-ci-gold.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
     }
 
     @Test fun theVersionMarkerControlsVisibilityIndependentlyOfBuildType() {
         val version = mutableStateOf("17.0")
         compose.setContent { Hero(version.value) }
-        listOf("17.0_Beta", "17.0-beta.2", "17.0bEtA3", "Beta17.0").forEach {
+        listOf("17.0.3.94-CI-66624d2b", "17.0.3.95-ci-36aafca0").forEach {
             compose.runOnIdle { version.value = it }
-            compose.onNodeWithTag("homeBetaBadge").assertExists()
+            compose.onNodeWithTag("homeCiBadge").assertExists()
         }
-        listOf("17.0", "17.0-Release", "17.0-Debug", "17.0-CI-abcd", "17.0-rc1").forEach {
+        listOf("17.0.3.94", "17.0.2.310", "17.0.2.309_Beta", "17.0-Debug").forEach {
             compose.runOnIdle { version.value = it }
-            compose.onNodeWithTag("homeBetaBadge").assertDoesNotExist()
+            compose.onNodeWithTag("homeCiBadge").assertDoesNotExist()
         }
     }
 
@@ -94,15 +94,15 @@ class HomeBetaBadgeUiTest {
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, 1.7f)) {
-                Hero("17.0_BETA10", 300.dp)
+                Hero("17.0.3.94-CI-66624d2b", 300.dp)
             }
         }
-        val badge = compose.onNodeWithTag("homeBetaBadge").getUnclippedBoundsInRoot()
+        val badge = compose.onNodeWithTag("homeCiBadge").getUnclippedBoundsInRoot()
         val title = compose.onNodeWithTag("homeHeroTitle").getUnclippedBoundsInRoot()
         val card = compose.onNodeWithTag("hero").getUnclippedBoundsInRoot()
         assertTrue(badge.top >= card.top && badge.bottom <= card.bottom)
         assertTrue(badge.right <= card.right && badge.left >= card.left)
         assertTrue(title.right + 10.dp <= badge.left)
-        compose.onNodeWithText("BETA").assertExists()
+        compose.onNodeWithText("CI").assertExists()
     }
 }

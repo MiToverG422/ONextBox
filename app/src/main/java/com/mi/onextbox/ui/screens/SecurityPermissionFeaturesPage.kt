@@ -36,6 +36,15 @@ internal fun SecurityPermissionFeaturesPage() {
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val writeLock = remember { Mutex() }
+    var exportPages by rememberSaveable {
+        mutableStateOf(LspConfig.isPermissionFeatureEnabled(context, PermissionFeature.ExportPermissionPages))
+    }
+    var exportToolbarFix by rememberSaveable {
+        mutableStateOf(LspConfig.isPermissionFeatureEnabled(context, PermissionFeature.ExportPermissionToolbarFix))
+    }
+    var nativeDialogs by rememberSaveable {
+        mutableStateOf(LspConfig.isPermissionFeatureEnabled(context, PermissionFeature.NativePermissionDialogs))
+    }
     var oldDialog by rememberSaveable {
         mutableStateOf(LspConfig.isPermissionFeatureEnabled(context, PermissionFeature.OldAppStartDialog))
     }
@@ -63,26 +72,36 @@ internal fun SecurityPermissionFeaturesPage() {
     AppLockDelaySettingsGroup()
 
     SettingsSection(title = stringResource(R.string.feature_permission_ui_group))
-    SettingsGroup {
-        val options = listOf(
-            Triple(PermissionFeature.ExportPermissionPages,
-                R.string.feature_permission_export_pages_title, R.string.feature_permission_export_pages_summary),
-            Triple(PermissionFeature.NativePermissionDialogs,
-                R.string.feature_permission_native_dialogs_title, R.string.feature_permission_native_dialogs_summary),
-        )
-        options.forEachIndexed { index, (feature, title, summary) ->
-            var checked by rememberSaveable(feature.key) {
-                mutableStateOf(LspConfig.isPermissionFeatureEnabled(context, feature))
-            }
-            if (index > 0) SettingsDivider()
-            run {SettingsToggleRow(
-                    title = stringResource(title),
-                    summary = stringResource(summary),
-                    checked = checked,
-                    onCheckedChange = { checked = it; save(feature, it) },
-                    hasDividerAbove = index > 0,
-                    hasDividerBelow = index < options.lastIndex,
-                )}
+    FeatureAnimatedGroup {
+        row(PermissionFeature.ExportPermissionPages.key) { above, below ->
+            SettingsToggleRow(
+                title = stringResource(R.string.feature_permission_export_pages_title),
+                summary = stringResource(R.string.feature_permission_export_pages_summary),
+                checked = exportPages,
+                onCheckedChange = { exportPages = it; save(PermissionFeature.ExportPermissionPages, it) },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
+        }
+        row(PermissionFeature.ExportPermissionToolbarFix.key, visible = exportPages) { above, below ->
+            SettingsToggleRow(
+                title = stringResource(R.string.feature_permission_export_toolbar_fix_title),
+                summary = stringResource(R.string.feature_permission_export_toolbar_fix_summary),
+                checked = exportToolbarFix,
+                onCheckedChange = { exportToolbarFix = it; save(PermissionFeature.ExportPermissionToolbarFix, it) },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
+        }
+        row(PermissionFeature.NativePermissionDialogs.key) { above, below ->
+            SettingsToggleRow(
+                title = stringResource(R.string.feature_permission_native_dialogs_title),
+                summary = stringResource(R.string.feature_permission_native_dialogs_summary),
+                checked = nativeDialogs,
+                onCheckedChange = { nativeDialogs = it; save(PermissionFeature.NativePermissionDialogs, it) },
+                hasDividerAbove = above,
+                hasDividerBelow = below,
+            )
         }
     }
 

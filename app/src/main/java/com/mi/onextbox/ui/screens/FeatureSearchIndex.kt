@@ -439,6 +439,7 @@ internal object FeatureSearchIndex {
         Entry(FeaturePageMode.SettingsRegion, R.string.feature_settings_restore_domestic_auxiliary_functions_title, R.string.feature_settings_restore_domestic_auxiliary_functions_summary),
         Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_manager_title),
         Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_export_pages_title, R.string.feature_permission_export_pages_summary),
+        Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_export_toolbar_fix_title, R.string.feature_permission_export_toolbar_fix_summary),
         Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_native_dialogs_title, R.string.feature_permission_native_dialogs_summary),
         Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_old_dialog_title, R.string.feature_permission_old_dialog_summary),
         Entry(FeaturePageMode.SecurityPermission, R.string.feature_permission_always_allow_title, R.string.feature_permission_always_allow_summary),

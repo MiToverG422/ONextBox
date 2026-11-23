@@ -58,12 +58,24 @@ val prepareAndroidLogoLicenses by tasks.registering(Sync::class) {
 }
 tasks.named("preBuild").configure { dependsOn(prepareAndroidLogoLicenses) }
 
-val ciVersionName = (project.findProperty("ONEXTBOX_VERSION_NAME") as String?)
-    ?.takeIf { it.isNotBlank() }
-    ?: "17.0"
+// Bump this prefix when moving to a new release series. Git supplies the fourth segment.
+val versionBase = "17.0.3"
+fun gitOutput(vararg args: String): String = providers.exec {
+    workingDir(rootProject.projectDir)
+    commandLine("git", *args)
+}.standardOutput.asText.get().trim()
 
-// Android install version and product build label.
-val androidVersionCode = 1
+check(gitOutput("rev-parse", "--is-shallow-repository") == "false") {
+    "ONextBox versioning requires a complete Git history. Fetch the remaining commits before building."
+}
+val commitCount = gitOutput("rev-list", "--count", "HEAD").toInt()
+require(commitCount in 1..9_999) { "The fourth version segment must fit in four digits." }
+val buildChannel = providers.gradleProperty("ONEXTBOX_BUILD_CHANNEL").orElse("release").get()
+require(buildChannel == "ci" || buildChannel == "release") { "ONEXTBOX_BUILD_CHANNEL must be ci or release." }
+val baseVersionName = "$versionBase.$commitCount"
+val onextBoxVersionName = if (buildChannel == "ci") "$baseVersionName-CI-${gitOutput("rev-parse", "--short=8", "HEAD")}"
+    else baseVersionName
+val androidVersionCode = 10_000 + commitCount
 val appVersionCodeLabel = "EX01"
 
 val ciSignReleaseWithDebug = (project.findProperty("ONEXTBOX_CI_SIGN_RELEASE_WITH_DEBUG") as String?)
@@ -123,7 +135,7 @@ android {
         minSdk = 35
         targetSdk = 36
         versionCode = androidVersionCode
-        versionName = ciVersionName
+        versionName = onextBoxVersionName
         buildConfigField("String", "APP_VERSION_CODE_LABEL", "\"$appVersionCodeLabel\"")
         buildConfigField("String", "APP_BUILD_TIME", "\"$oNextBoxBuildTime\"")
         buildConfigField("long", "APP_BUILD_TIMESTAMP", "${oNextBoxBuildTimestamp}L")

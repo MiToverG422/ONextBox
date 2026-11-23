@@ -1,5 +1,11 @@
 package com.mi.onextbox.lsp
 
+import android.app.Activity
+import android.graphics.Color
+import android.os.Bundle
+import android.view.View
+import android.widget.Toolbar
+import com.mi.onextbox.R
 import com.mi.onextbox.lsp.LspConfig.PermissionFeature
 import com.mi.onextbox.lsp.compat.ModernHookBridge
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
@@ -11,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap
 /** Selects the APK's existing export UI branches only inside verified presentation calls. */
 internal object PermissionUiStyleHooker {
     private const val TAG = "ONextBox-PermissionUI"
+    private const val MANAGE_PERMISSIONS_ACTIVITY =
+        "com.android.permissioncontroller.permission.ui.ManagePermissionsActivity"
     private val loaders = ConcurrentHashMap.newKeySet<String>()
     private val activeFeature = ThreadLocal<PermissionFeature?>()
     private val reported = ConcurrentHashMap.newKeySet<PermissionFeature>()
@@ -53,7 +61,7 @@ internal object PermissionUiStyleHooker {
         }
         val ui = "com.android.permissioncontroller.permission"
         val oplusUi = "com.oplusos.permissioncontroller.permission.ui"
-        scopeMethods(loader, "$ui.ui.ManagePermissionsActivity",
+        scopeMethods(loader, MANAGE_PERMISSIONS_ACTIVITY,
             PermissionFeature.ExportPermissionPages, "onCreate")
         scopeMethods(loader, "$oplusUi.ManagePermissionsActivityTrampoline",
             PermissionFeature.ExportPermissionPages, "onCreate")
@@ -63,6 +71,7 @@ internal object PermissionUiStyleHooker {
             PermissionFeature.ExportPermissionPages)
         scopeMethods(loader, "$oplusUi.handheld.AppPermissionFragment",
             PermissionFeature.ExportPermissionPages, "onCreate")
+        hookExportToolbar(loader, "$ui.ui.handheld.AppPermissionWrapperFragment")
 
         scopeMethods(loader, "$oplusUi.OplusBaseGrantPermissionsActivity",
             PermissionFeature.NativePermissionDialogs, "onCreate")
@@ -76,6 +85,52 @@ internal object PermissionUiStyleHooker {
             PermissionFeature.NativePermissionDialogs, "onCreate")
         scopeMethods(loader, "$ui.ui.v37.RequestLocationButtonPermissionsActivity",
             PermissionFeature.NativePermissionDialogs, "onCreate")
+    }
+
+    private fun hookExportToolbar(loader: ClassLoader, wrapperName: String) {
+        val wrapper = ModernReflect.findClassIfExists(wrapperName, loader) ?: return
+        runCatching {
+            // ColorOS 16 and 17 both configure the toolbar in this shared wrapper callback.
+            val onActivityCreated = wrapper.superclass.getDeclaredMethod("onActivityCreated", Bundle::class.java)
+            ModernHookBridge.hookMethod(onActivityCreated, object : ModernMethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    if (param.throwable != null ||
+                        !enabled(PermissionFeature.ExportPermissionPages) ||
+                        !enabled(PermissionFeature.ExportPermissionToolbarFix) ||
+                        LspPreferenceStore.readSystemPropertyToggle("persist.sys.permission.enable") != true) return
+                    val fragment = param.thisObject ?: return
+                    runCatching { fixExportToolbar(fragment) }
+                        .onFailure { HookLog.w(TAG, "Unable to fix international permission toolbar", it) }
+                }
+            })
+        }.onFailure { HookLog.w(TAG, "International permission toolbar hook unavailable", it) }
+    }
+
+    private fun fixExportToolbar(fragment: Any) {
+        val activity = ModernReflect.callMethod(fragment, "getActivity") as? Activity ?: return
+        if (activity.javaClass.name != MANAGE_PERMISSIONS_ACTIVITY) return
+        val root = ModernReflect.callMethod(fragment, "getView") as? View ?: return
+        val resources = root.resources
+        val packageName = activity.packageName
+        val appBar = root.findViewById<View>(resources.getIdentifier("app_bar", "id", packageName)) ?: return
+        val toolbar = appBar.findViewById<Toolbar>(resources.getIdentifier("action_bar", "id", packageName)) ?: return
+        val colors = activity.obtainStyledAttributes(R.styleable.ONextBoxPermissionToolbar)
+        try {
+            val background = colors.getColor(
+                R.styleable.ONextBoxPermissionToolbar_android_colorBackground,
+                Color.TRANSPARENT,
+            )
+            val tint = colors.getColorStateList(R.styleable.ONextBoxPermissionToolbar_android_textColorPrimary) ?: return
+            if (Color.alpha(background) != 255) return
+
+            // Cover scrolling content while retaining the page's own theme and collapsing behavior.
+            appBar.setBackgroundColor(background)
+            appBar.bringToFront()
+            toolbar.navigationIcon?.let { toolbar.navigationIcon = it.mutate().apply { setTintList(tint) } }
+            toolbar.overflowIcon?.let { toolbar.overflowIcon = it.mutate().apply { setTintList(tint) } }
+        } finally {
+            colors.recycle()
+        }
     }
 
     private fun enabled(feature: PermissionFeature) = LspConfig.isPermissionFeatureEnabledXposed(feature)

@@ -37,16 +37,16 @@ object AppUpdater {
 
     suspend fun checkAndInstall(
         context: Context,
-        includeBeta: Boolean = AppUpdatePreferences.getBetaPlanEnabled(context),
+        channel: UpdateChannel = AppUpdatePreferences.getUpdateChannel(context),
         installMode: UpdateInstallMode = UpdateInstallMode.Interactive,
     ): UpdateResult {
-        val update = runCatching { checkForUpdate(includeBeta) }
+        val update = runCatching { checkForUpdate(channel) }
             .getOrElse { error ->
                 if (error is CancellationException) throw error
                 return UpdateResult.Failed(error.message ?: error::class.java.simpleName)
             }
             ?: return UpdateResult.NoUpdate
-        if (update.isBeta && !AppUpdatePreferences.getBetaPlanEnabled(context)) return UpdateResult.NoUpdate
+        if (update.channel != AppUpdatePreferences.getUpdateChannel(context)) return UpdateResult.NoUpdate
         return downloadAndInstall(
             context = context,
             update = update,
@@ -55,12 +55,14 @@ object AppUpdater {
     }
 
     suspend fun checkForUpdate(
-        includeBeta: Boolean = false,
+        channel: UpdateChannel,
     ): AvailableUpdate? =
         withContext(Dispatchers.IO) {
             val buildType = AppUpdatePreferences.currentBuildType
-            val update = findLatestRelease(buildType, includeBeta) ?: return@withContext null
-            update.takeIf(::isNewerUpdate)
+            when (channel) {
+                UpdateChannel.Release -> findLatestStableRelease(buildType)
+                UpdateChannel.Ci -> findLatestCiRelease(buildType)?.takeIf(::isNewerUpdate)
+            }
         }
 
     internal suspend fun findReleaseNotes(versionName: String): String? =
@@ -138,7 +140,7 @@ object AppUpdater {
         apkFile: File,
         installMode: UpdateInstallMode = UpdateInstallMode.Interactive,
     ): UpdateResult {
-        if (update.isBeta && !AppUpdatePreferences.getBetaPlanEnabled(context)) return UpdateResult.NoUpdate
+        if (update.channel != AppUpdatePreferences.getUpdateChannel(context)) return UpdateResult.NoUpdate
         markPendingInstallation(context, update, apkFile)
         return runCatching {
             when (installMode) {
@@ -223,7 +225,6 @@ object AppUpdater {
         AppLogStore.i("Updater", "Automatic silent update check started")
         return checkAndInstall(
             context = appContext,
-            includeBeta = AppUpdatePreferences.getBetaPlanEnabled(appContext),
             installMode = UpdateInstallMode.Silent,
         ).also { result ->
             AppLogStore.i("Updater", "Automatic silent update result: $result")
@@ -234,81 +235,65 @@ object AppUpdater {
         AppUpdateRules.compareVersions(first.versionName, second.versionName)
     }
 
-    private fun findLatestRelease(buildType: UpdateBuildType, includeBeta: Boolean): AvailableUpdate? {
-        val results = AppUpdateRules.releaseSources(includeBeta).map { betaSource ->
-            runCatching { findLatestRepositoryRelease(buildType, betaSource) }
-        }
-        // A failed optional source must not hide updates from the other repository.
-        if (results.all { it.isFailure }) throw results.first().exceptionOrNull()!!
-        return results.mapNotNull { it.getOrNull() }.maxWithOrNull(compareByUpdateVersion)
-    }
-
-    private fun findLatestRepositoryRelease(buildType: UpdateBuildType, includeBeta: Boolean): AvailableUpdate? {
-        val apiBase = "https://api.github.com/repos/${AppUpdateRules.repository(includeBeta)}"
+    private fun findLatestStableRelease(buildType: UpdateBuildType): AvailableUpdate? {
+        val apiBase = "https://api.github.com/repos/${AppUpdateRules.MAIN_REPOSITORY}"
         val candidates = mutableListOf<AvailableUpdate>()
         for (page in 1..3) {
             val releases = JSONArray(getText("$apiBase/releases?per_page=100&page=$page"))
             for (index in 0 until releases.length()) {
                 val release = releases.optJSONObject(index) ?: continue
-                val update = releaseUpdate(release, buildType, includeBeta) ?: continue
-                if (!AppUpdateRules.acceptsRelease(
-                        release.optString("tag_name"),
-                        release.optBoolean("draft"),
-                        release.optBoolean("prerelease"),
-                        includeBeta,
-                        release.optString("name"),
-                        update.fileName,
-                    )) continue
-                candidates.add(update)
+                val update = releaseUpdate(release, buildType, UpdateChannel.Release) ?: continue
+                if (isNewerUpdate(update)) candidates.add(update)
             }
             if (releases.length() < 100) break
         }
         return candidates.maxWithOrNull(compareByUpdateVersion)
     }
 
-    private fun findLatestReleaseAsset(
-        url: String,
-        buildType: UpdateBuildType,
-        fromBetaRepository: Boolean = false,
-    ): AvailableUpdate? {
-        return releaseUpdate(JSONObject(getText(url)), buildType, fromBetaRepository)
+    private fun findLatestCiRelease(buildType: UpdateBuildType): AvailableUpdate? {
+        val url = "https://api.github.com/repos/${AppUpdateRules.MAIN_REPOSITORY}/releases/tags/${AppUpdateRules.CI_RELEASE_TAG}"
+        val release = try {
+            JSONObject(getText(url))
+        } catch (error: GitHubRequestException) {
+            if (error.status == 404) return null
+            throw error
+        }
+        return releaseUpdate(release, buildType, UpdateChannel.Ci)
     }
 
-    private fun releaseUpdate(json: JSONObject, buildType: UpdateBuildType, fromBetaRepository: Boolean = false): AvailableUpdate? {
+    private fun releaseUpdate(
+        json: JSONObject,
+        buildType: UpdateBuildType,
+        channel: UpdateChannel,
+    ): AvailableUpdate? {
         if (json.optBoolean("draft")) return null
         val assets = json.optJSONArray("assets") ?: JSONArray()
-        val asset = firstApkAsset(assets, buildType) ?: return null
-        val assetName = asset.optString("name", "")
-        val versionName = AppUpdateRules.releaseVersionName(
-            tag = json.optString("tag_name"),
-            releaseName = json.optString("name"),
-            assetName = assetName,
-            requireBeta = fromBetaRepository,
-        ) ?: return null
-        return AvailableUpdate(
-            versionName = versionName,
-            downloadUrl = asset.getString("browser_download_url"),
-            fileName = assetName.ifBlank {
-                "onextbox-$versionName-${buildType.name.lowercase(Locale.ROOT)}.apk"
-            },
-            fileSizeBytes = asset.optLong("size").takeIf { it > 0L },
-            releaseNotes = normalizeReleaseNotes(json.optString("body")),
-            isArtifactZip = false,
-            isBeta = fromBetaRepository ||
-                (json.optBoolean("prerelease") && !json.optString("tag_name").equals("ci-latest", ignoreCase = true)) ||
-                AppUpdateRules.isBetaVersion(versionName),
-        )
-    }
-
-    private fun firstApkAsset(
-        assets: JSONArray,
-        buildType: UpdateBuildType,
-    ): JSONObject? {
+        val tag = json.optString("tag_name")
+        val title = json.optString("name")
+        val body = json.optString("body")
         for (index in 0 until assets.length()) {
             val asset = assets.optJSONObject(index) ?: continue
-            if (AppUpdateRules.matchesApk(asset.optString("name"), buildType)) {
-                return asset
-            }
+            val assetName = asset.optString("name")
+            if (!AppUpdateRules.matchesApk(assetName, buildType)) continue
+            if (!AppUpdateRules.acceptsRelease(
+                    tag = tag,
+                    draft = false,
+                    prerelease = json.optBoolean("prerelease"),
+                    channel = channel,
+                    releaseName = title,
+                    assetName = assetName,
+                )
+            ) continue
+            val versionName = AppUpdateRules.releaseVersionName(tag, title, assetName) ?: continue
+            return AvailableUpdate(
+                versionName = versionName,
+                versionCode = AppUpdateRules.releaseVersionCode(body),
+                downloadUrl = asset.getString("browser_download_url"),
+                fileName = assetName,
+                fileSizeBytes = asset.optLong("size").takeIf { it > 0L },
+                releaseNotes = normalizeReleaseNotes(body),
+                channel = channel,
+            )
         }
         return null
     }
@@ -592,21 +577,17 @@ object AppUpdater {
     }
 
     private fun isNewerUpdate(update: AvailableUpdate): Boolean {
-        if (update.isBeta) return AppUpdateRules.isNewerBetaVersion(update.versionName, BuildConfig.VERSION_NAME)
-        if (isNewerVersion(update.versionName, BuildConfig.VERSION_NAME)) return true
-        return update.versionCode?.let { it > BuildConfig.VERSION_CODE.toLong() } == true
+        return AppUpdateRules.isNewerInstallableVersion(
+            update.versionName, BuildConfig.VERSION_NAME, update.versionCode, BuildConfig.VERSION_CODE.toLong(),
+        )
     }
 
     private fun isNewerVersion(remote: String, current: String): Boolean {
         return AppUpdateRules.isNewerVersion(remote, current)
     }
 
-    private fun String.removeVersionPrefix(): String {
-        return trim().replaceFirst(Regex("^v", RegexOption.IGNORE_CASE), "")
-    }
-
     private fun normalizeReleaseNotes(markdown: String): String? {
-        return markdown
+        return AppUpdateRules.releaseNotesText(markdown)
             .lineSequence()
             .map { line ->
                 line
@@ -655,7 +636,7 @@ data class AvailableUpdate(
     val fileSizeBytes: Long? = null,
     val releaseNotes: String? = null,
     val isArtifactZip: Boolean = false,
-    val isBeta: Boolean = false,
+    val channel: UpdateChannel = UpdateChannel.Release,
 )
 
 data class DownloadProgress(

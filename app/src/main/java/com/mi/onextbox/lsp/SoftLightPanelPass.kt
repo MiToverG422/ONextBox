@@ -27,6 +27,7 @@ internal class SoftLightPanelPass(
     private val skipWhiteControl: () -> Boolean,
     private val skipWhiteVolume: () -> Boolean,
     private val pluginMaterial: () -> Boolean,
+    private val active: () -> Boolean,
     private val report: (String) -> Unit,
 ) {
     private class Surface(val view: WeakReference<View>, val role: Int, val locked: Boolean)
@@ -146,7 +147,7 @@ internal class SoftLightPanelPass(
                     it.name == "onDraw" && it.parameterTypes.contentEquals(arrayOf(Canvas::class.java))
                 } ?: continue
                 ModernHookRegistry.installFast("soft-light:panel-draw:$name", method, XposedInterface.Hooker { chain ->
-                    withRole(owner) { chain.proceed() }
+                    if (active()) withRole(owner) { chain.proceed() } else chain.proceed()
                 })
             }
         }
@@ -204,6 +205,7 @@ internal class SoftLightPanelPass(
         }
         wrapper?.getDeclaredMethod("draw", Canvas::class.java)?.let { method ->
             ModernHookRegistry.installFast("soft-light:surface-draw", method, XposedInterface.Hooker { chain ->
+                if (!active()) return@Hooker chain.proceed()
                 val drawable = chain.thisObject as Drawable
                 val selected = kinds[drawable] ?: if (progressRadii.containsKey(drawable)) VOLUME_PROGRESS else return@Hooker chain.proceed()
                 if (selected == FOREGROUND && skipWhiteControl()) {

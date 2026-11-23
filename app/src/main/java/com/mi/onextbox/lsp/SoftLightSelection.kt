@@ -94,6 +94,7 @@ internal class SoftLightSelection(private val enabled: () -> Boolean) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         val draw = plugin.getDeclaredMethod("draw", Canvas::class.java)
         ModernHookRegistry.installFast("soft-light:device-background", draw, XposedInterface.Hooker { chain ->
+            if (!enabled()) return@Hooker chain.proceed()
             val owner = chain.thisObject as DrawableWrapper
             if (!recipes.active(owner, recipe.invoke(config.get(owner)))) return@Hooker chain.proceed()
             val view = owner.callback as? View ?: return@Hooker chain.proceed()

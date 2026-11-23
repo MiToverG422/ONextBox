@@ -17,6 +17,11 @@ internal object LauncherIosMotionProfile {
         "SWIPE_TO_HOME", "SWIPE_TO_CLIENT_HOME" -> RouteKind.SwipeToHome
         else -> null
     }
+
+    // Fixed portrait and landscape frames both use the host's window and icon coordinates.
+    fun supportsFullscreenFrame(width: Int, height: Int, fullscreen: Boolean, widget: Boolean, rotating: Boolean) =
+        fullscreen && !widget && !rotating && width > 0 && height > 0
+
     fun response(opening: Boolean, config: Config): Double {
         val speed = (if (opening) config.openSpeed else config.closeSpeed).coerceIn(50, 200)
         return (if (opening) .24 else .336) * config.slowMotion.coerceIn(100, 500) / speed

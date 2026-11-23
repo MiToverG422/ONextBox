@@ -9,12 +9,17 @@ internal data class ReleaseNotesEntry(
 ) {
     fun matches(version: String): Boolean {
         if (draft) return false
-        val beta = AppUpdateRules.isBetaVersion(version)
+        val normalized = AppUpdateRules.versionNameRegex.find(version)?.value ?: return false
+        if (tag.equals(AppUpdateRules.CI_RELEASE_TAG, ignoreCase = true)) {
+            return assetNames.any { asset ->
+                AppUpdateRules.releaseVersionName(tag, name, asset).equals(normalized, ignoreCase = true)
+            }
+        }
         val identities = listOf(tag, name) + assetNames
-        if (!beta && identities.any(AppUpdateRules::isBetaVersion)) return false
+        if (identities.any { AppUpdateRules.isLegacyBeta(it) || AppUpdateRules.isCiVersion(it) }) return false
         val candidate = identities.mapNotNull { AppUpdateRules.versionNameRegex.find(it)?.value }
-            .firstOrNull { AppUpdateRules.isBetaVersion(it) == beta } ?: return false
-        return candidate.equals(version.trim().removePrefix("v").removePrefix("V"), ignoreCase = true)
+            .firstOrNull() ?: return false
+        return candidate.equals(normalized, ignoreCase = true)
     }
 }
 
@@ -24,7 +29,10 @@ internal object ReleaseNotesLookup {
         byTag: (repository: String, tag: String) -> ReleaseNotesEntry?,
         page: (repository: String, page: Int) -> List<ReleaseNotesEntry>,
     ): ReleaseNotesEntry? {
-        val repository = AppUpdateRules.repository(AppUpdateRules.isBetaVersion(version))
+        val repository = AppUpdateRules.MAIN_REPOSITORY
+        if (AppUpdateRules.isCiVersion(version)) {
+            return byTag(repository, AppUpdateRules.CI_RELEASE_TAG)?.takeIf { it.matches(version) }
+        }
         val normalized = version.trim().removePrefix("v").removePrefix("V")
         for (tag in listOf("V$normalized", "v$normalized", normalized).distinct()) {
             val release = byTag(repository, tag)

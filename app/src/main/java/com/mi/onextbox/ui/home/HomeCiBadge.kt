@@ -29,9 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-internal fun HomeBetaBadge() {
+internal fun HomeCiBadge() {
     Layout(
-        modifier = Modifier.size(90.dp).clipToBounds().testTag("homeBetaBadge"),
+        modifier = Modifier.size(90.dp).clipToBounds().testTag("homeCiBadge"),
         content = { GoldBetaRibbon() },
     ) { measurables, constraints ->
         val ribbonWidth = 128.dp.roundToPx()
@@ -51,7 +51,7 @@ internal fun HomeBetaBadge() {
 private fun GoldBetaRibbon() {
     val density = LocalDensity.current
     BasicText(
-        text = "BETA",
+        text = "CI",
         maxLines = 1,
         style = TextStyle(
             color = Color(0xFF503006),

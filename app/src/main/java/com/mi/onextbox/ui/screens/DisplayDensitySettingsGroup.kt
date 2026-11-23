@@ -1,5 +1,8 @@
 package com.mi.onextbox.ui.screens
 
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalConfiguration
@@ -27,6 +30,15 @@ internal fun DisplayDensitySettingsGroup() {
         state = withContext(Dispatchers.IO) { runCatching { DisplayDensity.read(ctx) }.getOrNull() }
     }
     LaunchedEffect(density) { refresh() }
+    DisposableEffect(ctx) {
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                scope.launch { refresh() }
+            }
+        }
+        ctx.contentResolver.registerContentObserver(DisplayDensity.resultUri(ctx), false, observer)
+        onDispose { ctx.contentResolver.unregisterContentObserver(observer) }
+    }
     fun save(onFailure: () -> Unit = {}, block: () -> Unit) {
         if (busy) return
         busy = true
