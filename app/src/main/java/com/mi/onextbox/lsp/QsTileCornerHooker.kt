@@ -42,7 +42,8 @@ internal object QsTileCornerHooker {
         val provider = Reflect.findClassIfExists("com.oplusos.systemui.common.outline.RoundRectOutlineProvider", loader) ?: return
         val observers = QsCornerViewObservers(VIEWS,
             onLayout = { updateSafely(it, provider, refreshChildren = true) },
-            content = ::contentState) { updateSafely(it, provider, refreshChildren = true) }
+            content = ::contentState,
+            onRefresh = { hierarchy?.refresh() }) { updateSafely(it, provider, refreshChildren = true) }
         val types = listOf(RESIZEABLE, "${RESIZEABLE}OneXOne", "${RESIZEABLE}TwoXOne", "${RESIZEABLE}TwoXTwo",
             "com.oplus.systemui.plugins.qs.customize.view.tile.OplusQSResizeableThreeStageView",
             STANDARD, HIGHLIGHT, MEDIA, SCENARIO,

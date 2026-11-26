@@ -24,8 +24,10 @@ internal object SideVolumePercentageSettings {
             QsSliderPercentageRules.offset(it.getInt(OFFSET, QsSliderPercentageRules.DEFAULT_OFFSET)))
     }
 
+    fun enabledXposed() = HookConfigSnapshot.boolean(ENABLED, false) == true
+
     fun stateXposed() = QsSliderPercentageSettings.State(
-        HookConfigSnapshot.boolean(ENABLED, false) == true,
+        enabledXposed(),
         QsSliderPercentageRules.size(HookConfigSnapshot.int(SIZE, QsSliderPercentageRules.DEFAULT_SIZE_SP)
             ?: QsSliderPercentageRules.DEFAULT_SIZE_SP),
         HookConfigSnapshot.long(COLOR),

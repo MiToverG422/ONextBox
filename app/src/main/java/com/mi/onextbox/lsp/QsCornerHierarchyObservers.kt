@@ -12,8 +12,7 @@ internal class QsCornerHierarchyObservers(key: String, private val found: (View)
     private val roots = WeakHashMap<ViewGroup, Guard>()
     init {
         HotReloadLifecycle.register(key,
-            detach = { synchronized(roots) { roots.values.toList() }.forEach { it.dispose() } },
-            restore = { synchronized(roots) { roots.values.toList() }.forEach { it.attach() } })
+            detach = { synchronized(roots) { roots.values.toList() }.forEach { it.dispose() } })
         registerRoots(key)
     }
     // Older generations tracked device cards with a second observer on the same QS root.
@@ -27,7 +26,14 @@ internal class QsCornerHierarchyObservers(key: String, private val found: (View)
             replay = { saved -> (saved as? Array<*>)?.filterIsInstance<ViewGroup>()?.forEach(::watch) })
     }
     fun watch(root: ViewGroup) {
-        synchronized(roots) { roots.getOrPut(root) { Guard(root) } }.attach()
+        val guard = synchronized(roots) { roots.getOrPut(root) { Guard(root) } }
+        if (!HotReloadLifecycle.isStaging && QsTileCornerSettings.enabledXposed()) guard.attach()
+    }
+    fun refresh() {
+        val enabled = QsTileCornerSettings.enabledXposed()
+        synchronized(roots) { roots.values.toList() }.forEach { guard ->
+            if (enabled) guard.attach() else guard.dispose()
+        }
     }
     private inner class Guard(root: ViewGroup) : View.OnAttachStateChangeListener, ViewTreeObserver.OnGlobalLayoutListener {
         private val target = WeakReference(root)

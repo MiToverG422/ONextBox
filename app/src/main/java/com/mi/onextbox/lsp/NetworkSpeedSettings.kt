@@ -23,7 +23,9 @@ internal object NetworkSpeedSettings {
         val fontSizeDp: Int = 9,
         val hideLowSpeed: Boolean = false,
         val lowSpeedThresholdKbps: Int = DEFAULT_THRESHOLD_KBPS,
-    )
+    ) {
+        val customAppearance get() = hidePerSecond || hideUnits || singleLine || followFontWeight || customFontSize
+    }
 
     fun normalize(state: State) = state.copy(
         intervalMs = state.intervalMs.coerceIn(500, 10000),
@@ -40,7 +42,17 @@ internal object NetworkSpeedSettings {
             enabled(Feature.HideLowSpeed), prefs.getInt(LOW_SPEED_THRESHOLD, DEFAULT_THRESHOLD_KBPS)))
     }
 
+    @Volatile private var cached: Pair<Any, State>? = null
+
     fun snapshot(): State {
+        val identity = HookConfigSnapshot.identity
+        cached?.let { if (it.first === identity) return it.second }
+        val state = readSnapshot()
+        if (identity != null && HookConfigSnapshot.identity === identity) cached = identity to state
+        return state
+    }
+
+    private fun readSnapshot(): State {
         fun enabled(feature: Feature) = LspConfig.isNetworkSpeedFeatureEnabledXposed(feature)
         return normalize(State(enabled(Feature.CustomRefreshInterval), HookConfigSnapshot.int(INTERVAL, 1000) ?: 1000,
             enabled(Feature.HidePerSecond), enabled(Feature.HideUnits), enabled(Feature.SingleLine),

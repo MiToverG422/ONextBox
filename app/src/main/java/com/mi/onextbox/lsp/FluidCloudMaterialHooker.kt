@@ -24,28 +24,50 @@ internal fun fluidCloudAnimationPolicy(loader: ClassLoader): java.lang.reflect.M
 /** Unifies card backgrounds while preserving native layout, controls and content transitions. */
 internal object FluidCloudMaterialHooker {
     private const val TAG = "ONextBox-FluidMaterial"
+    private const val STATE = "fluid-material:views"
     private val installed = ConcurrentHashMap.newKeySet<ClassLoader>()
+    private val pluginLoaders = ConcurrentHashMap.newKeySet<ClassLoader>()
     private val diagnosed = ConcurrentHashMap.newKeySet<String>()
     private val applied = ConcurrentHashMap.newKeySet<String>()
     private lateinit var material: FluidCloudNotificationMaterial
     private lateinit var expandedMaterial: FluidCloudExpandedMaterialHooks
+    @Volatile private var materialHooksInstalled = false
 
     fun hook(loader: ClassLoader) {
+        // The plugin factory can run before the feature is enabled. Record its loader
+        // here so the first live enable can bind an already loaded plugin.
+        HotReloadLifecycle.registerReplay("fluid-material:plugins",
+            capture = { pluginLoaders.toTypedArray() },
+            replay = { saved -> (saved as? Array<*>)?.filterIsInstance<ClassLoader>()?.forEach(::rememberPlugin) })
+        watchPluginFactory(loader)
+        SystemUiHookActivation.install(STATE, setOf(LspConfig.KEY_FLUID_CLOUD_MATERIAL), ::enabled) {
+            installMaterialHooks(loader)
+        }
+    }
+
+    private fun installMaterialHooks(loader: ClassLoader) {
         material = FluidCloudNotificationMaterial(loader, ::diagnose)
         expandedMaterial = FluidCloudExpandedMaterialHooks(::enabled, ::logged, ::diagnose)
-        HotReloadLifecycle.register("fluid-material:views",
+        HotReloadLifecycle.register(STATE,
             capture = { material.captureReloadState() },
             detach = { material.releaseAll() },
             restore = { material.restoreReloadState(it) })
-        HotReloadLifecycle.registerReplay("fluid-material:plugins",
-            capture = { installed.toTypedArray() },
-            replay = { saved -> (saved as? Array<*>)?.filterIsInstance<ClassLoader>()?.forEach(::installPlugin) })
         HotReloadLifecycle.registerReplay("fluid-material:expanded-backgrounds",
             capture = { expandedMaterial.captureReloadState() },
             replay = { expandedMaterial.restoreReloadState(it) })
         installNormalNotificationAod(loader)
         installPanelMaterial(loader)
         installFlashlightMaterial(loader)
+        materialHooksInstalled = true
+        pluginLoaders.forEach(::installPlugin)
+    }
+
+    private fun rememberPlugin(loader: ClassLoader) {
+        pluginLoaders += loader
+        if (materialHooksInstalled) installPlugin(loader)
+    }
+
+    private fun watchPluginFactory(loader: ClassLoader) {
         runCatching {
             val factory = Reflect.findClass("com.android.systemui.shared.plugins.PluginInstance\$PluginFactory", loader)
             for (name in listOf("createClassLoader", "createPluginContext")) {
@@ -56,7 +78,7 @@ internal object FluidCloudMaterialHooker {
                         val info = Reflect.getObjectField(requireNotNull(chain.thisObject), "pluginAppInfo") as? ApplicationInfo
                         if (info?.packageName == FluidCloudMaterialRules.PLUGIN_PACKAGE) {
                             val pluginLoader = (result as? ClassLoader) ?: (result as? Context)?.classLoader
-                            pluginLoader?.let(::installPlugin)
+                            pluginLoader?.let(::rememberPlugin)
                         }
                     }.onFailure { diagnose("Plugin material hook unavailable", it) }
                     result

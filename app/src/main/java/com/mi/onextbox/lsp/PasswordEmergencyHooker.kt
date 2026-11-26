@@ -14,6 +14,7 @@ import java.util.WeakHashMap
 internal object PasswordEmergencyHooker {
     private const val TAG = "ONextBox-PasswordEmergency"
     private const val BUTTON = "com.android.keyguard.EmergencyButton"
+    private val feature = LspConfig.KeyguardFeature.HidePasswordEmergency
     private val hosts = setOf("com.oplus.keyguard.security.view.OplusKeyguardPinView",
         "com.oplus.keyguard.security.view.OplusKeyguardFixedPinView",
         "com.oplus.keyguard.security.view.OplusKeyguardPasswordView",
@@ -32,7 +33,11 @@ internal object PasswordEmergencyHooker {
         val update = button.getDeclaredMethod("updateEmergencyCallButton", *Array(4) { Boolean::class.javaPrimitiveType!! })
     }
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(TAG, setOf(feature.key), ::enabled) { late ->
+        install(loader, late)
+    }
+
+    private fun install(loader: ClassLoader, late: Boolean) {
         runCatching {
             val targets = Targets(loader)
             ModernHookRegistry.installCompat("$TAG:visibility", targets.visibility, object : ModernMethodHook() {
@@ -52,13 +57,14 @@ internal object PasswordEmergencyHooker {
                 override fun afterHookedMethod(param: MethodHookParam) { (param.thisObject as? View)?.let(::reconcile) }
             })
             fun observe(key: String, method: java.lang.reflect.Method, detach: Boolean = false) {
-                ModernHookRegistry.installCompat("$TAG:$key", method, object : ModernMethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        if (applying || !targets.button.isInstance(param.thisObject)) return
-                        val button = param.thisObject as View
+                ModernHookRegistry.installFast("$TAG:$key", method) { chain ->
+                    val result = chain.proceed()
+                    val button = chain.thisObject as? View
+                    if (!applying && button != null && targets.button.isInstance(button)) {
                         if (detach) restore(button, buttons.remove(button)) else reconcile(button)
                     }
-                })
+                    result
+                }
             }
             observe("attach", targets.attach)
             observe("detach", targets.detach, detach = true)
@@ -76,6 +82,7 @@ internal object PasswordEmergencyHooker {
                         reconcile(button)
                     }
                 })
+            if (late) SystemUiWindowViews.find(loader, targets.button::isInstance).forEach(::reconcile)
         }.onFailure {
             ModernHookRegistry.unhookPrefix(TAG)
             buttons.toMap().forEach { (button, state) -> restore(button, state) }
@@ -94,12 +101,13 @@ internal object PasswordEmergencyHooker {
     }
 
     private fun state(button: View) = buttons.getOrPut(button) { State(button.visibility) }
+    private fun enabled() = LspConfig.isKeyguardFeatureEnabledXposed(feature)
 
     // This guarded query runs in SystemUI with the host's phone permission;
     // the module APK intentionally does not request access to phone state.
     @SuppressLint("MissingPermission")
     private fun hide(button: View, state: State): Boolean {
-        val enabled = LspConfig.isKeyguardFeatureEnabledXposed(LspConfig.KeyguardFeature.HidePasswordEmergency)
+        val enabled = enabled()
         val passwordPage = passwordHost(button) != null
         if (enabled && passwordPage && state.inCall == null &&
             button.context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {

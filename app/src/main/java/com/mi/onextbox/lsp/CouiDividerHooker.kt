@@ -9,6 +9,7 @@ import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernReflect
 import io.github.libxposed.api.XposedInterface
+import java.lang.reflect.Constructor
 import java.lang.reflect.Modifier
 import java.util.Collections
 import java.util.WeakHashMap
@@ -19,13 +20,21 @@ internal object CouiDividerHooker {
     private const val RECYCLER = "androidx.recyclerview.widget.RecyclerView"
     private const val COUI_RECYCLER = "androidx.recyclerview.widget.COUIRecyclerView"
 
-    fun hook(packageName: String, loader: ClassLoader, apkPath: String) {
+    fun hook(packageName: String, loader: ClassLoader, apkPath: String, systemUi: Boolean) {
         if (packageName == "android" || packageName == "system" || packageName == "com.mi.onextbox") return
         val installHooks = {
             RuntimeDiagnostics.measure("CouiDividerHooker.hook") { install(packageName, loader, apkPath) }
         }
-        if (packageName == "com.android.systemui") {
-            SystemUiHookActivation.install(CouiDividerViewHooker.STATE, setOf(CouiDividerSettings.ENABLED), CouiDividerSettings::enabledXposed) {
+        if (systemUi) {
+            // Package-ready callbacks also report isolated clock and UI-engine loaders
+            // inside SystemUI. Those loaders must not install the process-wide View hook while off.
+            val state = CouiDividerViewHooker.STATE
+            val key = if (packageName == "com.android.systemui") state else "$state:$packageName@${System.identityHashCode(loader)}"
+            SystemUiHookActivation.install(key, setOf(CouiDividerSettings.ENABLED), CouiDividerSettings::enabledXposed,
+                legacyTarget = if (key == state) null else { target ->
+                    target is Constructor<*> && target.declaringClass == View::class.java && target.parameterCount == 4
+                },
+            ) {
                 ApkDexSession.withSession(apkPath) { installHooks() }
             }
         } else {

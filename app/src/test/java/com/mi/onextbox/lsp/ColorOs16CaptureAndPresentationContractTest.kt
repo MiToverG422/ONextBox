@@ -23,7 +23,7 @@ class ColorOs16CaptureAndPresentationContractTest {
     @Test fun c16VolumeInheritedDrawIsRestrictedToTheActualOemSubtype() {
         val text = source("SideVolumePercentageHooker.kt")
         assertTrue(text.contains("hook(loader, inheritedDraw = true)"))
-        assertTrue(text.contains("if (!type.isInstance(param.thisObject)) return"))
+        assertTrue(text.contains("if (!type.isInstance(chain.thisObject)"))
         assertTrue(text.contains("drawing.track.set(Reflect.getObjectField(view, \"mBackgroundRect\") as Rect)"))
         assertTrue(text.contains("else Reflect.callMethod(view, \"copyBackgroundRect\", drawing.track)"))
     }

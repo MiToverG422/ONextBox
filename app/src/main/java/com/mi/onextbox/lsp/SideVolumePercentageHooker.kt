@@ -4,6 +4,7 @@ import android.graphics.Canvas
 import android.graphics.Rect
 import android.util.TypedValue
 import android.view.View
+import com.mi.onextbox.diagnostics.RuntimeDiagnostics
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernMethodHook
@@ -14,6 +15,7 @@ import java.util.WeakHashMap
 internal object SideVolumePercentageHooker {
     private const val SEEK = "com.oplus.systemui.volume.OplusVolumeSeekBar"
     private const val TAG = "ONextBox-SideVolumePercentage"
+    private const val VIEWS = "volume:percentage-views"
     private class Drawing(view: View) {
         val style = QsSliderPercentageHooker.NativeStyle(view)
         val track = Rect()
@@ -28,13 +30,20 @@ internal object SideVolumePercentageHooker {
 
     fun hookColorOs16(loader: ClassLoader) = hook(loader, inheritedDraw = true)
 
-    private fun hook(loader: ClassLoader, inheritedDraw: Boolean) {
+    private fun hook(loader: ClassLoader, inheritedDraw: Boolean) = SystemUiHookActivation.install(
+        "$VIEWS:views", setOf(SideVolumePercentageSettings.ENABLED), SideVolumePercentageSettings::enabledXposed,
+    ) { late ->
+        val name = if (inheritedDraw) "ColorOs16SystemUI.volume-percentage" else "SideVolumePercentageHooker.hook"
+        RuntimeDiagnostics.measure(name) { install(loader, inheritedDraw, late) }
+    }
+
+    private fun install(loader: ClassLoader, inheritedDraw: Boolean, late: Boolean) {
         val type = Reflect.findClassIfExists(SEEK, loader) ?: return
         // C16's subclass inherits COUIVerticalSeekBar.onDraw; C17 overrides it.
         val drawType = if (inheritedDraw) generateSequence(type as Class<*>?) { it.superclass }
             .firstOrNull { owner -> owner.declaredMethods.any { it.name == "onDraw" &&
                 it.parameterTypes.contentEquals(arrayOf(Canvas::class.java)) } } ?: return else type
-        val observers = QsCornerViewObservers("volume:percentage-views",
+        val observers = QsCornerViewObservers(VIEWS,
             content = { drawing(it).style.refresh() },
             configurationToken = { SideVolumePercentageSettings.configurationTokenXposed() },
             settingsKeys = SideVolumePercentageSettings.keys,
@@ -49,21 +58,20 @@ internal object SideVolumePercentageHooker {
         }
         drawType.declaredMethods.filter { it.name == "onDraw" && it.parameterTypes.contentEquals(arrayOf(Canvas::class.java)) }
             .forEach { method ->
-                ModernHookRegistry.installCompat("$TAG:draw", method, object : ModernMethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        if (param.throwable != null || HotReloadLifecycle.isRetiring) return
-                        if (!type.isInstance(param.thisObject)) return
-                        val state = SideVolumePercentageSettings.stateXposed()
-                        if (!state.enabled) return
-                        val view = param.thisObject as? View ?: return
-                        observers.watch(view)
-                        val canvas = param.args.firstOrNull() as? Canvas ?: return
-                        runCatching { draw(view, canvas, state, inheritedDraw) }.onFailure {
-                            if (!reported) { reported = true; HookLog.w(TAG, "Volume popup percentage unavailable", it) }
-                        }
+                ModernHookRegistry.installFast("$TAG:draw", method) { chain ->
+                    val result = chain.proceed()
+                    if (!type.isInstance(chain.thisObject) || HotReloadLifecycle.isRetiring ||
+                        !SideVolumePercentageSettings.enabledXposed()) return@installFast result
+                    val view = chain.thisObject as View
+                    observers.watch(view)
+                    val canvas = chain.getArg(0) as? Canvas ?: return@installFast result
+                    runCatching { draw(view, canvas, SideVolumePercentageSettings.stateXposed(), inheritedDraw) }.onFailure {
+                        if (!reported) { reported = true; HookLog.w(TAG, "Volume popup percentage unavailable", it) }
                     }
-                })
+                    result
+                }
             }
+        if (late) SystemUiWindowViews.find(loader, type::isInstance).forEach(observers::watch)
     }
 
     private fun draw(view: View, canvas: Canvas, state: QsSliderPercentageSettings.State, inheritedDraw: Boolean) {

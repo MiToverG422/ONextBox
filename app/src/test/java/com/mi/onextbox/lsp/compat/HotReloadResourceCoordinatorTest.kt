@@ -15,6 +15,32 @@ class HotReloadResourceCoordinatorTest {
     private fun hookResult(owner: HotReloadResourceCoordinator) =
         owner.withHook(fallback = { "original" }, action = { "module" })
 
+    @Test fun pendingFeatureCanWaitUntilTheReplacementGateOpens() {
+        val owner = coordinator()
+        owner.begin(emptyMap())
+        assertTrue(owner.isStaging)
+        var activation: (() -> String)? = null
+        owner.afterCommit {
+            assertTrue(owner.isStaging)
+            assertEquals("original", hookResult(owner))
+            activation = { hookResult(owner) }
+        }
+        assertNull(activation)
+        owner.complete()
+        assertFalse(owner.isStaging)
+        assertEquals("module", checkNotNull(activation).invoke())
+    }
+
+    @Test fun capturedNullStillIdentifiesAnExistingResourceOwner() {
+        val old = coordinator()
+        old.register("pin-swipe")
+        val replacement = coordinator()
+        replacement.begin(old.prepare())
+        assertNull(replacement.restoredState("pin-swipe"))
+        assertTrue(replacement.hasRestoredState("pin-swipe"))
+        assertFalse(replacement.hasRestoredState("never-installed"))
+    }
+
     @Test fun busyPreflightKeepsLiveCallbacksActive() {
         val owner = coordinator()
         owner.register("native-network", canPrepare = {

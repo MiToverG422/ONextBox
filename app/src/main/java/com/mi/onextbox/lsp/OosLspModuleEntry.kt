@@ -219,15 +219,16 @@ class OosLspModuleEntry : XposedModule() {
     private fun dispatchPackageHooks(target: ReloadTarget) {
         val packageName = target.packageName
         val classLoader = target.classLoader
+        val hostProcess = processName.substringBefore(':')
 
         // Auxiliary package callbacks must not bind the launcher's adapter using another APK's loader.
-        if (processName.substringBefore(':') == PACKAGE_LAUNCHER && packageName != PACKAGE_LAUNCHER) return
+        if (hostProcess == PACKAGE_LAUNCHER && packageName != PACKAGE_LAUNCHER) return
         SystemAdaptationDetector.initialize(packageName, classLoader)
         val profile = AdaptationHookGate.bind()
         // Recovery and genuine phone reads stay active when feature hooks enter safe mode.
         preparePhoneRecovery(target)
         if (!AdaptationHookGate.isActive(profile)) return
-        CouiDividerHooker.hook(packageName, classLoader, target.sourceDir)
+        CouiDividerHooker.hook(packageName, classLoader, target.sourceDir, systemUi = hostProcess == PACKAGE_SYSTEM_UI)
         if (profile == SystemAdaptationVersion.ColorOs17) {
             runCatching { SoftLightGlassHooker.hook(packageName, processName, classLoader, target.sourceDir) }
                 .onFailure { HookLog.w("ONextBox-SoftLight", "Material hooks unavailable in $packageName", it) }
@@ -263,15 +264,13 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("DataSimSignalHooker.hook") { DataSimSignalHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("StatusBarLayoutHooker.hook") { StatusBarLayoutHooker.hook(classLoader) }
                 SystemUiAppearanceHooker.hook(classLoader)
-                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PowerIndicatorHooker.hook") { PowerIndicatorHooker.hook(classLoader) }
+                PowerIndicatorHooker.hook(classLoader)
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("RotationSuggestionHooker.hook") { RotationSuggestionHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CarrierNameHooker.hook") { CarrierNameHooker.hook(classLoader) }
                 QsTileCornerHooker.hook(classLoader)
                 QsSliderPercentageHooker.hook(classLoader)
-                runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SideVolumePercentageHooker.hook") { SideVolumePercentageHooker.hook(classLoader) } }
-                    .onFailure { HookLog.w("ONextBox-SideVolumePercentage", "Volume popup percentage adapter unavailable", it) }
-                runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SideVolumeAppearanceHooker.hook") { SideVolumeAppearanceHooker.hook(classLoader) } }
-                    .onFailure { HookLog.w("ONextBox-SideVolumeAppearance", "Volume popup appearance adapter unavailable", it) }
+                SideVolumePercentageHooker.hook(classLoader)
+                SideVolumeAppearanceHooker.hook(classLoader)
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SideKeySystemUiHooker.hook") { SideKeySystemUiHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("ImmersiveNavigationHooker.hook") { ImmersiveNavigationHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("AospBackPanelHooker.hook") { AospBackPanelHooker.hook(classLoader) }
@@ -293,8 +292,8 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SystemUiRedOneHooker.hook") { SystemUiRedOneHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NotificationRemovalHooker.hookSystemUi") { NotificationRemovalHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NotificationClearButtonHooker.hook") { NotificationClearButtonHooker.hook(classLoader) }
-                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("HideNotificationClearHooker.hook") { HideNotificationClearHooker.hook(classLoader) }
-                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("RetainLockscreenNotificationsHooker.hook") { RetainLockscreenNotificationsHooker.hook(classLoader) }
+                HideNotificationClearHooker.hook(classLoader)
+                RetainLockscreenNotificationsHooker.hook(classLoader)
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SmallWindowHooker.hookSystemUi") { SmallWindowHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("NetworkSpeedHooker.hook") { NetworkSpeedHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FaceTapUnlockHooker.hook") { FaceTapUnlockHooker.hook(classLoader) }

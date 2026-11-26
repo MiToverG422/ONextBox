@@ -6,6 +6,7 @@ internal class FluidCloudPanelDrawGate {
 
     fun <T> duringDraw(useNotificationMaterial: Boolean, draw: () -> T): T {
         val previous = pending.get()
+        if (!useNotificationMaterial && previous != true) return draw()
         pending.set(useNotificationMaterial)
         return try {
             draw()

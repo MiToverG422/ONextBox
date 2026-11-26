@@ -3,7 +3,6 @@ package com.mi.onextbox.lsp
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.view.ViewGroup
 import android.widget.TextView
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
@@ -15,12 +14,16 @@ import java.util.WeakHashMap
 
 internal object ClockSpacingHooker {
     private const val PREFIX = "clock-spacing:"
+    private const val VIEWS = PREFIX + "views"
     private val hosts = WeakHashMap<TextView, Unit>()
     private val main = Handler(Looper.getMainLooper())
-    private var bootstrap: Runnable? = null
     private var restoring = false
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(
+        VIEWS, setOf(ClockPeriodSettings.COMPACT), ClockPeriodSettings::compactXposed,
+    ) { install(loader) }
+
+    private fun install(loader: ClassLoader) {
         runCatching {
             val type = Reflect.findClass(ClockPeriodHooker.CLOCK, loader)
             val stat = Reflect.findClass(ClockPeriodHooker.STAT_CLOCK, loader)
@@ -44,10 +47,9 @@ internal object ClockSpacingHooker {
             }
             ModernHookRegistry.installCompat(PREFIX + "measure", measure, object : ModernMethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    if (param.throwable != null) return
+                    if (param.throwable != null || !enabled()) return
                     val view = param.thisObject as TextView
-                    hosts[view] = Unit
-                    if (!enabled()) return
+                    if (view !in hosts) hosts[view] = Unit
                     val width = compact(view, view.measuredWidth)
                     if (width != view.measuredWidth) {
                         measureText.invokeSpecial(view,
@@ -72,28 +74,27 @@ internal object ClockSpacingHooker {
                     }
                 }
             })
-            HotReloadLifecycle.register(PREFIX + "views",
+            val bootstrap = Runnable {
+                if (enabled()) SystemUiWindowViews.find(loader, stat::isInstance).filterIsInstance<TextView>().forEach {
+                    hosts[it] = Unit
+                    refresh(it)
+                }
+            }
+            fun scheduleRefresh() {
+                main.removeCallbacks(bootstrap)
+                main.post(bootstrap)
+            }
+            HotReloadLifecycle.register(VIEWS,
                 capture = { hosts.keys.toTypedArray() },
                 detach = {
-                    bootstrap?.let(main::removeCallbacks)
-                    bootstrap = null
+                    main.removeCallbacks(bootstrap)
                     restoring = true
                     try { hosts.keys.toList().forEach(::refresh) } finally { restoring = false; hosts.clear() }
                 },
                 restore = { state -> (state as? Array<*>)?.filterIsInstance<TextView>()?.forEach(::refresh) },
+                resumeAfterRejection = ::scheduleRefresh,
             )
-            bootstrap = Runnable {
-                bootstrap = null
-                if (!HotReloadLifecycle.isRetiring) runCatching {
-                    val global = Reflect.callStaticMethod(Reflect.findClass("android.view.WindowManagerGlobal", loader), "getInstance")
-                    val roots = global?.let { Reflect.getObjectField(it, "mViews") } as? List<*> ?: return@runCatching
-                    fun visit(view: View) {
-                        if (stat.isInstance(view)) { hosts[view as TextView] = Unit; refresh(view) }
-                        else if (view is ViewGroup) for (i in 0 until view.childCount) visit(view.getChildAt(i))
-                    }
-                    roots.filterIsInstance<View>().forEach(::visit)
-                }.onFailure { HookLog.w("ONextBox-ClockSpacing", "Clock spacing will refresh on the next layout", it) }
-            }.also(main::post)
+            HotReloadLifecycle.afterCommit(::scheduleRefresh)
             HookLog.i("ONextBox-ClockSpacing", "Native clock spacing interfaces installed")
         }.onFailure {
             ModernHookRegistry.unhookPrefix(PREFIX)

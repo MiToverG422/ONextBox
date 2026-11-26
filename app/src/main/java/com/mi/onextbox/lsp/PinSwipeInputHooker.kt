@@ -16,6 +16,7 @@ internal object PinSwipeInputHooker {
     private const val TAG = "ONextBox-PinSwipe"
     private const val DIAL = "com.coui.appcompat.passworddial.COUIPasswordDial"
     private const val KEY = "com.coui.appcompat.passworddial.key.PasswordDialKeyView"
+    private val feature = LspConfig.KeyguardFeature.SwipePinInput
     private val hosts = setOf("com.oplus.keyguard.security.view.OplusKeyguardPinView",
         "com.oplus.keyguard.security.view.OplusKeyguardFixedPinView")
     private class Gesture(val dial: ViewGroup, val keys: List<View>, val x: Float, val y: Float,
@@ -26,17 +27,18 @@ internal object PinSwipeInputHooker {
     }
     private val gestures = IdentityHashMap<View, Gesture>()
     private var dispatchingNativeTouch = false
-    private fun enabled() = LspConfig.isKeyguardFeatureEnabledXposed(LspConfig.KeyguardFeature.SwipePinInput)
+    private fun enabled() = LspConfig.isKeyguardFeatureEnabledXposed(feature)
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(TAG, setOf(feature.key), ::enabled) {
+        install(loader)
+    }
+
+    private fun install(loader: ClassLoader) {
         runCatching {
             val keyClass = ModernReflect.findClass(KEY, loader)
-            ModernHookRegistry.installCompat("$TAG:release-click", View::class.java.getDeclaredMethod("performClick"),
-                object : ModernMethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        if (PinSwipeNativeClick.suppressesClick(param.thisObject)) param.result = false
-                    }
-                })
+            ModernHookRegistry.installFast("$TAG:release-click", View::class.java.getDeclaredMethod("performClick")) { chain ->
+                if (PinSwipeNativeClick.suppressesClick(chain.thisObject)) false else chain.proceed()
+            }
             ModernHookRegistry.installCompat(TAG, keyClass.getDeclaredMethod("dispatchTouchEvent", MotionEvent::class.java),
                 object : ModernMethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {

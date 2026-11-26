@@ -17,6 +17,16 @@ internal object NotificationClearButtonHooker {
 
     fun hook(loader: ClassLoader) {
         val stateKey = "$TAG:state@${System.identityHashCode(loader)}"
+        SystemUiHookActivation.install(stateKey,
+            setOf(LspConfig.KEY_ROUND_NOTIFICATION_CLEAR_BUTTON, SystemCustomizationSettings.Feature.NotificationClearSize.key),
+            { LspConfig.isRoundNotificationClearButtonEnabledXposed() ||
+                SystemCustomizationSettings.active(SystemCustomizationSettings.Feature.NotificationClearSize) },
+        ) {
+            install(loader, stateKey)
+        }
+    }
+
+    private fun install(loader: ClassLoader, stateKey: String) {
         val saved = DexTargetCache.restoredState(stateKey) as? Array<*>
         val hookKey = "$TAG@${System.identityHashCode(loader)}"
         val keys = listOf("$hookKey:layout", "$hookKey:margin")
@@ -43,10 +53,10 @@ internal object NotificationClearButtonHooker {
                 detach = { native.stop() },
                 restore = { state ->
                     native.restoreSnapshot((state as? Array<*>)?.get(1))
-                    native.start()
                 },
+                resumeAfterRejection = native::start,
             )
-            native.start()
+            HotReloadLifecycle.afterCommit(native::start)
             HookLog.i(TAG, "Native round notification clear button hook installed")
         }.onFailure {
             owner?.stop()
@@ -63,8 +73,11 @@ internal object NotificationClearButtonHooker {
         private val known = WeakHashMap<View, IntArray>()
         private val handler = Handler(Looper.getMainLooper())
         private val preferences = ModernHookRuntime.remotePreferences("lsp_features")
+        private var observingPreferences = false
         private val refreshTask = Runnable {
-            known.toMap().forEach { (view, native) -> apply(view, native[0], native[1]) }
+            if (!HotReloadLifecycle.isRetiring) {
+                known.toMap().forEach { (view, native) -> apply(view, native[0], native[1]) }
+            }
         }
         private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == null || key.startsWith("notification_clear_") ||
@@ -75,12 +88,19 @@ internal object NotificationClearButtonHooker {
         }
 
         fun start() {
-            preferences?.registerOnSharedPreferenceChangeListener(listener)
+            if (!observingPreferences && preferences != null) {
+                preferences.registerOnSharedPreferenceChangeListener(listener)
+                observingPreferences = true
+            }
+            handler.removeCallbacks(refreshTask)
             handler.post(refreshTask)
         }
 
         fun stop() {
-            preferences?.unregisterOnSharedPreferenceChangeListener(listener)
+            if (observingPreferences) {
+                preferences?.unregisterOnSharedPreferenceChangeListener(listener)
+                observingPreferences = false
+            }
             handler.removeCallbacks(refreshTask)
             restoreAll()
             known.clear()
@@ -90,7 +110,10 @@ internal object NotificationClearButtonHooker {
             val view = button.get(controller) as? View ?: return
             val width = stockWidth.getInt(controller)
             val height = stockHeight.getInt(controller)
-            known[view] = intArrayOf(width, height)
+            val cached = known[view]
+            if (cached == null || cached[0] != width || cached[1] != height) {
+                known[view] = intArrayOf(width, height)
+            }
             apply(view, width, height)
         }
 
@@ -156,13 +179,15 @@ internal object NotificationClearButtonHooker {
                 val view = row.getOrNull(0) as? View ?: return@forEach
                 val width = row.getOrNull(1) as? Int ?: return@forEach
                 val third = row.getOrNull(2) as? Int ?: return@forEach
-                val sizes = if (row.size >= 5) intArrayOf(width, third,
-                    row[3] as Int, row[4] as Int) else intArrayOf(width, view.layoutParams.height,
-                    third, view.layoutParams.height)
+                val sizes = if (row.size >= 5) {
+                    intArrayOf(width, third, row[3] as Int, row[4] as Int)
+                } else {
+                    val height = view.layoutParams?.height ?: return@forEach
+                    intArrayOf(width, height, third, height)
+                }
                 val savedPadding = row.drop(5).take(8).filterIsInstance<Int>().toIntArray()
                 known[view] = intArrayOf(sizes[0], sizes[1])
                 resized[view] = if (savedPadding.size == 8) sizes + savedPadding else sizes
-                apply(view, width, sizes[1])
             }
         }
     }

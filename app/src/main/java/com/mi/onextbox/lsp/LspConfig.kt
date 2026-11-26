@@ -111,7 +111,7 @@ object LspConfig {
         )
     }
 
-    private const val KEY_ROUND_NOTIFICATION_CLEAR_BUTTON = "systemui_round_notification_clear_button"
+    internal const val KEY_ROUND_NOTIFICATION_CLEAR_BUTTON = "systemui_round_notification_clear_button"
     private const val PROP_ROUND_NOTIFICATION_CLEAR_BUTTON = "oost.$KEY_ROUND_NOTIFICATION_CLEAR_BUTTON"
     private const val PERSIST_PROP_ROUND_NOTIFICATION_CLEAR_BUTTON = "persist.sys.$PROP_ROUND_NOTIFICATION_CLEAR_BUTTON"
     private const val SETTINGS_ROUND_NOTIFICATION_CLEAR_BUTTON = "oost_$KEY_ROUND_NOTIFICATION_CLEAR_BUTTON"
@@ -150,7 +150,7 @@ object LspConfig {
         SETTINGS_FLUID_CLOUD_BATTERY, KEY_FLUID_CLOUD_BATTERY, false,
     )
 
-    private const val KEY_FLUID_CLOUD_MATERIAL = "systemui_fluid_cloud_unified_material"
+    internal const val KEY_FLUID_CLOUD_MATERIAL = "systemui_fluid_cloud_unified_material"
     private const val PROP_FLUID_CLOUD_MATERIAL = "oost.$KEY_FLUID_CLOUD_MATERIAL"
     private const val PERSIST_PROP_FLUID_CLOUD_MATERIAL = "persist.sys.$PROP_FLUID_CLOUD_MATERIAL"
     private const val SETTINGS_FLUID_CLOUD_MATERIAL = "oost_$KEY_FLUID_CLOUD_MATERIAL"

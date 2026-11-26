@@ -24,6 +24,7 @@ internal class FluidCloudAodColorScope {
     fun preservesBackground(): Boolean = active.get() != null
     fun <T> duringUpdate(color: Any?, update: () -> T): T {
         val previous = active.get()
+        if (color == null && previous == null) return update()
         if (color == null) active.remove() else active.set(color)
         return try { update() } finally {
             if (previous == null) active.remove() else active.set(previous)
@@ -37,6 +38,7 @@ internal class FluidCloudAodDrawScope {
     fun hidesMask(extension: Any?): Boolean = extension != null && active.get() === extension
     fun <T> duringDraw(extension: Any?, draw: () -> T): T {
         val previous = active.get()
+        if (extension == null && previous == null) return draw()
         if (extension == null) active.remove() else active.set(extension)
         return try { draw() } finally {
             if (previous == null) active.remove() else active.set(previous)

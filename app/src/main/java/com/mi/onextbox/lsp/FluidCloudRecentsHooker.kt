@@ -10,7 +10,14 @@ internal object FluidCloudRecentsHooker {
     private const val VIEW_MODEL =
         "com.oplus.systemui.statusbar.pipeline.shared.ui.viewmodel.OplusHomeStatusBarViewModelImpl\$isSeedlingContainerVisible\$1"
 
-    fun hook(classLoader: ClassLoader) {
+    fun hook(classLoader: ClassLoader) = SystemUiHookActivation.install(
+        TAG, setOf(FluidCloudRecentsSettings.ENABLED, StatusBarKeepSettings.ENABLED, NativeLiveUpdateSettings.KEY),
+        { !NativeLiveUpdateSettings.active() &&
+            (FluidCloudRecentsSettings.isEnabledXposed() || StatusBarKeepSettings.isEnabledXposed()) },
+        legacyTarget = { it.declaringClass.name == VIEW_MODEL && it.name == "invoke" && it.parameterCount == 6 },
+    ) { install(classLoader) }
+
+    private fun install(classLoader: ClassLoader) {
         val key = "$TAG@${System.identityHashCode(classLoader)}:"
         runCatching {
             val adapter = StatusBarVisibilityAdapter.load(classLoader)

@@ -8,7 +8,7 @@ internal object ColorOs16SystemUiFeatureHooks {
         install("large-network") { LargeNetworkTypeHooker.hookColorOs16(loader) }
         install("data-sim") { DataSimSignalHooker.hook(loader) }
         install("statusbar-layout") { StatusBarLayoutHooker.hookColorOs16(loader) }
-        install("power-indicator") { PowerIndicatorHooker.hook(loader) }
+        PowerIndicatorHooker.hook(loader)
         install("clock-period") { ClockPeriodHooker.hook(loader) }
         install("clock-tabular-digits") { ClockTabularDigitsHooker.hook(loader) }
         install("clock-spacing") { ClockSpacingHooker.hook(loader) }
@@ -16,8 +16,8 @@ internal object ColorOs16SystemUiFeatureHooks {
         install("carrier-name") { CarrierNameHooker.hook(loader) }
         QsTileCornerHooker.hook(loader)
         QsSliderPercentageHooker.hook(loader)
-        install("volume-percentage") { SideVolumePercentageHooker.hookColorOs16(loader) }
-        install("volume-appearance") { SideVolumeAppearanceHooker.hook(loader) }
+        SideVolumePercentageHooker.hookColorOs16(loader)
+        SideVolumeAppearanceHooker.hook(loader)
         install("volume-safety") { VolumeSafetyWarningHooker.hook(loader) }
         install("native-volume") { ColorOs16AospVolumeHooker.hook(loader) }
         install("navigation") { ImmersiveNavigationHooker.hook(loader) }

@@ -41,6 +41,8 @@ class NotificationClearButtonHookContractTest {
         assertTrue(text.contains("handler.removeCallbacks(refreshTask)"))
         assertTrue(text.contains("unregisterOnSharedPreferenceChangeListener(listener)"))
         assertTrue(text.contains("native.restoreSnapshot((state as? Array<*>)?.get(1))"))
+        assertTrue(text.contains("HotReloadLifecycle.afterCommit(native::start)"))
+        assertTrue(text.contains("resumeAfterRejection = native::start"))
         assertTrue(text.contains("NotificationClearButtonRules.restoreWidth"))
     }
 

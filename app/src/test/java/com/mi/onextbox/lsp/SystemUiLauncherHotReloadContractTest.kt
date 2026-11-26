@@ -35,9 +35,9 @@ class SystemUiLauncherHotReloadContractTest {
 
     @Test fun powerIndicatorHandsOverHostRootsInsteadOfVetoingAttachedViews() {
         val source = source("PowerIndicatorHooker.kt")
-        assertTrue(source.contains("capture = { owners.keys.toTypedArray() }"))
-        assertTrue(source.contains("detach = ::detachOwners"))
-        assertTrue(source.contains("if (root.isAttachedToWindow && !owners.containsKey(root)) attach(root)"))
+        assertTrue(source.contains("capture = { roots.toTypedArray() }"))
+        assertTrue(source.contains("detachOwners()"))
+        assertTrue(source.contains("if (enabled() && !owners.containsKey(root)) attach(root)"))
         assertTrue(source.contains("owners.clear()"))
         assertTrue(source.contains("owner.close()"))
         assertFalse(source.contains("canReload = { owners.isEmpty() }"))
@@ -49,7 +49,9 @@ class SystemUiLauncherHotReloadContractTest {
         assertTrue(source.contains("HotReloadLifecycle.withHook(fallback = {}, action = sample@{"))
         assertTrue(source.contains("if (closed || token != generation) return@sample"))
         assertTrue(source.contains("if (closed || HotReloadLifecycle.isRetiring || token != generation ||"))
-        assertTrue(source.contains("resumeAfterRejection = { owners.values.toList().forEach { it.resume() } }"))
+        val rearm = source.substringAfter("resumeAfterRejection = {").substringBefore("HotReloadLifecycle.afterCommit")
+        assertTrue(rearm.contains("owners.values.toList().forEach { it.resume() }"))
+        assertTrue(rearm.contains("observePreferences()"))
         val resume = source.substringAfter("fun resume()").substringBefore("fun close()")
         assertTrue(resume.contains("generation++"))
         assertTrue(resume.contains("main.removeCallbacksAndMessages(null)"))

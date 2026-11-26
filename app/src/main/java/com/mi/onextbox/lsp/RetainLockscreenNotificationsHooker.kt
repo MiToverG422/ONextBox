@@ -1,6 +1,7 @@
 package com.mi.onextbox.lsp
 
 import android.content.Context
+import com.mi.onextbox.diagnostics.RuntimeDiagnostics
 import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
@@ -16,12 +17,20 @@ internal object RetainLockscreenNotificationsSettings {
 
 internal object RetainLockscreenNotificationsHooker {
     private const val TAG = "ONextBox-LockscreenNotifications"
+    private const val PROVIDER = "com.oplus.systemui.statusbar.notification.interruption.OplusKeyguardNotificationVisibilityProviderExImpl"
     private val checkingLockscreen = ThreadLocal<Boolean>()
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(
+        TAG, setOf(RetainLockscreenNotificationsSettings.KEY), RetainLockscreenNotificationsSettings::enabledXposed,
+        legacyTarget = { it.declaringClass.name == PROVIDER && it.name == "shouldHideNotification" && it.parameterCount == 1 },
+    ) {
+        RuntimeDiagnostics.measure("RetainLockscreenNotificationsHooker.hook") { install(loader) }
+    }
+
+    private fun install(loader: ClassLoader) {
         runCatching {
             val entry = loader.loadClass("com.android.systemui.statusbar.notification.collection.NotificationEntry")
-            val provider = loader.loadClass("com.oplus.systemui.statusbar.notification.interruption.OplusKeyguardNotificationVisibilityProviderExImpl")
+            val provider = loader.loadClass(PROVIDER)
             val visibility = provider.getDeclaredMethod("shouldHideNotification", entry)
             val debug = loader.loadClass("com.oplus.systemui.notification.debug.OplusNotificationDebug")
                 .getDeclaredMethod("getSkipCheckPostedBeforeLock")
@@ -31,8 +40,10 @@ internal object RetainLockscreenNotificationsHooker {
                 if (checkingLockscreen.get() == true) true else chain.proceed()
             })
             ModernHookRegistry.installFast("$TAG:visibility", visibility, XposedInterface.Hooker { chain ->
+                val enabled = RetainLockscreenNotificationsSettings.enabledXposed()
                 val previous = checkingLockscreen.get()
-                checkingLockscreen.set(RetainLockscreenNotificationsSettings.enabledXposed())
+                if (!enabled && previous == null) return@Hooker chain.proceed()
+                checkingLockscreen.set(enabled)
                 try { chain.proceed() }
                 finally {
                     if (previous == null) checkingLockscreen.remove() else checkingLockscreen.set(previous)

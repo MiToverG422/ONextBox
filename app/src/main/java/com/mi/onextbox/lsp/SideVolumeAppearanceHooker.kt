@@ -10,19 +10,24 @@ import com.mi.onextbox.lsp.QsCornerReflect as Reflect
 internal object SideVolumeAppearanceHooker {
     private const val SEEK = "com.oplus.systemui.volume.OplusVolumeSeekBar"
     private const val TAG = "ONextBox-SideVolumeAppearance"
+    private const val VIEWS = "volume:appearance-views"
     private var reported = false
 
     private fun diagnose(error: Throwable) {
         if (!reported) { reported = true; HookLog.w(TAG, "Volume width adapter unavailable", error) }
     }
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(
+        "$VIEWS:views", SideVolumeAppearanceSettings.keys, SideVolumeAppearanceSettings::enabledXposed,
+    ) { late -> install(loader, late) }
+
+    private fun install(loader: ClassLoader, late: Boolean) {
         val seekType = Reflect.findClassIfExists(SEEK, loader) ?: return
-        val observers = QsCornerViewObservers("volume:appearance-views",
+        val observers = QsCornerViewObservers(VIEWS,
             configurationToken = { SideVolumeAppearanceSettings.configurationTokenXposed() },
             settingsKeys = SideVolumeAppearanceSettings.keys,
         ) { view ->
-            if (SideVolumeAppearanceSettings.stateXposed().keepWide &&
+            if (SideVolumeAppearanceSettings.enabledXposed() &&
                 ((Reflect.getObjectField(view, "mThickType") as Number).toInt() != 0 ||
                     Reflect.callMethod(view, "getHasEnlarge") == true)) {
                 Reflect.callMethod(view, "resetSeekBar")
@@ -40,13 +45,11 @@ internal object SideVolumeAppearanceHooker {
         val dialog = Reflect.findClassIfExists("com.oplus.systemui.volume.OplusVolumeDialogImpl", loader)
         dialog?.declaredMethods?.filter { it.name in setOf("startThickAnim", "startKeyDownTransAnim") &&
             it.parameterCount == 1 }?.forEach { method ->
-            ModernHookRegistry.installCompat("$TAG:keep-wide:${method.name}", method, object : ModernMethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    if (SideVolumeAppearanceSettings.stateXposed().keepWide && param.args[0] == true)
-                        param.result = null
-                }
-            })
+            ModernHookRegistry.installFast("$TAG:keep-wide:${method.name}", method) { chain ->
+                if (SideVolumeAppearanceSettings.enabledXposed() && chain.getArg(0) == true) null else chain.proceed()
+            }
             runCatching { ModernHookRuntime.requireModule().deoptimize(method) }.onFailure(::diagnose)
         }
+        if (late) SystemUiWindowViews.find(loader, seekType::isInstance).forEach(observers::watch)
     }
 }

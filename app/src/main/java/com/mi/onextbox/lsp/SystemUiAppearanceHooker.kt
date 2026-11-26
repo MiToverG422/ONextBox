@@ -35,10 +35,7 @@ internal class SystemUiAppearanceHooker private constructor(private val loader: 
     private val refreshTask = Runnable { if (!HotReloadLifecycle.isRetiring) refresh() }
     private var prefs: SharedPreferences? = null
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == null || key in keys) {
-            main.removeCallbacks(refreshTask)
-            main.post(refreshTask)
-        }
+        if (key == null || key in keys) scheduleRefresh()
     }
     private val barClass = Reflect.findClassIfExists("com.android.systemui.statusbar.phone.PhoneStatusBarView", loader)
     private val barExtension = barClass?.declaredMethods?.firstOrNull {
@@ -95,8 +92,7 @@ internal class SystemUiAppearanceHooker private constructor(private val loader: 
                 ModernHookRegistry.installCompat("appearance:custom-notification-scene", method, object : ModernMethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         if (param.result == true && !HotReloadLifecycle.isRetiring && Option.Corners.current() != 0) {
-                            main.removeCallbacks(refreshTask)
-                            main.post(refreshTask)
+                            scheduleRefresh()
                         }
                     }
                 })
@@ -117,7 +113,13 @@ internal class SystemUiAppearanceHooker private constructor(private val loader: 
         if (prefs == null) prefs = ModernHookRuntime.remotePreferences("lsp_features")?.also {
             it.registerOnSharedPreferenceChangeListener(listener)
         }
-        refresh()
+        // Insets are refreshed through native methods whose hooks resume after commit.
+        scheduleRefresh()
+    }
+
+    private fun scheduleRefresh() {
+        main.removeCallbacks(refreshTask)
+        main.post(refreshTask)
     }
 
     private fun requested(view: View, bar: Boolean, header: Boolean, notifications: Boolean) =

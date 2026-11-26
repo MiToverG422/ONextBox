@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.graphics.Paint
 import android.graphics.Typeface
 import com.mi.onextbox.lsp.compat.HookConfigSnapshot
@@ -19,12 +20,17 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.mi.onextbox.diagnostics.RuntimeDiagnostics
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
+import com.mi.onextbox.lsp.compat.MODERN_PREFERENCES_REVISION_KEY
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
+import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernMethodHook
 import com.mi.onextbox.lsp.compat.ModernReflect
 import java.io.File
+import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.WeakHashMap
 
 /** An independent view beside the clock; does not replace the native network-speed slot. */
 internal object PowerIndicatorHooker {
@@ -32,30 +38,78 @@ internal object PowerIndicatorHooker {
     private val batteryCurrent = File("/sys/class/power_supply/battery/current_now")
     private val batteryVoltage = File("/sys/class/power_supply/battery/voltage_now")
     private val owners = IdentityHashMap<ViewGroup, Owner>()
-    fun hook(loader: ClassLoader) {
+
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(
+        TAG, setOf(PowerIndicatorSettings.ENABLED), ::enabled,
+    ) { late ->
+        RuntimeDiagnostics.measure("PowerIndicatorHooker.hook") { install(loader, late) }
+    }
+
+    private fun enabled() = HookConfigSnapshot.boolean(PowerIndicatorSettings.ENABLED, false) == true
+
+    private fun install(loader: ClassLoader, late: Boolean) {
         runCatching {
             val type = ModernReflect.findClass("com.android.systemui.statusbar.phone.PhoneStatusBarView", loader)
+            val roots = Collections.newSetFromMap(WeakHashMap<ViewGroup, Boolean>())
+            val main = Handler(Looper.getMainLooper())
+            val preferences = ModernHookRuntime.remotePreferences("lsp_features")
+            var observing = false
+            fun bind(root: ViewGroup) {
+                if (!root.isAttachedToWindow) return
+                roots += root
+                if (enabled() && !owners.containsKey(root)) attach(root)
+            }
+            val refresh = Runnable {
+                if (!HotReloadLifecycle.isRetiring) runCatching {
+                    if (enabled()) roots.toList().forEach(::bind) else detachOwners()
+                }.onFailure { HookLog.w(TAG, "Power indicator refresh unavailable", it) }
+            }
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (key == null || key == PowerIndicatorSettings.ENABLED || key == MODERN_PREFERENCES_REVISION_KEY) {
+                    main.removeCallbacks(refresh)
+                    main.post(refresh)
+                }
+            }
+            fun observePreferences() {
+                if (!observing && preferences != null) {
+                    preferences.registerOnSharedPreferenceChangeListener(listener)
+                    observing = true
+                }
+                main.removeCallbacks(refresh)
+                main.post(refresh)
+            }
             for (methodName in listOf("onAttachedToWindow", "onDetachedFromWindow")) {
                 ModernHookRegistry.installCompat("$TAG:$methodName", type.getDeclaredMethod(methodName), object : ModernMethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         if (param.throwable != null) return
                         val root = param.thisObject as? ViewGroup ?: return
-                        if (methodName == "onDetachedFromWindow") owners.remove(root)?.close()
-                        else if (!owners.containsKey(root)) runCatching { attach(root) }
+                        if (methodName == "onDetachedFromWindow") {
+                            roots.remove(root)
+                            owners.remove(root)?.close()
+                        } else runCatching { bind(root) }
                             .onFailure { HookLog.w(TAG, "Status-bar placement unavailable", it) }
                     }
                 })
             }
             HotReloadLifecycle.register(TAG,
-                capture = { owners.keys.toTypedArray() },
-                detach = ::detachOwners,
-                restore = { state ->
-                    (state as? Array<*>)?.filterIsInstance<ViewGroup>()?.forEach { root ->
-                        if (root.isAttachedToWindow && !owners.containsKey(root)) attach(root)
-                    }
+                capture = { roots.toTypedArray() },
+                detach = {
+                    if (observing) preferences?.unregisterOnSharedPreferenceChangeListener(listener)
+                    observing = false
+                    main.removeCallbacks(refresh)
+                    detachOwners()
+                    roots.clear()
                 },
-                resumeAfterRejection = { owners.values.toList().forEach { it.resume() } },
+                restore = { state ->
+                    (state as? Array<*>)?.filterIsInstance<ViewGroup>()?.forEach(::bind)
+                },
+                resumeAfterRejection = {
+                    owners.values.toList().forEach { it.resume() }
+                    observePreferences()
+                },
             )
+            HotReloadLifecycle.afterCommit(::observePreferences)
+            if (late) SystemUiWindowViews.find(loader, type::isInstance).filterIsInstance<ViewGroup>().forEach(::bind)
         }.onFailure { HookLog.w(TAG, "Status-bar hook unavailable", it) }
     }
 

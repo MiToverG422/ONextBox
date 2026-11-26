@@ -21,12 +21,11 @@ internal class NetworkSpeedVisibility(viewClass: Class<*>, stateClass: Class<*>)
         require(speed.returnType == Long::class.javaPrimitiveType && visible.returnType == Boolean::class.javaPrimitiveType)
     }
 
-    fun filter(view: FrameLayout, state: Any?): Any? {
-        if (state == null) {
+    fun filter(view: FrameLayout, state: Any?, settings: NetworkSpeedSettings.State): Any? {
+        if (state == null || !settings.hideLowSpeed) {
             hiddenStates.remove(view)
-            return null
+            return state
         }
-        val settings = NetworkSpeedSettings.snapshot()
         if (visible.invoke(state) == true && NetworkSpeedRules.hideLowSpeed(
                 speed.invoke(state) as Long, settings.hideLowSpeed, settings.lowSpeedThresholdKbps,
             )) {
@@ -40,9 +39,9 @@ internal class NetworkSpeedVisibility(viewClass: Class<*>, stateClass: Class<*>)
         return state
     }
 
-    fun refresh(view: FrameLayout) {
-        val original = hiddenStates[view] ?: currentState.get(view) ?: return
-        val filtered = filter(view, original)
+    fun refresh(view: FrameLayout, settings: NetworkSpeedSettings.State) {
+        val original = hiddenStates[view] ?: (if (settings.hideLowSpeed) currentState.get(view) else null) ?: return
+        val filtered = filter(view, original, settings)
         nativeApply.invokeSpecial(view, filtered)
     }
 

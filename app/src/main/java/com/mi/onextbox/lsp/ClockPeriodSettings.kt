@@ -17,9 +17,11 @@ internal object ClockPeriodSettings {
     fun state(context: Context) = LspPreferenceStore.prefs(context).let {
         State(it.getBoolean(ENABLED, false), ClockPeriodRules.normalizeFormat(it.getInt(FORMAT, 1)), it.getBoolean(SMALL, false), it.getBoolean(COMPACT, false), it.getBoolean(SHADE, false), it.getBoolean(LOCK_SECONDS, false), it.getBoolean(TABULAR_DIGITS, false))
     }
-    fun snapshot() = State(HookConfigSnapshot.boolean(ENABLED, false) == true,
-        ClockPeriodRules.normalizeFormat(HookConfigSnapshot.int(FORMAT, 1) ?: 1), HookConfigSnapshot.boolean(SMALL, false) == true, compactXposed(), HookConfigSnapshot.boolean(SHADE, false) == true, HookConfigSnapshot.boolean(LOCK_SECONDS, false) == true, tabularDigitsXposed())
+    fun snapshot() = State(enabledXposed(),
+        ClockPeriodRules.normalizeFormat(HookConfigSnapshot.int(FORMAT, 1) ?: 1), HookConfigSnapshot.boolean(SMALL, false) == true, compactXposed(), shadeXposed(), HookConfigSnapshot.boolean(LOCK_SECONDS, false) == true, tabularDigitsXposed())
 
+    fun enabledXposed() = HookConfigSnapshot.boolean(ENABLED, false) == true
+    fun shadeXposed() = HookConfigSnapshot.boolean(SHADE, false) == true
     fun compactXposed() = HookConfigSnapshot.boolean(COMPACT, false) == true
     fun tabularDigitsXposed() = HookConfigSnapshot.boolean(TABULAR_DIGITS, false) == true
 

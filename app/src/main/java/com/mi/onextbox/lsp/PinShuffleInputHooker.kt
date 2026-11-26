@@ -19,6 +19,7 @@ internal object PinShuffleInputHooker {
     private const val DIAL = "com.coui.appcompat.passworddial.COUIPasswordDial"
     private const val MATRIX = "com.coui.appcompat.passworddial.key.PasswordDialMatrixLayout"
     private const val KEY = "com.coui.appcompat.passworddial.key.PasswordDialKeyView"
+    private val feature = LspConfig.KeyguardFeature.ShufflePinKeys
     private val hosts = setOf("com.oplus.keyguard.security.view.OplusKeyguardPinView",
         "com.oplus.keyguard.security.view.OplusKeyguardFixedPinView")
     private val random by lazy { SecureRandom() }
@@ -40,7 +41,11 @@ internal object PinShuffleInputHooker {
         val disappear: Method = dial.getDeclaredMethod("prepareForHostDisappear")
     }
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(TAG, setOf(feature.key), ::enabled) { late ->
+        install(loader, late)
+    }
+
+    private fun install(loader: ClassLoader, late: Boolean) {
         runCatching {
             val targets = Targets(loader)
             fun shown(value: Any?) {
@@ -52,12 +57,18 @@ internal object PinShuffleInputHooker {
             after("attach", targets.attach, ::shown)
             after("visibility", targets.visibility, ::shown)
             after("enter", targets.enter, ::shown)
-            after("window", View::class.java.getDeclaredMethod("onWindowVisibilityChanged", Int::class.javaPrimitiveType), ::shown)
+            val window = View::class.java.getDeclaredMethod("onWindowVisibilityChanged", Int::class.javaPrimitiveType)
+            ModernHookRegistry.installFast("$TAG:window", window) { chain ->
+                val result = chain.proceed()
+                if (targets.dial.isInstance(chain.thisObject)) shown(chain.thisObject)
+                result
+            }
             after("detach", targets.detach) { (it as? ViewGroup)?.let(::restore) }
             after("disappear", targets.disappear) { (it as? ViewGroup)?.let { dial -> active[dial]?.ending = true } }
             HotReloadLifecycle.register(TAG,
                 canReload = { active.keys.none { it.isShown && it.windowVisibility == View.VISIBLE } },
                 detach = { active.keys.toList().forEach(::restore); previous.clear() })
+            if (late) SystemUiWindowViews.find(loader, targets.dial::isInstance).forEach(::shown)
             HookLog.i(TAG, "Installed native PIN key-position shuffling")
         }.onFailure {
             ModernHookRegistry.unhookPrefix(TAG)
@@ -75,7 +86,7 @@ internal object PinShuffleInputHooker {
     private fun begin(dial: ViewGroup, targets: Targets) {
         if (active[dial]?.ending == false) return
         restore(dial)
-        if (!LspConfig.isKeyguardFeatureEnabledXposed(LspConfig.KeyguardFeature.ShufflePinKeys)) return
+        if (!enabled()) return
         var host = dial.parent
         while (host is View && host.javaClass.name !in hosts) host = host.parent
         if (host !is View) return
@@ -107,4 +118,6 @@ internal object PinShuffleInputHooker {
             state.matrix.requestLayout()
         }
     }
+
+    private fun enabled() = LspConfig.isKeyguardFeatureEnabledXposed(feature)
 }

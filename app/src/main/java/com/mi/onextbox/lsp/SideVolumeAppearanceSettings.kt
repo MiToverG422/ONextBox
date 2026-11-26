@@ -10,9 +10,8 @@ internal object SideVolumeAppearanceSettings {
     fun state(context: Context) = LspPreferenceStore.prefs(context).let {
         State(it.getBoolean(KEEP_WIDE, false))
     }
-    fun stateXposed() = State(
-        HookConfigSnapshot.boolean(KEEP_WIDE, false) == true)
-    fun configurationTokenXposed(): Int? = stateXposed().takeIf { it.keepWide }?.hashCode()
+    fun enabledXposed() = HookConfigSnapshot.boolean(KEEP_WIDE, false) == true
+    fun configurationTokenXposed(): Int? = if (enabledXposed()) 1 else null
     fun setKeepWide(context: Context, enabled: Boolean) {
         check(LspPreferenceStore.prefs(context).edit().putBoolean(KEEP_WIDE, enabled).commit())
         LspConfig.syncReadableState(context)

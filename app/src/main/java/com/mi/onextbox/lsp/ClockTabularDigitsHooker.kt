@@ -2,8 +2,6 @@ package com.mi.onextbox.lsp
 
 import android.os.Handler
 import android.os.Looper
-import android.view.View
-import android.view.ViewGroup
 import android.widget.TextView
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
@@ -13,11 +11,11 @@ import java.util.WeakHashMap
 
 internal object ClockTabularDigitsHooker {
     private const val PREFIX = "clock-tabular-digits:"
+    private const val VIEWS = PREFIX + "views"
     private data class Appearance(val original: String?, val applied: String)
     private val hosts = WeakHashMap<TextView, Unit>()
     private val appearances = WeakHashMap<TextView, Appearance>()
     private val main = Handler(Looper.getMainLooper())
-    private var bootstrap: Runnable? = null
     private var restoring = false
     private val digitFeature = Regex("""^(?:['"](?:pnum|tnum)['"]|pnum|tnum)(?:\s+(?:on|off|\d+))?$""")
 
@@ -26,7 +24,11 @@ internal object ClockTabularDigitsHooker {
             .filter { it.isNotEmpty() && !digitFeature.matches(it) } + listOf("'pnum' 0", "'tnum' 1"))
             .joinToString(", ")
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(
+        VIEWS, setOf(ClockPeriodSettings.TABULAR_DIGITS), ClockPeriodSettings::tabularDigitsXposed,
+    ) { install(loader) }
+
+    private fun install(loader: ClassLoader) {
         runCatching {
             val clock = Reflect.findClass(ClockPeriodHooker.CLOCK, loader)
             val stat = Reflect.findClass(ClockPeriodHooker.STAT_CLOCK, loader)
@@ -49,11 +51,11 @@ internal object ClockTabularDigitsHooker {
             }
             fun apply(view: TextView, refreshLayout: Boolean = true) {
                 if (restoring || HotReloadLifecycle.isRetiring) return
-                hosts[view] = Unit
                 if (!ClockPeriodSettings.tabularDigitsXposed()) {
                     restore(view)
                     return
                 }
+                if (view !in hosts) hosts[view] = Unit
                 val current = view.fontFeatureSettings
                 appearances[view]?.let { if (it.applied == current) return }
                 val next = tabularFeatures(current)
@@ -75,29 +77,27 @@ internal object ClockTabularDigitsHooker {
                     apply(param.thisObject as TextView, refreshLayout = false)
                 }
             })
-            HotReloadLifecycle.register(PREFIX + "views",
+            val bootstrap = Runnable {
+                if (!HotReloadLifecycle.isRetiring && ClockPeriodSettings.tabularDigitsXposed()) runCatching {
+                    SystemUiWindowViews.find(loader, stat::isInstance).filterIsInstance<TextView>().forEach { apply(it) }
+                }.onFailure { HookLog.w("ONextBox-ClockDigits", "Clock digits will refresh on the next native update", it) }
+            }
+            fun scheduleRefresh() {
+                main.removeCallbacks(bootstrap)
+                main.post(bootstrap)
+            }
+            HotReloadLifecycle.register(VIEWS,
                 capture = { hosts.keys.toTypedArray() },
                 detach = {
-                    bootstrap?.let(main::removeCallbacks)
-                    bootstrap = null
+                    main.removeCallbacks(bootstrap)
                     restoring = true
                     try { appearances.keys.toList().forEach(::restore) }
                     finally { restoring = false; appearances.clear(); hosts.clear() }
                 },
                 restore = { state -> (state as? Array<*>)?.filterIsInstance<TextView>()?.forEach { apply(it) } },
+                resumeAfterRejection = ::scheduleRefresh,
             )
-            bootstrap = Runnable {
-                bootstrap = null
-                if (!HotReloadLifecycle.isRetiring) runCatching {
-                    val global = Reflect.callStaticMethod(Reflect.findClass("android.view.WindowManagerGlobal", loader), "getInstance")
-                    val roots = global?.let { Reflect.getObjectField(it, "mViews") } as? List<*> ?: return@runCatching
-                    fun visit(view: View) {
-                        if (stat.isInstance(view)) apply(view as TextView)
-                        else if (view is ViewGroup) for (i in 0 until view.childCount) visit(view.getChildAt(i))
-                    }
-                    roots.filterIsInstance<View>().forEach(::visit)
-                }.onFailure { HookLog.w("ONextBox-ClockDigits", "Clock digits will refresh on the next native update", it) }
-            }.also(main::post)
+            HotReloadLifecycle.afterCommit(::scheduleRefresh)
             HookLog.i("ONextBox-ClockDigits", "Native tabular clock digits installed")
         }.onFailure {
             ModernHookRegistry.unhookPrefix(PREFIX)

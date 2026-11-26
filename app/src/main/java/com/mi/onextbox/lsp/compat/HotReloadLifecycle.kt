@@ -43,6 +43,7 @@ internal open class HotReloadResourceCoordinator(
     private val main by lazy { Handler(Looper.getMainLooper()) }
 
     @Volatile private var staging = false
+    val isStaging: Boolean get() = staging
     @Volatile private var imported: Map<String, Any?> = emptyMap()
     @Volatile var isRetiring: Boolean = false
         private set
@@ -83,6 +84,8 @@ internal open class HotReloadResourceCoordinator(
     }
 
     fun restoredState(key: String): Any? = imported[key]
+
+    fun hasRestoredState(key: String): Boolean = key in imported
 
     fun afterCommit(action: () -> Unit) {
         synchronized(lock) {

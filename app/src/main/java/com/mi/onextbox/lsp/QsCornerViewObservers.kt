@@ -18,6 +18,7 @@ internal class QsCornerViewObservers(
     private val content: (View) -> List<Any?>? = { emptyList() },
     private val configurationToken: (View) -> Int? = { QsTileCornerSettings.configurationTokenXposed() },
     settingsKeys: Set<String> = QsTileCornerSettings.keys,
+    private val onRefresh: () -> Unit = {},
     private val update: (View) -> Boolean,
 ) {
     private val guards = WeakHashMap<View, Guard>()
@@ -25,10 +26,8 @@ internal class QsCornerViewObservers(
     private var preferences: SharedPreferences? = null
     private val refresh = Runnable {
         if (!HotReloadLifecycle.isRetiring) {
-            synchronized(guards) { guards.values.toList() }.forEach {
-                it.attach()
-                it.markDirty()
-            }
+            synchronized(guards) { guards.values.toList() }.forEach { it.refresh() }
+            onRefresh()
         }
     }
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -55,12 +54,15 @@ internal class QsCornerViewObservers(
         if (preferences == null) preferences = ModernHookRuntime.remotePreferences("lsp_features")?.also {
             it.registerOnSharedPreferenceChangeListener(listener)
         }
-        refresh.run()
+        // Existing drawables should be restored after the new generation has
+        // taken ownership, with the replacement callbacks available.
+        main.removeCallbacks(refresh)
+        main.post(refresh)
     }
 
     fun watch(view: View) {
         val guard = synchronized(guards) { guards.getOrPut(view) { Guard(view) } }
-        guard.attach()
+        if (!HotReloadLifecycle.isStaging) guard.attach()
     }
     fun invalidate(view: View) {
         watch(view)
@@ -82,6 +84,20 @@ internal class QsCornerViewObservers(
             if (!listening) return
             resetProbe()
             target.get()?.invalidate()
+        }
+
+        fun refresh() {
+            val view = target.get() ?: return
+            // The shade may be hidden and stop drawing. Restore here so
+            // disabling the feature does not leave a permanent pre-draw listener.
+            if (listening && configurationToken(view) == null &&
+                runCatching { update(view) }.getOrDefault(false)
+            ) {
+                dispose()
+                return
+            }
+            attach()
+            markDirty()
         }
         private var layoutPending = true
         private var retryAt = 0L

@@ -9,7 +9,12 @@ internal object StatusBarKeepHooker {
     private const val TAG = "ONextBox-StatusBarKeep"
     private const val VM = "com.android.systemui.statusbar.pipeline.shared.ui.viewmodel.HomeStatusBarViewModelImpl"
 
-    fun hook(classLoader: ClassLoader) {
+    fun hook(classLoader: ClassLoader) = SystemUiHookActivation.install(
+        TAG, setOf(StatusBarKeepSettings.ENABLED), StatusBarKeepSettings::isEnabledXposed,
+        legacyTarget = { it.declaringClass.name.startsWith("$VM\$") && it.name == "invoke" },
+    ) { install(classLoader) }
+
+    private fun install(classLoader: ClassLoader) {
         val adapter = runCatching { StatusBarVisibilityAdapter.load(classLoader) }.getOrElse {
             HookLog.w(TAG, "Status bar visibility contract unavailable; stock behavior retained", it)
             return

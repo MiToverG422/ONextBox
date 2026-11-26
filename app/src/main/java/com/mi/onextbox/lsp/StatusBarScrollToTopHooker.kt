@@ -14,16 +14,26 @@ import java.util.WeakHashMap
 /** Change only the OEM scroll-to-top trigger and its application allowlist gate. */
 internal object StatusBarScrollToTopHooker {
     private const val TAG = "ONextBox-ScrollToTop"
+    private const val HELPER = "com.oplus.systemui.statusbar.util.StatusbarClickHelper"
     private data class TouchState(
         val doubleTapSlop: Float,
         val tracker: StatusBarDoubleTapTracker = StatusBarDoubleTapTracker(),
     )
     private val states = Collections.synchronizedMap(WeakHashMap<Any, TouchState>())
 
-    fun hookSystemUi(loader: ClassLoader) {
+    fun hookSystemUi(loader: ClassLoader) = SystemUiHookActivation.install(
+        "$TAG:SystemUI", setOf(StatusBarInteractionFeature.DoubleTapToTop.key), ::doubleTapEnabled,
+        legacyTarget = { it.declaringClass.name == HELPER && it.name == "scrollToTop" && it.parameterCount == 1 },
+    ) {
+        installSystemUi(loader)
+    }
+
+    private fun doubleTapEnabled() = LspConfig.isStatusBarInteractionFeatureEnabledXposed(StatusBarInteractionFeature.DoubleTapToTop)
+
+    private fun installSystemUi(loader: ClassLoader) {
         val key = "$TAG:SystemUI@${System.identityHashCode(loader)}:"
         runCatching {
-            val helper = ModernReflect.findClass("com.oplus.systemui.statusbar.util.StatusbarClickHelper", loader)
+            val helper = ModernReflect.findClass(HELPER, loader)
             val click = helper.getDeclaredMethod("scrollToTop", MotionEvent::class.java)
             val parameters = helper.getDeclaredMethod("checkClickParams", Context::class.java)
             val touchSlop = helper.getDeclaredField("mTouchSlop").apply { isAccessible = true }
@@ -42,11 +52,17 @@ internal object StatusBarScrollToTopHooker {
             })
             ModernHookRegistry.installFast("${key}click", click, XposedInterface.Hooker { chain ->
                 val owner = chain.thisObject ?: return@Hooker chain.proceed()
-                val state = states[owner] ?: return@Hooker chain.proceed()
-                if (!LspConfig.isStatusBarInteractionFeatureEnabledXposed(StatusBarInteractionFeature.DoubleTapToTop)) {
-                    state.tracker.cancel()
+                if (!doubleTapEnabled()) {
+                    states[owner]?.tracker?.cancel()
                     return@Hooker chain.proceed()
                 }
+                val state = states[owner] ?: runCatching {
+                    // The native helper may have attached before the first live enable.
+                    val context = ModernReflect.callStaticMethod(
+                        HostClassLookup.load("android.app.ActivityThread"), "currentApplication",
+                    ) as? Context ?: return@runCatching null
+                    TouchState(ViewConfiguration.get(context).scaledDoubleTapSlop.toFloat()).also { states[owner] = it }
+                }.getOrNull() ?: return@Hooker chain.proceed()
                 val event = chain.getArg(0) as? MotionEvent ?: return@Hooker chain.proceed()
                 val doubleTap = runCatching {
                     synchronized(state) {
