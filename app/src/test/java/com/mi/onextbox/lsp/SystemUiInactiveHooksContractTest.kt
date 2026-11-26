@@ -7,6 +7,34 @@ import java.io.File
 class SystemUiInactiveHooksContractTest {
     private fun source(name: String) = File("src/main/java/com/mi/onextbox/lsp/$name.kt").readText()
 
+    @Test fun disabledRenderingGroupsWaitForPreferencesBeforeInstallingHooks() {
+        val activation = source("SystemUiHookActivation")
+        assertTrue(activation.contains("if (enabled() || HotReloadLifecycle.restoredState(stateKey) != null)"))
+        assertTrue(activation.contains("HotReloadLifecycle.afterCommit(observer::observe)"))
+        assertTrue(activation.contains("resumeAfterRejection = observer::observe"))
+        assertTrue(activation.contains("HookConfigSnapshot.isAvailable && !SafeModeRuntime.blocked && enabled()"))
+        val groups = mapOf(
+            "CouiDividerHooker" to "CouiDividerSettings::enabledXposed",
+            "QsTileCornerHooker" to "QsTileCornerSettings::enabledXposed",
+            "QsSliderPercentageHooker" to "QsSliderPercentageSettings::enabledXposed",
+            "SoftLightGlassHooker" to "SoftLightGlassSettings::enabledXposed",
+            "SystemUiAppearanceHooker" to "barEnabled() || headerEnabled() || cornersEnabled()",
+        )
+        groups.forEach { (hook, preference) ->
+            assertTrue(hook, source(hook).substringAfter("SystemUiHookActivation.install(").contains(preference))
+        }
+    }
+
+    @Test fun lateActivationDiscoversExistingTilesSlidersAndNativeMaterials() {
+        assertTrue(source("QsTileCornerHooker").contains("SystemUiWindowViews.find(loader) { it.javaClass.name == QS_ROOT }"))
+        assertTrue(source("QsControlCenterSliderCorners").contains("if (late) SystemUiWindowViews.find(loader)"))
+        assertTrue(source("QsSliderPercentageHooker").contains("if (late) SystemUiWindowViews.find(loader)"))
+        val glass = source("SoftLightGlassHooker")
+        assertTrue(glass.contains("adoptExistingShaders = late ||"))
+        assertTrue(glass.contains("firstDraw && adoptExistingShaders && upgradeExistingDrawable != null"))
+        assertTrue(glass.contains("nativePrograms.keys.toTypedArray(), adoptExistingShaders"))
+    }
+
     @Test fun disabledGlassCompilesTheNativeSourceAndKeepsItsBindingsForActivation() {
         val hook = source("SoftLightGlassHooker")
         val constructor = hook.substringAfter("install(\"program\", ctor").substringBefore("val cache =")

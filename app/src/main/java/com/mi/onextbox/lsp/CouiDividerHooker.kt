@@ -4,6 +4,7 @@ import android.content.pm.ApplicationInfo
 import android.content.Context
 import android.graphics.Canvas
 import android.view.View
+import com.mi.onextbox.diagnostics.RuntimeDiagnostics
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
 import com.mi.onextbox.lsp.compat.ModernReflect
@@ -20,6 +21,19 @@ internal object CouiDividerHooker {
 
     fun hook(packageName: String, loader: ClassLoader, apkPath: String) {
         if (packageName == "android" || packageName == "system" || packageName == "com.mi.onextbox") return
+        val installHooks = {
+            RuntimeDiagnostics.measure("CouiDividerHooker.hook") { install(packageName, loader, apkPath) }
+        }
+        if (packageName == "com.android.systemui") {
+            SystemUiHookActivation.install(CouiDividerViewHooker.STATE, setOf(CouiDividerSettings.ENABLED), CouiDividerSettings::enabledXposed) {
+                ApkDexSession.withSession(apkPath) { installHooks() }
+            }
+        } else {
+            installHooks()
+        }
+    }
+
+    private fun install(packageName: String, loader: ClassLoader, apkPath: String) {
         val prefix = "$TAG@$packageName@${System.identityHashCode(loader)}:"
         CouiPreferenceDividerHooker.hook(loader, apkPath, prefix)
         runCatching { CouiDividerViewHooker.hook() }

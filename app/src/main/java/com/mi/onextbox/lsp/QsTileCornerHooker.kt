@@ -4,6 +4,7 @@ import android.graphics.drawable.Drawable
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import com.mi.onextbox.diagnostics.RuntimeDiagnostics
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
@@ -15,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap
 /** Per-tile providers only: never mutate the shared QS resource pool or global drawables. */
 internal object QsTileCornerHooker {
     private const val TAG = "ONextBox-QsTileCorner"
+    private const val VIEWS = "qs:corner-views"
+    private const val QS_ROOT = "com.oplus.systemui.plugins.qs.OplusQSRootView"
     private const val RESIZEABLE = "com.oplus.systemui.plugins.qs.customize.view.tile.OplusQSResizeableTileView"
     private const val STANDARD = "com.oplus.systemui.qs.base.tile.OplusQSTileBaseView"
     private const val HIGHLIGHT = "com.oplus.systemui.qs.base.tile.OplusQSHighlightTileView"
@@ -28,10 +31,16 @@ internal object QsTileCornerHooker {
     private var hierarchy: QsCornerHierarchyObservers? = null
     private val animationCapture = ThreadLocal<Boolean>()
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(
+        "$VIEWS:views", setOf(QsTileCornerSettings.ENABLED), QsTileCornerSettings::enabledXposed,
+    ) { late ->
+        RuntimeDiagnostics.measure("QsTileCornerHooker.hook") { install(loader, late) }
+    }
+
+    private fun install(loader: ClassLoader, late: Boolean) {
         // Class lookup must not initialize launcher/SystemUI configuration during package loading.
         val provider = Reflect.findClassIfExists("com.oplusos.systemui.common.outline.RoundRectOutlineProvider", loader) ?: return
-        val observers = QsCornerViewObservers("qs:corner-views",
+        val observers = QsCornerViewObservers(VIEWS,
             onLayout = { updateSafely(it, provider, refreshChildren = true) },
             content = ::contentState) { updateSafely(it, provider, refreshChildren = true) }
         val types = listOf(RESIZEABLE, "${RESIZEABLE}OneXOne", "${RESIZEABLE}TwoXOne", "${RESIZEABLE}TwoXTwo",
@@ -179,10 +188,14 @@ internal object QsTileCornerHooker {
                     ModernHookRuntime.requireModule().deoptimize(method)
                 }.onFailure { diagnose("Media drawing", it) }
             }
-        runCatching { QsControlCenterSliderCorners.hook(loader) }
+        runCatching { QsControlCenterSliderCorners.hook(loader, late) }
             .onFailure { diagnose("Control Center slider corners", it) }
         runCatching { QsDeviceCardCorners.hook(loader) }
             .onFailure { diagnose("Device card corners", it) }
+        if (late) {
+            SystemUiWindowViews.find(loader) { it.javaClass.name == QS_ROOT }
+                .filterIsInstance<ViewGroup>().forEach { hierarchy?.watch(it) }
+        }
         HotReloadLifecycle.register("qs:tile-corners", detach = {
             synchronized(owned) { owned.toList() }.forEach { (drawable, state) -> restore(drawable, state) }
             synchronized(mediaClips) { mediaClips.keys.toList() }.forEach(::restoreMediaClip)
@@ -195,7 +208,7 @@ internal object QsTileCornerHooker {
         if (view == null || HotReloadLifecycle.isRetiring) return false
         if (QsTileCornerSettings.enabledXposed()) {
             val root = generateSequence(view) { it.parent as? View }
-                .firstOrNull { it.javaClass.name == "com.oplus.systemui.plugins.qs.OplusQSRootView" }
+                .firstOrNull { it.javaClass.name == QS_ROOT }
             if (root is ViewGroup) hierarchy?.watch(root)
         } else if (synchronized(owned) { owned.isEmpty() } &&
             synchronized(mediaClips) { mediaClips.isEmpty() }) return true

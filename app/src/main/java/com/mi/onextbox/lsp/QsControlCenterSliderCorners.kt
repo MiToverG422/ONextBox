@@ -26,7 +26,7 @@ internal object QsControlCenterSliderCorners {
     private val paintedCorner = ThreadLocal<PaintedCorner>()
     private val smoothPath = QsSliderProgressShape()
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader, late: Boolean) {
         val observers = QsCornerViewObservers("qs:slider-views", content = ::contentState) { updateSafely(it, force = true) }
         QsControlCenterCornerTargets.sliders.forEach { name ->
             val type = Reflect.findClassIfExists(name, loader) ?: return@forEach
@@ -177,6 +177,8 @@ internal object QsControlCenterSliderCorners {
             synchronized(materialStates) { materialStates.clear() }
             synchronized(detailTransitions) { detailTransitions.clear() }
         })
+        if (late) SystemUiWindowViews.find(loader) { QsControlCenterCornerTargets.isSlider(it.javaClass.name) }
+            .forEach(observers::watch)
         HookLog.i(TAG, "Control Center brightness/volume corner adapters installed")
     }
 

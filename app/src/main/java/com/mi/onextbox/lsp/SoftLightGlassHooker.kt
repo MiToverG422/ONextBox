@@ -43,13 +43,24 @@ internal object SoftLightGlassHooker {
         if (processName.substringBefore(':') != packageName || packageName == "android" ||
             packageName == "com.mi.onextbox") return
         if (sourceDir.startsWith("/data/") && !isUpdatedSystemApp(packageName)) return
+        if (packageName == "com.android.systemui") {
+            SystemUiHookActivation.install(STATE, setOf(SoftLightGlassSettings.ENABLED), SoftLightGlassSettings::enabledXposed) { late ->
+                val saved = HotReloadLifecycle.restoredState(STATE) as? Array<*>
+                install(packageName, loader, adoptExistingShaders = late || saved?.getOrNull(15) == true)
+            }
+        } else {
+            install(packageName, loader)
+        }
+    }
+
+    private fun install(packageName: String, loader: ClassLoader, adoptExistingShaders: Boolean = false) {
         val shelf = packageName == SoftLightShelfPass.PACKAGE
         val build = if (shelf) null else materialBuilder(loader)
         val coui = if (shelf) null else runCatching { SoftLightCouiPass.findSetter(loader) }.getOrNull()
         val nativeScope = packageName in SoftLightGlassSettings.mainPackages
         if (build == null && coui == null && !nativeScope) return
         synchronized(this) {
-            val current = session ?: Session(packageName).also {
+            val current = session ?: Session(packageName, adoptExistingShaders).also {
                 session = it
                 HotReloadLifecycle.register(STATE, capture = it::capture, detach = it::detach, restore = it::restore)
                 HotReloadLifecycle.afterCommit { it.restore(HotReloadLifecycle.restoredState(STATE)) }
@@ -91,7 +102,7 @@ internal object SoftLightGlassHooker {
             info.flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
     }.getOrDefault(false)
 
-    private class Session(private val packageName: String) {
+    private class Session(private val packageName: String, private val adoptExistingShaders: Boolean) {
         private val systemUi = packageName == "com.android.systemui"
         private val main = Handler(Looper.getMainLooper())
         private val lock = Any()
@@ -276,8 +287,8 @@ internal object SoftLightGlassHooker {
 
         fun installMaterial(build: Method, loader: ClassLoader, lockscreen: Boolean = false) {
             if (!materialOwners.add(build.declaringClass)) return
-            runCatching { installCachedShaderUpgrade(loader, lockscreen) }
-                .onFailure { logOnce("cached shader adapter unavailable", it) }
+            val upgradeExistingDrawable = runCatching { installCachedShaderUpgrade(loader, lockscreen) }
+                .onFailure { logOnce("cached shader adapter unavailable", it) }.getOrNull()
             if (packageName == "com.android.systemui") runCatching { selection.installTiles(loader, ::preserveControlWhite, ::logOnce) }
                 .onFailure { logOnce("tile selection metadata unavailable", it) }
             if (packageName == "com.android.systemui") runCatching { selection.installDeviceCards(loader, ::preserveControlWhite, ::logOnce) }
@@ -310,8 +321,12 @@ internal object SoftLightGlassHooker {
                 }
                 install("drawable:$name:${System.identityHashCode(type)}", draw, XposedInterface.Hooker { chain ->
                     val drawable = chain.thisObject as Drawable
-                    synchronized(lock) { drawables[drawable] = true }
+                    val firstDraw = synchronized(lock) { drawables.put(drawable, true) == null }
                     if (systemUi && !active()) return@Hooker chain.proceed()
+                    if (firstDraw && adoptExistingShaders && upgradeExistingDrawable != null) {
+                        runCatching { upgradeExistingDrawable(drawable) }
+                            .onFailure { logOnce("existing panel material refresh", it) }
+                    }
                     if (followTilt && drawable.isVisible) {
                         lastDraw = SystemClock.uptimeMillis()
                         tilt.request()
@@ -323,18 +338,18 @@ internal object SoftLightGlassHooker {
             }
         }
 
-        private fun installCachedShaderUpgrade(loader: ClassLoader, lockscreen: Boolean) {
-            val shaderType = ModernReflect.findClassIfExists("com.oplus.posteffect.agsl.DrawableShader", loader) ?: return
+        private fun installCachedShaderUpgrade(loader: ClassLoader, lockscreen: Boolean): ((Drawable) -> Unit)? {
+            val shaderType = ModernReflect.findClassIfExists("com.oplus.posteffect.agsl.DrawableShader", loader) ?: return null
             val getters = shaderType.declaredMethods.filter { it.returnType == RuntimeShader::class.java && it.parameterCount == 0 &&
                 it.name in setOf("getShaderOrNull", "getShaderDirect", "s") }
             val forceUpdate = shaderType.declaredMethods.firstOrNull { it.name in setOf("updateShaderBlendParams", "T") &&
                 it.parameterTypes.contentEquals(arrayOf(java.lang.Boolean.TYPE)) && it.returnType == Void.TYPE }
             val rebuild = forceUpdate ?: shaderType.declaredMethods.firstOrNull {
                 it.name == "rebuildShader" && it.parameterCount == 0 && it.returnType == Void.TYPE
-            } ?: return
-            if (getters.isEmpty()) return
+            } ?: return null
+            if (getters.isEmpty()) return null
             rebuild.isAccessible = true
-            val shaderField = shaderType.declaredFields.singleOrNull { it.type == RuntimeShader::class.java }?.also { it.isAccessible = true } ?: return
+            val shaderField = shaderType.declaredFields.singleOrNull { it.type == RuntimeShader::class.java }?.also { it.isAccessible = true } ?: return null
             val panel = systemUi && !lockscreen
             if (panel) {
                 val wrap = XposedInterface.Hooker { chain ->
@@ -361,7 +376,7 @@ internal object SoftLightGlassHooker {
                 if (!active()) return result
                 if (synchronized(lock) {
                     (result in pluginPrograms && (!panel || panelModes[result] == desired)) ||
-                        (!lockscreen && result !in programs && result !in nativePrograms) ||
+                        (!lockscreen && !adoptExistingShaders && result !in programs && result !in nativePrograms) ||
                         (!panel && !profile.needsCurrentShader && result in programs)
                 }) return result
                 val attempt = if (panel) desired.ordinal else -1
@@ -390,7 +405,8 @@ internal object SoftLightGlassHooker {
                     val result = chain.proceed() as? RuntimeShader ?: return@Hooker null
                     if (!active()) return@Hooker result
                     if (panel && buildingPanel.get() != null) return@Hooker result
-                    if ((!hasLegacyPrograms || (!panel && !profile.needsCurrentShader)) && !lockscreen) return@Hooker result
+                    if ((!hasLegacyPrograms || (!panel && !profile.needsCurrentShader)) && !lockscreen && !adoptExistingShaders)
+                        return@Hooker result
                     upgrade(chain.thisObject ?: return@Hooker result, result)
                 })
             }
@@ -400,17 +416,18 @@ internal object SoftLightGlassHooker {
                     for (owner in owners) (shaderField.get(owner) as? RuntimeShader)?.let { upgrade(owner, it) }
                 }
             }
-            val drawable = ModernReflect.findClassIfExists("com.oplus.posteffect.drawable.BaseDrawable", loader) ?: return
-            val material = drawable.declaredFields.singleOrNull { it.type == shaderType }?.also { it.isAccessible = true } ?: return
-            synchronized(lock) {
-                cachedMaterialReaders += { surfaces ->
-                    for (surface in surfaces) if (drawable.isInstance(surface)) {
-                        val owner = material.get(surface) ?: continue
-                        val program = shaderField.get(owner) as? RuntimeShader ?: continue
-                        upgrade(owner, program)
-                    }
-                }
+            val drawable = ModernReflect.findClassIfExists("com.oplus.posteffect.drawable.BaseDrawable", loader) ?: return null
+            val material = drawable.declaredFields.singleOrNull { it.type == shaderType }?.also { it.isAccessible = true } ?: return null
+            val refresh: (Drawable) -> Unit = refresh@{ surface ->
+                if (!drawable.isInstance(surface)) return@refresh
+                val owner = material.get(surface) ?: return@refresh
+                val program = shaderField.get(owner) as? RuntimeShader ?: return@refresh
+                if (upgrade(owner, program) !== program) surface.invalidateSelf()
             }
+            synchronized(lock) {
+                cachedMaterialReaders += { surfaces -> surfaces.forEach(refresh) }
+            }
+            return refresh
         }
 
         private fun materialMarker(source: String): String? = when {
@@ -585,7 +602,7 @@ internal object SoftLightGlassHooker {
                 profile[Parameter.WIDTH] > 0f && profile[Parameter.STRENGTH] > 0f
             if (!followTilt) tilt.stop()
             if (systemUi && previousMode != profile.panelProgram) hasLegacyPrograms = true
-            if (enabled && hasLegacyPrograms && (systemUi || profile.needsCurrentShader)) {
+            if (enabled && (hasLegacyPrograms || adoptExistingShaders) && (systemUi || profile.needsCurrentShader)) {
                 val (readers, surfaces) = synchronized(lock) { cachedMaterialReaders.toList() to drawables.keys.toList() }
                 readers.forEach { reader -> runCatching { reader(surfaces) }.onFailure { logOnce("cached drawable refresh", it) } }
                 hasLegacyPrograms = synchronized(lock) {
@@ -630,7 +647,7 @@ internal object SoftLightGlassHooker {
                 directional.keys.toTypedArray(), dimmable.keys.toTypedArray(), aodPrograms.keys.toTypedArray(), stylePrograms.keys.toTypedArray(),
                 arrayOf(LiquidGlassShader.DECLARATION, pluginPrograms.keys.toTypedArray()),
                 panelModes.map { (shader, mode) -> arrayOf(shader, mode.ordinal) }.toTypedArray(), panelOwners.keys.toTypedArray(),
-                nativePrograms.keys.toTypedArray())
+                nativePrograms.keys.toTypedArray(), adoptExistingShaders)
         }
 
         fun detach() {

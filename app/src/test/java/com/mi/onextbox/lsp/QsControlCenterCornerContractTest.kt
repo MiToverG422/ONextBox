@@ -22,7 +22,7 @@ class QsControlCenterCornerContractTest {
     }
     @Test fun sliderUpdatesUseNativeSetterAndNeverChangeSystemValuesOrGlobalResources() {
         val slider = source("QsControlCenterSliderCorners")
-        assertTrue(source("QsTileCornerHooker").contains("QsControlCenterSliderCorners.hook(loader)"))
+        assertTrue(source("QsTileCornerHooker").contains("QsControlCenterSliderCorners.hook(loader, late)"))
         assertTrue(slider.contains("QsControlCenterCornerTargets.isSlider(view.javaClass.name)"))
         assertTrue(slider.contains("\"setCornerRadius\", radius"))
         assertTrue(slider.contains("scope.paint(paintedProgress, paintedBackground)"))

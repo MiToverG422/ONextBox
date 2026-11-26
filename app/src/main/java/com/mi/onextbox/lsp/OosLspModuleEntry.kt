@@ -227,7 +227,7 @@ class OosLspModuleEntry : XposedModule() {
         // Recovery and genuine phone reads stay active when feature hooks enter safe mode.
         preparePhoneRecovery(target)
         if (!AdaptationHookGate.isActive(profile)) return
-        com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CouiDividerHooker.hook") { CouiDividerHooker.hook(packageName, classLoader, target.sourceDir) }
+        CouiDividerHooker.hook(packageName, classLoader, target.sourceDir)
         if (profile == SystemAdaptationVersion.ColorOs17) {
             runCatching { SoftLightGlassHooker.hook(packageName, processName, classLoader, target.sourceDir) }
                 .onFailure { HookLog.w("ONextBox-SoftLight", "Material hooks unavailable in $packageName", it) }
@@ -262,14 +262,12 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("LargeNetworkTypeHooker.hook") { LargeNetworkTypeHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("DataSimSignalHooker.hook") { DataSimSignalHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("StatusBarLayoutHooker.hook") { StatusBarLayoutHooker.hook(classLoader) }
-                com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SystemUiAppearanceHooker.install") { SystemUiAppearanceHooker(classLoader).install() }
+                SystemUiAppearanceHooker.hook(classLoader)
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PowerIndicatorHooker.hook") { PowerIndicatorHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("RotationSuggestionHooker.hook") { RotationSuggestionHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CarrierNameHooker.hook") { CarrierNameHooker.hook(classLoader) }
-                runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("QsTileCornerHooker.hook") { QsTileCornerHooker.hook(classLoader) } }
-                    .onFailure { HookLog.w("ONextBox-QsTileCorner", "Tile corner adapter unavailable", it) }
-                runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("QsSliderPercentageHooker.hook") { QsSliderPercentageHooker.hook(classLoader) } }
-                    .onFailure { HookLog.w("ONextBox-QsPercentage", "Slider percentage adapter unavailable", it) }
+                QsTileCornerHooker.hook(classLoader)
+                QsSliderPercentageHooker.hook(classLoader)
                 runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SideVolumePercentageHooker.hook") { SideVolumePercentageHooker.hook(classLoader) } }
                     .onFailure { HookLog.w("ONextBox-SideVolumePercentage", "Volume popup percentage adapter unavailable", it) }
                 runCatching { com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("SideVolumeAppearanceHooker.hook") { SideVolumeAppearanceHooker.hook(classLoader) } }

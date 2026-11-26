@@ -16,11 +16,12 @@ import java.lang.ref.WeakReference
 import java.util.WeakHashMap
 
 internal object CouiDividerViewHooker {
+    const val STATE = "coui:divider-clips"
     private val dividers = WeakHashMap<View, DividerClip>()
     private const val ANDROID = "http://schemas.android.com/apk/res/android"
 
     init {
-        HotReloadLifecycle.register("coui:divider-clips",
+        HotReloadLifecycle.register(STATE,
             capture = { synchronized(dividers) { dividers.keys.toTypedArray() } },
             detach = {
                 synchronized(dividers) { dividers.toMap().also { dividers.clear() } }

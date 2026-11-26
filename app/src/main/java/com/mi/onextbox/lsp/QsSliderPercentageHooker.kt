@@ -6,6 +6,7 @@ import android.graphics.Rect
 import android.util.TypedValue
 import android.view.View
 import android.widget.TextView
+import com.mi.onextbox.diagnostics.RuntimeDiagnostics
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import com.mi.onextbox.lsp.compat.ModernHookRuntime
@@ -16,6 +17,7 @@ import java.util.WeakHashMap
 /** Paint after the native track; leave slider listeners, touch geometry and animations untouched. */
 internal object QsSliderPercentageHooker {
     private const val TAG = "ONextBox-QsPercentage"
+    private const val VIEWS = "qs:percentage-views"
     private const val LABEL = "com.oplus.systemui.plugins.qs.customize.view.tile.QsLabelView"
     private const val COLORS = "com.oplus.systemui.qs.base.util.QsColorUtil"
     private val styles = WeakHashMap<View, NativeStyle>()
@@ -43,10 +45,16 @@ internal object QsSliderPercentageHooker {
         }
     }
 
-    fun hook(loader: ClassLoader) {
+    fun hook(loader: ClassLoader) = SystemUiHookActivation.install(
+        "$VIEWS:views", setOf(QsSliderPercentageSettings.ENABLED), QsSliderPercentageSettings::enabledXposed,
+    ) { late ->
+        RuntimeDiagnostics.measure("QsSliderPercentageHooker.hook") { install(loader, late) }
+    }
+
+    private fun install(loader: ClassLoader, late: Boolean) {
         val type = Reflect.findClassIfExists(QsControlCenterCornerTargets.SEEK_BAR, loader) ?: return
         val observers = QsCornerViewObservers(
-            "qs:percentage-views",
+            VIEWS,
             content = { view -> style(view).refresh() },
             configurationToken = { QsSliderPercentageSettings.configurationTokenXposed() },
             settingsKeys = QsSliderPercentageSettings.keys,
@@ -74,6 +82,8 @@ internal object QsSliderPercentageHooker {
             }
         hookDetailAnimationFrames(loader)
         hookNativeVolumeTitle(loader)
+        if (late) SystemUiWindowViews.find(loader) { type.isInstance(it) && hasSliderOwner(it) }
+            .forEach(observers::watch)
     }
 
     private fun hookNativeVolumeTitle(loader: ClassLoader) {

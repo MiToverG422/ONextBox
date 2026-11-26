@@ -4,7 +4,7 @@ import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.view.ViewGroup
+import com.mi.onextbox.diagnostics.RuntimeDiagnostics
 import com.mi.onextbox.lsp.SystemUiAppearance as Option
 import com.mi.onextbox.lsp.compat.HotReloadLifecycle
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
@@ -15,11 +15,25 @@ import java.util.WeakHashMap
 import java.lang.ref.WeakReference
 import kotlin.math.abs
 
-internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
+internal class SystemUiAppearanceHooker private constructor(private val loader: ClassLoader) {
+    companion object {
+        private const val STATE = "systemui-appearance"
+        private val keys = Option.entries.mapTo(hashSetOf()) { it.key } + StatusBarIconLayout.keys
+
+        fun hook(loader: ClassLoader) = SystemUiHookActivation.install(
+            STATE, keys, { barEnabled() || headerEnabled() || cornersEnabled() },
+        ) {
+            RuntimeDiagnostics.measure("SystemUiAppearanceHooker.install") { SystemUiAppearanceHooker(loader).install() }
+        }
+
+        private fun barEnabled() = Option.Mirror.current() != 0 || StatusBarIconLayout.current().enabled
+        private fun headerEnabled() = Option.HideSettings.current() != 0
+        private fun cornersEnabled() = Option.Corners.current() != 0
+    }
+
     private val main = Handler(Looper.getMainLooper())
     private val refreshTask = Runnable { if (!HotReloadLifecycle.isRetiring) refresh() }
     private var prefs: SharedPreferences? = null
-    private val keys = Option.entries.mapTo(hashSetOf()) { it.key } + StatusBarIconLayout.keys
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == null || key in keys) {
             main.removeCallbacks(refreshTask)
@@ -63,7 +77,7 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
         if (!HotReloadLifecycle.isRetiring && transforms.containsKey(view)) applySide(view)
     }
 
-    fun install() {
+    private fun install() {
         rowClass?.let { type ->
             runCatching { NotificationCorners(type).also { it.observeNativeChanges() } }.onSuccess { corners = it }.onFailure {
                 HookLog.w("ONextBox-Appearance", "Notification corner adapter unavailable", it)
@@ -92,7 +106,7 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
             runCatching { banners?.installTransitions() }.onFailure(::reportCornerFailure)
             after(bannerClass, setOf("onViewAttachedToWindow", "onConfigurationChanged"), ::cornersEnabled)
         }
-        HotReloadLifecycle.register("systemui-appearance",
+        HotReloadLifecycle.register(STATE,
             capture = { views.keys.toTypedArray() }, detach = ::detach,
             restore = { state -> (state as? Array<*>)?.filterIsInstance<View>()?.forEach { views[it] = Unit } },
             resumeAfterRejection = ::activate)
@@ -106,23 +120,13 @@ internal class SystemUiAppearanceHooker(private val loader: ClassLoader) {
         refresh()
     }
 
-    private fun barEnabled() = Option.Mirror.current() != 0 || StatusBarIconLayout.current().enabled
-    private fun headerEnabled() = Option.HideSettings.current() != 0
-    private fun cornersEnabled() = Option.Corners.current() != 0
-
     private fun requested(view: View, bar: Boolean, header: Boolean, notifications: Boolean) =
         (bar && barClass?.isInstance(view) == true) || (header && headerClass?.isInstance(view) == true) ||
             (notifications && (rowClass?.isInstance(view) == true || customClass?.isInstance(view) == true ||
                 bannerClass?.isInstance(view) == true))
 
     private fun discover(bar: Boolean, header: Boolean, notifications: Boolean) {
-        val global = runCatching { Reflect.callStaticMethod(Reflect.findClass("android.view.WindowManagerGlobal", loader), "getInstance") }.getOrNull()
-        val roots = global?.let { runCatching { Reflect.getObjectField(it, "mViews") as? List<*> }.getOrNull() }
-        fun visit(v: View) {
-            if (requested(v, bar, header, notifications)) views[v] = Unit
-            if (v is ViewGroup) for (i in 0 until v.childCount) visit(v.getChildAt(i))
-        }
-        roots?.filterIsInstance<View>()?.forEach(::visit)
+        SystemUiWindowViews.find(loader) { requested(it, bar, header, notifications) }.forEach { views[it] = Unit }
     }
 
     private fun after(type: Class<*>?, methods: Set<String>, enabled: () -> Boolean) {

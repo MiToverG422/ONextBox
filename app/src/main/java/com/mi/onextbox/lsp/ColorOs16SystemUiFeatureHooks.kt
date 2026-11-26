@@ -14,8 +14,8 @@ internal object ColorOs16SystemUiFeatureHooks {
         install("clock-spacing") { ClockSpacingHooker.hook(loader) }
         install("network-speed") { NetworkSpeedHooker.hook(loader) }
         install("carrier-name") { CarrierNameHooker.hook(loader) }
-        install("qs-corners") { QsTileCornerHooker.hook(loader) }
-        install("qs-percentage") { QsSliderPercentageHooker.hook(loader) }
+        QsTileCornerHooker.hook(loader)
+        QsSliderPercentageHooker.hook(loader)
         install("volume-percentage") { SideVolumePercentageHooker.hookColorOs16(loader) }
         install("volume-appearance") { SideVolumeAppearanceHooker.hook(loader) }
         install("volume-safety") { VolumeSafetyWarningHooker.hook(loader) }
