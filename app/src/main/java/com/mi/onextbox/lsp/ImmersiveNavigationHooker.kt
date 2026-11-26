@@ -1,7 +1,8 @@
 package com.mi.onextbox.lsp
 
-import android.content.res.Resources
+import android.content.res.AssetManager
 import android.content.res.ColorStateList
+import android.content.res.Resources
 import android.content.res.TypedArray
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -9,18 +10,14 @@ import android.util.TypedValue
 import android.view.View
 import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
-import com.mi.onextbox.lsp.compat.ModernMethodHook
 import io.github.libxposed.api.XposedInterface
-import java.util.Collections
 import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 
 // Gesture navigation insets, handle dimensions, and system colors.
 internal object ImmersiveNavigationHooker {
     private data class ResourceName(val packageName: String, val type: String, val name: String)
-    private val resourceNames = Collections.synchronizedMap(
-        WeakHashMap<Resources, ConcurrentHashMap<Int, ResourceName>>(),
-    )
+    private val resourceNames = WeakHashMap<AssetManager, ConcurrentHashMap<Int, ResourceName>>()
     private val dimensionMethods = setOf("getDimension", "getDimensionPixelSize", "getDimensionPixelOffset")
     private val colorMethods = setOf("getColor", "getColorStateList")
     private val resourcePackages = setOf("android", "com.android.systemui", "oplus")
@@ -80,29 +77,20 @@ internal object ImmersiveNavigationHooker {
                 else -> method.parameterTypes.size == 1 && (method.name in dimensionMethods || method.name == "getBoolean")
             }
         }.forEach { method ->
-            ModernHookRegistry.installCompat(
+            val type = when (method.name) {
+                in colorMethods -> "color"
+                "getBoolean" -> "bool"
+                else -> "dimen"
+            }
+            ModernHookRegistry.installFast(
                 key = "immersive-navigation:resources:${method.toGenericString()}",
                 executable = method,
-                callback = object : ModernMethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        if (param.throwable != null) return
-                        val resources = param.thisObject as? Resources ?: return
-                        val id = param.args.firstOrNull() as? Int ?: return
-                        val name = resourceName(resources, id) ?: return
-                        if (name.packageName !in resourcePackages) return
-                        if (name.type == "color" && method.name in colorMethods) {
-                            replacementColor(method.name, resources, name)?.let { param.result = it }
-                        } else if (name.type == "bool" && method.name == "getBoolean" &&
-                            ImmersiveNavigationRules.isBoolean(name.packageName, name.name) &&
-                            LspConfig.isImmersiveNavigationEnabledXposed()
-                        ) {
-                            ImmersiveNavigationRules.boolean(
-                                name.packageName, name.name, gestureNavigation(resources),
-                            )?.let { param.result = it }
-                        } else if (name.type == "dimen" && method.name in dimensionMethods) {
-                            replacementDimension(method.name, resources, name)?.let { param.result = it }
-                        }
-                    }
+                hooker = XposedInterface.Hooker { chain ->
+                    val result = chain.proceed()
+                    if (!needsLookup(type)) return@Hooker result
+                    val resources = chain.thisObject as? Resources ?: return@Hooker result
+                    val id = chain.getArg(0) as? Int ?: return@Hooker result
+                    replacement(type, method.name, resources, id) ?: result
                 },
             )
         }
@@ -113,26 +101,39 @@ internal object ImmersiveNavigationHooker {
             method.parameterTypes.firstOrNull() == Int::class.javaPrimitiveType &&
                 (method.name in colorMethods || method.parameterTypes.size == 2)
         }.forEach { method ->
-            ModernHookRegistry.installCompat(
+            val type = if (method.name in colorMethods) "color" else "dimen"
+            ModernHookRegistry.installFast(
                 key = "immersive-navigation:typed-array:${method.toGenericString()}",
                 executable = method,
-                callback = object : ModernMethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        if (param.throwable != null) return
-                        val values = param.thisObject as? TypedArray ?: return
-                        val index = param.args.firstOrNull() as? Int ?: return
-                        val id = values.getResourceId(index, 0)
-                        val name = resourceName(values.resources, id) ?: return
-                        if (name.type == "color" && method.name in colorMethods) {
-                            replacementColor(method.name, values.resources, name)?.let { param.result = it }
-                        } else if (name.type == "dimen" && method.name !in colorMethods) {
-                            replacementDimension(method.name, values.resources, name)?.let { param.result = it }
-                        }
-                    }
+                hooker = XposedInterface.Hooker { chain ->
+                    val result = chain.proceed()
+                    if (!needsLookup(type)) return@Hooker result
+                    val values = chain.thisObject as? TypedArray ?: return@Hooker result
+                    val index = chain.getArg(0) as? Int ?: return@Hooker result
+                    val id = values.getResourceId(index, 0)
+                    replacement(type, method.name, values.resources, id) ?: result
                 },
             )
         }
         HookLog.i("ImmersiveNavigation", "Navigation resource hooks installed")
+    }
+
+    private fun needsLookup(type: String): Boolean = when (type) {
+        "color" -> LspConfig.isNavigationHandleAutoHideEnabledXposed()
+        "bool" -> LspConfig.isImmersiveNavigationEnabledXposed()
+        else -> true
+    }
+
+    private fun replacement(type: String, method: String, resources: Resources, id: Int): Any? {
+        val name = resourceName(resources, id) ?: return null
+        if (name.type != type || name.packageName !in resourcePackages) return null
+        return when (type) {
+            "color" -> replacementColor(method, resources, name)
+            "bool" -> if (ImmersiveNavigationRules.isBoolean(name.packageName, name.name)) {
+                ImmersiveNavigationRules.boolean(name.packageName, name.name, gestureNavigation(resources))
+            } else null
+            else -> replacementDimension(method, resources, name)
+        }
     }
 
     private fun replacementColor(method: String, resources: Resources, name: ResourceName): Any? {
@@ -148,14 +149,16 @@ internal object ImmersiveNavigationHooker {
     private fun resourceName(resources: Resources, id: Int): ResourceName? {
         if (id == 0) return null
         val names = synchronized(resourceNames) {
-            resourceNames.getOrPut(resources) { ConcurrentHashMap() }
+            resourceNames.getOrPut(resources.assets) { ConcurrentHashMap() }
         }
         return names[id] ?: runCatching {
-            ResourceName(
-                resources.getResourcePackageName(id),
-                resources.getResourceTypeName(id),
-                resources.getResourceEntryName(id),
-            )
+            // Android returns the canonical "package:type/entry" in one native lookup.
+            val qualified = resources.getResourceName(id)
+            val packageEnd = qualified.indexOf(':')
+            val typeEnd = qualified.indexOf('/', packageEnd + 1)
+            if (packageEnd <= 0 || typeEnd <= packageEnd + 1 || typeEnd == qualified.lastIndex) return@runCatching null
+            ResourceName(qualified.substring(0, packageEnd), qualified.substring(packageEnd + 1, typeEnd),
+                qualified.substring(typeEnd + 1))
         }.getOrNull()?.also { names[id] = it }
     }
 

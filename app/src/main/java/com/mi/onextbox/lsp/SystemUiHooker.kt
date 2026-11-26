@@ -2,6 +2,7 @@ package com.mi.onextbox.lsp
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.AssetManager
 import android.content.res.Resources
 import android.view.View
 import android.view.ViewGroup
@@ -269,6 +270,7 @@ object SystemUiHooker {
 
     /** Equivalent to setting always_show_data_rat_icon_bool=false in SystemUI resources. */
     private fun hookInternationalNetworkDisplayResource() {
+        val targetIds = WeakHashMap<AssetManager, Int>()
         val methods = Resources::class.java.declaredMethods.filter { method ->
             method.name == "getBoolean" &&
                 method.parameterTypes.size == 1 &&
@@ -281,14 +283,18 @@ object SystemUiHooker {
                 executable = method,
                 hooker = XposedInterface.Hooker { chain ->
                     val resourceId = chain.getArg(0) as? Int ?: return@Hooker chain.proceed()
+                    if (resourceId == 0) return@Hooker chain.proceed()
                     val resources = chain.thisObject as? Resources ?: return@Hooker chain.proceed()
-                    val isTarget = runCatching {
-                        resources.getResourcePackageName(resourceId) == SYSTEM_UI_RESOURCE_PACKAGE &&
-                            resources.getResourceTypeName(resourceId) == "bool" &&
-                            resources.getResourceEntryName(resourceId) ==
-                            ALWAYS_SHOW_DATA_RAT_ICON_RESOURCE
-                    }.getOrDefault(false)
-                    if (!isTarget) return@Hooker chain.proceed()
+                    // Resolve the one target per asset table so inflating unrelated layouts
+                    // doesn't send every Boolean resource through native name resolution.
+                    val targetId = synchronized(targetIds) {
+                        targetIds.getOrPut(resources.assets) {
+                            resources.getIdentifier(ALWAYS_SHOW_DATA_RAT_ICON_RESOURCE, "bool", SYSTEM_UI_RESOURCE_PACKAGE)
+                        }
+                    }
+                    if (resourceId != targetId || !LspConfig.isSystemUiInternationalNetworkDisplayEnabledXposed()) {
+                        return@Hooker chain.proceed()
+                    }
 
                     if (internationalNetworkDisplayApplied.compareAndSet(false, true)) {
                         log("SystemUI resource override: $ALWAYS_SHOW_DATA_RAT_ICON_RESOURCE=false")
