@@ -13,7 +13,11 @@ internal class HotReloadHookIds<T> {
     fun next(target: T): String {
         val slot = counts[target] ?: 0
         counts[target] = slot + 1
-        return "onextbox.reload.v1:$slot"
+        return idForSlot(slot)
+    }
+
+    companion object {
+        fun idForSlot(slot: Int): String = "onextbox.reload.v1:$slot"
     }
 }
 

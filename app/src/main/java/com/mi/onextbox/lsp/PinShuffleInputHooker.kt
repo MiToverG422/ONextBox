@@ -54,21 +54,31 @@ internal object PinShuffleInputHooker {
                 if (dial.isAttachedToWindow && dial.isShown && dial.windowVisibility == View.VISIBLE) begin(dial, targets)
                 else restore(dial)
             }
-            after("attach", targets.attach, ::shown)
+            val windowVisibility = SystemUiWindowVisibilityObservers(changed = ::shown)
+            fun watch(dial: View) {
+                windowVisibility.watch(dial)
+                shown(dial)
+            }
+            fun watchExisting() = SystemUiWindowViews.find(loader, targets.dial::isInstance).forEach(::watch)
+            after("attach", targets.attach) { (it as? View)?.let(::watch) }
             after("visibility", targets.visibility, ::shown)
             after("enter", targets.enter, ::shown)
-            val window = View::class.java.getDeclaredMethod("onWindowVisibilityChanged", Int::class.javaPrimitiveType)
-            ModernHookRegistry.installFast("$TAG:window", window) { chain ->
-                val result = chain.proceed()
-                if (targets.dial.isInstance(chain.thisObject)) shown(chain.thisObject)
-                result
+            after("detach", targets.detach) {
+                val dial = it as? ViewGroup ?: return@after
+                windowVisibility.unwatch(dial)
+                restore(dial)
             }
-            after("detach", targets.detach) { (it as? ViewGroup)?.let(::restore) }
             after("disappear", targets.disappear) { (it as? ViewGroup)?.let { dial -> active[dial]?.ending = true } }
             HotReloadLifecycle.register(TAG,
                 canReload = { active.keys.none { it.isShown && it.windowVisibility == View.VISIBLE } },
-                detach = { active.keys.toList().forEach(::restore); previous.clear() })
-            if (late) SystemUiWindowViews.find(loader, targets.dial::isInstance).forEach(::shown)
+                detach = {
+                    windowVisibility.clear()
+                    active.keys.toList().forEach(::restore)
+                    previous.clear()
+                },
+                resumeAfterRejection = ::watchExisting)
+            if (late) watchExisting()
+            else if (HotReloadLifecycle.isStaging) HotReloadLifecycle.afterCommit(::watchExisting)
             HookLog.i(TAG, "Installed native PIN key-position shuffling")
         }.onFailure {
             ModernHookRegistry.unhookPrefix(TAG)

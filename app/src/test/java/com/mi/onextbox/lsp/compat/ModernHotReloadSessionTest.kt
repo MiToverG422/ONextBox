@@ -149,6 +149,23 @@ class ModernHotReloadSessionTest {
     }
 
     @Test
+    fun bothPreviousVisibilitySlotsCanBeRetiredWithoutReplacingTheirTarget() {
+        val retired = listOf(FakeHandle(target("first"), id(0)), FakeHandle(target("first"), id(1)))
+        val keep = FakeHandle(target("second"), id(0))
+        val handles = retired + keep
+        val installer = RecordingInstaller()
+        val session = ModernHotReloadSession.Session(true, installer::install, handles.map { it.executable })
+        session.retireLegacySlots(retired.first().executable, 2)
+        session.install(keep.executable, hooker("replacement"))
+
+        session.commit(handles)
+
+        assertEquals(listOf(1, 1), retired.map { it.unhookCalls })
+        assertEquals(1, keep.replaceCalls.size)
+        assertTrue(installer.calls.isEmpty())
+    }
+
+    @Test
     fun missingPreviousTargetAbortsBeforeChangingAnyHook() {
         val installer = RecordingInstaller()
         val session = ModernHotReloadSession.Session(true, installer::install)

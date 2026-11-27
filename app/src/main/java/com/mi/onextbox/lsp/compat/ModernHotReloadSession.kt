@@ -19,9 +19,13 @@ internal object ModernHotReloadSession {
         private var precedingTargets = if (staging) previousTargets.toList() else emptyList()
         private val retiredSlots = mutableSetOf<HotReloadHookKey<Executable>>()
 
-        fun retireLegacyFirstSlot(target: Executable) {
-            if (staging && precedingTargets.count { it == target } == 1) {
-                retiredSlots += HotReloadHookKey(target, "onextbox.reload.v1:0")
+        fun retireLegacyFirstSlot(target: Executable) = retireLegacySlots(target, 1)
+
+        fun retireLegacySlots(target: Executable, maximum: Int) {
+            if (!staging) return
+            val count = precedingTargets.count { it == target }
+            if (count in 1..maximum) repeat(count) { index ->
+                retiredSlots += HotReloadHookKey(target, HotReloadHookIds.idForSlot(index))
             }
         }
 

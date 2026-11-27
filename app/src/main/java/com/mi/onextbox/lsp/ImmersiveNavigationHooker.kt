@@ -6,21 +6,34 @@ import android.content.res.Resources
 import android.content.res.TypedArray
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.util.SparseArray
 import android.util.TypedValue
 import android.view.View
 import com.mi.onextbox.lsp.compat.HookConfigSnapshot
 import com.mi.onextbox.lsp.compat.ModernHookRegistry
 import io.github.libxposed.api.XposedInterface
 import java.util.WeakHashMap
-import java.util.concurrent.ConcurrentHashMap
 
 // Gesture navigation insets, handle dimensions, and system colors.
 internal object ImmersiveNavigationHooker {
     private data class ResourceName(val packageName: String, val type: String, val name: String)
-    private val resourceNames = WeakHashMap<AssetManager, ConcurrentHashMap<Int, ResourceName>>()
+    private val resourceIds = WeakHashMap<AssetManager, SparseArray<ResourceName>>()
+    private val targetResources = buildList<ResourceName> {
+        fun addTargets(packageName: String, type: String, vararg names: String) {
+            names.forEach { add(ResourceName(packageName, type, it)) }
+        }
+        addTargets("android", "dimen", "navigation_bar_frame_height", "navigation_bar_height",
+            "navigation_bar_height_landscape", "navigation_bar_width", "navigation_bar_gesture_height")
+        addTargets("com.android.systemui", "dimen", "navigation_home_handle_width",
+            *ImmersiveNavigationRules.Geometry.entries.map { it.resource }.toTypedArray())
+        addTargets("oplus", "dimen", "navigation_gesture_view_width", "navigation_gesture_view_landscape_width")
+        addTargets("android", "bool", "config_navBarNeedsScrim", "config_attachNavBarToAppDuringTransition",
+            "config_navBarTapThrough")
+        addTargets("com.android.systemui", "color", "navigation_bar_home_handle_dark_color_faded",
+            "navigation_bar_home_handle_light_color_faded")
+    }
     private val dimensionMethods = setOf("getDimension", "getDimensionPixelSize", "getDimensionPixelOffset")
     private val colorMethods = setOf("getColor", "getColorStateList")
-    private val resourcePackages = setOf("android", "com.android.systemui", "oplus")
 
     fun hook(classLoader: ClassLoader? = null) {
         if (!LspConfig.isImmersiveNavigationEnabledXposed() &&
@@ -126,7 +139,7 @@ internal object ImmersiveNavigationHooker {
 
     private fun replacement(type: String, method: String, resources: Resources, id: Int): Any? {
         val name = resourceName(resources, id) ?: return null
-        if (name.type != type || name.packageName !in resourcePackages) return null
+        if (name.type != type) return null
         return when (type) {
             "color" -> replacementColor(method, resources, name)
             "bool" -> if (ImmersiveNavigationRules.isBoolean(name.packageName, name.name)) {
@@ -148,18 +161,16 @@ internal object ImmersiveNavigationHooker {
 
     private fun resourceName(resources: Resources, id: Int): ResourceName? {
         if (id == 0) return null
-        val names = synchronized(resourceNames) {
-            resourceNames.getOrPut(resources.assets) { ConcurrentHashMap() }
+        val assets = resources.assets
+        synchronized(resourceIds) { resourceIds[assets] }?.let { return it[id] }
+        // IDs vary between ROMs. Resolve only the named navigation resources in each asset set.
+        val targets = SparseArray<ResourceName>(targetResources.size)
+        for (target in targetResources) {
+            val targetId = runCatching { resources.getIdentifier(target.name, target.type, target.packageName) }
+                .getOrDefault(0)
+            if (targetId != 0) targets.put(targetId, target)
         }
-        return names[id] ?: runCatching {
-            // Android returns the canonical "package:type/entry" in one native lookup.
-            val qualified = resources.getResourceName(id)
-            val packageEnd = qualified.indexOf(':')
-            val typeEnd = qualified.indexOf('/', packageEnd + 1)
-            if (packageEnd <= 0 || typeEnd <= packageEnd + 1 || typeEnd == qualified.lastIndex) return@runCatching null
-            ResourceName(qualified.substring(0, packageEnd), qualified.substring(packageEnd + 1, typeEnd),
-                qualified.substring(typeEnd + 1))
-        }.getOrNull()?.also { names[id] = it }
+        return synchronized(resourceIds) { resourceIds.getOrPut(assets) { targets } }[id]
     }
 
     private fun gestureNavigation(resources: Resources): Boolean {

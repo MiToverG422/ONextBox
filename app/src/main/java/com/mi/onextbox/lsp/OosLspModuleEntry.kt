@@ -267,6 +267,8 @@ class OosLspModuleEntry : XposedModule() {
                 PowerIndicatorHooker.hook(classLoader)
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("RotationSuggestionHooker.hook") { RotationSuggestionHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("CarrierNameHooker.hook") { CarrierNameHooker.hook(classLoader) }
+                DeviceSpaceLayoutWarmup.hook(classLoader)
+                if (processName == PACKAGE_SYSTEM_UI) QsRuntimeShaderCacheHooker.hook(classLoader)
                 QsTileCornerHooker.hook(classLoader)
                 QsSliderPercentageHooker.hook(classLoader)
                 SideVolumePercentageHooker.hook(classLoader)
@@ -302,6 +304,7 @@ class OosLspModuleEntry : XposedModule() {
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("KeyguardCaptureHooker.hookSystemUi") { KeyguardCaptureHooker.hookSystemUi(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PasswordDialHighlightHooker.hook") { PasswordDialHighlightHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PinSwipeInputHooker.hook") { PinSwipeInputHooker.hook(classLoader) }
+                SystemUiWindowVisibilityObservers.retireLegacyHooks()
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PinShuffleInputHooker.hook") { PinShuffleInputHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("PasswordEmergencyHooker.hook") { PasswordEmergencyHooker.hook(classLoader) }
                 com.mi.onextbox.diagnostics.RuntimeDiagnostics.measure("FluidCloudMediaBlacklistHooker.hook") { FluidCloudMediaBlacklistHooker.hook(classLoader) }

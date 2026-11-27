@@ -23,6 +23,7 @@ internal object PasswordEmergencyHooker {
         val visibility = PasswordEmergencyVisibility(initial)
     }
     private val buttons = WeakHashMap<View, State>()
+    private val visibilityObservers = SystemUiWindowVisibilityObservers(observeLayout = true, changed = ::reconcile)
     private var applying = false
 
     internal class Targets(loader: ClassLoader) {
@@ -56,24 +57,32 @@ internal object PasswordEmergencyHooker {
                 }
                 override fun afterHookedMethod(param: MethodHookParam) { (param.thisObject as? View)?.let(::reconcile) }
             })
-            fun observe(key: String, method: java.lang.reflect.Method, detach: Boolean = false) {
+            fun watch(button: View) {
+                if (passwordHost(button) != null) visibilityObservers.watch(button)
+                reconcile(button)
+            }
+            fun watchExisting() = SystemUiWindowViews.find(loader, targets.button::isInstance).forEach(::watch)
+            fun observe(key: String, method: java.lang.reflect.Method, action: (View) -> Unit) {
                 ModernHookRegistry.installFast("$TAG:$key", method) { chain ->
                     val result = chain.proceed()
                     val button = chain.thisObject as? View
-                    if (!applying && button != null && targets.button.isInstance(button)) {
-                        if (detach) restore(button, buttons.remove(button)) else reconcile(button)
-                    }
+                    if (!applying && button != null) action(button)
                     result
                 }
             }
-            observe("attach", targets.attach)
-            observe("detach", targets.detach, detach = true)
-            observe("parent-visibility", View::class.java.getDeclaredMethod("onVisibilityChanged", View::class.java, Int::class.javaPrimitiveType))
-            observe("window", View::class.java.getDeclaredMethod("onWindowVisibilityChanged", Int::class.javaPrimitiveType))
+            observe("attach", targets.attach, ::watch)
+            observe("detach", targets.detach) { button ->
+                visibilityObservers.unwatch(button)
+                restore(button, buttons.remove(button))
+            }
             HotReloadLifecycle.register(TAG,
                 capture = { buttons.map { (button, state) -> arrayOf(button, state.visibility.requested, state.inCall) }.toTypedArray() },
                 canReload = { buttons.keys.none { button -> passwordHost(button)?.let { it.isShown && it.windowVisibility == View.VISIBLE } == true } },
-                detach = { buttons.toMap().forEach { (button, state) -> restore(button, state) }; buttons.clear() },
+                detach = {
+                    visibilityObservers.clear()
+                    buttons.toMap().forEach { (button, state) -> restore(button, state) }
+                    buttons.clear()
+                },
                 restore = { saved ->
                     (saved as? Array<*>)?.filterIsInstance<Array<*>>()?.forEach { row ->
                         val button = row.getOrNull(0) as? View ?: return@forEach
@@ -81,10 +90,13 @@ internal object PasswordEmergencyHooker {
                         buttons[button] = State(visibility, row.getOrNull(2) as? Boolean)
                         reconcile(button)
                     }
-                })
-            if (late) SystemUiWindowViews.find(loader, targets.button::isInstance).forEach(::reconcile)
+                },
+                resumeAfterRejection = ::watchExisting)
+            if (late) watchExisting()
+            else if (HotReloadLifecycle.isStaging) HotReloadLifecycle.afterCommit(::watchExisting)
         }.onFailure {
             ModernHookRegistry.unhookPrefix(TAG)
+            visibilityObservers.clear()
             buttons.toMap().forEach { (button, state) -> restore(button, state) }
             buttons.clear()
             HookLog.w(TAG, "Password emergency entry unavailable; native visibility retained", it)
